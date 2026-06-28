@@ -1,0 +1,36 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}PrintFlow | Inicio{% endblock %}
+
+{% block body %}
+    <h1>{{ app_name }} funcionando correctamente</h1>
+
+    <p class="status-ok">
+        Symfony está cargando correctamente.
+    </p>
+
+    <p>
+        Esta es la primera prueba mínima del sistema para validar compatibilidad
+        con hosting compartido antes de desarrollar los módulos reales.
+    </p>
+
+    <hr>
+
+    <p>
+        <span class="badge">PHP {{ php_version }}</span>
+        <span class="badge">Symfony {{ symfony_version }}</span>
+        <span class="badge">Ambiente: {{ environment }}</span>
+    </p>
+
+    <h2>Pruebas disponibles</h2>
+
+    <p>
+        Ruta principal:
+        <code>/</code>
+    </p>
+
+    <p>
+        Health check:
+        <code>/health</code>
+    </p>
+{% endblock %}
