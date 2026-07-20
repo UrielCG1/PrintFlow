@@ -1,0 +1,14 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Inicio | PrintFlow{% endblock %}
+
+{% block body %}
+    <main>
+        <h1>Bienvenido, {{ app.user.fullName }}</h1>
+        <p>Tu sesión se ha iniciado correctamente.</p>
+
+        <form method="post" action="{{ path('app_logout') }}">
+            <button type="submit">Cerrar sesión</button>
+        </form>
+    </main>
+{% endblock %}
