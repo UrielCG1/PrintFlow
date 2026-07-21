@@ -1,17 +1,59 @@
 .pf-app-body {
     min-width: 20rem;
+    background-color: var(--pf-color-canvas);
 }
 
 .pf-app-shell {
+    display: grid;
+    grid-template-columns: 17rem minmax(0, 1fr);
     min-height: 100vh;
 }
 
-.pf-app-main {
+.pf-app-stage {
+    display: flex;
     min-width: 0;
+    flex-direction: column;
+}
+
+.pf-app-content {
+    flex: 1;
 }
 
 .pf-page {
     width: min(100%, 90rem);
     margin-inline: auto;
     padding: var(--pf-space-page);
+}
+
+.pf-app-sidebar-backdrop {
+    display: none;
+}
+
+@media (max-width: 991.98px) {
+    .pf-app-shell {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .pf-app-sidebar-backdrop {
+        position: fixed;
+        z-index: 50;
+        inset: 0;
+        display: block;
+        width: 100%;
+        border: 0;
+        background-color: rgb(23 26 24 / 0.35);
+        cursor: default;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity var(--pf-transition-base);
+    }
+
+    .pf-app-sidebar-backdrop.is-visible {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    body.pf-sidebar-open {
+        overflow: hidden;
+    }
 }

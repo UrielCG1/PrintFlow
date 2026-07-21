@@ -4,12 +4,39 @@ html {
 
 body {
     min-height: 100vh;
+    background-color: var(--pf-color-canvas);
+    color: var(--pf-color-text);
     font-family: var(--pf-font-sans);
+    line-height: 1.5;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    color: var(--pf-color-text-strong);
+    font-weight: 650;
+    letter-spacing: -0.02em;
+}
+
+h1 {
+    font-size: clamp(1.75rem, 3vw, 2.25rem);
+}
+
+a {
+    text-underline-offset: 0.18em;
 }
 
 :focus-visible {
-    outline: 0.2rem solid currentColor;
+    outline: 0.2rem solid #148E1C;
     outline-offset: 0.2rem;
+}
+
+::selection {
+    background-color: var(--pf-color-brand-soft);
+    color: var(--pf-color-text-strong);
 }
 
 [hidden] {

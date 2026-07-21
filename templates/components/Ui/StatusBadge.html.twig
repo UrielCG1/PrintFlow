@@ -1,0 +1,20 @@
+{% set tones = {
+    neutral: 'pf-status-badge--neutral',
+    brand: 'pf-status-badge--brand',
+    success: 'pf-status-badge--success',
+    warning: 'pf-status-badge--warning',
+    danger: 'pf-status-badge--danger',
+    info: 'pf-status-badge--info'
+} %}
+
+<span
+    {{ attributes.defaults({
+        class: 'pf-status-badge ' ~ tones[tone]|default(tones.neutral)
+    }) }}
+>
+    {% if label %}
+        {{ label }}
+    {% else %}
+        {% block content %}{% endblock %}
+    {% endif %}
+</span>

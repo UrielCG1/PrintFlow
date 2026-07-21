@@ -1,16 +1,80 @@
-{% extends 'base.html.twig' %}
+{% extends 'layouts/app.html.twig' %}
 
 {% block title %}Crear rol | PrintFlow{% endblock %}
 
-{% block body %}
-    <main>
-        <h1>Crear rol personalizado</h1>
+{% block app_navigation_active %}roles{% endblock %}
 
-        {{ form_start(form) }}
-            {{ form_widget(form) }}
-            <button type="submit">Crear rol</button>
-        {{ form_end(form) }}
+{% block app_breadcrumb %}Administración / Roles y permisos / Nuevo{% endblock %}
 
-        <p><a href="{{ path('admin_roles_index') }}">Cancelar</a></p>
-    </main>
+{% block app_content %}
+    <section class="pf-roles-page">
+        <header class="pf-roles-heading pf-roles-heading--form">
+            <div>
+                <a href="{{ path('admin_roles_index') }}" class="pf-roles-back-link">
+                    <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                    Volver a roles
+                </a>
+
+                <p class="pf-roles-heading__eyebrow">Administración</p>
+                <h1>Crear rol personalizado</h1>
+                <p>Define un perfil reutilizable y los permisos que tendrá dentro del sistema.</p>
+            </div>
+        </header>
+
+        {{ form_start(form, {attr: {class: 'pf-role-form'}}) }}
+            {{ form_errors(form) }}
+
+            <div class="pf-role-form__grid">
+                <section class="pf-role-form__card">
+                    <header class="pf-role-form__section-header">
+                        <span class="pf-role-form__section-icon">
+                            <i class="bi bi-shield-plus" aria-hidden="true"></i>
+                        </span>
+                        <div>
+                            <h2>Información del rol</h2>
+                            <p>El código técnico se usa internamente y no podrá cambiarse después.</p>
+                        </div>
+                    </header>
+
+                    <div class="pf-role-form__fields">
+                        {{ form_row(form.name) }}
+                        {{ form_row(form.code) }}
+                        {{ form_row(form.description) }}
+                    </div>
+                </section>
+
+                <section class="pf-role-form__card">
+                    <header class="pf-role-form__section-header">
+                        <span class="pf-role-form__section-icon">
+                            <i class="bi bi-key" aria-hidden="true"></i>
+                        </span>
+                        <div>
+                            <h2>Permisos asignados</h2>
+                            <p>Selecciona al menos un permiso activo para este rol.</p>
+                        </div>
+                    </header>
+
+                    {{ form_label(form.permissions) }}
+                    {{ form_errors(form.permissions) }}
+
+                    <div class="pf-role-form__permissions">
+                        {{ form_widget(form.permissions) }}
+                    </div>
+                </section>
+            </div>
+
+            {{ form_rest(form) }}
+
+            <footer class="pf-role-form__footer">
+                <a href="{{ path('admin_roles_index') }}" class="btn pf-button pf-button--secondary">
+                    Cancelar
+                </a>
+
+                <button type="submit" class="btn btn-primary pf-button">
+                    <i class="bi bi-shield-plus" aria-hidden="true"></i>
+                    Crear rol
+                </button>
+            </footer>
+        {{ form_end(form, {render_rest: false}) }}
+    </section>
 {% endblock %}

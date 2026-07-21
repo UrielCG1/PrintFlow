@@ -1,3 +1,5 @@
 .pf-flash {
     margin-bottom: 1rem;
+    border-width: 1px;
+    box-shadow: var(--pf-shadow-sm);
 }

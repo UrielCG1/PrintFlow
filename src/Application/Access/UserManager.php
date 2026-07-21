@@ -35,33 +35,41 @@ final class UserManager
             );
         }
 
-        $user = (new User())
-            ->setFullName($data->fullName)
-            ->setUsername($username)
-            ->setEmail($email)
-            ->setPhone($data->phone)
-            ->setMustChangePassword(true);
+        return $this->entityManager->wrapInTransaction(function () use (
+            $data,
+            $actor,
+            $username,
+            $email,
+            $roles,
+        ): User {
+            $user = (new User())
+                ->setFullName($data->fullName)
+                ->setUsername($username)
+                ->setEmail($email)
+                ->setPhone($data->phone)
+                ->setMustChangePassword(true);
 
-        $user->setPassword(
-            $this->passwordHasher->hashPassword($user, $data->plainPassword),
-        );
+            $user->setPassword(
+                $this->passwordHasher->hashPassword($user, $data->plainPassword),
+            );
 
-        $this->syncRoles($user, $roles);
+            $this->syncRoles($user, $roles);
 
-        $this->entityManager->persist($user);
-        $this->entityManager->flush();
+            $this->entityManager->persist($user);
+            $this->entityManager->flush();
 
-        $this->auditLogger->record(
-            actor: $actor,
-            action: 'user.created',
-            entityType: 'users',
-            entityId: $user->getId(),
-            newValues: $this->snapshot($user),
-        );
+            $this->auditLogger->record(
+                actor: $actor,
+                action: 'user.created',
+                entityType: 'users',
+                entityId: $user->getId(),
+                newValues: $this->snapshot($user),
+            );
 
-        $this->entityManager->flush();
+            $this->entityManager->flush();
 
-        return $user;
+            return $user;
+        });
     }
 
     public function update(User $user, UpdateUserData $data, User $actor): void

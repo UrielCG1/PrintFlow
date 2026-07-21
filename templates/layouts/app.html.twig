@@ -3,15 +3,39 @@
 {% block body_class %}pf-app-body{% endblock %}
 
 {% block body %}
-    <div class="pf-app-shell">
-        {% block app_sidebar %}{% endblock %}
+    {% set active_navigation %}
+        {% block app_navigation_active %}dashboard{% endblock %}
+    {% endset %}
 
-        <div class="pf-app-main">
-            {% include 'partials/_flash_messages.html.twig' %}
+    {% set breadcrumb %}
+        {% block app_breadcrumb %}Inicio{% endblock %}
+    {% endset %}
 
-            <main id="main-content" class="pf-page" tabindex="-1">
-                {% block app_content %}{% endblock %}
-            </main>
+    <div class="pf-app-shell" data-controller="ui--sidebar">
+        <button
+            type="button"
+            class="pf-app-sidebar-backdrop"
+            aria-label="Cerrar menú"
+            data-ui--sidebar-target="backdrop"
+            data-action="ui--sidebar#close"
+        ></button>
+
+        {% include 'partials/_app_sidebar.html.twig' with {
+            active_navigation: active_navigation|trim
+        } %}
+
+        <div class="pf-app-stage">
+            {% include 'partials/_app_header.html.twig' with {
+                breadcrumb: breadcrumb|trim
+            } %}
+
+            <div class="pf-app-content">
+                {% include 'partials/_flash_messages.html.twig' %}
+
+                <main id="main-content" class="pf-page" tabindex="-1">
+                    {% block app_content %}{% endblock %}
+                </main>
+            </div>
         </div>
     </div>
 {% endblock %}

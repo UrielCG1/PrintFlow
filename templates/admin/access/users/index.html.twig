@@ -1,114 +1,253 @@
-{% extends 'base.html.twig' %}
+{% extends 'layouts/app.html.twig' %}
 
 {% block title %}Usuarios | PrintFlow{% endblock %}
 
-{% block body %}
-    <main>
-        <h1>Usuarios</h1>
+{% block app_navigation_active %}users{% endblock %}
 
-        {% for message in app.flashes('success') %}
-            <p role="status">{{ message }}</p>
-        {% endfor %}
+{% block app_breadcrumb %}Administración / Usuarios{% endblock %}
 
-        {% for message in app.flashes('error') %}
-            <p role="alert">{{ message }}</p>
-        {% endfor %}
+{% block app_content %}
+    <section class="pf-users-page">
+        <header class="pf-users-heading">
+            <div>
+                <p class="pf-users-heading__eyebrow">Administración</p>
+                <h1>Usuarios</h1>
+                <p>Gestiona las cuentas que tienen acceso a PrintFlow.</p>
+            </div>
 
-        <form method="get" action="{{ path('admin_users_index') }}">
-            <label for="q">Buscar usuarios</label>
-            <input id="q" name="q" value="{{ search }}" placeholder="Nombre, usuario o correo">
-            <button type="submit">Buscar</button>
-
-            {% if search %}
-                <a href="{{ path('admin_users_index') }}">Limpiar</a>
+            {% if is_granted('user.create') %}
+                <a
+                    href="{{ path('admin_users_new') }}"
+                    class="btn btn-primary pf-button pf-users-heading__action"
+                >
+                    <i class="bi bi-person-plus" aria-hidden="true"></i>
+                    Crear usuario
+                </a>
             {% endif %}
-        </form>
+        </header>
 
-        {% if is_granted('user.create') %}
-            <p>
-                <a href="{{ path('admin_users_new') }}">Crear usuario</a>
+        <section class="pf-users-toolbar" aria-label="Buscar usuarios">
+            <form
+                method="get"
+                action="{{ path('admin_users_index') }}"
+                class="pf-users-search"
+            >
+                <label for="q" class="visually-hidden">Buscar usuarios</label>
+
+                <div class="pf-users-search__field">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+
+                    <input
+                        id="q"
+                        name="q"
+                        value="{{ search }}"
+                        placeholder="Buscar por nombre, usuario o correo"
+                    >
+                </div>
+
+                <button type="submit" class="btn pf-button pf-button--secondary">
+                    Buscar
+                </button>
+
+                {% if search %}
+                    <a
+                        href="{{ path('admin_users_index') }}"
+                        class="pf-users-search__clear"
+                    >
+                        Limpiar
+                    </a>
+                {% endif %}
+            </form>
+
+            <p class="pf-users-toolbar__count">
+                {{ total_users }}
+                {{ total_users == 1 ? 'usuario encontrado' : 'usuarios encontrados' }}
             </p>
-        {% endif %}
+        </section>
 
-        <p>{{ total_users }} usuario(s) encontrado(s).</p>
+        <section class="pf-users-table-card">
+            <div class="pf-users-table-wrap">
+                <table class="pf-users-table">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Contacto</th>
+                            <th>Roles asignados</th>
+                            <th>Estado</th>
+                            <th>Último acceso</th>
+                            <th class="pf-users-table__actions-column">Acciones</th>
+                        </tr>
+                    </thead>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>Usuario</th>
-                    <th>Correo</th>
-                    <th>Roles</th>
-                    <th>Estado</th>
-                    <th>Último acceso</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for managed_user in users %}
-                    <tr>
-                        <td>{{ managed_user.fullName }}</td>
-                        <td>{{ managed_user.username }}</td>
-                        <td>{{ managed_user.email }}</td>
-                        <td>
-                            {% for role in managed_user.assignedRoles %}
-                                {{ role.name }}{% if not loop.last %}, {% endif %}
-                            {% else %}
-                                Sin roles
-                            {% endfor %}
-                        </td>
-                        <td>{{ managed_user.active ? 'Activo' : 'Inactivo' }}</td>
-                        <td>
-                            {{ managed_user.lastLoginAt ? managed_user.lastLoginAt|date('d/m/Y H:i') : 'Sin acceso' }}
-                        </td>
-                        <td>
-                            {% if is_granted('user.update') %}
-                                <a href="{{ path('admin_users_edit', {id: managed_user.id}) }}">Editar</a>
-                            {% endif %}
+                    <tbody>
+                        {% for managed_user in users %}
+                            <tr>
+                                <td>
+                                    <div class="pf-user-identity">
+                                        <span class="pf-user-identity__avatar">
+                                            {{ managed_user.fullName|slice(0, 1)|upper }}
+                                        </span>
 
-                            {% if is_granted('user.reset_password') %}
-                                <a href="{{ path('admin_users_reset_password', {id: managed_user.id}) }}">
-                                    Restablecer contraseña
-                                </a>
-                            {% endif %}
+                                        <div>
+                                            <strong>{{ managed_user.fullName }}</strong>
+                                            <span>@{{ managed_user.username }}</span>
+                                        </div>
+                                    </div>
+                                </td>
 
-                            {% if is_granted('user.deactivate') and app.user.id != managed_user.id %}
-                                <form
-                                    method="post"
-                                    action="{{ path('admin_users_toggle_status', {id: managed_user.id}) }}"
-                                >
-                                    <input
-                                        type="hidden"
-                                        name="_token"
-                                        value="{{ csrf_token('user_status_' ~ managed_user.id) }}"
+                                <td>
+                                    <a
+                                        href="mailto:{{ managed_user.email }}"
+                                        class="pf-users-table__email"
                                     >
-                                    <button type="submit">
-                                        {{ managed_user.active ? 'Desactivar' : 'Activar' }}
-                                    </button>
-                                </form>
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% else %}
-                    <tr>
-                        <td colspan="7">No hay usuarios para mostrar.</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                                        {{ managed_user.email }}
+                                    </a>
 
-        {% if total_pages > 1 %}
-            <nav aria-label="Paginación de usuarios">
-                {% if page > 1 %}
-                    <a href="{{ path('admin_users_index', {q: search, page: page - 1}) }}">Anterior</a>
-                {% endif %}
+                                    {% if managed_user.phone %}
+                                        <span class="pf-users-table__phone">
+                                            {{ managed_user.phone }}
+                                        </span>
+                                    {% endif %}
+                                </td>
 
-                <span>Página {{ page }} de {{ total_pages }}</span>
+                                <td>
+                                    <div class="pf-user-roles">
+                                        {% for role in managed_user.assignedRoles %}
+                                            <span class="pf-user-role">{{ role.name }}</span>
+                                        {% else %}
+                                            <span class="pf-user-roles__empty">Sin roles asignados</span>
+                                        {% endfor %}
+                                    </div>
+                                </td>
 
-                {% if page < total_pages %}
-                    <a href="{{ path('admin_users_index', {q: search, page: page + 1}) }}">Siguiente</a>
-                {% endif %}
-            </nav>
-        {% endif %}
-    </main>
+                                <td>
+                                    <span class="pf-user-status {{ managed_user.active ? 'pf-user-status--active' : 'pf-user-status--inactive' }}">
+                                        <i
+                                            class="bi {{ managed_user.active ? 'bi-check-circle-fill' : 'bi-pause-circle-fill' }}"
+                                            aria-hidden="true"
+                                        ></i>
+                                        {{ managed_user.active ? 'Activo' : 'Inactivo' }}
+                                    </span>
+                                </td>
+
+                                <td>
+                                    {% if managed_user.lastLoginAt %}
+                                        <time
+                                            class="pf-users-table__last-login"
+                                            datetime="{{ managed_user.lastLoginAt|date('c') }}"
+                                        >
+                                            {{ managed_user.lastLoginAt|date('d/m/Y') }}
+                                            <span>{{ managed_user.lastLoginAt|date('H:i') }}</span>
+                                        </time>
+                                    {% else %}
+                                        <span class="pf-users-table__muted">Sin acceso registrado</span>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    <div class="pf-user-actions">
+                                        {% if is_granted('user.update') %}
+                                            <a
+                                                href="{{ path('admin_users_edit', {id: managed_user.id}) }}"
+                                                class="pf-user-action"
+                                            >
+                                                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                                Editar
+                                            </a>
+                                        {% endif %}
+
+                                        {% if is_granted('user.reset_password') %}
+                                            <a
+                                                href="{{ path('admin_users_reset_password', {id: managed_user.id}) }}"
+                                                class="pf-user-action"
+                                            >
+                                                <i class="bi bi-key" aria-hidden="true"></i>
+                                                Contraseña
+                                            </a>
+                                        {% endif %}
+
+                                        {% if is_granted('user.deactivate') and app.user.id != managed_user.id %}
+                                            <form
+                                                method="post"
+                                                action="{{ path('admin_users_toggle_status', {id: managed_user.id}) }}"
+                                            >
+                                                <input
+                                                    type="hidden"
+                                                    name="_token"
+                                                    value="{{ csrf_token('user_status_' ~ managed_user.id) }}"
+                                                >
+
+                                                <button
+                                                    type="submit"
+                                                    class="pf-user-action {{ managed_user.active ? 'pf-user-action--danger' : 'pf-user-action--success' }}"
+                                                >
+                                                    <i
+                                                        class="bi {{ managed_user.active ? 'bi-person-dash' : 'bi-person-check' }}"
+                                                        aria-hidden="true"
+                                                    ></i>
+                                                    {{ managed_user.active ? 'Desactivar' : 'Activar' }}
+                                                </button>
+                                            </form>
+                                        {% elseif app.user.id == managed_user.id %}
+                                            <span class="pf-user-actions__self">Tu cuenta</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="6">
+                                    <div class="pf-users-empty">
+                                        <i class="bi bi-people" aria-hidden="true"></i>
+                                        <div>
+                                            <strong>No hay usuarios para mostrar.</strong>
+                                            <span>Prueba con otra búsqueda o crea una cuenta nueva.</span>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if total_pages > 1 %}
+                <nav class="pf-users-pagination" aria-label="Paginación de usuarios">
+                    {% if page > 1 %}
+                        <a
+                            href="{{ path('admin_users_index', {q: search, page: page - 1}) }}"
+                            class="pf-users-pagination__button"
+                        >
+                            <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                            Anterior
+                        </a>
+                    {% else %}
+                        <span class="pf-users-pagination__button is-disabled">
+                            <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                            Anterior
+                        </span>
+                    {% endif %}
+
+                    <span class="pf-users-pagination__summary">
+                        Página <strong>{{ page }}</strong> de <strong>{{ total_pages }}</strong>
+                    </span>
+
+                    {% if page < total_pages %}
+                        <a
+                            href="{{ path('admin_users_index', {q: search, page: page + 1}) }}"
+                            class="pf-users-pagination__button"
+                        >
+                            Siguiente
+                            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    {% else %}
+                        <span class="pf-users-pagination__button is-disabled">
+                            Siguiente
+                            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                        </span>
+                    {% endif %}
+                </nav>
+            {% endif %}
+        </section>
+    </section>
 {% endblock %}

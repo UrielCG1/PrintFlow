@@ -1,17 +1,111 @@
-{% extends 'base.html.twig' %}
+{% extends 'layouts/app.html.twig' %}
 
 {% block title %}Editar usuario | PrintFlow{% endblock %}
 
-{% block body %}
-    <main>
-        <h1>Editar usuario</h1>
-        <p>Cuenta: {{ managed_user.username }}</p>
+{% block app_navigation_active %}users{% endblock %}
 
-        {{ form_start(form) }}
-            {{ form_widget(form) }}
-            <button type="submit">Guardar cambios</button>
-        {{ form_end(form) }}
+{% block app_breadcrumb %}Administración / Usuarios / Editar{% endblock %}
 
-        <p><a href="{{ path('admin_users_index') }}">Volver a usuarios</a></p>
-    </main>
+{% block app_content %}
+    <section class="pf-users-page">
+        <header class="pf-users-heading pf-users-heading--form">
+            <div>
+                <a href="{{ path('admin_users_index') }}" class="pf-users-back-link">
+                    <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                    Volver a usuarios
+                </a>
+
+                <p class="pf-users-heading__eyebrow">Administración</p>
+                <h1>Editar usuario</h1>
+                <p>Actualiza los datos de <strong>{{ managed_user.fullName }}</strong>.</p>
+            </div>
+
+            <span class="pf-user-status {{ managed_user.active ? 'pf-user-status--active' : 'pf-user-status--inactive' }}">
+                <i
+                    class="bi {{ managed_user.active ? 'bi-check-circle-fill' : 'bi-pause-circle-fill' }}"
+                    aria-hidden="true"
+                ></i>
+                {{ managed_user.active ? 'Cuenta activa' : 'Cuenta inactiva' }}
+            </span>
+        </header>
+
+        {{ form_start(form, {attr: {class: 'pf-user-form'}}) }}
+            {{ form_errors(form) }}
+
+            <div class="pf-user-form__grid">
+                <section class="pf-user-form__card">
+                    <header class="pf-user-form__section-header">
+                        <div class="pf-user-form__section-icon">
+                            <i class="bi bi-person-vcard" aria-hidden="true"></i>
+                        </div>
+
+                        <div>
+                            <h2>Información de la cuenta</h2>
+                            <p>Datos visibles para identificar y contactar a la persona.</p>
+                        </div>
+                    </header>
+
+                    <div class="pf-user-form__fields">
+                        {{ form_row(form.fullName) }}
+                        {{ form_row(form.username) }}
+                        {{ form_row(form.email) }}
+                        {{ form_row(form.phone) }}
+                    </div>
+                </section>
+
+                <aside class="pf-user-form__sidebar">
+                    <section class="pf-user-form__card">
+                        <header class="pf-user-form__section-header">
+                            <div class="pf-user-form__section-icon">
+                                <i class="bi bi-shield-lock" aria-hidden="true"></i>
+                            </div>
+
+                            <div>
+                                <h2>Roles asignados</h2>
+                                <p>Definen los permisos efectivos al iniciar sesión.</p>
+                            </div>
+                        </header>
+
+                        {% if form.roles.vars.disabled %}
+                            <div class="pf-user-form__notice">
+                                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                                <span>No puedes modificar los roles de tu propia cuenta.</span>
+                            </div>
+                        {% endif %}
+
+                        {{ form_label(form.roles) }}
+                        {{ form_errors(form.roles) }}
+
+                        <div class="pf-user-form__roles">
+                            {{ form_widget(form.roles) }}
+                        </div>
+                    </section>
+
+                    <section class="pf-user-form__card pf-user-form__account-summary">
+                        <span class="pf-user-form__summary-label">Cuenta</span>
+                        <strong>@{{ managed_user.username }}</strong>
+                        <span>
+                            Creada para operar en PrintFlow.
+                        </span>
+                    </section>
+                </aside>
+            </div>
+
+            {{ form_rest(form) }}
+
+            <footer class="pf-user-form__footer">
+                <a
+                    href="{{ path('admin_users_index') }}"
+                    class="btn pf-button pf-button--secondary"
+                >
+                    Cancelar
+                </a>
+
+                <button type="submit" class="btn btn-primary pf-button">
+                    <i class="bi bi-check-lg" aria-hidden="true"></i>
+                    Guardar cambios
+                </button>
+            </footer>
+        {{ form_end(form, {render_rest: false}) }}
+    </section>
 {% endblock %}

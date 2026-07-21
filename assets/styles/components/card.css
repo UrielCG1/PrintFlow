@@ -1,0 +1,41 @@
+.pf-card {
+    overflow: hidden;
+    border-color: var(--pf-color-border);
+    border-radius: var(--pf-radius-md);
+    box-shadow: none;
+}
+
+.pf-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--pf-color-border);
+    background-color: var(--pf-color-surface);
+}
+
+.pf-card__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+}
+
+.pf-card__subtitle {
+    margin: 0.25rem 0 0;
+    color: var(--pf-color-text-muted);
+    font-size: var(--pf-font-size-sm);
+}
+
+.pf-card--padding-none .pf-card__body {
+    padding: 0;
+}
+
+.pf-card--padding-compact .pf-card__body {
+    padding: 1rem;
+}
+
+.pf-card--padding-default .pf-card__body {
+    padding: 1.25rem;
+}

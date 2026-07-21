@@ -76,6 +76,12 @@ final class RoleController extends AbstractController
 
         $isProtected = $role->getCode() === 'ROLE_ADMIN';
 
+        if ($isProtected && $request->isMethod('POST')) {
+            throw $this->createAccessDeniedException(
+                'El rol Administrador no puede modificarse.',
+            );
+        }
+
         $form = $this->createForm(UpdateRoleType::class, $data, [
             'allow_permission_edit' => !$isProtected,
         ]);

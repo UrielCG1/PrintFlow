@@ -1,17 +1,106 @@
-{% extends 'base.html.twig' %}
+{% extends 'layouts/app.html.twig' %}
 
 {% block title %}Crear usuario | PrintFlow{% endblock %}
 
-{% block body %}
-    <main>
-        <h1>Crear usuario</h1>
-        <p>La cuenta se creará con una contraseña temporal obligatoria.</p>
+{% block app_navigation_active %}users{% endblock %}
 
-        {{ form_start(form) }}
-            {{ form_widget(form) }}
-            <button type="submit">Crear usuario</button>
-        {{ form_end(form) }}
+{% block app_breadcrumb %}Administración / Usuarios / Nuevo{% endblock %}
 
-        <p><a href="{{ path('admin_users_index') }}">Volver a usuarios</a></p>
-    </main>
+{% block app_content %}
+    <section class="pf-users-page">
+        <header class="pf-users-heading pf-users-heading--form">
+            <div>
+                <a href="{{ path('admin_users_index') }}" class="pf-users-back-link">
+                    <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                    Volver a usuarios
+                </a>
+
+                <p class="pf-users-heading__eyebrow">Administración</p>
+                <h1>Crear usuario</h1>
+                <p>Registra una cuenta y define los roles con los que iniciará sesión.</p>
+            </div>
+        </header>
+
+        {{ form_start(form, {attr: {class: 'pf-user-form'}}) }}
+            {{ form_errors(form) }}
+
+            <div class="pf-user-form__grid">
+                <section class="pf-user-form__card">
+                    <header class="pf-user-form__section-header">
+                        <div class="pf-user-form__section-icon">
+                            <i class="bi bi-person-vcard" aria-hidden="true"></i>
+                        </div>
+
+                        <div>
+                            <h2>Información de la cuenta</h2>
+                            <p>Datos de identificación y contacto de la persona.</p>
+                        </div>
+                    </header>
+
+                    <div class="pf-user-form__fields">
+                        {{ form_row(form.fullName) }}
+                        {{ form_row(form.username) }}
+                        {{ form_row(form.email) }}
+                        {{ form_row(form.phone) }}
+                    </div>
+                </section>
+
+                <aside class="pf-user-form__sidebar">
+                    <section class="pf-user-form__card">
+                        <header class="pf-user-form__section-header">
+                            <div class="pf-user-form__section-icon">
+                                <i class="bi bi-shield-lock" aria-hidden="true"></i>
+                            </div>
+
+                            <div>
+                                <h2>Roles asignados</h2>
+                                <p>Determinan los módulos y acciones disponibles.</p>
+                            </div>
+                        </header>
+
+                        {{ form_label(form.roles) }}
+                        {{ form_errors(form.roles) }}
+
+                        <div class="pf-user-form__roles">
+                            {{ form_widget(form.roles) }}
+                        </div>
+                    </section>
+
+                    <section class="pf-user-form__card">
+                        <header class="pf-user-form__section-header">
+                            <div class="pf-user-form__section-icon">
+                                <i class="bi bi-key" aria-hidden="true"></i>
+                            </div>
+
+                            <div>
+                                <h2>Acceso inicial</h2>
+                                <p>La contraseña es temporal y deberá cambiarse al iniciar sesión.</p>
+                            </div>
+                        </header>
+
+                        <div class="pf-user-form__fields">
+                            {{ form_row(form.plainPassword.first) }}
+                            {{ form_row(form.plainPassword.second) }}
+                        </div>
+                    </section>
+                </aside>
+            </div>
+
+            {{ form_rest(form) }}
+
+            <footer class="pf-user-form__footer">
+                <a
+                    href="{{ path('admin_users_index') }}"
+                    class="btn pf-button pf-button--secondary"
+                >
+                    Cancelar
+                </a>
+
+                <button type="submit" class="btn btn-primary pf-button">
+                    <i class="bi bi-person-plus" aria-hidden="true"></i>
+                    Crear usuario
+                </button>
+            </footer>
+        {{ form_end(form, {render_rest: false}) }}
+    </section>
 {% endblock %}

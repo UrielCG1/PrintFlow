@@ -1,0 +1,29 @@
+{% set paddings = {
+    none: 'pf-card--padding-none',
+    compact: 'pf-card--padding-compact',
+    default: 'pf-card--padding-default'
+} %}
+
+<section
+    {{ attributes.defaults({
+        class: 'card pf-card ' ~ paddings[padding]|default(paddings.default)
+    }) }}
+>
+    {% if title or subtitle %}
+        <header class="pf-card__header">
+            <div>
+                {% if title %}
+                    <h2 class="pf-card__title">{{ title }}</h2>
+                {% endif %}
+
+                {% if subtitle %}
+                    <p class="pf-card__subtitle">{{ subtitle }}</p>
+                {% endif %}
+            </div>
+        </header>
+    {% endif %}
+
+    <div class="pf-card__body">
+        {% block content %}{% endblock %}
+    </div>
+</section>

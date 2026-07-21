@@ -1,6 +1,7 @@
 .pf-public-body {
     display: grid;
     min-height: 100vh;
+    background-color: var(--pf-color-surface);
 }
 
 .pf-public-shell {

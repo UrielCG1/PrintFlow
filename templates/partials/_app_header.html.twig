@@ -1,0 +1,56 @@
+<header class="pf-app-header">
+    <div class="pf-app-header__start">
+        <button
+            type="button"
+            class="pf-app-header__menu-button"
+            aria-label="Abrir menú"
+            aria-controls="pf-app-sidebar"
+            aria-expanded="false"
+            data-ui--sidebar-target="toggle"
+            data-action="ui--sidebar#toggle"
+        >
+            <i class="bi bi-list" aria-hidden="true"></i>
+        </button>
+
+        <p class="pf-app-header__breadcrumb">{{ breadcrumb }}</p>
+    </div>
+
+    <div class="pf-app-header__end">
+        <div class="dropdown">
+            <button
+                type="button"
+                class="pf-user-menu__trigger"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+            >
+                <span class="pf-user-menu__avatar">
+                    {{ app.user.fullName|slice(0, 1)|upper }}
+                </span>
+
+                <span class="pf-user-menu__identity">
+                    <span class="pf-user-menu__name">{{ app.user.fullName }}</span>
+                    <span class="pf-user-menu__username">{{ app.user.username }}</span>
+                </span>
+
+                <i class="bi bi-chevron-down pf-user-menu__chevron" aria-hidden="true"></i>
+            </button>
+
+            <ul class="dropdown-menu dropdown-menu-end pf-user-menu__dropdown">
+                <li>
+                    <span class="dropdown-header">Sesión activa</span>
+                </li>
+
+                <li><hr class="dropdown-divider"></li>
+
+                <li>
+                    <form method="post" action="{{ path('app_logout') }}">
+                        <button type="submit" class="dropdown-item pf-user-menu__logout">
+                            <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                            Cerrar sesión
+                        </button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
+</header>

@@ -1,101 +1,273 @@
-{% extends 'base.html.twig' %}
+{% extends 'layouts/app.html.twig' %}
 
 {% block title %}Bitácora | PrintFlow{% endblock %}
 
-{% block body %}
-    <h1>Bitácora del sistema</h1>
-    <p>Consulta las acciones relevantes realizadas dentro de PrintFlow.</p>
+{% block app_navigation_active %}audit{% endblock %}
 
-    <form method="get">
-        <label for="q">Buscar</label>
-        <input id="q" name="q" value="{{ search }}" placeholder="Acción, módulo o usuario">
+{% block app_breadcrumb %}Administración / Bitácora{% endblock %}
 
-        <label for="actor">Usuario</label>
-        <select id="actor" name="actor">
-            <option value="">Todos</option>
-            {% for user in users %}
-                <option value="{{ user.id }}" {{ actorId == user.id ? 'selected' : '' }}>
-                    {{ user.fullName }} ({{ user.username }})
-                </option>
-            {% endfor %}
-        </select>
+{% block app_content %}
+    {% set action_labels = {
+        'user.created': 'Usuario creado',
+        'user.updated': 'Usuario actualizado',
+        'user.activated': 'Usuario activado',
+        'user.deactivated': 'Usuario desactivado',
+        'user.password_reset': 'Contraseña restablecida',
+        'user.password_changed': 'Contraseña cambiada',
+        'role.created': 'Rol creado',
+        'role.updated': 'Rol actualizado',
+        'authentication.login_success': 'Inicio de sesión',
+        'authentication.logout': 'Cierre de sesión'
+    } %}
 
-        <label for="from">Desde</label>
-        <input id="from" type="date" name="from" value="{{ from }}">
+    {% set field_labels = {
+        'fullName': 'Nombre completo',
+        'username': 'Usuario',
+        'email': 'Correo electrónico',
+        'phone': 'Teléfono',
+        'isActive': 'Estado de la cuenta',
+        'mustChangePassword': 'Cambio de contraseña obligatorio',
+        'roles': 'Roles asignados',
+        'permissions': 'Permisos asignados',
+        'name': 'Nombre',
+        'description': 'Descripción',
+        'passwordReset': 'Contraseña temporal restablecida'
+    } %}
 
-        <label for="to">Hasta</label>
-        <input id="to" type="date" name="to" value="{{ to }}">
+    <section class="pf-audit-page">
+        <header class="pf-audit-heading">
+            <div>
+                <p class="pf-audit-heading__eyebrow">Administración</p>
+                <h1>Bitácora del sistema</h1>
+                <p class="pf-audit-heading__description">
+                    Consulta las acciones relevantes realizadas dentro de PrintFlow.
+                </p>
+            </div>
 
-        <button type="submit">Filtrar</button>
-        <a href="{{ path('admin_audit_index') }}">Limpiar</a>
-    </form>
+            <p class="pf-audit-summary">
+                <strong>{{ totalLogs }}</strong>
+                {{ totalLogs == 1 ? 'registro encontrado' : 'registros encontrados' }}
+            </p>
+        </header>
 
-    <p>{{ logs|length }} registros en esta página.</p>
+        <form method="get" action="{{ path('admin_audit_index') }}" class="pf-audit-filter">
+            <div class="pf-audit-filter__field">
+                <label for="q">Buscar</label>
+                <input
+                    id="q"
+                    name="q"
+                    value="{{ search }}"
+                    placeholder="Acción, módulo o usuario"
+                >
+            </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Fecha</th>
-                <th>Usuario</th>
-                <th>Acción</th>
-                <th>Entidad</th>
-                <th>IP</th>
-                <th>Detalle</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for log in logs %}
-                <tr>
-                    <td>{{ log.createdAt|date('d/m/Y H:i:s', 'America/Mexico_City') }}</td>
-                    <td>
-                        {% if log.actor %}
-                            {{ log.actor.fullName }} ({{ log.actor.username }})
+            <div class="pf-audit-filter__field">
+                <label for="actor">Usuario responsable</label>
+                <select id="actor" name="actor">
+                    <option value="">Todos los usuarios</option>
+
+                    {% for user in users %}
+                        <option value="{{ user.id }}" {{ actorId == user.id ? 'selected' : '' }}>
+                            {{ user.fullName }} ({{ user.username }})
+                            {{ user.active ? '' : ' — Inactivo' }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="pf-audit-filter__field">
+                <label for="from">Desde</label>
+                <input id="from" type="date" name="from" value="{{ from }}">
+            </div>
+
+            <div class="pf-audit-filter__field">
+                <label for="to">Hasta</label>
+                <input id="to" type="date" name="to" value="{{ to }}">
+            </div>
+
+            <div class="pf-audit-filter__actions">
+                <button type="submit" class="btn btn-primary pf-button">
+                    <i class="bi bi-funnel" aria-hidden="true"></i>
+                    Filtrar
+                </button>
+
+                <a href="{{ path('admin_audit_index') }}" class="pf-audit-filter__clear">
+                    Limpiar
+                </a>
+            </div>
+        </form>
+
+        <section class="pf-audit-table-card">
+            <div class="pf-audit-table-wrap">
+                <table class="pf-audit-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Usuario</th>
+                            <th>Acción</th>
+                            <th>Entidad</th>
+                            <th>IP</th>
+                            <th>Detalle</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                            {% set action_label = action_labels[log.action]|default(log.action|replace({'.': ' · ', '_': ' '})|title) %}
+                            {% set action_tone = '' %}
+
+                            {% if log.action starts with 'user.' %}
+                                {% set action_tone = 'pf-audit-action--user' %}
+                            {% elseif log.action starts with 'authentication.' %}
+                                {% set action_tone = 'pf-audit-action--authentication' %}
+                            {% elseif log.action starts with 'role.' %}
+                                {% set action_tone = 'pf-audit-action--role' %}
+                            {% endif %}
+
+                            <tr>
+                                <td>
+                                    <div class="pf-audit-date">
+                                        <strong>{{ log.createdAt|date('d/m/Y', 'America/Mexico_City') }}</strong>
+                                        <span>{{ log.createdAt|date('H:i:s', 'America/Mexico_City') }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="pf-audit-actor">
+                                        <span class="pf-audit-actor__icon">
+                                            <i class="bi {{ log.actor ? 'bi-person' : 'bi-cpu' }}" aria-hidden="true"></i>
+                                        </span>
+                                        <div>
+                                            <strong>{{ log.actor ? log.actor.fullName : 'Sistema' }}</strong>
+                                            <span>{{ log.actor ? '@' ~ log.actor.username : 'Proceso interno' }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="pf-audit-action {{ action_tone }}">
+                                        <i class="bi bi-clock-history" aria-hidden="true"></i>
+                                        {{ action_label }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="pf-audit-entity">
+                                        <strong>{{ log.entityType|capitalize }}</strong>
+                                        <span>#{{ log.entityId ?? '—' }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="pf-audit-ip">{{ log.ipAddress ?? '—' }}</span>
+                                </td>
+                                <td>
+                                    {% if log.oldValues or log.newValues %}
+                                        <details class="pf-audit-details">
+                                            <summary>Ver detalle</summary>
+
+                                            <div class="pf-audit-change-grid">
+                                                {% if log.oldValues %}
+                                                    <section class="pf-audit-change-card">
+                                                        <h3>Antes</h3>
+                                                        <dl>
+                                                            {% for field, value in log.oldValues %}
+                                                                <div>
+                                                                    <dt>{{ field_labels[field]|default(field) }}</dt>
+                                                                    <dd>
+                                                                        {% if value is iterable %}
+                                                                            {{ value|join(', ') ?: '—' }}
+                                                                        {% elseif value is same as(true) %}
+                                                                            Sí
+                                                                        {% elseif value is same as(false) %}
+                                                                            No
+                                                                        {% elseif value is null %}
+                                                                            —
+                                                                        {% else %}
+                                                                            {{ value }}
+                                                                        {% endif %}
+                                                                    </dd>
+                                                                </div>
+                                                            {% endfor %}
+                                                        </dl>
+                                                    </section>
+                                                {% endif %}
+
+                                                {% if log.newValues %}
+                                                    <section class="pf-audit-change-card">
+                                                        <h3>Después</h3>
+                                                        <dl>
+                                                            {% for field, value in log.newValues %}
+                                                                <div>
+                                                                    <dt>{{ field_labels[field]|default(field) }}</dt>
+                                                                    <dd>
+                                                                        {% if value is iterable %}
+                                                                            {{ value|join(', ') ?: '—' }}
+                                                                        {% elseif value is same as(true) %}
+                                                                            Sí
+                                                                        {% elseif value is same as(false) %}
+                                                                            No
+                                                                        {% elseif value is null %}
+                                                                            —
+                                                                        {% else %}
+                                                                            {{ value }}
+                                                                        {% endif %}
+                                                                    </dd>
+                                                                </div>
+                                                            {% endfor %}
+                                                        </dl>
+                                                    </section>
+                                                {% endif %}
+                                            </div>
+                                        </details>
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                            </tr>
                         {% else %}
-                            Sistema
-                        {% endif %}
-                    </td>
-                    <td>{{ log.action }}</td>
-                    <td>{{ log.entityType }} #{{ log.entityId ?? '—' }}</td>
-                    <td>{{ log.ipAddress ?? '—' }}</td>
-                    <td>
-                        {% if log.oldValues or log.newValues %}
-                            <details>
-                                <summary>Ver cambios</summary>
+                            <tr>
+                                <td colspan="6">
+                                    <div class="pf-audit-empty">
+                                        <div>
+                                            <i class="bi bi-journal-x" aria-hidden="true"></i>
+                                            <strong>No hay registros para los filtros seleccionados.</strong>
+                                            Ajusta o limpia los filtros para consultar otros eventos.
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
-                                {% if log.oldValues %}
-                                    <strong>Antes</strong>
-                                    <pre>{{ log.oldValues|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
-                                {% endif %}
+        {% if totalPages > 1 %}
+            <nav class="pf-audit-pagination" aria-label="Paginación de bitácora">
+                {% if page > 1 %}
+                    <a
+                        href="{{ path('admin_audit_index', routeParameters|merge({page: page - 1})) }}"
+                        class="btn pf-button pf-button--secondary"
+                    >
+                        <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                        Anterior
+                    </a>
+                {% else %}
+                    <span></span>
+                {% endif %}
 
-                                {% if log.newValues %}
-                                    <strong>Después</strong>
-                                    <pre>{{ log.newValues|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
-                                {% endif %}
-                            </details>
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
-                </tr>
-            {% else %}
-                <tr>
-                    <td colspan="6">No hay registros para los filtros seleccionados.</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                <span class="pf-audit-pagination__summary">
+                    Página {{ page }} de {{ totalPages }}
+                </span>
 
-    {% if totalPages > 1 %}
-        <nav aria-label="Paginación de bitácora">
-            {% if page > 1 %}
-                <a href="{{ path('admin_audit_index', routeParameters|merge({page: page - 1})) }}">← Anterior</a>
-            {% endif %}
-
-            <span>Página {{ page }} de {{ totalPages }}</span>
-
-            {% if page < totalPages %}
-                <a href="{{ path('admin_audit_index', routeParameters|merge({page: page + 1})) }}">Siguiente →</a>
-            {% endif %}
-        </nav>
-    {% endif %}
+                {% if page < totalPages %}
+                    <a
+                        href="{{ path('admin_audit_index', routeParameters|merge({page: page + 1})) }}"
+                        class="btn pf-button pf-button--secondary"
+                    >
+                        Siguiente
+                        <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                    </a>
+                {% else %}
+                    <span></span>
+                {% endif %}
+            </nav>
+        {% endif %}
+    </section>
 {% endblock %}

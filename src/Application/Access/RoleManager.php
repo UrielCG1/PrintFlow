@@ -44,29 +44,36 @@ final class RoleManager
 
         $permissions = $this->validatePermissions($data->permissions);
 
-        $role = (new Role())
-            ->setCode($code)
-            ->setName($data->name)
-            ->setDescription($data->description)
-            ->setIsSystem(false)
-            ->setIsActive(true);
+        return $this->entityManager->wrapInTransaction(function () use (
+            $code,
+            $data,
+            $permissions,
+            $actor,
+        ): Role {
+            $role = (new Role())
+                ->setCode($code)
+                ->setName($data->name)
+                ->setDescription($data->description)
+                ->setIsSystem(false)
+                ->setIsActive(true);
 
-        $this->syncPermissions($role, $permissions);
+            $this->syncPermissions($role, $permissions);
 
-        $this->entityManager->persist($role);
-        $this->entityManager->flush();
+            $this->entityManager->persist($role);
+            $this->entityManager->flush();
 
-        $this->auditLogger->record(
-            actor: $actor,
-            action: 'role.created',
-            entityType: 'roles',
-            entityId: $role->getId(),
-            newValues: $this->snapshot($role),
-        );
+            $this->auditLogger->record(
+                actor: $actor,
+                action: 'role.created',
+                entityType: 'roles',
+                entityId: $role->getId(),
+                newValues: $this->snapshot($role),
+            );
 
-        $this->entityManager->flush();
+            $this->entityManager->flush();
 
-        return $role;
+            return $role;
+        });
     }
 
     public function update(Role $role, UpdateRoleData $data, User $actor): void

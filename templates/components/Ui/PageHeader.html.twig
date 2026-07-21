@@ -1,0 +1,17 @@
+<header {{ attributes.defaults({ class: 'pf-page-header' }) }}>
+    <div class="pf-page-header__content">
+        {% if eyebrow %}
+            <p class="pf-page-header__eyebrow">{{ eyebrow }}</p>
+        {% endif %}
+
+        <h1 class="pf-page-header__title">{{ title }}</h1>
+
+        {% if description %}
+            <p class="pf-page-header__description">{{ description }}</p>
+        {% endif %}
+    </div>
+
+    <div class="pf-page-header__actions">
+        {% block content %}{% endblock %}
+    </div>
+</header>

@@ -1,52 +1,128 @@
-{% extends 'base.html.twig' %}
+{% extends 'layouts/app.html.twig' %}
 
-{% block title %}Roles | PrintFlow{% endblock %}
+{% block title %}Roles y permisos | PrintFlow{% endblock %}
 
-{% block body %}
-    <main>
-        <h1>Roles y permisos</h1>
+{% block app_navigation_active %}roles{% endblock %}
 
-        {% for message in app.flashes('success') %}
-            <p role="status">{{ message }}</p>
-        {% endfor %}
+{% block app_breadcrumb %}Administración / Roles y permisos{% endblock %}
 
-        {% if is_granted('role.manage') %}
-            <p><a href="{{ path('admin_roles_new') }}">Crear rol personalizado</a></p>
-        {% endif %}
+{% block app_content %}
+    <section class="pf-roles-page">
+        <header class="pf-roles-heading">
+            <div>
+                <p class="pf-roles-heading__eyebrow">Administración</p>
+                <h1>Roles y permisos</h1>
+                <p>Define qué acciones puede realizar cada perfil dentro de PrintFlow.</p>
+            </div>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>Rol</th>
-                    <th>Código</th>
-                    <th>Tipo</th>
-                    <th>Permisos</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for role in roles %}
-                    <tr>
-                        <td>{{ role.name }}</td>
-                        <td>{{ role.code }}</td>
-                        <td>{{ role.system ? 'Sistema' : 'Personalizado' }}</td>
-                        <td>{{ role.permissions|length }}</td>
-                        <td>
-                            {% if is_granted('role.manage') %}
-                                <a href="{{ path('admin_roles_edit', {id: role.id}) }}">
-                                    {{ role.code == 'ROLE_ADMIN' ? 'Consultar' : 'Editar' }}
-                                </a>
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% else %}
-                    <tr>
-                        <td colspan="5">No hay roles registrados.</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+            {% if is_granted('role.manage') %}
+                <a
+                    href="{{ path('admin_roles_new') }}"
+                    class="btn btn-primary pf-button pf-roles-heading__action"
+                >
+                    <i class="bi bi-shield-plus" aria-hidden="true"></i>
+                    Crear rol
+                </a>
+            {% endif %}
+        </header>
 
-        <p><a href="{{ path('app_dashboard') }}">Volver al inicio</a></p>
-    </main>
+        <section class="pf-roles-table-card">
+            <div class="pf-roles-table-wrap">
+                <table class="pf-roles-table">
+                    <thead>
+                        <tr>
+                            <th>Rol</th>
+                            <th>Código</th>
+                            <th>Tipo</th>
+                            <th>Permisos</th>
+                            <th>Estado</th>
+                            <th class="pf-roles-table__actions-column">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for role in roles %}
+                            {% set is_protected = role.code == 'ROLE_ADMIN' %}
+
+                            <tr>
+                                <td>
+                                    <div class="pf-role-identity">
+                                        <span class="pf-role-identity__icon">
+                                            <i
+                                                class="bi {{ is_protected ? 'bi-shield-lock-fill' : 'bi-shield-check' }}"
+                                                aria-hidden="true"
+                                            ></i>
+                                        </span>
+
+                                        <div>
+                                            <strong>{{ role.name }}</strong>
+                                            <span>{{ role.description ?: 'Sin descripción registrada.' }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <code class="pf-role-code">{{ role.code }}</code>
+                                </td>
+                                <td>
+                                    {% if is_protected %}
+                                        <span class="pf-role-badge pf-role-badge--protected">
+                                            <i class="bi bi-lock-fill" aria-hidden="true"></i>
+                                            Protegido
+                                        </span>
+                                    {% elseif role.system %}
+                                        <span class="pf-role-badge">Sistema</span>
+                                    {% else %}
+                                        <span class="pf-role-badge">Personalizado</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="pf-role-permission-count">
+                                        <i class="bi bi-key" aria-hidden="true"></i>
+                                        {{ role.permissions|length }}
+                                        {{ role.permissions|length == 1 ? 'permiso' : 'permisos' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="pf-role-status {{ role.active ? 'pf-role-status--active' : 'pf-role-status--inactive' }}">
+                                        <i
+                                            class="bi {{ role.active ? 'bi-check-circle-fill' : 'bi-pause-circle-fill' }}"
+                                            aria-hidden="true"
+                                        ></i>
+                                        {{ role.active ? 'Activo' : 'Inactivo' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if is_granted('role.manage') %}
+                                        <a
+                                            href="{{ path('admin_roles_edit', {id: role.id}) }}"
+                                            class="pf-role-action"
+                                        >
+                                            <i
+                                                class="bi {{ is_protected ? 'bi-eye' : 'bi-pencil-square' }}"
+                                                aria-hidden="true"
+                                            ></i>
+                                            {{ is_protected ? 'Consultar' : 'Editar' }}
+                                        </a>
+                                    {% else %}
+                                        <span class="pf-roles-table__muted">Sin acciones disponibles</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="6">
+                                    <div class="pf-roles-empty">
+                                        <i class="bi bi-shield-x" aria-hidden="true"></i>
+                                        <div>
+                                            <strong>No hay roles registrados.</strong>
+                                            <span>Crea un rol personalizado cuando necesites un nuevo perfil.</span>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </section>
 {% endblock %}

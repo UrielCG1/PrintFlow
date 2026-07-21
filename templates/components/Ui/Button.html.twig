@@ -1,0 +1,30 @@
+{% set variants = {
+    primary: 'btn-primary',
+    secondary: 'btn-outline-secondary',
+    danger: 'btn-outline-danger',
+    link: 'btn-link'
+} %}
+
+{% set variant_class = variants[variant]|default(variants.primary) %}
+{% set button_class = 'btn pf-button ' ~ variant_class %}
+
+{% set component_content %}
+    {% block content %}{% endblock %}
+{% endset %}
+
+{% if href %}
+    <a
+        {{ attributes.defaults({ class: button_class }) }}
+        href="{{ href }}"
+        {% if disabled %}aria-disabled="true" tabindex="-1"{% endif %}
+    >
+        {{ component_content }}
+    </a>
+{% else %}
+    <button
+        {{ attributes.defaults({ class: button_class, type: type }) }}
+        {% if disabled %}disabled{% endif %}
+    >
+        {{ component_content }}
+    </button>
+{% endif %}

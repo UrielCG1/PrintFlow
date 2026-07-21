@@ -12,14 +12,21 @@ final class AuditLogger
     private const SENSITIVE_KEYS = [
         'password',
         'password_hash',
-        'passwordHash',
         'plain_password',
-        'plainPassword',
+        'current_password',
+        'new_password',
+        'temporary_password',
+        'password_confirmation',
         'token',
         'reset_token',
-        'resetToken',
         'access_token',
-        'accessToken',
+        'refresh_token',
+        'csrf_token',
+        'api_key',
+        'client_secret',
+        'secret',
+        'authorization',
+        'private_key',
     ];
 
     public function __construct(
@@ -30,7 +37,7 @@ final class AuditLogger
 
     /**
      * Registra el evento, pero no ejecuta flush.
-     * El caso de uso que haga el cambio controla la transacción completa.
+     * El caso de uso controla la transacción completa.
      */
     public function record(
         ?User $actor,
@@ -64,7 +71,7 @@ final class AuditLogger
         }
 
         foreach ($values as $key => $value) {
-            if (in_array((string) $key, self::SENSITIVE_KEYS, true)) {
+            if (in_array($this->normalizeKey((string) $key), self::SENSITIVE_KEYS, true)) {
                 $values[$key] = '[REDACTED]';
                 continue;
             }
@@ -75,5 +82,12 @@ final class AuditLogger
         }
 
         return $values;
+    }
+
+    private function normalizeKey(string $key): string
+    {
+        $key = preg_replace('/(?<!^)[A-Z]/', '_$0', $key) ?? $key;
+
+        return strtolower(str_replace(['-', ' '], '_', $key));
     }
 }

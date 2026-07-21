@@ -1,29 +1,148 @@
-{% extends 'base.html.twig' %}
+{% extends 'layouts/app.html.twig' %}
 
-{% block title %}Editar rol | PrintFlow{% endblock %}
+{% block title %}{{ is_protected ? 'Consultar rol' : 'Editar rol' }} | PrintFlow{% endblock %}
 
-{% block body %}
-    <main>
-        <h1>{{ is_protected ? 'Consultar rol protegido' : 'Editar rol' }}</h1>
+{% block app_navigation_active %}roles{% endblock %}
 
-        <p>
-            Código técnico: <strong>{{ role.code }}</strong>
-        </p>
+{% block app_breadcrumb %}Administración / Roles y permisos / {{ is_protected ? 'Consultar' : 'Editar' }}{% endblock %}
+
+{% block app_content %}
+    <section class="pf-roles-page">
+        <header class="pf-roles-heading pf-roles-heading--form">
+            <div>
+                <a href="{{ path('admin_roles_index') }}" class="pf-roles-back-link">
+                    <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                    Volver a roles
+                </a>
+
+                <p class="pf-roles-heading__eyebrow">Administración</p>
+                <h1>{{ is_protected ? 'Consultar rol protegido' : 'Editar rol' }}</h1>
+                <p>
+                    Código técnico:
+                    <code class="pf-role-code">{{ role.code }}</code>
+                </p>
+            </div>
+
+            {% if is_protected %}
+                <span class="pf-role-badge pf-role-badge--protected">
+                    <i class="bi bi-lock-fill" aria-hidden="true"></i>
+                    Rol protegido
+                </span>
+            {% endif %}
+        </header>
 
         {% if is_protected %}
-            <p>
-                El rol Administrador está protegido y conserva todos los permisos.
-            </p>
+            <div class="pf-role-protected-notice">
+                <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+                <span>
+                    <strong>ROLE_ADMIN está reservado para el sistema.</strong>
+                    Conserva todos los permisos y no puede modificarse desde la interfaz.
+                </span>
+            </div>
+
+            <div class="pf-role-form__grid">
+                <section class="pf-role-form__card">
+                    <header class="pf-role-form__section-header">
+                        <span class="pf-role-form__section-icon">
+                            <i class="bi bi-shield-lock" aria-hidden="true"></i>
+                        </span>
+                        <div>
+                            <h2>Información del rol</h2>
+                            <p>Datos definidos durante el arranque seguro de PrintFlow.</p>
+                        </div>
+                    </header>
+
+                    <dl class="pf-role-summary">
+                        <div>
+                            <dt>Nombre</dt>
+                            <dd>{{ role.name }}</dd>
+                        </div>
+                        <div>
+                            <dt>Descripción</dt>
+                            <dd>{{ role.description ?: 'Sin descripción registrada.' }}</dd>
+                        </div>
+                    </dl>
+                </section>
+
+                <section class="pf-role-form__card">
+                    <header class="pf-role-form__section-header">
+                        <span class="pf-role-form__section-icon">
+                            <i class="bi bi-key" aria-hidden="true"></i>
+                        </span>
+                        <div>
+                            <h2>Permisos efectivos</h2>
+                            <p>{{ role.permissions|length }} permisos asignados.</p>
+                        </div>
+                    </header>
+
+                    <ul class="pf-role-permission-list">
+                        {% for permission in role.permissions %}
+                            <li>
+                                <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                                <span>
+                                    <strong>{{ permission.name }}</strong>
+                                    <small>{{ permission.module }} · {{ permission.code }}</small>
+                                </span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </section>
+            </div>
+        {% else %}
+            {{ form_start(form, {attr: {class: 'pf-role-form'}}) }}
+                {{ form_errors(form) }}
+
+                <div class="pf-role-form__grid">
+                    <section class="pf-role-form__card">
+                        <header class="pf-role-form__section-header">
+                            <span class="pf-role-form__section-icon">
+                                <i class="bi bi-shield-check" aria-hidden="true"></i>
+                            </span>
+                            <div>
+                                <h2>Información del rol</h2>
+                                <p>Actualiza el nombre y la descripción visibles para administración.</p>
+                            </div>
+                        </header>
+
+                        <div class="pf-role-form__fields">
+                            {{ form_row(form.name) }}
+                            {{ form_row(form.description) }}
+                        </div>
+                    </section>
+
+                    <section class="pf-role-form__card">
+                        <header class="pf-role-form__section-header">
+                            <span class="pf-role-form__section-icon">
+                                <i class="bi bi-key" aria-hidden="true"></i>
+                            </span>
+                            <div>
+                                <h2>Permisos asignados</h2>
+                                <p>Los cambios se aplicarán a quienes tengan este rol en su próximo acceso.</p>
+                            </div>
+                        </header>
+
+                        {{ form_label(form.permissions) }}
+                        {{ form_errors(form.permissions) }}
+
+                        <div class="pf-role-form__permissions">
+                            {{ form_widget(form.permissions) }}
+                        </div>
+                    </section>
+                </div>
+
+                {{ form_rest(form) }}
+
+                <footer class="pf-role-form__footer">
+                    <a href="{{ path('admin_roles_index') }}" class="btn pf-button pf-button--secondary">
+                        Cancelar
+                    </a>
+
+                    <button type="submit" class="="btn btn-primary pf-button">
+                        <i class="bi bi-check-lg" aria-hidden="true"></i>
+                        Guardar cambios
+                    </button>
+                </footer>
+            {{ form_end(form, {render_rest: false}) }}
         {% endif %}
-
-        {{ form_start(form) }}
-            {{ form_widget(form) }}
-
-            {% if not is_protected %}
-                <button type="submit">Guardar cambios</button>
-            {% endif %}
-        {{ form_end(form) }}
-
-        <p><a href="{{ path('admin_roles_index') }}">Volver a roles</a></p>
-    </main>
+    </section>
 {% endblock %}

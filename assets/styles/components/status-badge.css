@@ -1,0 +1,48 @@
+.pf-status-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.75rem;
+    padding: 0.25rem 0.55rem;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: var(--pf-font-size-xs);
+    font-weight: 650;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.pf-status-badge--neutral {
+    background-color: var(--pf-color-info-soft);
+    border-color: var(--pf-color-border);
+    color: var(--pf-color-text);
+}
+
+.pf-status-badge--brand {
+    background-color: var(--pf-color-brand-soft);
+    border-color: #B3EFBA;
+    color: #0A5A0F;
+}
+
+.pf-status-badge--success {
+    background-color: var(--pf-color-success-soft);
+    border-color: #B3E6B6;
+    color: #0B5C10;
+}
+
+.pf-status-badge--warning {
+    background-color: var(--pf-color-warning-soft);
+    border-color: #F1D899;
+    color: #6F4700;
+}
+
+.pf-status-badge--danger {
+    background-color: var(--pf-color-danger-soft);
+    border-color: #F4B8B2;
+    color: #8A1C13;
+}
+
+.pf-status-badge--info {
+    background-color: var(--pf-color-info-soft);
+    border-color: var(--pf-color-border);
+    color: var(--pf-color-text-muted);
+}

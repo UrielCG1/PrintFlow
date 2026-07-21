@@ -1,0 +1,76 @@
+{% set current_navigation = active_navigation|default('dashboard') %}
+
+<aside
+    id="pf-app-sidebar"
+    class="pf-sidebar"
+    data-ui--sidebar-target="sidebar"
+    aria-label="Navegación principal"
+>
+    <div class="pf-sidebar__brand">
+        <a href="{{ path('app_dashboard') }}" class="pf-brand pf-brand--app">
+            <span class="pf-brand__mark"></span>
+            <span class="pf-brand__name">PrintFlow</span>
+        </a>
+    </div>
+
+    <nav class="pf-sidebar__nav">
+        {% if is_granted('dashboard.view') %}
+            <a
+                href="{{ path('app_dashboard') }}"
+                class="pf-sidebar__link {{ current_navigation == 'dashboard' ? 'is-active' : '' }}"
+                {% if current_navigation == 'dashboard' %}aria-current="page"{% endif %}
+                data-action="ui--sidebar#close"
+            >
+                <i class="bi bi-house-door" aria-hidden="true"></i>
+                <span>Inicio</span>
+            </a>
+        {% endif %}
+
+        {% if is_granted('user.view') or is_granted('role.view') %}
+            <p class="pf-sidebar__section">Administración</p>
+
+            {% if is_granted('user.view') %}
+                <a
+                    href="{{ path('admin_users_index') }}"
+                    class="pf-sidebar__link {{ current_navigation == 'users' ? 'is-active' : '' }}"
+                    {% if current_navigation == 'users' %}aria-current="page"{% endif %}
+                    data-action="ui--sidebar#close"
+                >
+                    <i class="bi bi-people" aria-hidden="true"></i>
+                    <span>Usuarios</span>
+                </a>
+            {% endif %}
+
+            {% if is_granted('role.view') %}
+                <a
+                    href="{{ path('admin_roles_index') }}"
+                    class="pf-sidebar__link {{ current_navigation == 'roles' ? 'is-active' : '' }}"
+                    {% if current_navigation == 'roles' %}aria-current="page"{% endif %}
+                    data-action="ui--sidebar#close"
+                >
+                    <i class="bi bi-shield-lock" aria-hidden="true"></i>
+                    <span>Roles y permisos</span>
+                </a>
+            {% endif %}
+        {% endif %}
+
+        {% if is_granted('audit_log.view') %}
+            <p class="pf-sidebar__section">Control</p>
+
+            <a
+                href="{{ path('admin_audit_index') }}"
+                class="pf-sidebar__link {{ current_navigation == 'audit' ? 'is-active' : '' }}"
+                {% if current_navigation == 'audit' %}aria-current="page"{% endif %}
+                data-action="ui--sidebar#close"
+            >
+                <i class="bi bi-journal-text" aria-hidden="true"></i>
+                <span>Bitácora</span>
+            </a>
+        {% endif %}
+    </nav>
+
+    <div class="pf-sidebar__footer">
+        <span class="pf-sidebar__footer-label">PrintFlow</span>
+        <span class="pf-sidebar__footer-version">Gestión de impresión</span>
+    </div>
+</aside>

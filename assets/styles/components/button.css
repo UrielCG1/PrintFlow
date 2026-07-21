@@ -1,0 +1,39 @@
+.pf-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+
+.pf-button.btn-primary {
+    color: var(--pf-color-text-strong);
+    background-color: var(--pf-color-brand);
+    border-color: var(--pf-color-brand);
+}
+
+.pf-button.btn-primary:hover {
+    color: var(--pf-color-text-strong);
+    background-color: var(--pf-color-brand-hover);
+    border-color: var(--pf-color-brand-hover);
+}
+
+.pf-button.btn-primary:focus-visible {
+    color: var(--pf-color-text-strong);
+    background-color: var(--pf-color-brand);
+    border-color: var(--pf-color-brand);
+    box-shadow: 0 0 0 0.25rem rgb(var(--pf-color-brand-rgb) / 0.22);
+}
+
+.pf-button.btn-primary:active {
+    color: var(--pf-color-text-strong);
+    background-color: var(--pf-color-brand-active);
+    border-color: var(--pf-color-brand-active);
+}
+
+.pf-button.btn-primary:disabled,
+.pf-button.btn-primary.disabled {
+    color: var(--pf-color-text-muted);
+    background-color: #C8EBCB;
+    border-color: #C8EBCB;
+}

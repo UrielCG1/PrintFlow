@@ -28,18 +28,34 @@ final class AuditLogController extends AbstractController
         $actorId = $request->query->getInt('actor') ?: null;
         $fromValue = (string) $request->query->get('from', '');
         $toValue = (string) $request->query->get('to', '');
-        $page = max(1, $request->query->getInt('page', 1));
+        $requestedPage = max(1, $request->query->getInt('page', 1));
 
-        $logs = $auditLogs->paginateForAdministration(
+        $from = $this->parseDate($fromValue, false);
+        $to = $this->parseDate($toValue, true);
+
+        $paginator = $auditLogs->paginateForAdministration(
             search: $search,
             actorId: $actorId,
-            from: $this->parseDate($fromValue, false),
-            to: $this->parseDate($toValue, true),
-            page: $page,
+            from: $from,
+            to: $to,
+            page: $requestedPage,
             limit: self::PAGE_SIZE,
         );
 
-        $totalPages = max(1, (int) ceil(count($logs) / self::PAGE_SIZE));
+        $totalLogs = count($paginator);
+        $totalPages = max(1, (int) ceil($totalLogs / self::PAGE_SIZE));
+        $page = min($requestedPage, $totalPages);
+
+        if ($page !== $requestedPage) {
+            $paginator = $auditLogs->paginateForAdministration(
+                search: $search,
+                actorId: $actorId,
+                from: $from,
+                to: $to,
+                page: $page,
+                limit: self::PAGE_SIZE,
+            );
+        }
 
         $routeParameters = array_filter([
             'q' => $search,
@@ -49,9 +65,9 @@ final class AuditLogController extends AbstractController
         ], static fn (mixed $value): bool => $value !== null && $value !== '');
 
         return $this->render('admin/audit/logs/index.html.twig', [
-            'logs' => $logs,
+            'logs' => iterator_to_array($paginator),
             'users' => $users->findBy(
-                ['isActive' => true, 'deletedAt' => null],
+                ['deletedAt' => null],
                 ['fullName' => 'ASC'],
             ),
             'search' => $search,
@@ -60,6 +76,7 @@ final class AuditLogController extends AbstractController
             'to' => $toValue,
             'page' => $page,
             'totalPages' => $totalPages,
+            'totalLogs' => $totalLogs,
             'routeParameters' => $routeParameters,
         ]);
     }

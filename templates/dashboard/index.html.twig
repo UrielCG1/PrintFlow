@@ -1,26 +1,129 @@
-{% extends 'base.html.twig' %}
+{% extends 'layouts/app.html.twig' %}
 
 {% block title %}Inicio | PrintFlow{% endblock %}
 
-{% block body %}
-    <main>
-        <h1>Bienvenido, {{ app.user.fullName }}</h1>
-        <p>Tu sesión se ha iniciado correctamente.</p>
-        {% if is_granted('role.view') %}
-            <p>
-                <a href="{{ path('admin_roles_index') }}">Administrar roles y permisos</a>
-            </p>
+{% block app_navigation_active %}dashboard{% endblock %}
+
+{% block app_breadcrumb %}Inicio{% endblock %}
+
+{% block app_content %}
+    <twig:Ui:PageHeader
+        title="Inicio"
+        description="Resumen de las herramientas a las que tienes acceso."
+    ></twig:Ui:PageHeader>
+
+    <section class="pf-dashboard-welcome">
+        <div>
+            <p class="pf-dashboard-welcome__eyebrow">Sesión activa</p>
+            <h2>Hola, {{ app.user.fullName }}</h2>
+            <p>Selecciona un módulo para continuar con tu operación.</p>
+        </div>
+
+        <span class="pf-status-badge pf-status-badge--success">
+            <i class="bi bi-check-circle" aria-hidden="true"></i>
+            Acceso verificado
+        </span>
+    </section>
+
+    {% set has_administration_access =
+        is_granted('user.view')
+        or is_granted('role.view')
+        or is_granted('audit_log.view')
+    %}
+
+    <section class="pf-dashboard-section">
+        <div class="pf-dashboard-section__header">
+            <div>
+                <h2>Módulos disponibles</h2>
+                <p>Accesos habilitados según tus permisos asignados.</p>
+            </div>
+        </div>
+
+        {% if has_administration_access %}
+            <div class="pf-dashboard-grid">
+                {% if is_granted('user.view') %}
+                    <twig:Ui:Card
+                        title="Usuarios"
+                        subtitle="Cuentas, estatus y contraseñas temporales."
+                        class="pf-dashboard-card"
+                    >
+                        <a
+                            href="{{ path('admin_users_index') }}"
+                            class="pf-dashboard-shortcut"
+                        >
+                            <span class="pf-dashboard-shortcut__icon">
+                                <i class="bi bi-people" aria-hidden="true"></i>
+                            </span>
+
+                            <span>
+                                Administrar usuarios
+                                <small>Consultar y gestionar cuentas</small>
+                            </span>
+
+                            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    </twig:Ui:Card>
+                {% endif %}
+
+                {% if is_granted('role.view') %}
+                    <twig:Ui:Card
+                        title="Roles y permisos"
+                        subtitle="Control de acceso al sistema."
+                        class="pf-dashboard-card"
+                    >
+                        <a
+                            href="{{ path('admin_roles_index') }}"
+                            class="pf-dashboard-shortcut"
+                        >
+                            <span class="pf-dashboard-shortcut__icon">
+                                <i class="bi bi-shield-lock" aria-hidden="true"></i>
+                            </span>
+
+                            <span>
+                                Administrar roles
+                                <small>Definir permisos y responsabilidades</small>
+                            </span>
+
+                            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    </twig:Ui:Card>
+                {% endif %}
+
+                {% if is_granted('audit_log.view') %}
+                    <twig:Ui:Card
+                        title="Bitácora"
+                        subtitle="Trazabilidad de las acciones administrativas."
+                        class="pf-dashboard-card"
+                    >
+                        <a
+                            href="{{ path('admin_audit_index') }}"
+                            class="pf-dashboard-shortcut"
+                        >
+                            <span class="pf-dashboard-shortcut__icon">
+                                <i class="bi bi-journal-text" aria-hidden="true"></i>
+                            </span>
+
+                            <span>
+                                Consultar bitácora
+                                <small>Revisar actividades y cambios registrados</small>
+                            </span>
+
+                            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    </twig:Ui:Card>
+                {% endif %}
+            </div>
+        {% else %}
+            <twig:Ui:Card class="pf-dashboard-empty">
+                <div class="pf-dashboard-empty__icon">
+                    <i class="bi bi-shield-check" aria-hidden="true"></i>
+                </div>
+
+                <div>
+                    <h2>Sin módulos administrativos asignados</h2>
+                    <p>Tu cuenta está autenticada, pero no tiene accesos adicionales habilitados.</p>
+                </div>
+            </twig:Ui:Card>
         {% endif %}
-        {% if is_granted('user.view') %}
-            <p>
-                <a href="{{ path('admin_users_index') }}">Administrar usuarios</a>
-            </p>
-        {% endif %}
-        {% if is_granted('audit_log.view') %}
-            <p><a href="{{ path('admin_audit_index') }}">Consultar bitácora</a></p>
-        {% endif %}
-        <form method="post" action="{{ path('app_logout') }}">
-            <button type="submit">Cerrar sesión</button>
-        </form>
-    </main>
+    </section>
 {% endblock %}
