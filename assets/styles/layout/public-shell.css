@@ -1,0 +1,15 @@
+.pf-public-body {
+    display: grid;
+    min-height: 100vh;
+}
+
+.pf-public-shell {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    padding: var(--pf-space-page);
+}
+
+.pf-public-content {
+    width: min(100%, 30rem);
+}

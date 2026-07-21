@@ -1,0 +1,17 @@
+html {
+    min-height: 100%;
+}
+
+body {
+    min-height: 100vh;
+    font-family: var(--pf-font-sans);
+}
+
+:focus-visible {
+    outline: 0.2rem solid currentColor;
+    outline-offset: 0.2rem;
+}
+
+[hidden] {
+    display: none !important;
+}

@@ -1,0 +1,13 @@
+{% extends 'base.html.twig' %}
+
+{% block body_class %}pf-public-body{% endblock %}
+
+{% block body %}
+    <main id="main-content" class="pf-public-shell">
+        <div class="pf-public-content">
+            {% include 'partials/_flash_messages.html.twig' %}
+
+            {% block public_content %}{% endblock %}
+        </div>
+    </main>
+{% endblock %}

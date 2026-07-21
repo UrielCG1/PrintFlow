@@ -1,0 +1,17 @@
+.pf-app-body {
+    min-width: 20rem;
+}
+
+.pf-app-shell {
+    min-height: 100vh;
+}
+
+.pf-app-main {
+    min-width: 0;
+}
+
+.pf-page {
+    width: min(100%, 90rem);
+    margin-inline: auto;
+    padding: var(--pf-space-page);
+}

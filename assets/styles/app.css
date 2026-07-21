@@ -1,0 +1,11 @@
+@layer foundation, layout, components, patterns, modules, utilities;
+
+@import url('./foundation/tokens.css') layer(foundation);
+@import url('./foundation/base.css') layer(foundation);
+
+@import url('./layout/public-shell.css') layer(layout);
+@import url('./layout/app-shell.css') layer(layout);
+
+@import url('./components/flash.css') layer(components);
+
+@import url('./utilities/utilities.css') layer(utilities);

@@ -1,63 +1,32 @@
-<!DOCTYPE html>
-<html lang="es">
+<!doctype html>
+<html lang="{{ app.request.locale|default('es') }}">
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}PrintFlow{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f4f6f8;
-            color: #1f2937;
-        }
+    <title>{% block title %}PrintFlow{% endblock %}</title>
+    <meta
+        name="description"
+        content="{% block meta_description %}Sistema de cotización y trazabilidad productiva PrintFlow.{% endblock %}"
+    >
 
-        .navbar {
-            background: #1f3b57;
-            color: white;
-            padding: 16px 32px;
-            font-weight: bold;
-        }
+    {% block stylesheets %}
+        <link
+            rel="stylesheet"
+            href="{{ asset('vendor/bootstrap/css/bootstrap.min.css') }}"
+        >
+    {% endblock %}
 
-        .container {
-            max-width: 960px;
-            margin: 40px auto;
-            background: white;
-            border-radius: 12px;
-            padding: 32px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, .08);
-        }
-
-        .badge {
-            display: inline-block;
-            background: #e8f1ff;
-            color: #1f3b57;
-            padding: 6px 10px;
-            border-radius: 8px;
-            font-size: 14px;
-            margin-right: 8px;
-        }
-
-        .status-ok {
-            color: #15803d;
-            font-weight: bold;
-        }
-
-        code {
-            background: #f1f5f9;
-            padding: 3px 6px;
-            border-radius: 4px;
-        }
-    </style>
+    {% block importmap %}
+        {{ importmap('app') }}
+    {% endblock %}
 </head>
-<body>
-    <div class="navbar">
-        PrintFlow
-    </div>
+<body class="{% block body_class %}{% endblock %}">
+    {% block body %}{% endblock %}
 
-    <main class="container">
-        {% block body %}{% endblock %}
-    </main>
+    <script src="{{ asset('vendor/jquery/jquery-3.7.1.min.js') }}"></script>
+    <script src="{{ asset('vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+
+    {% block javascripts %}{% endblock %}
 </body>
 </html>

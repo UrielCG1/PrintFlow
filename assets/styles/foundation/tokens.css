@@ -1,0 +1,12 @@
+:root {
+    --pf-font-sans: var(--bs-font-sans-serif);
+
+    --pf-space-page: clamp(1rem, 2vw, 2rem);
+
+    --pf-radius-sm: 0.375rem;
+    --pf-radius-md: 0.625rem;
+    --pf-radius-lg: 0.875rem;
+
+    --pf-transition-fast: 160ms ease;
+    --pf-transition-base: 220ms ease;
+}
