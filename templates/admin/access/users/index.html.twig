@@ -1,0 +1,114 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Usuarios | PrintFlow{% endblock %}
+
+{% block body %}
+    <main>
+        <h1>Usuarios</h1>
+
+        {% for message in app.flashes('success') %}
+            <p role="status">{{ message }}</p>
+        {% endfor %}
+
+        {% for message in app.flashes('error') %}
+            <p role="alert">{{ message }}</p>
+        {% endfor %}
+
+        <form method="get" action="{{ path('admin_users_index') }}">
+            <label for="q">Buscar usuarios</label>
+            <input id="q" name="q" value="{{ search }}" placeholder="Nombre, usuario o correo">
+            <button type="submit">Buscar</button>
+
+            {% if search %}
+                <a href="{{ path('admin_users_index') }}">Limpiar</a>
+            {% endif %}
+        </form>
+
+        {% if is_granted('user.create') %}
+            <p>
+                <a href="{{ path('admin_users_new') }}">Crear usuario</a>
+            </p>
+        {% endif %}
+
+        <p>{{ total_users }} usuario(s) encontrado(s).</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Usuario</th>
+                    <th>Correo</th>
+                    <th>Roles</th>
+                    <th>Estado</th>
+                    <th>Último acceso</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for managed_user in users %}
+                    <tr>
+                        <td>{{ managed_user.fullName }}</td>
+                        <td>{{ managed_user.username }}</td>
+                        <td>{{ managed_user.email }}</td>
+                        <td>
+                            {% for role in managed_user.assignedRoles %}
+                                {{ role.name }}{% if not loop.last %}, {% endif %}
+                            {% else %}
+                                Sin roles
+                            {% endfor %}
+                        </td>
+                        <td>{{ managed_user.active ? 'Activo' : 'Inactivo' }}</td>
+                        <td>
+                            {{ managed_user.lastLoginAt ? managed_user.lastLoginAt|date('d/m/Y H:i') : 'Sin acceso' }}
+                        </td>
+                        <td>
+                            {% if is_granted('user.update') %}
+                                <a href="{{ path('admin_users_edit', {id: managed_user.id}) }}">Editar</a>
+                            {% endif %}
+
+                            {% if is_granted('user.reset_password') %}
+                                <a href="{{ path('admin_users_reset_password', {id: managed_user.id}) }}">
+                                    Restablecer contraseña
+                                </a>
+                            {% endif %}
+
+                            {% if is_granted('user.deactivate') and app.user.id != managed_user.id %}
+                                <form
+                                    method="post"
+                                    action="{{ path('admin_users_toggle_status', {id: managed_user.id}) }}"
+                                >
+                                    <input
+                                        type="hidden"
+                                        name="_token"
+                                        value="{{ csrf_token('user_status_' ~ managed_user.id) }}"
+                                    >
+                                    <button type="submit">
+                                        {{ managed_user.active ? 'Desactivar' : 'Activar' }}
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="7">No hay usuarios para mostrar.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if total_pages > 1 %}
+            <nav aria-label="Paginación de usuarios">
+                {% if page > 1 %}
+                    <a href="{{ path('admin_users_index', {q: search, page: page - 1}) }}">Anterior</a>
+                {% endif %}
+
+                <span>Página {{ page }} de {{ total_pages }}</span>
+
+                {% if page < total_pages %}
+                    <a href="{{ path('admin_users_index', {q: search, page: page + 1}) }}">Siguiente</a>
+                {% endif %}
+            </nav>
+        {% endif %}
+    </main>
+{% endblock %}

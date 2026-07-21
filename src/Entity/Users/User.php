@@ -226,11 +226,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->lastLoginAt;
     }
 
-    public function recordLogin(): static
+    public function recordLogin(): void
     {
-        $this->lastLoginAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+        $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
 
-        return $this;
+        $this->lastLoginAt = $now;
+        $this->updatedAt = $now;
     }
 
     public function getCreatedAt(): \DateTimeImmutable

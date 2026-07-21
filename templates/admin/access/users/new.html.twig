@@ -1,0 +1,17 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Crear usuario | PrintFlow{% endblock %}
+
+{% block body %}
+    <main>
+        <h1>Crear usuario</h1>
+        <p>La cuenta se creará con una contraseña temporal obligatoria.</p>
+
+        {{ form_start(form) }}
+            {{ form_widget(form) }}
+            <button type="submit">Crear usuario</button>
+        {{ form_end(form) }}
+
+        <p><a href="{{ path('admin_users_index') }}">Volver a usuarios</a></p>
+    </main>
+{% endblock %}

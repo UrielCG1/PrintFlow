@@ -1,0 +1,52 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Roles | PrintFlow{% endblock %}
+
+{% block body %}
+    <main>
+        <h1>Roles y permisos</h1>
+
+        {% for message in app.flashes('success') %}
+            <p role="status">{{ message }}</p>
+        {% endfor %}
+
+        {% if is_granted('role.manage') %}
+            <p><a href="{{ path('admin_roles_new') }}">Crear rol personalizado</a></p>
+        {% endif %}
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Rol</th>
+                    <th>Código</th>
+                    <th>Tipo</th>
+                    <th>Permisos</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for role in roles %}
+                    <tr>
+                        <td>{{ role.name }}</td>
+                        <td>{{ role.code }}</td>
+                        <td>{{ role.system ? 'Sistema' : 'Personalizado' }}</td>
+                        <td>{{ role.permissions|length }}</td>
+                        <td>
+                            {% if is_granted('role.manage') %}
+                                <a href="{{ path('admin_roles_edit', {id: role.id}) }}">
+                                    {{ role.code == 'ROLE_ADMIN' ? 'Consultar' : 'Editar' }}
+                                </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="5">No hay roles registrados.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <p><a href="{{ path('app_dashboard') }}">Volver al inicio</a></p>
+    </main>
+{% endblock %}

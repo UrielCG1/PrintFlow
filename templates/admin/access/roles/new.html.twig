@@ -1,0 +1,16 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Crear rol | PrintFlow{% endblock %}
+
+{% block body %}
+    <main>
+        <h1>Crear rol personalizado</h1>
+
+        {{ form_start(form) }}
+            {{ form_widget(form) }}
+            <button type="submit">Crear rol</button>
+        {{ form_end(form) }}
+
+        <p><a href="{{ path('admin_roles_index') }}">Cancelar</a></p>
+    </main>
+{% endblock %}

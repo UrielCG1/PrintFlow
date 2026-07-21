@@ -935,3 +935,84 @@ Pendiente de definir.
 ## 27. Mantenedor
 
 Proyecto en preparación técnica para **PrintFlow**.
+
+
+
+
+
+
+# PrintFlow — Documentación técnica de acceso, usuarios y auditoría
+
+**Base:** Symfony 7.4.14 · PHP 8.2.31 · MySQL 8.0.46 (`printflow_app`)  
+**Referencia:** 19 de julio de 2026
+
+## Propósito
+
+Esta guía explica cómo está construido el módulo de identidad de PrintFlow: autenticación, contraseña temporal, usuarios, roles, permisos y bitácora. La versión Word es la referencia principal, con diagramas, flujos y tablas operativas.
+
+## Arquitectura
+
+`Navegador/Twig → Controller → DTO + Form → Manager → Entity + Repository → MySQL + Audit`
+
+- Los controladores manejan HTTP, autorización y respuesta.
+- Los DTO/Form validan entrada; no hidratan entidades directamente.
+- `UserManager` y `RoleManager` concentran reglas, persistencia y auditoría.
+- `PermissionVoter` decide los `is_granted('codigo.permiso')` del servidor.
+- `AuditLogger` y `AuthenticationAuditSubscriber` generan trazabilidad.
+
+## Ubicaciones clave
+
+| Ubicación | Responsabilidad |
+|---|---|
+| `config/packages/security.yaml` | Provider por `username`, hasher, firewall `main`, `form_login` y logout. |
+| `src/Entity/Users/User.php` | Cuenta, hash, estado, roles, último acceso y contraseña temporal. |
+| `src/Entity/Users/Role.php` | Rol, código, estado, permisos. |
+| `src/Entity/Users/Permission.php` | Catálogo técnico de permisos. |
+| `src/Application/Access/UserManager.php` | Alta, edición, estado y restablecimiento. |
+| `src/Application/Access/RoleManager.php` | Roles personalizados y sincronización de permisos. |
+| `src/Security/Voter/PermissionVoter.php` | Autorización efectiva. |
+| `src/Service/Audit/AuditLogger.php` | Bitácora de cambios. |
+| `src/EventSubscriber/Security/AuthenticationAuditSubscriber.php` | Login/logout y `lastLoginAt`. |
+
+## Reglas no negociables
+
+- Los permisos se comprueban con `denyAccessUnlessGranted()` en servidor; Twig solo decide visibilidad.
+- Un permiso es catálogo controlado por código/datos iniciales; no se crea desde la UI.
+- `ROLE_ADMIN` está reservado, no se edita desde la UI y conserva todos los permisos.
+- Nunca persistir ni auditar contraseñas, texto plano, hashes, tokens o secretos.
+- Las mutaciones usan POST + CSRF; el estado de usuario usa `user_status_{id}`.
+- Fechas persistidas en UTC; los filtros administrativos reciben `America/Mexico_City` y convierten a UTC.
+
+## Rutas administrativas
+
+| Ruta | Permiso |
+|---|---|
+| `GET /admin/usuarios` | `user.view` |
+| `GET,POST /admin/usuarios/nuevo` | `user.create` |
+| `GET,POST /admin/usuarios/{id}/editar` | `user.update` |
+| `POST /admin/usuarios/{id}/estado` | `user.deactivate` |
+| `GET,POST /admin/usuarios/{id}/restablecer-contrasena` | `user.reset_password` |
+| `GET /admin/roles` | `role.view` |
+| `GET,POST /admin/roles/nuevo` | `role.manage` |
+| `GET,POST /admin/roles/{id}/editar` | `role.manage` |
+| `GET /admin/bitacora` | `audit_log.view` |
+
+## Flujo resumido
+
+1. Login: `/login` → firewall → provider por `username` → hasher → sesión → subscriber registra `authentication.login_success` y último acceso UTC.
+2. Alta/reset: Form + DTO → `UserManager` → hash + contraseña temporal → cambio obligatorio → auditoría.
+3. Acceso a operación: controller llama `denyAccessUnlessGranted()` → `PermissionVoter` resuelve permisos del usuario mediante sus roles → permite o responde 403.
+4. Cambio de roles: `RoleManager` valida código/permisos, sincroniza relaciones y registra snapshot.
+5. Logout: Symfony invalida sesión → subscriber registra `authentication.logout`.
+
+## Comandos de validación
+
+```powershell
+php bin/console lint:container
+php bin/console lint:twig templates
+php bin/console doctrine:schema:validate
+php bin/console debug:router | findstr /I "login admin/usuarios admin/roles admin/bitacora"
+rg -n "mustChangePassword|temporaryPassword|recordLogin|is_granted" src templates config
+```
+
+Consulta la versión `.docx` para el detalle de cada flujo, modelo, cambio frecuente, pruebas funcionales y diagnóstico.

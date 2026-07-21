@@ -1,0 +1,101 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Bitácora | PrintFlow{% endblock %}
+
+{% block body %}
+    <h1>Bitácora del sistema</h1>
+    <p>Consulta las acciones relevantes realizadas dentro de PrintFlow.</p>
+
+    <form method="get">
+        <label for="q">Buscar</label>
+        <input id="q" name="q" value="{{ search }}" placeholder="Acción, módulo o usuario">
+
+        <label for="actor">Usuario</label>
+        <select id="actor" name="actor">
+            <option value="">Todos</option>
+            {% for user in users %}
+                <option value="{{ user.id }}" {{ actorId == user.id ? 'selected' : '' }}>
+                    {{ user.fullName }} ({{ user.username }})
+                </option>
+            {% endfor %}
+        </select>
+
+        <label for="from">Desde</label>
+        <input id="from" type="date" name="from" value="{{ from }}">
+
+        <label for="to">Hasta</label>
+        <input id="to" type="date" name="to" value="{{ to }}">
+
+        <button type="submit">Filtrar</button>
+        <a href="{{ path('admin_audit_index') }}">Limpiar</a>
+    </form>
+
+    <p>{{ logs|length }} registros en esta página.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Usuario</th>
+                <th>Acción</th>
+                <th>Entidad</th>
+                <th>IP</th>
+                <th>Detalle</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+                <tr>
+                    <td>{{ log.createdAt|date('d/m/Y H:i:s', 'America/Mexico_City') }}</td>
+                    <td>
+                        {% if log.actor %}
+                            {{ log.actor.fullName }} ({{ log.actor.username }})
+                        {% else %}
+                            Sistema
+                        {% endif %}
+                    </td>
+                    <td>{{ log.action }}</td>
+                    <td>{{ log.entityType }} #{{ log.entityId ?? '—' }}</td>
+                    <td>{{ log.ipAddress ?? '—' }}</td>
+                    <td>
+                        {% if log.oldValues or log.newValues %}
+                            <details>
+                                <summary>Ver cambios</summary>
+
+                                {% if log.oldValues %}
+                                    <strong>Antes</strong>
+                                    <pre>{{ log.oldValues|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+                                {% endif %}
+
+                                {% if log.newValues %}
+                                    <strong>Después</strong>
+                                    <pre>{{ log.newValues|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
+                                {% endif %}
+                            </details>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="6">No hay registros para los filtros seleccionados.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if totalPages > 1 %}
+        <nav aria-label="Paginación de bitácora">
+            {% if page > 1 %}
+                <a href="{{ path('admin_audit_index', routeParameters|merge({page: page - 1})) }}">← Anterior</a>
+            {% endif %}
+
+            <span>Página {{ page }} de {{ totalPages }}</span>
+
+            {% if page < totalPages %}
+                <a href="{{ path('admin_audit_index', routeParameters|merge({page: page + 1})) }}">Siguiente →</a>
+            {% endif %}
+        </nav>
+    {% endif %}
+{% endblock %}

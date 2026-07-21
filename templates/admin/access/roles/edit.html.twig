@@ -1,0 +1,29 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Editar rol | PrintFlow{% endblock %}
+
+{% block body %}
+    <main>
+        <h1>{{ is_protected ? 'Consultar rol protegido' : 'Editar rol' }}</h1>
+
+        <p>
+            Código técnico: <strong>{{ role.code }}</strong>
+        </p>
+
+        {% if is_protected %}
+            <p>
+                El rol Administrador está protegido y conserva todos los permisos.
+            </p>
+        {% endif %}
+
+        {{ form_start(form) }}
+            {{ form_widget(form) }}
+
+            {% if not is_protected %}
+                <button type="submit">Guardar cambios</button>
+            {% endif %}
+        {{ form_end(form) }}
+
+        <p><a href="{{ path('admin_roles_index') }}">Volver a roles</a></p>
+    </main>
+{% endblock %}

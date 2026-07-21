@@ -6,7 +6,19 @@
     <main>
         <h1>Bienvenido, {{ app.user.fullName }}</h1>
         <p>Tu sesión se ha iniciado correctamente.</p>
-
+        {% if is_granted('role.view') %}
+            <p>
+                <a href="{{ path('admin_roles_index') }}">Administrar roles y permisos</a>
+            </p>
+        {% endif %}
+        {% if is_granted('user.view') %}
+            <p>
+                <a href="{{ path('admin_users_index') }}">Administrar usuarios</a>
+            </p>
+        {% endif %}
+        {% if is_granted('audit_log.view') %}
+            <p><a href="{{ path('admin_audit_index') }}">Consultar bitácora</a></p>
+        {% endif %}
         <form method="post" action="{{ path('app_logout') }}">
             <button type="submit">Cerrar sesión</button>
         </form>

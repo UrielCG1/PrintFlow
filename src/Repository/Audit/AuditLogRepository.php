@@ -3,7 +3,9 @@
 namespace App\Repository\Audit;
 
 use App\Entity\Audit\AuditLog;
+use DateTimeImmutable;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\Tools\Pagination\Paginator;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -16,28 +18,54 @@ class AuditLogRepository extends ServiceEntityRepository
         parent::__construct($registry, AuditLog::class);
     }
 
-    //    /**
-    //     * @return AuditLog[] Returns an array of AuditLog objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('a')
-    //            ->andWhere('a.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('a.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    public function paginateForAdministration(
+        ?string $search,
+        ?int $actorId,
+        ?DateTimeImmutable $from,
+        ?DateTimeImmutable $to,
+        int $page,
+        int $limit = 50,
+    ): Paginator {
+        $queryBuilder = $this->createQueryBuilder('log')
+            ->leftJoin('log.actor', 'actor')
+            ->addSelect('actor')
+            ->orderBy('log.createdAt', 'DESC');
 
-    //    public function findOneBySomeField($value): ?AuditLog
-    //    {
-    //        return $this->createQueryBuilder('a')
-    //            ->andWhere('a.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+        if ($search !== null && $search !== '') {
+            $queryBuilder
+                ->andWhere(
+                    $queryBuilder->expr()->orX(
+                        'LOWER(log.action) LIKE :search',
+                        'LOWER(log.entityType) LIKE :search',
+                        'LOWER(actor.fullName) LIKE :search',
+                        'LOWER(actor.username) LIKE :search',
+                    ),
+                )
+                ->setParameter('search', '%'.mb_strtolower($search).'%');
+        }
+
+        if ($actorId !== null) {
+            $queryBuilder
+                ->andWhere('actor.id = :actorId')
+                ->setParameter('actorId', $actorId);
+        }
+
+        if ($from !== null) {
+            $queryBuilder
+                ->andWhere('log.createdAt >= :from')
+                ->setParameter('from', $from);
+        }
+
+        if ($to !== null) {
+            $queryBuilder
+                ->andWhere('log.createdAt <= :to')
+                ->setParameter('to', $to);
+        }
+
+        $queryBuilder
+            ->setFirstResult(($page - 1) * $limit)
+            ->setMaxResults($limit);
+
+        return new Paginator($queryBuilder->getQuery(), true);
+    }
 }

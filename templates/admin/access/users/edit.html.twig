@@ -1,0 +1,17 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Editar usuario | PrintFlow{% endblock %}
+
+{% block body %}
+    <main>
+        <h1>Editar usuario</h1>
+        <p>Cuenta: {{ managed_user.username }}</p>
+
+        {{ form_start(form) }}
+            {{ form_widget(form) }}
+            <button type="submit">Guardar cambios</button>
+        {{ form_end(form) }}
+
+        <p><a href="{{ path('admin_users_index') }}">Volver a usuarios</a></p>
+    </main>
+{% endblock %}
