@@ -22,4 +22,18 @@ return [
     '@symfony/stimulus-bundle' => [
         'path' => './vendor/symfony/stimulus-bundle/assets/dist/loader.js',
     ],
+    'notyf' => [
+        'version' => '3.10.0',
+    ],
+    'notyf/notyf.min.css' => [
+        'version' => '3.10.0',
+        'type' => 'css',
+    ],
+    'sweetalert2' => [
+        'version' => '11.26.25',
+    ],
+    'sweetalert2/dist/sweetalert2.min.css' => [
+        'version' => '11.26.25',
+        'type' => 'css',
+    ],
 ];
