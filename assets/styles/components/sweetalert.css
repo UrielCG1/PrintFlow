@@ -1,0 +1,8 @@
+.pf-swal-actions {
+    gap: 0.75rem;
+    margin-top: 1.75rem;
+}
+
+.pf-swal-actions .btn {
+    min-width: 6.25rem;
+}

@@ -19,6 +19,7 @@
 @import url('./components/status-badge.css');
 @import url('./components/table.css');
 @import url('./components/tooltip.css');
+@import './components/sweetalert.css';
 
 /* Estilos exclusivos de módulos */
 @import url('./modules/dashboard.css');

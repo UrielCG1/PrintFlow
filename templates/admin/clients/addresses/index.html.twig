@@ -117,6 +117,15 @@
                                                     clientId: client.id,
                                                     addressId: address.id
                                                 }) }}"
+                                                data-controller="ui--confirm-action"
+                                                data-action="submit->ui--confirm-action#submit"
+                                                data-ui--confirm-action-title-value="{{ address.isActive ? '¿Desactivar dirección?' : '¿Reactivar dirección?' }}"
+                                                data-ui--confirm-action-text-value="{{ address.isActive
+                                                    ? 'La dirección dejará de estar disponible para futuras cotizaciones y órdenes.'
+                                                    : 'La dirección volverá a estar disponible para operar.' }}"
+                                                data-ui--confirm-action-confirm-button-text-value="{{ address.isActive ? 'Sí, desactivar' : 'Sí, reactivar' }}"
+                                                data-ui--confirm-action-cancel-button-text-value="Cancelar"
+                                                data-ui--confirm-action-icon-value="warning"
                                             >
                                                 <input
                                                     type="hidden"

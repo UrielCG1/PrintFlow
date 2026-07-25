@@ -99,6 +99,15 @@
                                             <form
                                                 method="post"
                                                 action="{{ path('admin_clients_status', { id: client.id }) }}"
+                                                data-controller="ui--confirm-action"
+                                                data-action="submit->ui--confirm-action#submit"
+                                                data-ui--confirm-action-title-value="{{ client.isActive ? '¿Desactivar cliente?' : '¿Reactivar cliente?' }}"
+                                                data-ui--confirm-action-text-value="{{ client.isActive
+                                                    ? 'El cliente dejará de estar disponible para nuevos registros.'
+                                                    : 'El cliente volverá a estar disponible para operar.' }}"
+                                                data-ui--confirm-action-confirm-button-text-value="{{ client.isActive ? 'Sí, desactivar' : 'Sí, reactivar' }}"
+                                                data-ui--confirm-action-cancel-button-text-value="Cancelar"
+                                                data-ui--confirm-action-icon-value="warning"
                                             >
                                                 <input
                                                     type="hidden"

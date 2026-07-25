@@ -11,12 +11,16 @@
         class: 'secondary',
         role: 'status'
     }) %}
+    {% set toastType = type == 'danger' ? 'error' : type %}
 
     <div class="pf-flash-stack">
         {% for message in messages %}
             <div
                 class="alert alert-{{ flash.class }} pf-flash"
                 role="{{ flash.role }}"
+                data-controller="ui--flash-toast"
+                data-ui--flash-toast-type-value="{{ toastType }}"
+                data-ui--flash-toast-message-value="{{ message|striptags }}"
             >
                 {{ message }}
             </div>
