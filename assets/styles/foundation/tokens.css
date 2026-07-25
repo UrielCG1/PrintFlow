@@ -6,20 +6,25 @@
     --pf-color-brand-active: #10A816;
     --pf-color-brand-soft: #E8FDEA;
     --pf-color-brand-subtle: #F3FFF4;
+    --pf-color-brand-contrast: #171A18;
 
-    /* Neutros */
+    /* Superficies y bordes */
     --pf-color-canvas: #F6F7F6;
     --pf-color-surface: #FFFFFF;
     --pf-color-surface-subtle: #F1F3F1;
+    --pf-color-surface-strong: #E7EBE8;
     --pf-color-border: #DCE1DD;
     --pf-color-border-strong: #B7C0B9;
 
+    /* Texto */
     --pf-color-text-strong: #171A18;
     --pf-color-text: #39413C;
     --pf-color-text-muted: #6A746D;
     --pf-color-text-inverse: #FFFFFF;
+    --pf-color-link: #137A1A;
+    --pf-color-link-hover: #0A5A0F;
 
-    /* Estados */
+    /* Estados semánticos */
     --pf-color-success: #168A1C;
     --pf-color-success-soft: #E8F8E9;
     --pf-color-warning: #9A6700;
@@ -42,42 +47,55 @@
     --pf-font-size-xs: 0.75rem;
     --pf-font-size-sm: 0.875rem;
     --pf-font-size-base: 0.9375rem;
+    --pf-font-size-lg: 1.125rem;
+    --pf-font-size-xl: 1.25rem;
+    --pf-font-size-2xl: 1.5rem;
 
-    /* Espaciado y forma */
+    --pf-font-weight-regular: 400;
+    --pf-font-weight-medium: 500;
+    --pf-font-weight-semibold: 600;
+    --pf-font-weight-bold: 700;
+
+    --pf-line-height-tight: 1.2;
+    --pf-line-height-base: 1.5;
+    --pf-line-height-relaxed: 1.65;
+
+    /* Espaciado */
+    --pf-space-1: 0.25rem;
+    --pf-space-2: 0.5rem;
+    --pf-space-3: 0.75rem;
+    --pf-space-4: 1rem;
+    --pf-space-5: 1.25rem;
+    --pf-space-6: 1.5rem;
+    --pf-space-8: 2rem;
+    --pf-space-10: 2.5rem;
     --pf-space-page: clamp(1rem, 2vw, 2rem);
+
+    /* Controles y forma */
+    --pf-control-height: 2.625rem;
 
     --pf-radius-sm: 0.375rem;
     --pf-radius-md: 0.625rem;
     --pf-radius-lg: 0.875rem;
+    --pf-radius-pill: 999px;
 
+    /* Elevación */
     --pf-shadow-sm: 0 1px 2px rgb(23 26 24 / 0.05);
     --pf-shadow-md: 0 8px 24px rgb(23 26 24 / 0.08);
+    --pf-shadow-lg: 0 16px 40px rgb(23 26 24 / 0.12);
 
+    /* Interacción */
     --pf-transition-fast: 160ms ease;
     --pf-transition-base: 220ms ease;
+    --pf-focus-ring-width: 0.2rem;
+    --pf-focus-ring-color: rgb(var(--pf-color-brand-rgb) / 0.28);
 
-    /* Variables globales de Bootstrap */
-    --bs-body-font-family: var(--pf-font-sans);
-    --bs-body-font-size: var(--pf-font-size-base);
-    --bs-body-color: var(--pf-color-text);
-    --bs-body-bg: var(--pf-color-canvas);
-
-    --bs-primary: var(--pf-color-brand);
-    --bs-primary-rgb: 39, 245, 46;
-
-    --bs-success: var(--pf-color-success);
-    --bs-success-rgb: 22, 138, 28;
-
-    --bs-border-color: var(--pf-color-border);
-    --bs-secondary-color: var(--pf-color-text-muted);
-    --bs-secondary-bg: var(--pf-color-surface-subtle);
-
-    --bs-link-color: #137A1A;
-    --bs-link-hover-color: #0A5A0F;
-
-    --bs-border-radius: var(--pf-radius-sm);
-    --bs-border-radius-sm: 0.25rem;
-    --bs-border-radius-lg: var(--pf-radius-md);
-
-    --bs-focus-ring-color: rgb(var(--pf-color-brand-rgb) / 0.22);
+    /* Capas: usar estos valores, nunca z-index improvisados */
+    --pf-z-dropdown: 1000;
+    --pf-z-sticky: 1020;
+    --pf-z-fixed: 1030;
+    --pf-z-modal-backdrop: 1040;
+    --pf-z-modal: 1050;
+    --pf-z-tooltip: 1080;
+    --pf-z-toast: 1090;
 }

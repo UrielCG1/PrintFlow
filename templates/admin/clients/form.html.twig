@@ -1,0 +1,73 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}{{ pageTitle }} | PrintFlow{% endblock %}
+
+{% block app_navigation_active %}clients{% endblock %}
+
+{% block app_breadcrumb %}{{ pageTitle }}{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page">
+        <div class="pf-page-header">
+            <div>
+                <h1>{{ pageTitle }}</h1>
+                <p class="pf-page-header__description">
+                    La información registrada estará disponible para futuras cotizaciones y órdenes.
+                </p>
+            </div>
+            {% if client %}
+                <div class="pf-page-header__actions">
+                    {% if is_granted('clients.contacts.view') %}
+                        <a
+                            href="{{ path('admin_client_contacts_index', { clientId: client.id }) }}"
+                            class="btn pf-button pf-button--secondary"
+                        >
+                            <i class="bi bi-person-vcard" aria-hidden="true"></i>
+                            Administrar contactos
+                        </a>
+                    {% endif %}
+
+                    {% if is_granted('clients.addresses.view') %}
+                        <a
+                            href="{{ path('admin_client_addresses_index', { clientId: client.id }) }}"
+                            class="btn pf-button pf-button--secondary"
+                        >
+                            <i class="bi bi-geo-alt" aria-hidden="true"></i>
+                            Administrar direcciones
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="pf-card pf-clients-form-card">
+            {% form_theme form 'form/printflow_theme.html.twig' %}
+
+            {{ form_start(form, { attr: { class: 'pf-form' } }) }}
+                {{ form_row(form.businessName) }}
+                {{ form_row(form.taxId) }}
+
+                <div class="pf-clients-form-grid">
+                    {{ form_row(form.email) }}
+                    {{ form_row(form.phone) }}
+                </div>
+
+                {{ form_row(form.notes) }}
+
+                <div class="pf-form-actions">
+                    <a
+                        href="{{ path('admin_clients_index') }}"
+                        class="btn pf-button pf-button--secondary"
+                    >
+                        Cancelar
+                    </a>
+
+                    <button type="submit" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-check-lg" aria-hidden="true"></i>
+                        {{ client ? 'Guardar cambios' : 'Registrar cliente' }}
+                    </button>
+                </div>
+            {{ form_end(form) }}
+        </div>
+    </div>
+{% endblock %}

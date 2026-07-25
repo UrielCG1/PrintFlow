@@ -1,27 +1,33 @@
+/* Fundamentos */
 @import url('./foundation/tokens.css');
 @import url('./foundation/base.css');
 @import url('./foundation/bootstrap-overrides.css');
 
+/* Estructura global */
 @import url('./layout/public-shell.css');
 @import url('./layout/app-shell.css');
 
-@import url('./components/button.css');
-@import url('./components/status-badge.css');
-@import url('./components/card.css');
-@import url('./components/page-header.css');
-@import url('./components/flash.css');
-
+/* Componentes reutilizables */
 @import url('./components/app-header.css');
 @import url('./components/sidebar.css');
+@import url('./components/button.css');
+@import url('./components/card.css');
+@import url('./components/flash.css');
+@import url('./components/form.css');
+@import url('./components/modal.css');
+@import url('./components/page-header.css');
+@import url('./components/status-badge.css');
+@import url('./components/table.css');
+@import url('./components/tooltip.css');
 
+/* Estilos exclusivos de módulos */
 @import url('./modules/dashboard.css');
-
 @import url('./modules/security.css');
+@import url('./modules/users.css');
+@import url('./modules/roles.css');
+@import url('./modules/audit-log.css');
 
+/* Utilidades */
 @import url('./utilities/utilities.css');
 
-@import url('./modules/users.css');
-
-@import './modules/roles.css';
-
-@import './modules/audit-log.css';
+@import url('./modules/clients.css');

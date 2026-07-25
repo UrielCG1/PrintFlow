@@ -1,0 +1,47 @@
+{% set sizes = {
+    sm: 'modal-sm',
+    md: '',
+    lg: 'modal-lg',
+    xl: 'modal-xl'
+} %}
+
+{% set footer_content %}
+    {% block footer %}{% endblock %}
+{% endset %}
+
+<div
+    {{ attributes.defaults({
+        class: 'modal fade pf-modal',
+        id: id,
+        tabindex: '-1',
+        'aria-labelledby': id ~ '-title',
+        'aria-hidden': 'true',
+        'data-bs-backdrop': staticBackdrop ? 'static' : 'true',
+        'data-bs-keyboard': keyboard ? 'true' : 'false'
+    }) }}
+>
+    <div class="modal-dialog {{ sizes[size]|default('') }}{{ scrollable ? ' modal-dialog-scrollable' }}">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="{{ id }}-title" class="modal-title">{{ title }}</h2>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Cerrar"
+                ></button>
+            </div>
+
+            <div class="modal-body">
+                {% block content %}{% endblock %}
+            </div>
+
+            {% if footer_content|trim is not empty %}
+                <div class="modal-footer">
+                    {{ footer_content }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

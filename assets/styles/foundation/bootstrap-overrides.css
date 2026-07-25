@@ -1,0 +1,43 @@
+/*
+ * Puente entre Bootstrap y los tokens de PrintFlow.
+ *
+ * Aquí únicamente se mapean variables globales de Bootstrap.
+ * Los estilos de botones, formularios, tablas y modales vivirán
+ * en sus respectivos archivos dentro de components/.
+ */
+:root {
+    --bs-body-font-family: var(--pf-font-sans);
+    --bs-body-font-size: var(--pf-font-size-base);
+    --bs-body-font-weight: var(--pf-font-weight-regular);
+    --bs-body-line-height: var(--pf-line-height-base);
+    --bs-body-color: var(--pf-color-text);
+    --bs-body-bg: var(--pf-color-canvas);
+
+    --bs-emphasis-color: var(--pf-color-text-strong);
+    --bs-secondary-color: var(--pf-color-text-muted);
+    --bs-secondary-bg: var(--pf-color-surface-subtle);
+    --bs-tertiary-bg: var(--pf-color-surface-strong);
+
+    --bs-border-color: var(--pf-color-border);
+    --bs-border-radius: var(--pf-radius-sm);
+    --bs-border-radius-sm: 0.25rem;
+    --bs-border-radius-lg: var(--pf-radius-md);
+
+    --bs-primary: var(--pf-color-brand);
+    --bs-primary-rgb: 39, 245, 46;
+
+    --bs-success: var(--pf-color-success);
+    --bs-success-rgb: 22, 138, 28;
+
+    --bs-warning: var(--pf-color-warning);
+    --bs-warning-rgb: 154, 103, 0;
+
+    --bs-danger: var(--pf-color-danger);
+    --bs-danger-rgb: 180, 35, 24;
+
+    --bs-link-color: var(--pf-color-link);
+    --bs-link-hover-color: var(--pf-color-link-hover);
+
+    --bs-focus-ring-width: var(--pf-focus-ring-width);
+    --bs-focus-ring-color: var(--pf-focus-ring-color);
+}

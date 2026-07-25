@@ -1,0 +1,57 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}{{ pageTitle }} | PrintFlow{% endblock %}
+
+{% block app_navigation_active %}clients{% endblock %}
+
+{% block app_breadcrumb %}Clientes / {{ pageTitle }}{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page">
+        <div class="pf-page-header">
+            <div>
+                <a
+                    href="{{ path('admin_client_contacts_index', { clientId: client.id }) }}"
+                    class="pf-page-header__back"
+                >
+                    ← Volver a contactos
+                </a>
+
+                <h1>{{ pageTitle }}</h1>
+                <p class="pf-page-header__description">
+                    Cliente: {{ client.businessName }}
+                </p>
+            </div>
+        </div>
+
+        <div class="pf-card pf-clients-form-card">
+            {% form_theme form 'form/printflow_theme.html.twig' %}
+
+            {{ form_start(form, { attr: { class: 'pf-form' } }) }}
+                {{ form_row(form.fullName) }}
+                {{ form_row(form.jobTitle) }}
+
+                <div class="pf-clients-form-grid">
+                    {{ form_row(form.email) }}
+                    {{ form_row(form.phone) }}
+                </div>
+
+                {{ form_row(form.isPrimary) }}
+
+                <div class="pf-form-actions">
+                    <a
+                        href="{{ path('admin_client_contacts_index', { clientId: client.id }) }}"
+                        class="btn pf-button pf-button--secondary"
+                    >
+                        Cancelar
+                    </a>
+
+                    <button type="submit" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-check-lg" aria-hidden="true"></i>
+                        {{ contact ? 'Guardar cambios' : 'Registrar contacto' }}
+                    </button>
+                </div>
+            {{ form_end(form) }}
+        </div>
+    </div>
+{% endblock %}

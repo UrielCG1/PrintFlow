@@ -1,0 +1,108 @@
+.pf-form {
+    display: grid;
+    gap: var(--pf-space-5);
+}
+
+.pf-form-field {
+    display: grid;
+    gap: var(--pf-space-2);
+}
+
+.pf-form .form-label {
+    margin: 0;
+    color: var(--pf-color-text-strong);
+    font-size: var(--pf-font-size-sm);
+    font-weight: var(--pf-font-weight-semibold);
+}
+
+.pf-form .form-control,
+.pf-form .form-select {
+    min-height: var(--pf-control-height);
+    border-color: var(--pf-color-border-strong);
+    border-radius: var(--pf-radius-sm);
+    color: var(--pf-color-text-strong);
+    box-shadow: none;
+}
+
+.pf-form textarea.form-control {
+    min-height: 7rem;
+    resize: vertical;
+}
+
+.pf-form .form-control::placeholder {
+    color: var(--pf-color-text-muted);
+    opacity: 1;
+}
+
+.pf-form .form-control:hover,
+.pf-form .form-select:hover {
+    border-color: var(--pf-color-text-muted);
+}
+
+.pf-form .form-control:focus,
+.pf-form .form-select:focus {
+    border-color: var(--pf-color-brand-hover);
+    box-shadow: 0 0 0 0.25rem var(--pf-focus-ring-color);
+}
+
+.pf-form .form-check {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--pf-space-2);
+    padding-left: 0;
+}
+
+.pf-form .form-check-input {
+    flex: 0 0 auto;
+    margin: 0.18rem 0 0;
+    border-color: var(--pf-color-border-strong);
+}
+
+.pf-form .form-check-input:checked {
+    background-color: var(--pf-color-success);
+    border-color: var(--pf-color-success);
+}
+
+.pf-form .form-check-label {
+    color: var(--pf-color-text);
+    font-size: var(--pf-font-size-sm);
+}
+
+.pf-form-help {
+    color: var(--pf-color-text-muted);
+    font-size: var(--pf-font-size-sm);
+}
+
+.pf-form-errors {
+    color: var(--pf-color-danger);
+    font-size: var(--pf-font-size-sm);
+}
+
+.pf-form-errors ul {
+    margin: 0;
+    padding-left: 1.1rem;
+}
+
+.pf-form .is-invalid {
+    border-color: var(--pf-color-danger);
+}
+
+.pf-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--pf-space-3);
+    padding-top: var(--pf-space-5);
+    border-top: 1px solid var(--pf-color-border);
+}
+
+@media (max-width: 575.98px) {
+    .pf-form-actions {
+        align-items: stretch;
+        flex-direction: column-reverse;
+    }
+
+    .pf-form-actions .pf-button {
+        width: 100%;
+    }
+}

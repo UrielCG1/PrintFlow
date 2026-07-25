@@ -1,0 +1,135 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Contactos de cliente | PrintFlow{% endblock %}
+
+{% block app_navigation_active %}clients{% endblock %}
+
+{% block app_breadcrumb %}Clientes / Contactos{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page">
+        <div class="pf-page-header">
+            <div>
+                <a
+                    href="{{ path('admin_clients_edit', { id: client.id }) }}"
+                    class="pf-page-header__back"
+                >
+                    ← Volver al cliente
+                </a>
+
+                <h1>Contactos de {{ client.businessName }}</h1>
+                <p class="pf-page-header__description">
+                    Define las personas que recibirán cotizaciones, órdenes y notificaciones.
+                </p>
+            </div>
+
+            {% if client.active and is_granted('clients.contacts.create') %}
+                <a
+                    href="{{ path('admin_client_contacts_new', { clientId: client.id }) }}"
+                    }) }}"
+                    class="btn pf-button pf-button--primary"
+                >
+                    <i class="bi bi-person-plus" aria-hidden="true"></i>
+                    Nuevo contacto
+                </a>
+            {% endif %}
+        </div>
+
+        {% if not client.active %}
+            <div class="alert alert-warning" role="alert">
+                Este cliente está inactivo. Reactívalo para registrar nuevos contactos.
+            </div>
+        {% endif %}
+
+        <div class="pf-card">
+            <div class="pf-table-responsive">
+                <table class="table pf-table">
+                    <thead>
+                        <tr>
+                            <th>Contacto</th>
+                            <th>Datos</th>
+                            <th>Tipo</th>
+                            <th>Estado</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for contact in contacts %}
+                            <tr>
+                                <td>
+                                    <strong>{{ contact.fullName }}</strong>
+                                    {% if contact.jobTitle %}
+                                        <div>{{ contact.jobTitle }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if contact.email %}<div>{{ contact.email }}</div>{% endif %}
+                                    {% if contact.phone %}<div>{{ contact.phone }}</div>{% endif %}
+                                    {% if not contact.email and not contact.phone %}—{% endif %}
+                                </td>
+                                <td>
+                                    {% if contact.primary %}
+                                        <span class="pf-status-badge pf-status-badge--info">
+                                            Principal
+                                        </span>
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="pf-status-badge {{ contact.active ? 'pf-status-badge--success' : 'pf-status-badge--neutral' }}">
+                                        {{ contact.active ? 'Activo' : 'Inactivo' }}
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <div class="pf-table__actions">
+                                        {% if is_granted('clients.contacts.update') %}
+                                            <a
+                                                href="{{ path('admin_client_contacts_edit', {
+                                                    clientId: client.id,
+                                                    contactId: contact.id
+                                                }) }}"
+                                                class="btn pf-button pf-button--secondary pf-button--sm"
+                                            >
+                                                Editar
+                                            </a>
+                                        {% endif %}
+
+                                        {% if is_granted('clients.contacts.toggle_status') %}
+                                            <form
+                                                method="post"
+                                                action="{{ path('admin_client_contacts_status', {
+                                                    clientId: client.id,
+                                                    contactId: contact.id
+                                                }) }}"
+                                            >
+                                                <input
+                                                    type="hidden"
+                                                    name="_token"
+                                                    value="{{ csrf_token('client_contact_status_' ~ contact.id) }}"
+                                                >
+
+                                                <button
+                                                    type="submit"
+                                                    class="btn pf-button pf-button--sm {{ contact.active ? 'pf-button--danger' : 'pf-button--success' }}"
+                                                >
+                                                    {{ contact.active ? 'Desactivar' : 'Reactivar' }}
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="pf-table__empty">
+                                    Este cliente todavía no tiene contactos registrados.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

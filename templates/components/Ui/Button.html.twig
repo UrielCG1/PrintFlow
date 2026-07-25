@@ -1,12 +1,23 @@
 {% set variants = {
-    primary: 'btn-primary',
-    secondary: 'btn-outline-secondary',
-    danger: 'btn-outline-danger',
-    link: 'btn-link'
+    primary: 'pf-button--primary',
+    secondary: 'pf-button--secondary',
+    success: 'pf-button--success',
+    danger: 'pf-button--danger',
+    link: 'pf-button--link'
 } %}
 
-{% set variant_class = variants[variant]|default(variants.primary) %}
-{% set button_class = 'btn pf-button ' ~ variant_class %}
+{% set sizes = {
+    sm: 'pf-button--sm',
+    md: '',
+    lg: 'pf-button--lg'
+} %}
+
+{% set button_class = [
+    'btn',
+    'pf-button',
+    variants[variant]|default(variants.primary),
+    sizes[size]|default('')
+]|filter(value => value is not empty)|join(' ') %}
 
 {% set component_content %}
     {% block content %}{% endblock %}

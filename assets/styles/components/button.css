@@ -2,38 +2,127 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: var(--pf-space-2);
+    min-height: var(--pf-control-height);
+    padding: 0.5625rem 0.875rem;
+    border: 1px solid transparent;
+    border-radius: var(--pf-radius-sm);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: 1.2;
+    text-decoration: none;
+    transition:
+        background-color var(--pf-transition-fast),
+        border-color var(--pf-transition-fast),
+        box-shadow var(--pf-transition-fast),
+        color var(--pf-transition-fast);
     white-space: nowrap;
 }
 
+.pf-button .bi {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.pf-button--sm {
+    min-height: 2.125rem;
+    padding: 0.375rem 0.625rem;
+    font-size: var(--pf-font-size-sm);
+}
+
+.pf-button--lg {
+    min-height: 3rem;
+    padding: 0.75rem 1.125rem;
+    font-size: var(--pf-font-size-lg);
+}
+
+.pf-button--icon {
+    width: var(--pf-control-height);
+    padding: 0;
+}
+
+/* Primario */
+.pf-button--primary,
 .pf-button.btn-primary {
-    color: var(--pf-color-text-strong);
+    color: var(--pf-color-brand-contrast);
     background-color: var(--pf-color-brand);
     border-color: var(--pf-color-brand);
 }
 
+.pf-button--primary:hover,
 .pf-button.btn-primary:hover {
-    color: var(--pf-color-text-strong);
+    color: var(--pf-color-brand-contrast);
     background-color: var(--pf-color-brand-hover);
     border-color: var(--pf-color-brand-hover);
 }
 
-.pf-button.btn-primary:focus-visible {
+/* Secundario */
+.pf-button--secondary,
+.pf-button.btn-outline-secondary {
     color: var(--pf-color-text-strong);
-    background-color: var(--pf-color-brand);
-    border-color: var(--pf-color-brand);
-    box-shadow: 0 0 0 0.25rem rgb(var(--pf-color-brand-rgb) / 0.22);
+    background-color: var(--pf-color-surface);
+    border-color: var(--pf-color-border-strong);
 }
 
-.pf-button.btn-primary:active {
+.pf-button--secondary:hover,
+.pf-button.btn-outline-secondary:hover {
     color: var(--pf-color-text-strong);
-    background-color: var(--pf-color-brand-active);
-    border-color: var(--pf-color-brand-active);
+    background-color: var(--pf-color-surface-subtle);
+    border-color: var(--pf-color-text-muted);
 }
 
-.pf-button.btn-primary:disabled,
-.pf-button.btn-primary.disabled {
-    color: var(--pf-color-text-muted);
-    background-color: #C8EBCB;
-    border-color: #C8EBCB;
+/* Éxito */
+.pf-button--success {
+    color: var(--pf-color-text-inverse);
+    background-color: var(--pf-color-success);
+    border-color: var(--pf-color-success);
+}
+
+.pf-button--success:hover {
+    color: var(--pf-color-text-inverse);
+    background-color: #0f7315;
+    border-color: #0f7315;
+}
+
+/* Peligro */
+.pf-button--danger,
+.pf-button.btn-outline-danger {
+    color: var(--pf-color-danger);
+    background-color: var(--pf-color-surface);
+    border-color: var(--pf-color-danger);
+}
+
+.pf-button--danger:hover,
+.pf-button.btn-outline-danger:hover {
+    color: var(--pf-color-text-inverse);
+    background-color: var(--pf-color-danger);
+    border-color: var(--pf-color-danger);
+}
+
+/* Enlace */
+.pf-button--link,
+.pf-button.btn-link {
+    min-height: auto;
+    padding: var(--pf-space-1) 0;
+    color: var(--pf-color-link);
+    background: transparent;
+    border-color: transparent;
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+}
+
+.pf-button--link:hover,
+.pf-button.btn-link:hover {
+    color: var(--pf-color-link-hover);
+}
+
+.pf-button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 0.25rem var(--pf-focus-ring-color);
+}
+
+.pf-button:disabled,
+.pf-button.disabled,
+.pf-button[aria-disabled='true'] {
+    pointer-events: none;
+    opacity: 0.58;
 }

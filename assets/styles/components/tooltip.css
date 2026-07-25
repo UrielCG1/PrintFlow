@@ -1,0 +1,13 @@
+.tooltip {
+    --bs-tooltip-bg: var(--pf-color-text-strong);
+    --bs-tooltip-color: var(--pf-color-text-inverse);
+    --bs-tooltip-opacity: 1;
+    --bs-tooltip-border-radius: var(--pf-radius-sm);
+    --bs-tooltip-padding-x: 0.625rem;
+    --bs-tooltip-padding-y: 0.375rem;
+}
+
+.tooltip-inner {
+    max-width: 18rem;
+    font-size: var(--pf-font-size-xs);
+}

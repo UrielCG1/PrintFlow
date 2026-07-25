@@ -1,5 +1,38 @@
+.pf-flash-stack {
+    display: grid;
+    gap: var(--pf-space-2);
+    margin-bottom: var(--pf-space-4);
+}
+
 .pf-flash {
-    margin-bottom: 1rem;
-    border-width: 1px;
+    margin: 0;
+    padding: var(--pf-space-3) var(--pf-space-4);
+    border-radius: var(--pf-radius-md);
     box-shadow: var(--pf-shadow-sm);
+    font-size: var(--pf-font-size-sm);
+}
+
+.pf-flash.alert-success {
+    --bs-alert-color: #0b5c10;
+    --bs-alert-bg: var(--pf-color-success-soft);
+    --bs-alert-border-color: #b3e6b6;
+}
+
+.pf-flash.alert-warning {
+    --bs-alert-color: #6f4700;
+    --bs-alert-bg: var(--pf-color-warning-soft);
+    --bs-alert-border-color: #f1d899;
+}
+
+.pf-flash.alert-danger {
+    --bs-alert-color: #8a1c13;
+    --bs-alert-bg: var(--pf-color-danger-soft);
+    --bs-alert-border-color: #f4b8b2;
+}
+
+.pf-flash.alert-info,
+.pf-flash.alert-secondary {
+    --bs-alert-color: var(--pf-color-text);
+    --bs-alert-bg: var(--pf-color-info-soft);
+    --bs-alert-border-color: var(--pf-color-border);
 }

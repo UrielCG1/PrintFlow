@@ -1,0 +1,50 @@
+.pf-table-responsive {
+    overflow-x: auto;
+    border: 1px solid var(--pf-color-border);
+    border-radius: var(--pf-radius-md);
+    background-color: var(--pf-color-surface);
+}
+
+.pf-table {
+    width: 100%;
+    margin: 0;
+    color: var(--pf-color-text);
+    vertical-align: middle;
+}
+
+.pf-table > :not(caption) > * > * {
+    padding: 0.875rem 1rem;
+    border-bottom-color: var(--pf-color-border);
+}
+
+.pf-table thead th {
+    color: var(--pf-color-text-muted);
+    background-color: var(--pf-color-surface-subtle);
+    border-bottom-width: 1px;
+    font-size: var(--pf-font-size-xs);
+    font-weight: var(--pf-font-weight-bold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.pf-table tbody tr {
+    transition: background-color var(--pf-transition-fast);
+}
+
+.pf-table tbody tr:hover {
+    background-color: var(--pf-color-brand-subtle);
+}
+
+.pf-table__actions {
+    display: inline-flex;
+    justify-content: flex-end;
+    gap: var(--pf-space-2);
+    white-space: nowrap;
+}
+
+.pf-table__empty {
+    padding: var(--pf-space-8) !important;
+    color: var(--pf-color-text-muted);
+    text-align: center;
+}

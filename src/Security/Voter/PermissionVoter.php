@@ -12,7 +12,10 @@ final class PermissionVoter extends Voter
     protected function supports(string $attribute, mixed $subject): bool
     {
         return $subject === null
-            && preg_match('/^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/', $attribute) === 1;
+            && preg_match(
+                '/^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$/',
+                $attribute,
+            ) === 1;
     }
 
     protected function voteOnAttribute(

@@ -1,18 +1,25 @@
-{% set flash_classes = {
-    success: 'success',
-    error: 'danger',
-    danger: 'danger',
-    warning: 'warning',
-    info: 'info'
+{% set flashes = {
+    success: { class: 'success', role: 'status' },
+    error: { class: 'danger', role: 'alert' },
+    danger: { class: 'danger', role: 'alert' },
+    warning: { class: 'warning', role: 'alert' },
+    info: { class: 'info', role: 'status' }
 } %}
 
 {% for type, messages in app.flashes %}
-    {% for message in messages %}
-        <div
-            class="alert alert-{{ flash_classes[type]|default('secondary') }} pf-flash"
-            role="alert"
-        >
-            {{ message }}
-        </div>
-    {% endfor %}
+    {% set flash = flashes[type]|default({
+        class: 'secondary',
+        role: 'status'
+    }) %}
+
+    <div class="pf-flash-stack">
+        {% for message in messages %}
+            <div
+                class="alert alert-{{ flash.class }} pf-flash"
+                role="{{ flash.role }}"
+            >
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
 {% endfor %}

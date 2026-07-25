@@ -1,0 +1,78 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}{{ pageTitle }} | PrintFlow{% endblock %}
+
+{% block app_navigation_active %}clients{% endblock %}
+
+{% block app_breadcrumb %}Clientes / {{ pageTitle }}{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page">
+        <div class="pf-page-header">
+            <div>
+                <a
+                    href="{{ path('admin_client_addresses_index', { clientId: client.id }) }}"
+                    class="pf-page-header__back"
+                >
+                    ← Volver a direcciones
+                </a>
+
+                <h1>{{ pageTitle }}</h1>
+                <p class="pf-page-header__description">
+                    Cliente: {{ client.businessName }}
+                </p>
+            </div>
+        </div>
+
+        <div class="pf-card pf-clients-form-card">
+            {% form_theme form 'form/printflow_theme.html.twig' %}
+
+            {{ form_start(form, { attr: { class: 'pf-form' } }) }}
+                {{ form_row(form.label) }}
+                {{ form_row(form.recipientName) }}
+
+                <div class="pf-clients-form-grid">
+                    {{ form_row(form.street) }}
+                    {{ form_row(form.exteriorNumber) }}
+                </div>
+
+                <div class="pf-clients-form-grid">
+                    {{ form_row(form.interiorNumber) }}
+                    {{ form_row(form.neighborhood) }}
+                </div>
+
+                <div class="pf-clients-form-grid">
+                    {{ form_row(form.postalCode) }}
+                    {{ form_row(form.municipality) }}
+                </div>
+
+                {{ form_row(form.state) }}
+                {{ form_row(form.references) }}
+
+                <div class="pf-form-section">
+                    <h2 class="pf-form-section__title">Uso de la dirección</h2>
+
+                    {{ form_row(form.isFiscalAddress) }}
+                    {{ form_row(form.isDefaultFiscal) }}
+
+                    {{ form_row(form.isDeliveryAddress) }}
+                    {{ form_row(form.isDefaultDelivery) }}
+                </div>
+
+                <div class="pf-form-actions">
+                    <a
+                        href="{{ path('admin_client_addresses_index', { clientId: client.id }) }}"
+                        class="btn pf-button pf-button--secondary"
+                    >
+                        Cancelar
+                    </a>
+
+                    <button type="submit" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-check-lg" aria-hidden="true"></i>
+                        {{ address ? 'Guardar cambios' : 'Registrar dirección' }}
+                    </button>
+                </div>
+            {{ form_end(form) }}
+        </div>
+    </div>
+{% endblock %}

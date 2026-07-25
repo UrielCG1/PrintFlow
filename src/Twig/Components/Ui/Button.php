@@ -9,6 +9,8 @@ final class Button
 {
     public string $variant = 'primary';
 
+    public string $size = 'md';
+
     public string $type = 'button';
 
     public ?string $href = null;

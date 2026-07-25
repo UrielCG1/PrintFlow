@@ -1,0 +1,150 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Direcciones de cliente | PrintFlow{% endblock %}
+
+{% block app_navigation_active %}clients{% endblock %}
+
+{% block app_breadcrumb %}Clientes / Direcciones{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page">
+        <div class="pf-page-header">
+            <div>
+                <a
+                    href="{{ path('admin_clients_edit', { id: client.id }) }}"
+                    class="pf-page-header__back"
+                >
+                    ← Volver al cliente
+                </a>
+
+                <h1>Direcciones de {{ client.businessName }}</h1>
+                <p class="pf-page-header__description">
+                    Administra los domicilios fiscales y de entrega disponibles para cotizaciones y órdenes.
+                </p>
+            </div>
+
+            {% if client.active and is_granted('clients.addresses.create') %}
+                <a
+                    href="{{ path('admin_client_addresses_new', { clientId: client.id }) }}"
+                    class="btn pf-button pf-button--primary"
+                >
+                    <i class="bi bi-geo-alt" aria-hidden="true"></i>
+                    Nueva dirección
+                </a>
+            {% endif %}
+        </div>
+
+        {% if not client.active %}
+            <div class="alert alert-warning" role="alert">
+                Este cliente está inactivo. Reactívalo para registrar nuevas direcciones.
+            </div>
+        {% endif %}
+
+        <div class="pf-card">
+            <div class="pf-table-responsive">
+                <table class="table pf-table">
+                    <thead>
+                        <tr>
+                            <th>Dirección</th>
+                            <th>Usos</th>
+                            <th>Estado</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for address in addresses %}
+                            <tr>
+                                <td>
+                                    <strong>{{ address.label }}</strong>
+
+                                    {% if address.recipientName %}
+                                        <div>{{ address.recipientName }}</div>
+                                    {% endif %}
+
+                                    <div>
+                                        {{ address.street }} #{{ address.exteriorNumber }}
+                                        {% if address.interiorNumber %}
+                                            Int. {{ address.interiorNumber }}
+                                        {% endif %}
+                                    </div>
+
+                                    {% if address.neighborhood %}
+                                        <div>{{ address.neighborhood }}</div>
+                                    {% endif %}
+
+                                    <div>
+                                        C.P. {{ address.postalCode }},
+                                        {{ address.municipality }},
+                                        {{ address.state }}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if address.fiscalAddress %}
+                                        <span class="pf-status-badge pf-status-badge--info">
+                                            Fiscal{{ address.defaultFiscal ? ' · Predeterminada' : '' }}
+                                        </span>
+                                    {% endif %}
+
+                                    {% if address.deliveryAddress %}
+                                        <span class="pf-status-badge pf-status-badge--success">
+                                            Entrega{{ address.defaultDelivery ? ' · Predeterminada' : '' }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="pf-status-badge {{ address.active ? 'pf-status-badge--success' : 'pf-status-badge--neutral' }}">
+                                        {{ address.active ? 'Activa' : 'Inactiva' }}
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <div class="pf-table__actions">
+                                        {% if is_granted('clients.addresses.update') %}
+                                            <a
+                                                href="{{ path('admin_client_addresses_edit', {
+                                                    clientId: client.id,
+                                                    addressId: address.id
+                                                }) }}"
+                                                class="btn pf-button pf-button--secondary pf-button--sm"
+                                            >
+                                                Editar
+                                            </a>
+                                        {% endif %}
+
+                                        {% if is_granted('clients.addresses.toggle_status') %}
+                                            <form
+                                                method="post"
+                                                action="{{ path('admin_client_addresses_status', {
+                                                    clientId: client.id,
+                                                    addressId: address.id
+                                                }) }}"
+                                            >
+                                                <input
+                                                    type="hidden"
+                                                    name="_token"
+                                                    value="{{ csrf_token('client_address_status_' ~ address.id) }}"
+                                                >
+
+                                                <button
+                                                    type="submit"
+                                                    class="btn pf-button pf-button--sm {{ address.active ? 'pf-button--danger' : 'pf-button--success' }}"
+                                                >
+                                                    {{ address.active ? 'Desactivar' : 'Reactivar' }}
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="pf-table__empty">
+                                    Este cliente todavía no tiene direcciones registradas.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

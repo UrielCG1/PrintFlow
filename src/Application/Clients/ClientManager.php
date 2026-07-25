@@ -1,0 +1,126 @@
+<?php
+
+namespace App\Application\Clients;
+
+use App\Entity\Clients\Client;
+use App\Entity\Users\User;
+use App\Service\Audit\AuditLogger;
+use Doctrine\ORM\EntityManagerInterface;
+
+final class ClientManager
+{
+    public function __construct(
+        private readonly EntityManagerInterface $entityManager,
+        private readonly AuditLogger $auditLogger,
+    ) {
+    }
+
+    public function create(ClientData $data, User $actor): Client
+    {
+        return $this->entityManager->wrapInTransaction(function () use ($data, $actor): Client {
+            $client = new Client();
+            $this->applyData($client, $data);
+
+            $this->entityManager->persist($client);
+            $this->entityManager->flush();
+
+            $this->auditLogger->record(
+                actor: $actor,
+                action: 'client.created',
+                entityType: 'client',
+                entityId: $client->getId(),
+                newValues: $this->snapshot($client),
+            );
+
+            $this->entityManager->flush();
+
+            return $client;
+        });
+    }
+
+    public function update(Client $client, ClientData $data, User $actor): void
+    {
+        $oldValues = $this->snapshot($client);
+
+        $this->applyData($client, $data);
+
+        $newValues = $this->snapshot($client);
+
+        if ($oldValues === $newValues) {
+            return;
+        }
+
+        $this->entityManager->wrapInTransaction(function () use (
+            $client,
+            $actor,
+            $oldValues,
+            $newValues,
+        ): void {
+            $this->auditLogger->record(
+                actor: $actor,
+                action: 'client.updated',
+                entityType: 'client',
+                entityId: $client->getId(),
+                oldValues: $oldValues,
+                newValues: $newValues,
+            );
+
+            $this->entityManager->flush();
+        });
+    }
+
+    public function setActive(Client $client, bool $isActive, User $actor): void
+    {
+        if ($client->isActive() === $isActive) {
+            return;
+        }
+
+        $oldValues = $this->snapshot($client);
+        $client->setIsActive($isActive);
+        $newValues = $this->snapshot($client);
+
+        $this->entityManager->wrapInTransaction(function () use (
+            $client,
+            $actor,
+            $isActive,
+            $oldValues,
+            $newValues,
+        ): void {
+            $this->auditLogger->record(
+                actor: $actor,
+                action: $isActive ? 'client.activated' : 'client.deactivated',
+                entityType: 'client',
+                entityId: $client->getId(),
+                oldValues: $oldValues,
+                newValues: $newValues,
+            );
+
+            $this->entityManager->flush();
+        });
+    }
+
+    private function applyData(Client $client, ClientData $data): void
+    {
+        $client
+            ->setBusinessName((string) $data->businessName)
+            ->setTaxId($data->taxId)
+            ->setEmail($data->email)
+            ->setPhone($data->phone)
+            ->setNotes($data->notes);
+    }
+
+    /**
+     * @return array<string, bool|string|null>
+     */
+    private function snapshot(Client $client): array
+    {
+        return [
+            'business_name' => $client->getBusinessName(),
+            'tax_id' => $client->getTaxId(),
+            'email' => $client->getEmail(),
+            'phone' => $client->getPhone(),
+            'notes' => $client->getNotes(),
+            'is_active' => $client->isActive(),
+        ];
+    }
+}

@@ -1,13 +1,23 @@
 html {
     min-height: 100%;
+    text-size-adjust: 100%;
 }
 
 body {
     min-height: 100vh;
+    margin: 0;
     background-color: var(--pf-color-canvas);
     color: var(--pf-color-text);
     font-family: var(--pf-font-sans);
-    line-height: 1.5;
+    font-size: var(--pf-font-size-base);
+    line-height: var(--pf-line-height-base);
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
 }
 
 h1,
@@ -17,7 +27,7 @@ h4,
 h5,
 h6 {
     color: var(--pf-color-text-strong);
-    font-weight: 650;
+    font-weight: var(--pf-font-weight-semibold);
     letter-spacing: -0.02em;
 }
 
@@ -26,11 +36,16 @@ h1 {
 }
 
 a {
+    color: var(--pf-color-link);
     text-underline-offset: 0.18em;
 }
 
+a:hover {
+    color: var(--pf-color-link-hover);
+}
+
 :focus-visible {
-    outline: 0.2rem solid #148E1C;
+    outline: var(--pf-focus-ring-width) solid var(--pf-focus-ring-color);
     outline-offset: 0.2rem;
 }
 
@@ -41,4 +56,15 @@ a {
 
 [hidden] {
     display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
 }

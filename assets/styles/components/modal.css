@@ -1,0 +1,26 @@
+.pf-modal .modal-content {
+    overflow: hidden;
+    border: 1px solid var(--pf-color-border);
+    border-radius: var(--pf-radius-lg);
+    box-shadow: var(--pf-shadow-lg);
+}
+
+.pf-modal .modal-header,
+.pf-modal .modal-footer {
+    padding: var(--pf-space-4) var(--pf-space-5);
+    border-color: var(--pf-color-border);
+}
+
+.pf-modal .modal-title {
+    margin: 0;
+    font-size: var(--pf-font-size-lg);
+    font-weight: var(--pf-font-weight-semibold);
+}
+
+.pf-modal .modal-body {
+    padding: var(--pf-space-5);
+}
+
+.pf-modal .modal-footer {
+    gap: var(--pf-space-3);
+}
