@@ -1,6 +1,6 @@
 # PrintFlow — Contexto técnico integral
 
-> Documento vivo del proyecto. Consolida el estado funcional y las decisiones confirmadas hasta el **24 de julio de 2026**. Úsalo como referencia antes de desarrollar, revisar, desplegar o modificar módulos.
+> Documento vivo del proyecto. Consolida el estado funcional y las decisiones confirmadas hasta el **25 de julio de 2026**. Úsalo como referencia antes de desarrollar, revisar, desplegar o modificar módulos.
 >
 > **Fuente de verdad de código:** el repositorio local `C:\PrintFlow` y su historial Git. Este documento no sustituye el código ni las migraciones; explica cómo están organizados y por qué. Las copias de archivos utilizadas para consolidarlo pueden corresponder a un momento anterior a las últimas correcciones indicadas en la sección [Cambios confirmados recientes](#cambios-confirmados-recientes).
 
@@ -18,7 +18,7 @@ El alcance comercial que originó el proyecto contempla:
 - Trazabilidad interna de los trabajos de impresión por etapas, materiales y destino siguiente.
 - Alertas, por ejemplo por bajo inventario.
 
-**Estado de implementación confirmado:** el cimiento técnico, el acceso administrativo, la auditoría y el módulo de clientes ya existen. Contactos y direcciones de cliente funcionan correctamente. El siguiente módulo acordado, aún sin iniciar, es el **catálogo de productos y servicios** (con categorías, unidades de medida y conceptos reutilizables en cotizaciones).
+**Estado de implementación confirmado:** el cimiento técnico, el acceso administrativo, la auditoría, clientes, contactos y direcciones ya existen y funcionan correctamente. Del catálogo de productos y servicios ya están terminadas las bases administrativas: **categorías comerciales** y **unidades de medida**, ambas con alta, edición, búsqueda, filtrado, estado y reordenamiento visual persistente. El siguiente bloque es el de **conceptos comerciales** y, después, sus reglas de precio.
 
 ---
 
@@ -32,7 +32,7 @@ El alcance comercial que originó el proyecto contempla:
 | Zona de negocio | `America/Mexico_City` |
 | Persistencia de fechas | UTC en MySQL y entidades; conversión a zona de negocio para filtros y presentación |
 | Vista | Twig, Symfony Forms, Twig Components / UX y Stimulus |
-| JavaScript/CSS | AssetMapper; Bootstrap 5, Bootstrap Icons y jQuery **locales**. CSS propio con tokens y componentes; no CDN como dependencia operativa |
+| JavaScript/CSS | AssetMapper; Bootstrap 5, Bootstrap Icons, jQuery, Notyf, SweetAlert2 y SortableJS **locales**. CSS propio con tokens y componentes; no CDN como dependencia operativa |
 | Sesión y seguridad | Symfony Security, sesiones, CSRF, rate limiter y RBAC por permisos almacenados en MySQL |
 | ORM y esquema | Doctrine ORM + Doctrine Migrations; MySQL/InnoDB/utf8mb4 |
 | Pruebas disponibles | PHPUnit, BrowserKit, CSS Selector y entorno `test` configurado |
@@ -97,7 +97,14 @@ PrintFlow/
 │   ├── app.js                         # Punto de entrada: importa CSS y Stimulus
 │   ├── stimulus_bootstrap.js           # Registro de controladores Stimulus
 │   ├── controllers/
-│   │   └── ui/sidebar_controller.js    # Apertura/cierre responsivo del sidebar
+│   │   ├── csrf_protection_controller.js # Protección complementaria de formularios
+│   │   └── ui/
+│   │       ├── confirm_action_controller.js
+│   │       ├── flash_toast_controller.js
+│   │       ├── password_visibility_controller.js
+│   │       ├── sidebar_controller.js    # Apertura/cierre responsivo del sidebar
+│   │       ├── sortable_controller.js   # Reordenamiento reutilizable con SortableJS
+│   │       └── tooltip_controller.js
 │   └── styles/
 │       ├── app.css                     # Índice de estilos de la aplicación
 │       ├── foundation/                 # Tokens, base y ajustes Bootstrap
@@ -115,6 +122,8 @@ PrintFlow/
 │       │   ├── sidebar.css
 │       │   ├── flash.css
 │       │   ├── form.css
+│       │   ├── sortable.css             # Handle y estados visuales de arrastre
+│       │   ├── sweetalert.css
 │       │   └── table.css
 │       └── modules/                    # Estilos exclusivos cuando un módulo los justifica
 │           ├── users/
@@ -148,13 +157,18 @@ PrintFlow/
 │   │   ├── Access/
 │   │   │   ├── UserManager.php
 │   │   │   └── RoleManager.php
-│   │   └── Clients/
+│   │   ├── Clients/
 │   │       ├── ClientData.php
 │   │       ├── ClientManager.php
 │   │       ├── ClientContactData.php
 │   │       ├── ClientContactManager.php
 │   │       ├── ClientAddressData.php
 │   │       └── ClientAddressManager.php
+│   │   └── Catalog/
+│   │       ├── CommercialCategoryData.php
+│   │       ├── CommercialCategoryManager.php
+│   │       ├── MeasurementUnitData.php
+│   │       └── MeasurementUnitManager.php
 │   ├── Command/
 │   │   └── BootstrapSecurityCommand.php # Bootstrap idempotente de roles/permisos/admin
 │   ├── Controller/
@@ -166,10 +180,13 @@ PrintFlow/
 │   │       │   └── RoleController.php
 │   │       ├── Audit/
 │   │       │   └── AuditLogController.php
-│   │       └── Clients/
+│   │       ├── Clients/
 │   │           ├── ClientController.php
 │   │           ├── ClientContactController.php
 │   │           └── ClientAddressController.php
+│   │       └── Catalog/
+│   │           ├── CommercialCategoryController.php
+│   │           └── MeasurementUnitController.php
 │   ├── DTO/
 │   │   └── Access/
 │   │       ├── CreateUserData.php
@@ -180,17 +197,20 @@ PrintFlow/
 │   ├── Entity/
 │   │   ├── Audit/AuditLog.php
 │   │   ├── Users/{User,Role,Permission}.php
-│   │   └── Clients/{Client,ClientContact,ClientAddress}.php
+│   │   ├── Clients/{Client,ClientContact,ClientAddress}.php
+│   │   └── Catalog/{CommercialCategory,MeasurementUnit}.php
 │   ├── EventSubscriber/
 │   │   └── Security/AuthenticationAuditSubscriber.php
 │   ├── Form/
 │   │   └── Admin/
 │   │       ├── Access/                 # Forms de usuarios y roles
-│   │       └── Clients/                # ClientType, ClientContactType, ClientAddressType
+│   │       ├── Clients/                # ClientType, ClientContactType, ClientAddressType
+│   │       └── Catalog/                # CommercialCategoryType, MeasurementUnitType
 │   ├── Repository/
 │   │   ├── Audit/AuditLogRepository.php
 │   │   ├── Users/{User,Role,Permission}Repository.php
-│   │   └── Clients/{Client,ClientContact,ClientAddress}Repository.php
+│   │   ├── Clients/{Client,ClientContact,ClientAddress}Repository.php
+│   │   └── Catalog/{CommercialCategory,MeasurementUnit}Repository.php
 │   ├── Security/
 │   │   ├── UserChecker.php
 │   │   └── Voter/PermissionVoter.php
@@ -211,10 +231,13 @@ PrintFlow/
 │   └── admin/
 │       ├── access/{users,roles}/        # Índice, alta, edición, reset de contraseña
 │       ├── audit/logs/index.html.twig
-│       └── clients/
+│       ├── clients/
 │           ├── {index,form}.html.twig
 │           ├── contacts/{index,form}.html.twig
 │           └── addresses/{index,form}.html.twig
+│       └── catalog/
+│           ├── categories/{index,form}.html.twig
+│           └── units/{index,form}.html.twig
 ├── tests/                               # Pruebas automatizadas actuales y futuras
 ├── .env                                 # Valores no secretos por entorno (no credenciales)
 ├── .env.local                           # Credenciales/configuración local, no versionar
@@ -273,6 +296,7 @@ Se utilizan códigos minúsculos separados por punto. Ejemplos:
 | Clientes | `clients.view`, `clients.create`, `clients.update`, `clients.toggle_status` |
 | Contactos | `clients.contacts.view`, `clients.contacts.create`, `clients.contacts.update`, `clients.contacts.toggle_status` |
 | Direcciones | `clients.addresses.view`, `clients.addresses.create`, `clients.addresses.update`, `clients.addresses.toggle_status` |
+| Catálogo | `catalog.view`, `catalog.categories.manage`, `catalog.units.manage` |
 
 **Regla crítica:** el `PermissionVoter` debe aceptar permisos de profundidad variable. El patrón correcto es:
 
@@ -323,6 +347,8 @@ client.created / client.updated / client.activated / client.deactivated
 client_contact.created / client_contact.updated / client_contact.activated / client_contact.deactivated
 client_address.created / client_address.updated / client_address.activated / client_address.deactivated
 client_address.default_changed
+commercial_category.created / commercial_category.updated / commercial_category.activated / commercial_category.deactivated / commercial_category.reordered
+measurement_unit.created / measurement_unit.updated / measurement_unit.activated / measurement_unit.deactivated / measurement_unit.reordered
 ```
 
 La pantalla `/admin/bitacora` permite consultar acciones, actor, fecha desde/hasta y texto de búsqueda. Los filtros de fecha se reciben en `America/Mexico_City` y se convierten a UTC antes de consultar.
@@ -413,6 +439,27 @@ erDiagram
         varchar name UK
         text description "nullable"
         decimal base_delivery_cost
+        int display_order
+        boolean is_active
+        datetime created_at
+        datetime updated_at
+    }
+
+    COMMERCIAL_CATEGORIES {
+        int id PK
+        varchar code UK
+        varchar name
+        text description "nullable"
+        int display_order
+        boolean is_active
+        datetime created_at
+        datetime updated_at
+    }
+
+    MEASUREMENT_UNITS {
+        int id PK
+        varchar code UK
+        varchar name
         int display_order
         boolean is_active
         datetime created_at
@@ -511,6 +558,8 @@ erDiagram
 | `clients` | Entidad comercial y fiscal | RFC único si existe; categoría opcional; datos fiscales y condiciones comerciales; baja lógica mediante `is_active`/`deleted_at` |
 | `client_contacts` | Personas de contacto de un cliente | FK `client_id` con `RESTRICT`; índices por cliente/activo y cliente/principal; un contacto principal activo por cliente |
 | `client_addresses` | Domicilios fiscales y de entrega | FK a cliente y zona de entrega opcional; una predeterminada fiscal activa y una de entrega activa por cliente mediante columnas generadas/índices únicos |
+| `commercial_categories` | Agrupación de futuros conceptos cotizables | `code` único; nombre, descripción opcional, orden visual y estado activo/inactivo |
+| `measurement_units` | Unidad de venta o cálculo de futuros conceptos | `code` único; nombre, orden visual y estado activo/inactivo |
 
 ### Clientes
 
@@ -538,6 +587,19 @@ Permisos: `clients.view`, `clients.create`, `clients.update`, `clients.toggle_st
 `ClientCategory` permite clasificar clientes para fines comerciales y operativos. Cuenta con nombre único, descripción opcional, orden de visualización y estado activo.
 
 `DeliveryZone` representa zonas configurables de entrega. Cada zona define un nombre único, descripción opcional, costo base de entrega, orden y estado activo. Una dirección puede asociarse opcionalmente a una zona; el costo final de entrega queda guardado en la dirección para permitir ajustes específicos por cliente o domicilio.
+
+### Catálogo comercial: categorías y unidades
+
+La primera subfase del catálogo está terminada. `CommercialCategory` agrupa los conceptos que después se cotizarán; `MeasurementUnit` define cómo se venden o calculan (por ejemplo, pieza, m², metro lineal o servicio). Ambos catálogos usan un `code` único, nombre, `displayOrder`, estado y timestamps; las categorías además permiten descripción opcional.
+
+Reglas implementadas:
+
+- La validación de código único funciona en alta y edición: al editar se excluye el propio registro mediante su identificador, por lo que solo se rechaza un código que pertenezca a otro registro.
+- Las listas permiten búsqueda por código/nombre, filtros de activas, inactivas o todas, paginación y cambio de estado con `POST`, CSRF, permiso y auditoría.
+- La visualización y edición se controlan mediante `catalog.view`, `catalog.categories.manage` y `catalog.units.manage`; el sidebar se muestra solo a quien tiene el permiso de consulta.
+- El orden de los registros activos se puede modificar al arrastrar desde una lista sin búsqueda. No se habilita sobre resultados filtrados, páginas o registros inactivos, para evitar reordenamientos parciales o ambiguos.
+- `ui--sortable` es un controlador Stimulus genérico. Envía únicamente el registro movido y sus vecinos al endpoint correspondiente, incluye un token CSRF y revierte el DOM si el servidor rechaza la operación.
+- Cada manager reordena dentro de una transacción y consulta los activos con bloqueo pesimista. Revalida los vecinos, reenumera `displayOrder` y deja el snapshot anterior/nuevo en `audit_logs`.
 
 ### Contactos de cliente
 
@@ -639,6 +701,25 @@ Rutas anidadas confirmadas:
 
 Los cambios de estado se realizan por `POST`, con token CSRF específico de cada registro.
 
+### 8.6 Catálogo comercial: bases
+
+Rutas principales:
+
+| Función | Ruta | Permiso |
+| --- | --- | --- |
+| Categorías comerciales | `/admin/catalogo/categorias` | `catalog.view` |
+| Nueva categoría | `/admin/catalogo/categorias/nueva` | `catalog.categories.manage` |
+| Editar categoría | `/admin/catalogo/categorias/{id}/editar` | `catalog.categories.manage` |
+| Estado de categoría | `/admin/catalogo/categorias/{id}/estado` (POST) | `catalog.categories.manage` |
+| Reordenar categorías | `/admin/catalogo/categorias/reordenar` (POST/AJAX) | `catalog.categories.manage` |
+| Unidades de medida | `/admin/catalogo/unidades` | `catalog.view` |
+| Nueva unidad | `/admin/catalogo/unidades/nueva` | `catalog.units.manage` |
+| Editar unidad | `/admin/catalogo/unidades/{id}/editar` | `catalog.units.manage` |
+| Estado de unidad | `/admin/catalogo/unidades/{id}/estado` (POST) | `catalog.units.manage` |
+| Reordenar unidades | `/admin/catalogo/unidades/reordenar` (POST/AJAX) | `catalog.units.manage` |
+
+La tabla muestra el handle de arrastre únicamente si el usuario puede administrar, consulta registros activos y no tiene búsqueda aplicada. SortableJS se instala con `php bin/console importmap:require sortablejs`; queda en `importmap.php` y se importa desde el controlador reutilizable `assets/controllers/ui/sortable_controller.js`. No se utiliza CDN ni se duplica JavaScript por catálogo.
+
 ---
 
 ## 9. Vistas, UX y componentes
@@ -708,7 +789,7 @@ El uso de `parent()` en ese bloque genera el error de Twig: *The template has no
 
 ### Estado confirmado
 
-El estado más reciente verificado en local fue:
+Antes de iniciar el catálogo, el estado verificado en local fue:
 
 ```text
 Database: printflow_app
@@ -716,6 +797,8 @@ Executed migrations: 5
 Current / Latest: DoctrineMigrations\Version20260721230000
 Previous: DoctrineMigrations\Version20260721224500
 ```
+
+Después se aplicó la migración que incorpora las tablas y permisos base del catálogo. La versión exacta debe obtenerse del repositorio actual con `php bin/console doctrine:migrations:status`; no se debe inferir ni escribir manualmente en este documento.
 
 La migración de contactos conocida es `Version20260721223000`: crea `client_contacts`, registra los cuatro permisos `clients.contacts.*` y los asigna a `ROLE_ADMIN` usando SQL idempotente.
 
@@ -818,25 +901,35 @@ Validaciones técnicas y pruebas funcionales
 
 ---
 
-## 12. Próximo bloque planificado: catálogo de productos y servicios
+## 12. Fase actual: catálogo de productos y servicios
 
-No está iniciado. El siguiente bloque debe ser el catálogo que alimente después el cotizador, no el cotizador directamente.
+### 12.1 Subfase terminada: bases del catálogo
 
-### Alcance propuesto para su diseño
+Categorías comerciales y unidades de medida están implementadas y probadas de forma funcional: crear, editar, filtrar, desactivar/reactivar y reordenar. Su orden se conserva después de guardar y está respaldado por transacción, bloqueo de filas, CSRF, autorización y auditoría.
 
-- Categorías de productos/servicios.
-- Unidades de medida.
-- Conceptos vendibles reutilizables.
-- Estado activo/inactivo para no alterar cotizaciones históricas.
-- Base para reglas de precio, pero sin precipitar una estructura de costos que aún no se haya levantado con el negocio.
+### 12.2 Cierre técnico pendiente antes de cambiar de subfase
 
-### Decisiones que deben tomarse antes de implementarlo
+- Confirmar en bitácora los eventos `commercial_category.reordered` y `measurement_unit.reordered`, incluyendo snapshots de orden anterior y nuevo.
+- Dejar versionados los cambios de la subfase: migración del catálogo, `importmap.php`, `assets/vendor/` generado por AssetMapper, controlador/estilos, backend, Twig y sidebar.
+- Ejecutar el checklist técnico del módulo: `lint:container`, `lint:twig templates`, `doctrine:schema:validate --skip-sync` y revisión de rutas `admin_catalog`.
+- Validar manualmente el caso de rechazo: mover mientras la lista se altera en otra sesión o simular un fallo de servidor; la UI debe volver a su orden previo y mostrar el error.
 
-- Si producto y servicio son la misma entidad con un tipo, o catálogos distintos.
-- Qué campos intervienen realmente en una cotización (medidas, cantidades, acabados, material, operación, desperdicio, etc.).
-- Si los precios son fijos, por unidad, por rangos o por fórmula.
-- Cómo se conservará una cotización histórica cuando el catálogo cambie: por snapshot de concepto/precio, nunca por lectura retroactiva del catálogo vigente.
-- Permisos y quién puede modificar precios.
+No falta otro CRUD de esta subfase. Una regla que impida desactivar categorías o unidades con conceptos activos solo podrá probarse e imponerse cuando existan esos conceptos; entonces pertenecerá a la siguiente subfase.
+
+### 12.3 Siguiente subfase: conceptos comerciales
+
+El siguiente bloque debe crear el catálogo de conceptos reutilizables por cotización. Cada concepto debe relacionarse con una categoría comercial y una unidad de medida; tendrá estado activo/inactivo y sus cambios deberán quedar auditados. Al desactivar una categoría o unidad, el manager deberá impedirlo si sigue siendo utilizada por conceptos activos, salvo que primero se resuelva la relación de negocio.
+
+Antes de modelarlo hay que cerrar con negocio:
+
+- Si producto y servicio son una misma entidad con campo `type`, o catálogos separados.
+- Campos realmente cotizables: medidas, cantidades, acabados, material, operación, desperdicio y notas.
+- Si el precio inicial será fijo, por unidad, por rango, por fórmula o una combinación.
+- Permisos para administrar conceptos y para modificar precios.
+
+### 12.4 Subfase posterior: reglas de precio e historial
+
+Las reglas de precio deben quedar separadas del concepto para soportar rangos de cantidad y vigencias sin reescribir cotizaciones existentes. Una cotización emitida deberá conservar un snapshot de concepto, precio, unidad, condiciones y cálculo utilizado; nunca debe consultar retroactivamente el catálogo vigente.
 
 ---
 
@@ -902,6 +995,9 @@ Estas correcciones ya se probaron de forma funcional y forman parte del estado v
 6. **Migraciones:** la base local está al día en `Version20260721230000`.
 7. **Diagrama:** el formato preferido es Mermaid. El archivo draw.io generado anteriormente se descartó por calidad visual y no es referencia de diseño.
 8. **Notificaciones y confirmaciones:** se incorporaron Notyf y SweetAlert2 como dependencias locales gestionadas por AssetMapper. Se registraron con `importmap:require`, sus archivos viven bajo `assets/vendor/`, `importmap.php` conserva el mapeo de versiones y sus CSS se importan desde `assets/app.js`. No se usan CDN, npm ni variables globales (`window.Notyf` / `window.Swal`).
+9. **Catálogo comercial — bases:** categorías comerciales y unidades de medida ya cuentan con CRUD administrativo, filtro, estado, permisos granulares, sidebar y auditoría.
+10. **Validación de edición:** los DTO de categoría y unidad incluyen el identificador actual en `UniqueEntity`, evitando que un registro se considere duplicado de sí mismo al cambiar nombre, descripción u orden.
+11. **Orden visual:** SortableJS se añadió mediante AssetMapper y se encapsuló en `ui--sortable`. El reordenamiento persiste desde endpoints `POST` con CSRF, autorización, transacción, bloqueo pesimista de los activos, validación de vecinos y auditoría de snapshots.
 
 ### Estándar de feedback y acciones sensibles
 
