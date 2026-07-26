@@ -1,0 +1,254 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Materiales | PrintFlow{% endblock %}
+{% block app_navigation_active %}materials{% endblock %}
+{% block app_breadcrumb %}Operación / Materiales{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page">
+        <div class="pf-page-header">
+            <div>
+                <h1 class="pf-page-header__title">Materiales</h1>
+                <p class="pf-page-header__subtitle">
+                    Administra los insumos operativos preparados para inventario futuro, sin registrar existencias.
+                </p>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                {% if is_granted('material_categories.view') %}
+                    <a href="{{ path('admin_material_categories_index') }}" class="btn pf-button pf-button--secondary">
+                        <i class="bi bi-tags" aria-hidden="true"></i>
+                        <span>Categorías de materiales</span>
+                    </a>
+                {% endif %}
+
+                {% if is_granted('materials.create') %}
+                    <a href="{{ path('admin_materials_new') }}" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                        <span>Nuevo material</span>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <form method="get" class="pf-card mb-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-lg-4">
+                    <label for="material-search" class="form-label">Buscar</label>
+                    <input
+                        id="material-search"
+                        type="search"
+                        name="q"
+                        value="{{ search }}"
+                        class="form-control"
+                        placeholder="Código, nombre, categoría, unidad o proveedor"
+                    >
+                </div>
+
+                <div class="col-md-4 col-lg-2">
+                    <label for="material-category" class="form-label">Categoría</label>
+                    <select id="material-category" name="category" class="form-select">
+                        <option value="">Todas</option>
+                        {% for category in categories %}
+                            <option value="{{ category.id }}" {{ categoryId == category.id ? 'selected' : '' }}>
+                                {{ category.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4 col-lg-2">
+                    <label for="material-unit" class="form-label">Unidad</label>
+                    <select id="material-unit" name="unit" class="form-select">
+                        <option value="">Todas</option>
+                        {% for unit in measurementUnits %}
+                            <option value="{{ unit.id }}" {{ measurementUnitId == unit.id ? 'selected' : '' }}>
+                                {{ unit.code }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4 col-lg-2">
+                    <label for="material-supplier" class="form-label">Proveedor</label>
+                    <select id="material-supplier" name="supplier" class="form-select">
+                        <option value="">Todos</option>
+                        {% for supplier in suppliers %}
+                            <option value="{{ supplier.id }}" {{ primarySupplierId == supplier.id ? 'selected' : '' }}>
+                                {{ supplier.businessName }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4 col-lg-2">
+                    <label for="material-status" class="form-label">Estado</label>
+                    <select id="material-status" name="status" class="form-select">
+                        <option value="active" {{ status == 'active' ? 'selected' : '' }}>Activos</option>
+                        <option value="inactive" {{ status == 'inactive' ? 'selected' : '' }}>Inactivos</option>
+                        <option value="all" {{ status == 'all' ? 'selected' : '' }}>Todos</option>
+                    </select>
+                </div>
+
+                <div class="col-12 d-flex gap-2">
+                    <button type="submit" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <span>Filtrar</span>
+                    </button>
+
+                    <a href="{{ path('admin_materials_index') }}" class="btn pf-button pf-button--secondary">
+                        Limpiar
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        {% set canManage = is_granted('materials.update') or is_granted('materials.toggle_status') %}
+
+        <div class="pf-card">
+            <div class="pf-table-responsive">
+                <table class="pf-table">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Material</th>
+                            <th>Categoría</th>
+                            <th>Unidad</th>
+                            <th>Proveedor principal</th>
+                            <th class="text-end">Costo ref.</th>
+                            <th class="text-end">Stock mínimo</th>
+                            <th>Estado</th>
+                            {% if canManage %}
+                                <th class="text-end">Acciones</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for material in page.items %}
+                            <tr>
+                                <td><code>{{ material.code }}</code></td>
+                                <td>
+                                    <strong>{{ material.name }}</strong>
+                                    {% if material.description %}
+                                        <div class="small text-body-secondary">{{ material.description }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>{{ material.category.name }}</td>
+                                <td>{{ material.measurementUnit.code }}</td>
+                                <td>{{ material.primarySupplier ? material.primarySupplier.businessName : '—' }}</td>
+                                <td class="text-end">${{ material.referenceCost|number_format(2, '.', ',') }}</td>
+                                <td class="text-end">
+                                    {{ material.minimumStock|number_format(3, '.', ',') }}
+                                    {{ material.measurementUnit.code }}
+                                </td>
+                                <td>
+                                    <span class="pf-status-badge {{ material.isActive ? 'pf-status-badge--success' : 'pf-status-badge--neutral' }}">
+                                        {{ material.isActive ? 'Activo' : 'Inactivo' }}
+                                    </span>
+                                </td>
+
+                                {% if canManage %}
+                                    <td>
+                                        <div class="pf-table__actions justify-content-end">
+                                            {% if is_granted('materials.update') %}
+                                                <a
+                                                    href="{{ path('admin_materials_edit', { id: material.id }) }}"
+                                                    class="btn pf-button pf-button--secondary pf-button--sm"
+                                                >
+                                                    <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                                    <span>Editar</span>
+                                                </a>
+                                            {% endif %}
+
+                                            {% if is_granted('materials.toggle_status') %}
+                                                <form
+                                                    method="post"
+                                                    action="{{ path('admin_materials_status', {
+                                                        id: material.id,
+                                                        q: search,
+                                                        status: status,
+                                                        category: categoryId,
+                                                        unit: measurementUnitId,
+                                                        supplier: primarySupplierId,
+                                                        page: page.currentPage
+                                                    }) }}"
+                                                    data-controller="ui--confirm-action"
+                                                    data-action="submit->ui--confirm-action#submit"
+                                                    data-ui--confirm-action-title-value="{{ material.isActive ? '¿Desactivar material?' : '¿Reactivar material?' }}"
+                                                    data-ui--confirm-action-text-value="{{ material.isActive
+                                                        ? 'El material dejará de estar disponible para futuras operaciones.'
+                                                        : 'El material volverá a estar disponible para operar.' }}"
+                                                    data-ui--confirm-action-confirm-button-text-value="{{ material.isActive ? 'Sí, desactivar' : 'Sí, reactivar' }}"
+                                                    data-ui--confirm-action-cancel-button-text-value="Cancelar"
+                                                    data-ui--confirm-action-icon-value="warning"
+                                                >
+                                                    <input
+                                                        type="hidden"
+                                                        name="_token"
+                                                        value="{{ csrf_token('material_status_' ~ material.id) }}"
+                                                    >
+
+                                                    <button
+                                                        type="submit"
+                                                        class="btn pf-button pf-button--sm {{ material.isActive ? 'pf-button--danger' : 'pf-button--success' }}"
+                                                    >
+                                                        <i class="bi {{ material.isActive ? 'bi-pause-circle' : 'bi-check-circle' }}" aria-hidden="true"></i>
+                                                        <span>{{ material.isActive ? 'Desactivar' : 'Reactivar' }}</span>
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="{{ canManage ? 9 : 8 }}" class="text-center py-4">
+                                    No se encontraron materiales con los filtros seleccionados.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if page.pageCount > 1 %}
+                <nav class="mt-4" aria-label="Paginación de materiales">
+                    <ul class="pagination mb-0">
+                        <li class="page-item {{ page.currentPage == 1 ? 'disabled' : '' }}">
+                            <a class="page-link" href="{{ path('admin_materials_index', {
+                                q: search,
+                                status: status,
+                                category: categoryId,
+                                unit: measurementUnitId,
+                                supplier: primarySupplierId,
+                                page: page.currentPage - 1
+                            }) }}">
+                                Anterior
+                            </a>
+                        </li>
+
+                        <li class="page-item disabled">
+                            <span class="page-link">
+                                Página {{ page.currentPage }} de {{ page.pageCount }}
+                            </span>
+                        </li>
+
+                        <li class="page-item {{ page.currentPage == page.pageCount ? 'disabled' : '' }}">
+                            <a class="page-link" href="{{ path('admin_materials_index', {
+                                q: search,
+                                status: status,
+                                category: categoryId,
+                                unit: measurementUnitId,
+                                supplier: primarySupplierId,
+                                page: page.currentPage + 1
+                            }) }}">
+                                Siguiente
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

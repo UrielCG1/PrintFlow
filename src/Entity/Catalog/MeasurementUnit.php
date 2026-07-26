@@ -11,7 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\UniqueConstraint(name: 'uniq_measurement_units_name', columns: ['name'])]
 #[ORM\Index(name: 'idx_measurement_units_active_order', columns: ['is_active', 'display_order', 'name'])]
 #[ORM\HasLifecycleCallbacks]
-final class MeasurementUnit
+class MeasurementUnit
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

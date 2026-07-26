@@ -68,8 +68,16 @@ final class BootstrapSecurityCommand extends Command
         'operation.view' => ['operations', 'view', 'Consultar operaciones'],
         'operation.manage' => ['operations', 'manage', 'Administrar operaciones'],
 
-        'material.view' => ['materials', 'view', 'Consultar materiales'],
-        'material.manage' => ['materials', 'manage', 'Administrar materiales'],
+        'material_categories.view' => ['materials', 'categories_view', 'Consultar categorías de materiales'],
+        'material_categories.create' => ['materials', 'categories_create', 'Crear categorías de materiales'],
+        'material_categories.update' => ['materials', 'categories_update', 'Editar categorías de materiales'],
+        'material_categories.toggle_status' => ['materials', 'categories_toggle_status', 'Activar o desactivar categorías de materiales'],
+
+        'materials.view' => ['materials', 'view', 'Consultar materiales'],
+        'materials.create' => ['materials', 'create', 'Crear materiales'],
+        'materials.update' => ['materials', 'update', 'Editar materiales'],
+        'materials.toggle_status' => ['materials', 'toggle_status', 'Activar o desactivar materiales'],
+
         'inventory.adjust_stock' => ['inventory', 'adjust_stock', 'Ajustar existencias'],
 
         'equipment.view' => ['equipment', 'view', 'Consultar equipos'],
@@ -126,7 +134,7 @@ final class BootstrapSecurityCommand extends Command
             'traceability.view',
             'traceability.assign',
             'traceability.update_stage',
-            'material.view',
+            'materials.view',
             'equipment.view',
         ],
 

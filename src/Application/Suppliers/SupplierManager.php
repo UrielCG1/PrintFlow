@@ -6,12 +6,14 @@ use App\Entity\Suppliers\Supplier;
 use App\Entity\Users\User;
 use App\Service\Audit\AuditLogger;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Repository\Materials\MaterialRepository;
 
 final class SupplierManager
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly AuditLogger $auditLogger,
+        private readonly MaterialRepository $materialRepository,
     ) {
     }
 
@@ -68,6 +70,15 @@ final class SupplierManager
     {
         if ($supplier->isActive() === $isActive) {
             return;
+        }
+
+        if (
+            !$isActive
+            && $this->materialRepository->hasActiveForPrimarySupplier($supplier)
+        ) {
+            throw new \DomainException(
+                'No puedes desactivar un proveedor que es principal de materiales activos.',
+            );
         }
 
         $this->entityManager->wrapInTransaction(function () use ($supplier, $isActive, $actor): void {

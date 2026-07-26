@@ -17,6 +17,29 @@ final class SupplierRepository extends ServiceEntityRepository
         parent::__construct($registry, Supplier::class);
     }
 
+    /**
+     * @return list<Supplier>
+     */
+    public function findAvailableForMaterialForm(?Supplier $selected = null): array
+    {
+        $queryBuilder = $this->createQueryBuilder('supplier')
+            ->andWhere('supplier.isActive = :isActive')
+            ->setParameter('isActive', true);
+
+        if ($selected !== null) {
+            $queryBuilder
+                ->orWhere('supplier.id = :selectedId')
+                ->setParameter('selectedId', $selected->getId());
+        }
+
+        return $queryBuilder
+            ->orderBy('supplier.isActive', 'DESC')
+            ->addOrderBy('supplier.businessName', 'ASC')
+            ->addOrderBy('supplier.code', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
     public function paginateForAdministration(
         string $search,
         ?bool $isActive,

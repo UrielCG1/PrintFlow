@@ -115,4 +115,12 @@ final class MeasurementUnitRepository extends ServiceEntityRepository
 
         return $units;
     }
+    /**
+     * @return list<MeasurementUnit>
+     */
+    public function findAvailableForMaterialForm(
+        ?MeasurementUnit $selected = null,
+    ): array {
+        return $this->findAvailableForItemForm($selected);
+    }
 }

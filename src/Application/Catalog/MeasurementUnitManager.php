@@ -8,6 +8,7 @@ use App\Repository\Catalog\CommercialItemRepository;
 use App\Service\Audit\AuditLogger;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Repository\Catalog\MeasurementUnitRepository;
+use App\Repository\Materials\MaterialRepository;
 
 final class MeasurementUnitManager
 {
@@ -15,6 +16,7 @@ final class MeasurementUnitManager
         private readonly EntityManagerInterface $entityManager,
         private readonly AuditLogger $auditLogger,
         private readonly CommercialItemRepository $commercialItemRepository,
+        private readonly MaterialRepository $materialRepository,
         private readonly MeasurementUnitRepository $measurementUnitRepository,
     ) {
     }
@@ -59,6 +61,15 @@ final class MeasurementUnitManager
 
         if (!$isActive && $this->commercialItemRepository->hasActiveForMeasurementUnit($unit)) {
             throw new \DomainException('No puedes desactivar una unidad de medida que tiene conceptos comerciales activos.');
+        }
+
+        if (
+            !$isActive
+            && $this->materialRepository->hasActiveForMeasurementUnit($unit)
+        ) {
+            throw new \DomainException(
+                'No puedes desactivar una unidad de medida que tiene materiales operativos activos.',
+            );
         }
 
         $this->entityManager->wrapInTransaction(function () use ($unit, $isActive, $actor): void {

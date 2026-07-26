@@ -145,14 +145,22 @@ final class SupplierController extends AbstractController
             throw $this->createAccessDeniedException('La solicitud no es válida.');
         }
 
-        $supplierManager->setActive($supplier, !$supplier->isActive(), $this->getActor());
+        try {
+            $supplierManager->setActive(
+                $supplier,
+                !$supplier->isActive(),
+                $this->getActor(),
+            );
 
-        $this->addFlash(
-            'success',
-            $supplier->isActive()
-                ? 'Proveedor reactivado correctamente.'
-                : 'Proveedor desactivado correctamente.',
-        );
+            $this->addFlash(
+                'success',
+                $supplier->isActive()
+                    ? 'Proveedor reactivado correctamente.'
+                    : 'Proveedor desactivado correctamente.',
+            );
+        } catch (\DomainException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        }
 
         return $this->redirectToRoute('admin_suppliers_index', $request->query->all());
     }

@@ -12,7 +12,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_suppliers_active_name', columns: ['is_active', 'business_name'])]
 #[ORM\Index(name: 'idx_suppliers_deleted_at', columns: ['deleted_at'])]
 #[ORM\HasLifecycleCallbacks]
-final class Supplier
+class Supplier
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
