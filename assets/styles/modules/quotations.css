@@ -1,0 +1,140 @@
+.quotation-list-card,
+.quotation-form-card {
+    border: 1px solid var(--pf-border-color, #dee2e6);
+    box-shadow: 0 0.35rem 1rem rgb(15 23 42 / 4%);
+}
+
+.quotation-form-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.quotation-calculation-note {
+    display: flex;
+    gap: 1rem;
+    height: 100%;
+    padding: 1.5rem;
+    border: 1px solid #c9f5ce;
+    border-radius: 0.75rem;
+    background: #f3fff4;
+}
+
+.quotation-calculation-note__icon {
+    display: grid;
+    flex: 0 0 auto;
+    width: 2.75rem;
+    height: 2.75rem;
+    place-items: center;
+    border-radius: 0.75rem;
+    background: var(--pf-brand-soft, #e8fdea);
+    color: var(--pf-brand-active, #10a816);
+    font-size: 1.25rem;
+}
+
+.quotation-calculation-note h2 {
+    margin: 0 0 0.4rem;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.quotation-calculation-note p {
+    margin: 0 0 0.35rem;
+    color: var(--bs-secondary-color);
+    font-size: 0.9rem;
+}
+
+.quotation-calculation-note small {
+    color: var(--bs-secondary-color);
+}
+
+.quotation-items {
+    display: grid;
+    gap: 1rem;
+}
+
+.quotation-item {
+    padding: 1rem;
+    border: 1px solid var(--pf-border-color, #dee2e6);
+    border-radius: 0.7rem;
+    background: #fff;
+}
+
+.quotation-item__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 0.85rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--pf-border-color, #dee2e6);
+}
+
+.quotation-item__number {
+    color: var(--bs-secondary-color);
+    font-size: 0.875rem;
+}
+
+.quotation-item__number strong {
+    color: var(--bs-body-color);
+}
+
+.quotation-items-empty {
+    padding: 2rem 1rem;
+    color: var(--bs-secondary-color);
+    text-align: center;
+}
+
+.quotation-items-empty i {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 1.75rem;
+}
+
+.quotation-items-empty p {
+    margin: 0;
+}
+
+.quotation-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding-top: 0.5rem;
+}
+
+.quotation-empty-state {
+    padding: 3rem 1.5rem;
+    text-align: center;
+}
+
+.quotation-empty-state > i {
+    display: block;
+    margin-bottom: 0.75rem;
+    color: var(--bs-secondary-color);
+    font-size: 2rem;
+}
+
+.quotation-empty-state h2 {
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.quotation-empty-state p {
+    margin-bottom: 1rem;
+    color: var(--bs-secondary-color);
+}
+
+@media (max-width: 575.98px) {
+    .quotation-form-card__header,
+    .quotation-item__header,
+    .quotation-form-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .quotation-form-actions .btn,
+    .quotation-form-card__header .btn {
+        width: 100%;
+    }
+}

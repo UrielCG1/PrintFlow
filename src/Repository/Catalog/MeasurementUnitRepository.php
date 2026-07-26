@@ -89,4 +89,30 @@ final class MeasurementUnitRepository extends ServiceEntityRepository
 
         return $units;
     }
+
+    /**
+     * @return list<MeasurementUnit>
+     */
+    public function findAvailableForItemForm(?MeasurementUnit $selected = null): array
+    {
+        $queryBuilder = $this->createQueryBuilder('unit')
+            ->andWhere('unit.isActive = :isActive')
+            ->setParameter('isActive', true);
+
+        if ($selected !== null) {
+            $queryBuilder
+                ->orWhere('unit.id = :selectedId')
+                ->setParameter('selectedId', $selected->getId());
+        }
+
+        /** @var list<MeasurementUnit> $units */
+        $units = $queryBuilder
+            ->orderBy('unit.isActive', 'DESC')
+            ->addOrderBy('unit.displayOrder', 'ASC')
+            ->addOrderBy('unit.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $units;
+    }
 }

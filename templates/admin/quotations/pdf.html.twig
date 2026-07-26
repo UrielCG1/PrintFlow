@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es-MX">
+    <head>
+        <meta charset="UTF-8">
+
+        <style>
+            @page {
+                margin: 25mm 16mm 23mm;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                color: #172033;
+                font-family: DejaVu Sans, sans-serif;
+                font-size: 9.5px;
+                line-height: 1.45;
+            }
+
+            .document-header {
+                position: fixed;
+                top: -18mm;
+                right: -16mm;
+                left: -16mm;
+                height: 12mm;
+                background: #172033;
+            }
+
+            .document-footer {
+                position: fixed;
+                right: -16mm;
+                bottom: -17mm;
+                left: -16mm;
+                height: 10mm;
+                padding: 3mm 16mm 0;
+                background: #172033;
+                color: #ffffff;
+                font-size: 7.5px;
+            }
+
+            .document-footer .page-number:after {
+                content: "Página " counter(page) " de " counter(pages);
+                float: right;
+            }
+
+            .header-table,
+            .summary-table,
+            .totals-table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            .header-table {
+                margin-bottom: 18px;
+                border-bottom: 2px solid #27f52e;
+            }
+
+            .header-table td {
+                padding-bottom: 13px;
+                vertical-align: top;
+            }
+
+            .issuer-name {
+                margin: 0 0 4px;
+                color: #172033;
+                font-size: 20px;
+                font-weight: 700;
+            }
+
+            .issuer-detail {
+                margin: 0;
+                color: #667085;
+                font-size: 8.5px;
+            }
+
+            .document-title {
+                margin: 0 0 5px;
+                color: #10a816;
+                font-size: 21px;
+                font-weight: 700;
+                text-align: right;
+            }
+
+            .folio {
+                margin: 0;
+                color: #172033;
+                font-size: 12px;
+                font-weight: 700;
+                text-align: right;
+            }
+
+            .section {
+                margin-top: 18px;
+            }
+
+            .section-title {
+                margin: 0 0 8px;
+                color: #344054;
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: 0.2px;
+                text-transform: uppercase;
+            }
+
+            .summary-table td {
+                width: 50%;
+                padding: 7px 9px;
+                border: 1px solid #e4e7ec;
+                vertical-align: top;
+            }
+
+            .summary-label {
+                display: block;
+                margin-bottom: 2px;
+                color: #667085;
+                font-size: 7.5px;
+                text-transform: uppercase;
+            }
+
+            .items {
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            .items thead {
+                display: table-header-group;
+            }
+
+            .items tr {
+                page-break-inside: avoid;
+            }
+
+            .items th {
+                padding: 8px;
+                border: 1px solid #d0d5dd;
+                background: #f2f4f7;
+                color: #344054;
+                font-size: 7.5px;
+                text-align: left;
+                text-transform: uppercase;
+            }
+
+            .items td {
+                padding: 8px;
+                border: 1px solid #e4e7ec;
+                vertical-align: top;
+            }
+
+            .items .number {
+                text-align: right;
+                white-space: nowrap;
+            }
+
+            .item-code {
+                display: block;
+                margin-bottom: 2px;
+                color: #667085;
+                font-size: 7.5px;
+            }
+
+            .item-name {
+                font-weight: 700;
+            }
+
+            .item-description {
+                margin-top: 3px;
+                color: #667085;
+                font-size: 7.5px;
+            }
+
+            .totals-wrapper {
+                width: 44%;
+                margin: 18px 0 0 auto;
+            }
+
+            .totals-table td {
+                padding: 5px 8px;
+                border-bottom: 1px solid #e4e7ec;
+            }
+
+            .totals-table .total td {
+                padding-top: 8px;
+                border-top: 2px solid #27f52e;
+                border-bottom: 0;
+                color: #172033;
+                font-size: 11px;
+                font-weight: 700;
+            }
+
+            .text-end {
+                text-align: right;
+            }
+
+            .notes {
+                margin-top: 18px;
+                padding: 9px;
+                border-left: 3px solid #27f52e;
+                background: #f8fdf8;
+                color: #475467;
+                font-size: 8.5px;
+            }
+        </style>
+    </head>
+
+    <body>
+        {% set client = quotation.clientSnapshot %}
+        {% set clientName = client.legal_name|default(client.business_name|default('Cliente')) %}
+        {% set clientEmail = client.billing_email|default(client.email|default('No especificado')) %}
+        {% set clientPhone = client.phone|default('No especificado') %}
+
+        <div class="document-header"></div>
+
+        <div class="document-footer">
+            Documento emitido por PrintFlow. Los importes corresponden a la versión {{ quotation.folio }}.
+            <span class="page-number"></span>
+        </div>
+
+        <table class="header-table">
+            <tr>
+                <td>
+                    <h1 class="issuer-name">{{ issuer.name }}</h1>
+
+                    {% if issuer.tax_id %}
+                        <p class="issuer-detail">RFC: {{ issuer.tax_id }}</p>
+                    {% endif %}
+
+                    {% if issuer.address %}
+                        <p class="issuer-detail">{{ issuer.address }}</p>
+                    {% endif %}
+
+                    {% if issuer.email or issuer.phone %}
+                        <p class="issuer-detail">
+                            {{ issuer.email }}{% if issuer.email and issuer.phone %} | {% endif %}{{ issuer.phone }}
+                        </p>
+                    {% endif %}
+                </td>
+
+                <td>
+                    <h2 class="document-title">Cotización</h2>
+                    <p class="folio">{{ quotation.folio }}</p>
+                </td>
+            </tr>
+        </table>
+
+        <section class="section">
+            <h2 class="section-title">Datos del cliente</h2>
+
+            <table class="summary-table">
+                <tr>
+                    <td>
+                        <span class="summary-label">Razón social</span>
+                        {{ clientName }}
+                    </td>
+                    <td>
+                        <span class="summary-label">RFC</span>
+                        {{ client.tax_id|default('No especificado') }}
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span class="summary-label">Correo</span>
+                        {{ clientEmail }}
+                    </td>
+                    <td>
+                        <span class="summary-label">Teléfono</span>
+                        {{ clientPhone }}
+                    </td>
+                </tr>
+            </table>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Información del documento</h2>
+
+            <table class="summary-table">
+                <tr>
+                    <td>
+                        <span class="summary-label">Fecha de emisión</span>
+                        {{ quotation.issuedAt|date('d/m/Y H:i', 'America/Mexico_City') }}
+                    </td>
+                    <td>
+                        <span class="summary-label">Vigencia</span>
+                        {{ quotation.expiresAt|date('d/m/Y', 'America/Mexico_City') }}
+                    </td>
+                </tr>
+            </table>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Partidas cotizadas</h2>
+
+            <table class="items">
+                <thead>
+                    <tr>
+                        <th style="width: 7%;">#</th>
+                        <th style="width: 43%;">Concepto</th>
+                        <th style="width: 14%;" class="number">Cantidad</th>
+                        <th style="width: 16%;" class="number">P. unitario</th>
+                        <th style="width: 20%;" class="number">Importe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in quotation.items %}
+                        {% set snapshot = item.commercialItemSnapshot %}
+
+                        <tr>
+                            <td>{{ item.lineNumber }}</td>
+                            <td>
+                                {% if snapshot.code|default(null) %}
+                                    <span class="item-code">{{ snapshot.code }}</span>
+                                {% endif %}
+
+                                <span class="item-name">
+                                    {{ snapshot.name|default('Concepto') }}
+                                </span>
+
+                                {% if snapshot.description|default(null) %}
+                                    <div class="item-description">
+                                        {{ snapshot.description }}
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td class="number">
+                                {{ item.quantity|number_format(4, '.', ',') }}
+                                {{ snapshot.measurement_unit.name|default('') }}
+                            </td>
+                            <td class="number">
+                                ${{ item.unitPrice|number_format(2, '.', ',') }}
+                            </td>
+                            <td class="number">
+                                ${{ item.lineSubtotal|number_format(2, '.', ',') }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div class="totals-wrapper">
+                <table class="totals-table">
+                    <tr>
+                        <td>Subtotal</td>
+                        <td class="text-end">
+                            ${{ quotation.subtotal|number_format(2, '.', ',') }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            Descuento ({{ quotation.discountPercent|number_format(2, '.', ',') }}%)
+                        </td>
+                        <td class="text-end">
+                            -${{ quotation.discountAmount|number_format(2, '.', ',') }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            IVA ({{ (quotation.taxRate * 100)|number_format(2, '.', ',') }}%)
+                        </td>
+                        <td class="text-end">
+                            ${{ quotation.taxAmount|number_format(2, '.', ',') }}
+                        </td>
+                    </tr>
+                    <tr class="total">
+                        <td>Total {{ quotation.currency|default('MXN') }}</td>
+                        <td class="text-end">
+                            ${{ quotation.total|number_format(2, '.', ',') }}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </section>
+
+        {% if quotation.notes %}
+            <section class="notes">
+                <strong>Observaciones:</strong><br>
+                {{ quotation.notes|nl2br }}
+            </section>
+        {% endif %}
+    </body>
+</html>

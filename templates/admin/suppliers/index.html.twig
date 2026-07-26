@@ -1,0 +1,199 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Proveedores | PrintFlow{% endblock %}
+{% block app_navigation_active %}suppliers{% endblock %}
+{% block app_breadcrumb %}Operación / Proveedores{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page">
+        <div class="pf-page-header">
+            <div>
+                <h1 class="pf-page-header__title">Proveedores</h1>
+                <p class="pf-page-header__subtitle">
+                    Administra las empresas que abastecen la operación de PrintFlow.
+                </p>
+            </div>
+
+            {% if is_granted('suppliers.create') %}
+                <a href="{{ path('admin_suppliers_new') }}" class="btn pf-button pf-button--primary">
+                    <i class="bi bi-truck" aria-hidden="true"></i>
+                    <span>Nuevo proveedor</span>
+                </a>
+            {% endif %}
+        </div>
+
+        <form method="get" class="pf-card mb-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-lg-6">
+                    <label for="supplier-search" class="form-label">Buscar</label>
+                    <input
+                        id="supplier-search"
+                        type="search"
+                        name="q"
+                        value="{{ search }}"
+                        class="form-control"
+                        placeholder="Código, nombre, RFC, correo o teléfono"
+                    >
+                </div>
+
+                <div class="col-md-4 col-lg-3">
+                    <label for="supplier-status" class="form-label">Estado</label>
+                    <select id="supplier-status" name="status" class="form-select">
+                        <option value="active" {{ status == 'active' ? 'selected' : '' }}>Activos</option>
+                        <option value="inactive" {{ status == 'inactive' ? 'selected' : '' }}>Inactivos</option>
+                        <option value="all" {{ status == 'all' ? 'selected' : '' }}>Todos</option>
+                    </select>
+                </div>
+
+                <div class="col-md-8 col-lg-3 d-flex gap-2">
+                    <button type="submit" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <span>Filtrar</span>
+                    </button>
+
+                    <a href="{{ path('admin_suppliers_index') }}" class="btn pf-button pf-button--secondary">
+                        Limpiar
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        {% set canManage = is_granted('suppliers.update') or is_granted('suppliers.toggle_status') %}
+
+        <div class="pf-card">
+            <div class="pf-table-responsive">
+                <table class="pf-table">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Proveedor</th>
+                            <th>RFC</th>
+                            <th>Contacto</th>
+                            <th>Estado</th>
+                            {% if canManage %}
+                                <th class="text-end">Acciones</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for supplier in page.items %}
+                            <tr>
+                                <td><code>{{ supplier.code }}</code></td>
+                                <td>
+                                    <strong>{{ supplier.businessName }}</strong>
+                                    {% if supplier.legalName and supplier.legalName != supplier.businessName %}
+                                        <div class="small text-body-secondary">{{ supplier.legalName }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>{{ supplier.taxId ?: '—' }}</td>
+                                <td>
+                                    {% if supplier.email %}<div>{{ supplier.email }}</div>{% endif %}
+                                    {% if supplier.phone %}<div>{{ supplier.phone }}</div>{% endif %}
+                                    {% if not supplier.email and not supplier.phone %}—{% endif %}
+                                </td>
+                                <td>
+                                    <span class="pf-status-badge {{ supplier.isActive ? 'pf-status-badge--success' : 'pf-status-badge--neutral' }}">
+                                        {{ supplier.isActive ? 'Activo' : 'Inactivo' }}
+                                    </span>
+                                </td>
+
+                                {% if canManage %}
+                                    <td>
+                                        <div class="pf-table__actions justify-content-end">
+                                            {% if is_granted('suppliers.update') %}
+                                                <a
+                                                    href="{{ path('admin_suppliers_edit', { id: supplier.id }) }}"
+                                                    class="btn pf-button pf-button--secondary pf-button--sm"
+                                                >
+                                                    <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                                    <span>Editar</span>
+                                                </a>
+                                            {% endif %}
+
+                                            {% if is_granted('suppliers.toggle_status') %}
+                                                <form
+                                                    method="post"
+                                                    action="{{ path('admin_suppliers_status', {
+                                                        id: supplier.id,
+                                                        q: search,
+                                                        status: status,
+                                                        page: page.currentPage
+                                                    }) }}"
+                                                    data-controller="ui--confirm-action"
+                                                    data-action="submit->ui--confirm-action#submit"
+                                                    data-ui--confirm-action-title-value="{{ supplier.isActive ? '¿Desactivar proveedor?' : '¿Reactivar proveedor?' }}"
+                                                    data-ui--confirm-action-text-value="{{ supplier.isActive
+                                                        ? 'El proveedor dejará de estar disponible para registros operativos futuros.'
+                                                        : 'El proveedor volverá a estar disponible para operar.' }}"
+                                                    data-ui--confirm-action-confirm-button-text-value="{{ supplier.isActive ? 'Sí, desactivar' : 'Sí, reactivar' }}"
+                                                    data-ui--confirm-action-cancel-button-text-value="Cancelar"
+                                                    data-ui--confirm-action-icon-value="warning"
+                                                >
+                                                    <input
+                                                        type="hidden"
+                                                        name="_token"
+                                                        value="{{ csrf_token('supplier_status_' ~ supplier.id) }}"
+                                                    >
+
+                                                    <button
+                                                        type="submit"
+                                                        class="btn pf-button pf-button--sm {{ supplier.isActive ? 'pf-button--danger' : 'pf-button--success' }}"
+                                                    >
+                                                        <i class="bi {{ supplier.isActive ? 'bi-pause-circle' : 'bi-check-circle' }}" aria-hidden="true"></i>
+                                                        <span>{{ supplier.isActive ? 'Desactivar' : 'Reactivar' }}</span>
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="{{ canManage ? 6 : 5 }}" class="text-center py-4">
+                                    No se encontraron proveedores con los filtros seleccionados.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if page.pageCount > 1 %}
+                <nav class="mt-4" aria-label="Paginación de proveedores">
+                    <ul class="pagination mb-0">
+                        <li class="page-item {{ page.currentPage == 1 ? 'disabled' : '' }}">
+                            <a
+                                class="page-link"
+                                href="{{ path('admin_suppliers_index', {
+                                    q: search,
+                                    status: status,
+                                    page: page.currentPage - 1
+                                }) }}"
+                            >
+                                Anterior
+                            </a>
+                        </li>
+
+                        <li class="page-item disabled">
+                            <span class="page-link">Página {{ page.currentPage }} de {{ page.pageCount }}</span>
+                        </li>
+
+                        <li class="page-item {{ page.currentPage == page.pageCount ? 'disabled' : '' }}">
+                            <a
+                                class="page-link"
+                                href="{{ path('admin_suppliers_index', {
+                                    q: search,
+                                    status: status,
+                                    page: page.currentPage + 1
+                                }) }}"
+                            >
+                                Siguiente
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Nueva cotización | PrintFlow{% endblock %}
+
+{% block app_navigation_active %}quotations{% endblock %}
+
+{% block app_breadcrumb %}Comercial / Cotizaciones / Nueva{% endblock %}
+
+{% block app_content %}
+    <section class="pf-page">
+        <header class="pf-page-header">
+            <div>
+                <p class="pf-page-header__eyebrow">Comercial</p>
+                <h1 class="pf-page-header__title">Nueva cotización</h1>
+                <p class="pf-page-header__description">
+                    Captura la información comercial y las partidas que integran el borrador.
+                </p>
+            </div>
+
+            <a
+                href="{{ path('admin_quotations_index') }}"
+                class="btn pf-button pf-button--secondary"
+            >
+                <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                Volver a cotizaciones
+            </a>
+        </header>
+
+        {% include 'admin/quotations/_form.html.twig' with {
+            form: form,
+            submit_label: 'Guardar borrador'
+        } only %}
+    </section>
+{% endblock %}

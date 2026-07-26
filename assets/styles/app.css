@@ -19,8 +19,8 @@
 @import url('./components/status-badge.css');
 @import url('./components/table.css');
 @import url('./components/tooltip.css');
-@import './components/sweetalert.css';
-@import './components/sortable.css';
+@import url('./components/sweetalert.css');
+@import url('./components/sortable.css');
 
 /* Estilos exclusivos de módulos */
 @import url('./modules/dashboard.css');
@@ -33,3 +33,4 @@
 @import url('./utilities/utilities.css');
 
 @import url('./modules/clients.css');
+@import url('./modules/quotations.css');

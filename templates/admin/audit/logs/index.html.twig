@@ -17,7 +17,23 @@
         'role.created': 'Rol creado',
         'role.updated': 'Rol actualizado',
         'authentication.login_success': 'Inicio de sesión',
-        'authentication.logout': 'Cierre de sesión'
+        'authentication.logout': 'Cierre de sesión',
+        'commercial_category.reordered': 'Categorías reordenadas',
+        'measurement_unit.reordered': 'Unidades de medida reordenadas',
+        'commercial_item.created': 'Concepto comercial creado',
+        'commercial_item.updated': 'Concepto comercial actualizado',
+        'commercial_item.price_updated': 'Precio base actualizado',
+        'commercial_item.activated': 'Concepto comercial activado',
+        'commercial_item.deactivated': 'Concepto comercial desactivado',
+        'item_price_rule.created': 'Rango de precio creado',
+        'item_price_rule.updated': 'Rango de precio actualizado',
+        'item_price_rule.price_updated': 'Precio de rango actualizado',
+        'item_price_rule.activated': 'Rango de precio activado',
+        'item_price_rule.deactivated': 'Rango de precio desactivado',
+        'quotation.created': 'Cotización creada',
+        'quotation.updated': 'Cotización actualizada',
+        'quotation.issued': 'Cotización emitida',
+        'quotation.status_changed': 'Estado de cotización actualizado',
     } %}
 
     {% set field_labels = {
@@ -31,7 +47,31 @@
         'permissions': 'Permisos asignados',
         'name': 'Nombre',
         'description': 'Descripción',
-        'passwordReset': 'Contraseña temporal restablecida'
+        'passwordReset': 'Contraseña temporal restablecida',
+        'active_order': 'Orden de elementos activos',
+        'display_order': 'Posición',
+        'type': 'Tipo',
+        'category': 'Categoría comercial',
+        'measurement_unit': 'Unidad de medida',
+        'base_price': 'Precio base',
+        'commercial_item': 'Concepto comercial',
+        'rule_type': 'Tipo de regla',
+        'min_quantity': 'Cantidad mínima',
+        'unit_price': 'Precio unitario',
+        'folio': 'Folio',
+        'status': 'Estado',
+        'client': 'Cliente',
+        'expires_at': 'Vigencia',
+        'discount_percent': 'Descuento',
+        'tax_rate': 'Tasa de IVA',
+        'subtotal': 'Subtotal',
+        'discount_amount': 'Importe de descuento',
+        'taxable_amount': 'Base gravable',
+        'tax_amount': 'IVA',
+        'total': 'Total',
+        'quotation.created': 'Cotización creada',
+        'quotation.updated': 'Cotización actualizada',
+        'quotation.issued': 'Cotización emitida',
     } %}
 
     <section class="pf-audit-page">
@@ -171,7 +211,7 @@
                                                                     <dt>{{ field_labels[field]|default(field) }}</dt>
                                                                     <dd>
                                                                         {% if value is iterable %}
-                                                                            {{ value|join(', ') ?: '—' }}
+                                                                            {{ value|json_encode(constant('JSON_UNESCAPED_UNICODE')) ?: '—' }}
                                                                         {% elseif value is same as(true) %}
                                                                             Sí
                                                                         {% elseif value is same as(false) %}
@@ -197,7 +237,7 @@
                                                                     <dt>{{ field_labels[field]|default(field) }}</dt>
                                                                     <dd>
                                                                         {% if value is iterable %}
-                                                                            {{ value|join(', ') ?: '—' }}
+                                                                            {{ value|json_encode(constant('JSON_UNESCAPED_UNICODE')) ?: '—' }}
                                                                         {% elseif value is same as(true) %}
                                                                             Sí
                                                                         {% elseif value is same as(false) %}

@@ -89,4 +89,30 @@ final class CommercialCategoryRepository extends ServiceEntityRepository
 
         return $categories;
     }
+
+    /**
+     * @return list<CommercialCategory>
+     */
+    public function findAvailableForItemForm(?CommercialCategory $selected = null): array
+    {
+        $queryBuilder = $this->createQueryBuilder('category')
+            ->andWhere('category.isActive = :isActive')
+            ->setParameter('isActive', true);
+
+        if ($selected !== null) {
+            $queryBuilder
+                ->orWhere('category.id = :selectedId')
+                ->setParameter('selectedId', $selected->getId());
+        }
+
+        /** @var list<CommercialCategory> $categories */
+        $categories = $queryBuilder
+            ->orderBy('category.isActive', 'DESC')
+            ->addOrderBy('category.displayOrder', 'ASC')
+            ->addOrderBy('category.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $categories;
+    }
 }

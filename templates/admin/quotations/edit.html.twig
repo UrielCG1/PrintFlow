@@ -1,0 +1,73 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Editar cotización | PrintFlow{% endblock %}
+
+{% block app_navigation_active %}quotations{% endblock %}
+
+{% block app_breadcrumb %}Comercial / Cotizaciones / Editar{% endblock %}
+
+{% block app_content %}
+    {% set status = quotation.status.value %}
+
+    <section class="pf-page">
+        <header class="pf-page-header">
+            <div>
+                <p class="pf-page-header__eyebrow">Comercial</p>
+                <h1 class="pf-page-header__title">
+                    Editar cotización{% if quotation.folio %} {{ quotation.folio }}{% else %} #{{ quotation.id }}{% endif %}
+                </h1>
+                <p class="pf-page-header__description">
+                    Última actualización: {{ quotation.updatedAt|date('d/m/Y H:i') }}.
+                </p>
+            </div>
+
+            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2">
+                <span class="pf-status-badge pf-status-badge--warning">
+                    {{ status == 'DRAFT' ? 'Borrador' : status }}
+                </span>
+
+                <a
+                    href="{{ path('admin_quotations_index') }}"
+                    class="btn pf-button pf-button--secondary"
+                >
+                    <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                    Volver a cotizaciones
+                </a>
+            </div>
+        </header>
+
+        {% include 'admin/quotations/_form.html.twig' with {
+            form: form,
+            submit_label: 'Guardar cambios'
+        } only %}
+
+        {% if quotation.editable and is_granted('quotations.issue') %}
+            <section class="pf-card mt-4">
+                <div class="p-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                    <div>
+                        <h2 class="h5 mb-1">Emitir cotización</h2>
+                        <p class="mb-0 text-muted">
+                            Al emitir se asignará el folio definitivo y el borrador quedará bloqueado.
+                        </p>
+                    </div>
+
+                    <form
+                        method="post"
+                        action="{{ path('admin_quotations_issue', {id: quotation.id}) }}"
+                    >
+                        <input
+                            type="hidden"
+                            name="_token"
+                            value="{{ csrf_token('quotation-issue-' ~ quotation.id) }}"
+                        >
+
+                        <button type="submit" class="btn pf-button pf-button--primary">
+                            <i class="bi bi-file-earmark-check" aria-hidden="true"></i>
+                            Emitir cotización
+                        </button>
+                    </form>
+                </div>
+            </section>
+        {% endif %}
+    </section>
+{% endblock %}

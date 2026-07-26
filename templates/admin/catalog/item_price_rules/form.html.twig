@@ -1,0 +1,46 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}{{ pageTitle }} | PrintFlow{% endblock %}
+{% block app_navigation_active %}catalog{% endblock %}
+{% block app_breadcrumb %}Catálogo / Conceptos comerciales / Rangos de precio / {{ pageTitle }}{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page">
+        <div class="pf-page-header">
+            <div>
+                <h1 class="pf-page-header__title">{{ pageTitle }}</h1>
+                <p class="pf-page-header__subtitle">
+                    {{ item.code }} — {{ item.name }}
+                </p>
+            </div>
+        </div>
+
+        <div class="pf-card">
+            {{ form_start(form, {attr: {class: 'pf-form', novalidate: 'novalidate'}}) }}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        {{ form_row(form.minQuantity) }}
+                    </div>
+
+                    <div class="col-md-6">
+                        {{ form_row(form.unitPrice) }}
+                    </div>
+                </div>
+
+                <div class="pf-form-actions mt-4">
+                    <a
+                        href="{{ path('admin_catalog_item_price_rules_index', {item: item.id}) }}"
+                        class="btn pf-button pf-button--secondary"
+                    >
+                        Cancelar
+                    </a>
+
+                    <button type="submit" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-check-lg" aria-hidden="true"></i>
+                        <span>{{ rule ? 'Guardar cambios' : 'Crear rango' }}</span>
+                    </button>
+                </div>
+            {{ form_end(form) }}
+        </div>
+    </div>
+{% endblock %}

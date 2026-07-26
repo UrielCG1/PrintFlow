@@ -21,3 +21,10 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+    App\Service\Quotations\QuotationPdfRenderer:
+        arguments:
+            $issuerName: '%env(string:PRINTFLOW_QUOTATION_ISSUER_NAME)%'
+            $issuerTaxId: '%env(string:PRINTFLOW_QUOTATION_ISSUER_TAX_ID)%'
+            $issuerEmail: '%env(string:PRINTFLOW_QUOTATION_ISSUER_EMAIL)%'
+            $issuerPhone: '%env(string:PRINTFLOW_QUOTATION_ISSUER_PHONE)%'
+            $issuerAddress: '%env(string:PRINTFLOW_QUOTATION_ISSUER_ADDRESS)%'

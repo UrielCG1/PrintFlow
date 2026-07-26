@@ -94,156 +94,194 @@ La siguiente estructura reúne el inventario confirmado y el lugar canónico par
 ```text
 PrintFlow/
 ├── assets/
-│   ├── app.js                         # Punto de entrada: importa CSS y Stimulus
-│   ├── stimulus_bootstrap.js           # Registro de controladores Stimulus
+│   ├── app.js                           # Punto de entrada: importa CSS y Stimulus
+│   ├── stimulus_bootstrap.js             # Registro de controladores Stimulus
 │   ├── controllers/
 │   │   ├── csrf_protection_controller.js # Protección complementaria de formularios
 │   │   └── ui/
 │   │       ├── confirm_action_controller.js
 │   │       ├── flash_toast_controller.js
 │   │       ├── password_visibility_controller.js
-│   │       ├── sidebar_controller.js    # Apertura/cierre responsivo del sidebar
-│   │       ├── sortable_controller.js   # Reordenamiento reutilizable con SortableJS
+│   │       ├── sidebar_controller.js     # Apertura/cierre responsivo del sidebar
+│   │       ├── sortable_controller.js    # Reordenamiento reutilizable con SortableJS
 │   │       └── tooltip_controller.js
 │   └── styles/
-│       ├── app.css                     # Índice de estilos de la aplicación
-│       ├── foundation/                 # Tokens, base y ajustes Bootstrap
-│       │   ├── tokens.css              # Variables de color, espaciado, fuentes, radios
-│       │   ├── base.css                # Normalización/base visual
-│       │   └── bootstrap-overrides.css # Ajustes globales de Bootstrap
+│       ├── app.css                       # Índice global de estilos
+│       ├── foundation/
+│       │   ├── tokens.css                # Colores, espaciado, fuentes y radios
+│       │   ├── base.css                  # Base y normalización visual
+│       │   └── bootstrap-overrides.css   # Ajustes globales de Bootstrap
 │       ├── layout/
-│       │   ├── public-shell.css        # Shell de pantallas públicas (login)
-│       │   └── app-shell.css           # Grid app, contenido y responsive
-│       ├── components/                 # Componentes compartidos
+│       │   ├── public-shell.css          # Shell de pantallas públicas, como login
+│       │   └── app-shell.css             # Grid autenticado, contenido y responsive
+│       ├── components/
 │       │   ├── button.css
-│       │   ├── status-badge.css
 │       │   ├── card.css
-│       │   ├── page-header.css
-│       │   ├── sidebar.css
 │       │   ├── flash.css
 │       │   ├── form.css
-│       │   ├── sortable.css             # Handle y estados visuales de arrastre
+│       │   ├── page-header.css
+│       │   ├── sidebar.css
+│       │   ├── sortable.css
+│       │   ├── status-badge.css
 │       │   ├── sweetalert.css
 │       │   └── table.css
-│       └── modules/                    # Estilos exclusivos cuando un módulo los justifica
-│           ├── users/
-│           ├── roles/
+│       └── modules/                      # Estilos exclusivos solo si el módulo lo justifica
 │           ├── audit-log/
+│           ├── clients/
 │           ├── dashboard/
+│           ├── roles/
 │           ├── security/
-│           └── clients/
+│           └── users/
 ├── config/
 │   ├── packages/
-│   │   ├── doctrine.yaml               # Conexión y mapeo Doctrine
-│   │   ├── doctrine_migrations.yaml    # Namespace/ruta de migraciones
-│   │   ├── framework.yaml              # APP_SECRET, sesiones y modo test
-│   │   ├── security.yaml               # Provider, firewall, login, logout, acceso
-│   │   ├── twig.yaml                   # Configuración Twig
+│   │   ├── doctrine.yaml                 # Conexión y mapeo Doctrine
+│   │   ├── doctrine_migrations.yaml      # Namespace y ruta de migraciones
+│   │   ├── framework.yaml                # APP_SECRET, sesiones y entorno test
+│   │   ├── security.yaml                 # Provider, firewall, login, logout y acceso
+│   │   ├── twig.yaml                     # Configuración Twig
 │   │   └── ...
-│   ├── routes/                         # Rutas, cuando no se usan atributos
-│   ├── services.yaml                   # Autowiring/autoconfigure de servicios
-│   └── bundles.php
+│   ├── routes/                           # Rutas no definidas por atributos
+│   ├── bundles.php
+│   └── services.yaml                     # Servicios, autowiring y renderer de PDF
 ├── migrations/
-│   ├── Version20260719164200.php       # Lote inicial: acceso, RBAC, auditoría
-│   ├── Version20260721223000.php       # Contactos de cliente + permisos
-│   ├── Version20260721224500.php       # Parte del lote de direcciones; verificar código
-│   └── Version20260721230000.php       # Última aplicada: lote final de direcciones/permisos
+│   ├── Version20260719164200.php         # Acceso, RBAC y auditoría inicial
+│   ├── Version20260721223000.php         # Contactos de cliente y permisos asociados
+│   ├── Version20260721224500.php         # Primera parte del lote de direcciones
+│   ├── Version20260721230000.php         # Direcciones y permisos finales
+│   ├── Version20260725163000.php         # Catálogo comercial, precios por cantidad y catalog.*
+│   └── Version20260726113000.php         # Folio anual de cotizaciones y permisos PDF
 ├── public/
-│   ├── index.php                       # Front controller Symfony
-│   ├── build/                           # Assets publicados por AssetMapper
-│   └── vendor/                          # Bootstrap, jQuery e iconos locales, si aplica
+│   ├── index.php                         # Front controller Symfony
+│   ├── build/                            # Assets publicados por AssetMapper
+│   └── vendor/                           # Dependencias frontend locales, si aplica
 ├── src/
 │   ├── Application/
 │   │   ├── Access/
-│   │   │   ├── UserManager.php
-│   │   │   └── RoleManager.php
+│   │   │   ├── RoleManager.php
+│   │   │   └── UserManager.php
+│   │   ├── Catalog/
+│   │   │   ├── CommercialCategoryData.php
+│   │   │   ├── CommercialCategoryManager.php
+│   │   │   ├── MeasurementUnitData.php
+│   │   │   ├── MeasurementUnitManager.php
+│   │   │   └── ...                       # Productos/servicios, rangos y resolución de precio
 │   │   ├── Clients/
-│   │       ├── ClientData.php
-│   │       ├── ClientManager.php
-│   │       ├── ClientContactData.php
-│   │       ├── ClientContactManager.php
-│   │       ├── ClientAddressData.php
-│   │       └── ClientAddressManager.php
-│   │   └── Catalog/
-│   │       ├── CommercialCategoryData.php
-│   │       ├── CommercialCategoryManager.php
-│   │       ├── MeasurementUnitData.php
-│   │       └── MeasurementUnitManager.php
+│   │   │   ├── ClientAddressData.php
+│   │   │   ├── ClientAddressManager.php
+│   │   │   ├── ClientContactData.php
+│   │   │   ├── ClientContactManager.php
+│   │   │   ├── ClientData.php
+│   │   │   └── ClientManager.php
+│   │   └── Quotations/
+│   │       ├── QuotationManager.php      # Borradores, snapshots, totales y emisión
+│   │       └── ...                       # Datos y cálculos de cotización
 │   ├── Command/
-│   │   └── BootstrapSecurityCommand.php # Bootstrap idempotente de roles/permisos/admin
+│   │   └── BootstrapSecurityCommand.php  # Bootstrap idempotente de roles/permisos/admin
 │   ├── Controller/
 │   │   ├── DashboardController.php
 │   │   ├── SecurityController.php
 │   │   └── Admin/
 │   │       ├── Access/
-│   │       │   ├── UserController.php
-│   │       │   └── RoleController.php
+│   │       │   ├── RoleController.php
+│   │       │   └── UserController.php
 │   │       ├── Audit/
 │   │       │   └── AuditLogController.php
+│   │       ├── Catalog/
+│   │       │   └── ...                   # Categorías, unidades y productos/servicios
 │   │       ├── Clients/
-│   │           ├── ClientController.php
-│   │           ├── ClientContactController.php
-│   │           └── ClientAddressController.php
-│   │       └── Catalog/
-│   │           ├── CommercialCategoryController.php
-│   │           └── MeasurementUnitController.php
+│   │       │   ├── ClientAddressController.php
+│   │       │   ├── ClientContactController.php
+│   │       │   └── ClientController.php
+│   │       └── Quotations/
+│   │           └── QuotationController.php # Borrador, emisión y descarga de PDF
 │   ├── DTO/
 │   │   └── Access/
-│   │       ├── CreateUserData.php
-│   │       ├── UpdateUserData.php
-│   │       ├── ResetUserPasswordData.php
 │   │       ├── CreateRoleData.php
-│   │       └── UpdateRoleData.php
+│   │       ├── CreateUserData.php
+│   │       ├── ResetUserPasswordData.php
+│   │       ├── UpdateRoleData.php
+│   │       └── UpdateUserData.php
 │   ├── Entity/
-│   │   ├── Audit/AuditLog.php
-│   │   ├── Users/{User,Role,Permission}.php
-│   │   ├── Clients/{Client,ClientContact,ClientAddress}.php
-│   │   └── Catalog/{CommercialCategory,MeasurementUnit}.php
+│   │   ├── Audit/
+│   │   │   └── AuditLog.php
+│   │   ├── Catalog/
+│   │   │   └── {CommercialCategory, MeasurementUnit, CommercialItem, ItemPriceRule}.php
+│   │   ├── Clients/
+│   │   │   └── {Client, ClientContact, ClientAddress}.php
+│   │   ├── Quotations/
+│   │   │   └── {Quotation, QuotationItem}.php
+│   │   └── Users/
+│   │       └── {User, Role, Permission}.php
 │   ├── EventSubscriber/
-│   │   └── Security/AuthenticationAuditSubscriber.php
+│   │   └── Security/
+│   │       └── AuthenticationAuditSubscriber.php
 │   ├── Form/
 │   │   └── Admin/
-│   │       ├── Access/                 # Forms de usuarios y roles
-│   │       ├── Clients/                # ClientType, ClientContactType, ClientAddressType
-│   │       └── Catalog/                # CommercialCategoryType, MeasurementUnitType
+│   │       ├── Access/                  # Formularios de usuarios y roles
+│   │       ├── Catalog/                 # Categorías, unidades y productos/servicios
+│   │       ├── Clients/                 # Cliente, contacto y dirección
+│   │       └── Quotations/              # Formulario de cotización y sus partidas
 │   ├── Repository/
-│   │   ├── Audit/AuditLogRepository.php
-│   │   ├── Users/{User,Role,Permission}Repository.php
-│   │   ├── Clients/{Client,ClientContact,ClientAddress}Repository.php
-│   │   └── Catalog/{CommercialCategory,MeasurementUnit}Repository.php
+│   │   ├── Audit/
+│   │   │   └── AuditLogRepository.php
+│   │   ├── Catalog/
+│   │   │   └── ...                      # Consultas de categorías, unidades y conceptos
+│   │   ├── Clients/
+│   │   │   └── {Client, ClientContact, ClientAddress}Repository.php
+│   │   ├── Quotations/
+│   │   │   └── ...                      # Consultas de cotizaciones y partidas
+│   │   └── Users/
+│   │       └── {User, Role, Permission}Repository.php
 │   ├── Security/
 │   │   ├── UserChecker.php
-│   │   └── Voter/PermissionVoter.php
+│   │   └── Voter/
+│   │       └── PermissionVoter.php
 │   └── Service/
-│       └── Audit/AuditLogger.php
+│       ├── Audit/
+│       │   └── AuditLogger.php
+│       └── Quotations/
+│           ├── QuotationFolioGenerator.php # Consecutivo anual atómico MySQL
+│           └── QuotationPdfRenderer.php    # PDF de cotización emitida con Dompdf
 ├── templates/
-│   ├── base.html.twig                  # Documento HTML raíz, assets y bloques comunes
+│   ├── base.html.twig                   # Documento HTML raíz y assets comunes
+│   ├── dashboard/
+│   │   └── index.html.twig
+│   ├── form/
+│   │   └── printflow_theme.html.twig    # Tema único de formularios
 │   ├── layouts/
-│   │   ├── public.html.twig             # Layout para login/páginas públicas
-│   │   └── app.html.twig                # Shell autenticado: sidebar, header, flashes, main
+│   │   ├── app.html.twig                # Shell autenticado
+│   │   └── public.html.twig             # Layout para login y páginas públicas
 │   ├── partials/
-│   │   ├── _app_sidebar.html.twig
 │   │   ├── _app_header.html.twig
+│   │   ├── _app_sidebar.html.twig       # Administración, Catálogos, Comercial y Control
 │   │   └── _flash_messages.html.twig
-│   ├── form/printflow_theme.html.twig  # Tema único de formularios
-│   ├── security/login.html.twig
-│   ├── dashboard/index.html.twig
+│   ├── security/
+│   │   └── login.html.twig
 │   └── admin/
-│       ├── access/{users,roles}/        # Índice, alta, edición, reset de contraseña
-│       ├── audit/logs/index.html.twig
+│       ├── access/
+│       │   └── {users, roles}/          # Índice, alta, edición y restablecimiento
+│       ├── audit/
+│       │   └── logs/
+│       │       └── index.html.twig
+│       ├── catalog/
+│       │   ├── categories/{index, form}.html.twig
+│       │   ├── items/                   # Productos/servicios y sus reglas de precio
+│       │   └── units/{index, form}.html.twig
 │       ├── clients/
-│           ├── {index,form}.html.twig
-│           ├── contacts/{index,form}.html.twig
-│           └── addresses/{index,form}.html.twig
-│       └── catalog/
-│           ├── categories/{index,form}.html.twig
-│           └── units/{index,form}.html.twig
+│       │   ├── {index, form}.html.twig
+│       │   ├── addresses/{index, form}.html.twig
+│       │   └── contacts/{index, form}.html.twig
+│       └── quotations/
+│           ├── _form.html.twig
+│           ├── edit.html.twig
+│           ├── index.html.twig
+│           └── pdf.html.twig            # Documento Carta descargable
 ├── tests/                               # Pruebas automatizadas actuales y futuras
-├── .env                                 # Valores no secretos por entorno (no credenciales)
-├── .env.local                           # Credenciales/configuración local, no versionar
-├── composer.json                        # Dependencias PHP y scripts
+├── .env                                 # Variables no secretas, incluido emisor de cotización
+├── .env.local                           # Credenciales y datos reales locales; no versionar
+├── composer.json                        # Dependencias PHP, incluido Dompdf
 ├── composer.lock                        # Versiones reproducibles
-└── phpunit.xml.dist                     # Configuración de pruebas
+└── phpunit.xml.dist                     # Configuración de PHPUnit
 ```
 
 ### Notas importantes de estructura
@@ -254,6 +292,13 @@ PrintFlow/
 - Si un estilo puede vivir en un componente compartido, no debe ir a `styles/modules/*`.
 - El layout autenticado usa el bloque `app_content`. Las vistas nuevas deben extender `layouts/app.html.twig` y definir `app_navigation_active`, `app_breadcrumb` y `app_content`.
 
+- Los módulos se agrupan por dominio: Access, Clients, Catalog y Quotations; no por tipo técnico global.
+- CommercialItem representa un producto o servicio vendible. ItemPriceRule contiene sus rangos de precio por cantidad. Una partida pertenece a QuotationItem; no existe como catálogo.
+- QuotationManager concentra creación, actualización, cálculo de totales, snapshots, auditoría y emisión. El controlador no calcula importes ni asigna folios.
+- QuotationFolioGenerator encapsula la secuencia anual en SQL; no existe una entidad QuotationFolioSequence.
+- El PDF se genera únicamente para cotizaciones emitidas mediante QuotationPdfRenderer y templates/admin/quotations/pdf.html.twig.
+- El sidebar mantiene la organización: Administración, Catálogos (Productos y servicios, Categorías comerciales y Unidades de medida), Comercial (Clientes y Cotizaciones) y Control.
+- Las vistas autenticadas extienden layouts/app.html.twig y definen app_navigation_active, app_breadcrumb y app_content.
 ---
 
 ## 5. Seguridad, autenticación y autorización

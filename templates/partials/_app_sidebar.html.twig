@@ -26,7 +26,7 @@
             </a>
         {% endif %}
 
-        {% if is_granted('user.view') or is_granted('role.view') or is_granted('clients.view') or is_granted('catalog.view') %}
+        {% if is_granted('user.view') or is_granted('role.view') %}
             <p class="pf-sidebar__section">Administración</p>
 
             {% if is_granted('user.view') %}
@@ -52,6 +52,45 @@
                     <span>Roles y permisos</span>
                 </a>
             {% endif %}
+        {% endif %}
+
+        {% if is_granted('catalog.view') %}
+            <p class="pf-sidebar__section">Catálogos</p>
+
+            <a
+                href="{{ path('admin_catalog_items_index') }}"
+                class="pf-sidebar__link {{ current_navigation == 'catalog_items' ? 'is-active' : '' }}"
+                {% if current_navigation == 'catalog_items' %}aria-current="page"{% endif %}
+                data-action="ui--sidebar#close"
+            >
+                <i class="bi bi-box-seam" aria-hidden="true"></i>
+                <span>Productos y servicios</span>
+            </a>
+
+            <a
+                href="{{ path('admin_catalog_categories_index') }}"
+                class="pf-sidebar__link {{ current_navigation == 'catalog_categories' ? 'is-active' : '' }}"
+                {% if current_navigation == 'catalog_categories' %}aria-current="page"{% endif %}
+                data-action="ui--sidebar#close"
+            >
+                <i class="bi bi-tags" aria-hidden="true"></i>
+                <span>Categorías comerciales</span>
+            </a>
+
+            <a
+                href="{{ path('admin_catalog_units_index') }}"
+                class="pf-sidebar__link {{ current_navigation == 'catalog_units' ? 'is-active' : '' }}"
+                {% if current_navigation == 'catalog_units' %}aria-current="page"{% endif %}
+                data-action="ui--sidebar#close"
+            >
+                <i class="bi bi-rulers" aria-hidden="true"></i>
+                <span>Unidades de medida</span>
+            </a>
+        {% endif %}
+
+        {% if is_granted('clients.view') or is_granted('quotations.view') %}
+            <p class="pf-sidebar__section">Comercial</p>
+
             {% if is_granted('clients.view') %}
                 <a
                     href="{{ path('admin_clients_index') }}"
@@ -63,17 +102,32 @@
                     <span>Clientes</span>
                 </a>
             {% endif %}
-            {% if is_granted('catalog.view') %}
+
+            {% if is_granted('quotations.view') %}
                 <a
-                    href="{{ path('admin_catalog_categories_index') }}"
-                    class="pf-sidebar__link {{ current_navigation == 'catalog' ? 'is-active' : '' }}"
-                    {% if current_navigation == 'catalog' %}aria-current="page"{% endif %}
+                    href="{{ path('admin_quotations_index') }}"
+                    class="pf-sidebar__link {{ current_navigation == 'quotations' ? 'is-active' : '' }}"
+                    {% if current_navigation == 'quotations' %}aria-current="page"{% endif %}
                     data-action="ui--sidebar#close"
                 >
-                    <i class="bi bi-tags" aria-hidden="true"></i>
-                    <span>Catálogo</span>
+                    <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                    <span>Cotizaciones</span>
                 </a>
             {% endif %}
+        {% endif %}
+
+        {% if is_granted('suppliers.view') %}
+            <p class="pf-sidebar__section">Operación</p>
+
+            <a
+                href="{{ path('admin_suppliers_index') }}"
+                class="pf-sidebar__link {{ current_navigation == 'suppliers' ? 'is-active' : '' }}"
+                {% if current_navigation == 'suppliers' %}aria-current="page"{% endif %}
+                data-action="ui--sidebar#close"
+            >
+                <i class="bi bi-truck" aria-hidden="true"></i>
+                <span>Proveedores</span>
+            </a>
         {% endif %}
 
         {% if is_granted('audit_log.view') %}

@@ -1,0 +1,69 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}{{ pageTitle }} | PrintFlow{% endblock %}
+{% block app_navigation_active %}catalog{% endblock %}
+{% block app_breadcrumb %}Catálogo / Conceptos comerciales / {{ pageTitle }}{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page">
+        <div class="pf-page-header">
+            <div>
+                <h1 class="pf-page-header__title">{{ pageTitle }}</h1>
+                <p class="pf-page-header__subtitle">
+                    Define la información comercial base que se utilizará en las cotizaciones.
+                </p>
+            </div>
+        </div>
+
+        <div class="pf-card">
+            {% if item and not canEditPrice %}
+                <div class="alert alert-info mb-4" role="alert">
+                    Puedes actualizar la información general, pero no el precio base.
+                </div>
+            {% endif %}
+
+            {{ form_start(form, {attr: {class: 'pf-form', novalidate: 'novalidate'}}) }}
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        {{ form_row(form.code) }}
+                    </div>
+
+                    <div class="col-md-4">
+                        {{ form_row(form.type) }}
+                    </div>
+
+                    <div class="col-md-4">
+                        {{ form_row(form.basePrice) }}
+                    </div>
+
+                    <div class="col-md-6">
+                        {{ form_row(form.name) }}
+                    </div>
+
+                    <div class="col-md-6">
+                        {{ form_row(form.category) }}
+                    </div>
+
+                    <div class="col-md-6">
+                        {{ form_row(form.measurementUnit) }}
+                    </div>
+
+                    <div class="col-12">
+                        {{ form_row(form.description) }}
+                    </div>
+                </div>
+
+                <div class="pf-form-actions mt-4">
+                    <a href="{{ path('admin_catalog_items_index') }}" class="btn pf-button pf-button--secondary">
+                        Cancelar
+                    </a>
+
+                    <button type="submit" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-check-lg" aria-hidden="true"></i>
+                        <span>{{ item ? 'Guardar cambios' : 'Crear concepto' }}</span>
+                    </button>
+                </div>
+            {{ form_end(form) }}
+        </div>
+    </div>
+{% endblock %}

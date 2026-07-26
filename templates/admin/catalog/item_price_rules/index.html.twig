@@ -1,0 +1,116 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Rangos de precio | PrintFlow{% endblock %}
+{% block app_navigation_active %}catalog{% endblock %}
+{% block app_breadcrumb %}Catálogo / Conceptos comerciales / Rangos de precio{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page">
+        <div class="pf-page-header">
+            <div>
+                <h1 class="pf-page-header__title">Rangos de precio</h1>
+                <p class="pf-page-header__subtitle">
+                    {{ item.code }} — {{ item.name }}
+                </p>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                <a
+                    href="{{ path('admin_catalog_items_edit', {id: item.id}) }}"
+                    class="btn pf-button pf-button--secondary"
+                >
+                    <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                    <span>Editar concepto</span>
+                </a>
+
+                <a
+                    href="{{ path('admin_catalog_item_price_rules_new', {item: item.id}) }}"
+                    class="btn pf-button pf-button--primary"
+                >
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                    <span>Nuevo rango</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="alert alert-info" role="alert">
+            Si no existe un rango activo aplicable, la cotización utilizará el precio base:
+            <strong>MXN ${{ item.basePrice|number_format(2, '.', ',') }}</strong>.
+        </div>
+
+        <div class="pf-card">
+            <div class="pf-table-responsive">
+                <table class="pf-table">
+                    <thead>
+                        <tr>
+                            <th>Aplica desde</th>
+                            <th class="text-end">Precio unitario</th>
+                            <th>Estado</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rule in rules %}
+                            <tr>
+                                <td>
+                                    {{ rule.minQuantity|number_format(4, '.', ',') }}
+                                    {{ item.measurementUnit.code }}
+                                </td>
+                                <td class="text-end">
+                                    MXN ${{ rule.unitPrice|number_format(2, '.', ',') }}
+                                </td>
+                                <td>
+                                    <span class="pf-status-badge {{ rule.isActive ? 'pf-status-badge--success' : 'pf-status-badge--neutral' }}">
+                                        {{ rule.isActive ? 'Activo' : 'Inactivo' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="pf-table__actions justify-content-end">
+                                        <a
+                                            href="{{ path('admin_catalog_item_price_rules_edit', {
+                                                item: item.id,
+                                                rule: rule.id
+                                            }) }}"
+                                            class="btn pf-button pf-button--secondary pf-button--sm"
+                                        >
+                                            <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                            <span>Editar</span>
+                                        </a>
+
+                                        <form
+                                            method="post"
+                                            action="{{ path('admin_catalog_item_price_rules_status', {
+                                                item: item.id,
+                                                rule: rule.id
+                                            }) }}"
+                                        >
+                                            <input
+                                                type="hidden"
+                                                name="_token"
+                                                value="{{ csrf_token('item_price_rule_status_' ~ rule.id) }}"
+                                            >
+
+                                            <button
+                                                type="submit"
+                                                class="btn pf-button pf-button--sm {{ rule.isActive ? 'pf-button--danger' : 'pf-button--success' }}"
+                                            >
+                                                <i class="bi {{ rule.isActive ? 'bi-pause-circle' : 'bi-check-circle' }}" aria-hidden="true"></i>
+                                                <span>{{ rule.isActive ? 'Desactivar' : 'Reactivar' }}</span>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4">
+                                    Este concepto aún no tiene rangos de precio.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

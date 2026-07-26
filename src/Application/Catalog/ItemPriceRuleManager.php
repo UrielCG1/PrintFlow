@@ -2,10 +2,10 @@
 
 namespace App\Application\Catalog;
 
-use App\Entity\Catalog\CommercialItem;
 use App\Entity\Catalog\ItemPriceRule;
 use App\Entity\Users\User;
 use App\Service\Audit\AuditLogger;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 
 final class ItemPriceRuleManager
@@ -16,41 +16,81 @@ final class ItemPriceRuleManager
     ) {
     }
 
-    public function create(CommercialItem $item, ItemPriceRuleData $data, User $actor): ItemPriceRule
+    public function create(ItemPriceRuleData $data, User $actor): ItemPriceRule
     {
-        return $this->entityManager->wrapInTransaction(function () use ($item, $data, $actor): ItemPriceRule {
-            $rule = new ItemPriceRule();
-            $rule->setCommercialItem($item)->setRuleType(ItemPriceRule::TYPE_QUANTITY_TIER);
-            $this->applyData($rule, $data);
+        try {
+            return $this->entityManager->wrapInTransaction(
+                function () use ($data, $actor): ItemPriceRule {
+                    $rule = new ItemPriceRule();
+                    $this->applyData($rule, $data);
 
-            $this->entityManager->persist($rule);
-            $this->entityManager->flush();
+                    $this->entityManager->persist($rule);
+                    $this->entityManager->flush();
 
-            $this->auditLogger->record($actor, 'item_price_rule.created', 'item_price_rule', $rule->getId(), null, $this->snapshot($rule));
-            $this->entityManager->flush();
+                    $this->auditLogger->record(
+                        $actor,
+                        'item_price_rule.created',
+                        'item_price_rule',
+                        $rule->getId(),
+                        null,
+                        $this->snapshot($rule),
+                    );
 
-            return $rule;
-        });
+                    $this->entityManager->flush();
+
+                    return $rule;
+                },
+            );
+        } catch (UniqueConstraintViolationException $exception) {
+            throw new \DomainException(
+                'Ya existe un rango con esta cantidad mínima para el concepto.',
+                0,
+                $exception,
+            );
+        }
     }
 
-    public function update(ItemPriceRule $rule, ItemPriceRuleData $data, User $actor): void
-    {
-        $this->entityManager->wrapInTransaction(function () use ($rule, $data, $actor): void {
-            $oldValues = $this->snapshot($rule);
-            $this->applyData($rule, $data);
-            $newValues = $this->snapshot($rule);
+    public function update(
+        ItemPriceRule $rule,
+        ItemPriceRuleData $data,
+        User $actor,
+    ): void {
+        try {
+            $this->entityManager->wrapInTransaction(
+                function () use ($rule, $data, $actor): void {
+                    $oldValues = $this->snapshot($rule);
 
-            if ($oldValues === $newValues) {
-                return;
-            }
+                    $this->applyData($rule, $data);
 
-            $action = $oldValues['unit_price'] !== $newValues['unit_price']
-                ? 'item_price_rule.price_updated'
-                : 'item_price_rule.updated';
+                    $newValues = $this->snapshot($rule);
 
-            $this->auditLogger->record($actor, $action, 'item_price_rule', $rule->getId(), $oldValues, $newValues);
-            $this->entityManager->flush();
-        });
+                    if ($oldValues === $newValues) {
+                        return;
+                    }
+
+                    $action = $oldValues['unit_price'] !== $newValues['unit_price']
+                        ? 'item_price_rule.price_updated'
+                        : 'item_price_rule.updated';
+
+                    $this->auditLogger->record(
+                        $actor,
+                        $action,
+                        'item_price_rule',
+                        $rule->getId(),
+                        $oldValues,
+                        $newValues,
+                    );
+
+                    $this->entityManager->flush();
+                },
+            );
+        } catch (UniqueConstraintViolationException $exception) {
+            throw new \DomainException(
+                'Ya existe un rango con esta cantidad mínima para el concepto.',
+                0,
+                $exception,
+            );
+        }
     }
 
     public function setActive(ItemPriceRule $rule, bool $isActive, User $actor): void
@@ -59,36 +99,49 @@ final class ItemPriceRuleManager
             return;
         }
 
-        $this->entityManager->wrapInTransaction(function () use ($rule, $isActive, $actor): void {
-            $oldValues = $this->snapshot($rule);
-            $rule->setIsActive($isActive);
-            $newValues = $this->snapshot($rule);
+        $this->entityManager->wrapInTransaction(
+            function () use ($rule, $isActive, $actor): void {
+                $oldValues = $this->snapshot($rule);
 
-            $this->auditLogger->record(
-                $actor,
-                $isActive ? 'item_price_rule.activated' : 'item_price_rule.deactivated',
-                'item_price_rule',
-                $rule->getId(),
-                $oldValues,
-                $newValues,
-            );
-            $this->entityManager->flush();
-        });
+                $rule->setIsActive($isActive);
+
+                $this->auditLogger->record(
+                    $actor,
+                    $isActive
+                        ? 'item_price_rule.activated'
+                        : 'item_price_rule.deactivated',
+                    'item_price_rule',
+                    $rule->getId(),
+                    $oldValues,
+                    $this->snapshot($rule),
+                );
+
+                $this->entityManager->flush();
+            },
+        );
     }
 
     private function applyData(ItemPriceRule $rule, ItemPriceRuleData $data): void
     {
+        if ($data->commercialItem === null || $data->ruleType === null) {
+            throw new \LogicException('Los datos de la regla de precio están incompletos.');
+        }
+
         $rule
+            ->setCommercialItem($data->commercialItem)
+            ->setRuleType($data->ruleType)
             ->setMinQuantity((string) $data->minQuantity)
             ->setUnitPrice((string) $data->unitPrice);
     }
 
-    /** @return array<string, bool|int|string> */
+    /** @return array<string, bool|string> */
     private function snapshot(ItemPriceRule $rule): array
     {
+        $item = $rule->getCommercialItem();
+
         return [
-            'commercial_item_id' => $rule->getCommercialItem()->getId(),
-            'rule_type' => $rule->getRuleType(),
+            'commercial_item' => $item->getCode().' — '.$item->getName(),
+            'rule_type' => $rule->getRuleType()->label(),
             'min_quantity' => $rule->getMinQuantity(),
             'unit_price' => $rule->getUnitPrice(),
             'is_active' => $rule->isActive(),

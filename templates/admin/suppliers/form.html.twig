@@ -1,0 +1,82 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}{{ pageTitle }} | PrintFlow{% endblock %}
+{% block app_navigation_active %}suppliers{% endblock %}
+{% block app_breadcrumb %}Operación / Proveedores / {{ pageTitle }}{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page">
+        <div class="pf-page-header">
+            <div>
+                <h1 class="pf-page-header__title">{{ pageTitle }}</h1>
+                <p class="pf-page-header__subtitle">
+                    Registra la información de identificación y contacto del proveedor.
+                </p>
+            </div>
+        </div>
+
+        <div class="pf-card">
+            {% form_theme form 'form/printflow_theme.html.twig' %}
+
+            {{ form_start(form, { attr: { class: 'pf-form', novalidate: 'novalidate' } }) }}
+                <section class="mb-4">
+                    <h2 class="h6 mb-1">Identificación</h2>
+                    <p class="small text-body-secondary mb-3">
+                        El código identifica al proveedor dentro de PrintFlow y no se reutiliza.
+                    </p>
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            {{ form_row(form.code) }}
+                        </div>
+                        <div class="col-md-8">
+                            {{ form_row(form.businessName) }}
+                        </div>
+                        <div class="col-md-8">
+                            {{ form_row(form.legalName) }}
+                        </div>
+                        <div class="col-md-4">
+                            {{ form_row(form.taxId) }}
+                        </div>
+                    </div>
+                </section>
+
+                <section class="mb-4">
+                    <h2 class="h6 mb-1">Contacto general</h2>
+                    <p class="small text-body-secondary mb-3">
+                        Estos datos no sustituyen contactos ni direcciones; esos catálogos se evaluarán en una subfase posterior.
+                    </p>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            {{ form_row(form.email) }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form_row(form.phone) }}
+                        </div>
+                    </div>
+                </section>
+
+                <section class="mb-4">
+                    <h2 class="h6 mb-1">Notas internas</h2>
+                    <p class="small text-body-secondary mb-3">
+                        Usa este campo solo para observaciones operativas; no crea condiciones de compra ni vínculos con materiales.
+                    </p>
+
+                    {{ form_row(form.notes) }}
+                </section>
+
+                <div class="pf-form-actions">
+                    <a href="{{ path('admin_suppliers_index') }}" class="btn pf-button pf-button--secondary">
+                        Cancelar
+                    </a>
+
+                    <button type="submit" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-check-lg" aria-hidden="true"></i>
+                        <span>{{ supplier ? 'Guardar cambios' : 'Registrar proveedor' }}</span>
+                    </button>
+                </div>
+            {{ form_end(form) }}
+        </div>
+    </div>
+{% endblock %}

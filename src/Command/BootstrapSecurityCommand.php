@@ -58,10 +58,10 @@ final class BootstrapSecurityCommand extends Command
         'client.update' => ['clients', 'update', 'Editar clientes'],
         'client.delete' => ['clients', 'delete', 'Eliminar clientes'],
 
-        'supplier.view' => ['suppliers', 'view', 'Consultar proveedores'],
-        'supplier.create' => ['suppliers', 'create', 'Crear proveedores'],
-        'supplier.update' => ['suppliers', 'update', 'Editar proveedores'],
-        'supplier.delete' => ['suppliers', 'delete', 'Eliminar proveedores'],
+        'suppliers.view' => ['suppliers', 'view', 'Consultar proveedores'],
+        'suppliers.create' => ['suppliers', 'create', 'Crear proveedores'],
+        'suppliers.update' => ['suppliers', 'update', 'Editar proveedores'],
+        'suppliers.toggle_status' => ['suppliers', 'toggle_status', 'Activar o desactivar proveedores'],
 
         'service.view' => ['services', 'view', 'Consultar servicios'],
         'service.manage' => ['services', 'manage', 'Administrar servicios'],

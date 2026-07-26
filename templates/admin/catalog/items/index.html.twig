@@ -1,0 +1,200 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Conceptos comerciales | PrintFlow{% endblock %}
+{% block app_navigation_active %}catalog{% endblock %}
+{% block app_breadcrumb %}Catálogo / Conceptos comerciales{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page">
+        <div class="pf-page-header">
+            <div>
+                <h1 class="pf-page-header__title">Conceptos comerciales</h1>
+                <p class="pf-page-header__subtitle">
+                    Administra los productos y servicios disponibles para las cotizaciones.
+                </p>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{{ path('admin_catalog_categories_index') }}" class="btn pf-button pf-button--secondary">
+                    <i class="bi bi-tags" aria-hidden="true"></i>
+                    <span>Categorías</span>
+                </a>
+
+                <a href="{{ path('admin_catalog_units_index') }}" class="btn pf-button pf-button--secondary">
+                    <i class="bi bi-rulers" aria-hidden="true"></i>
+                    <span>Unidades</span>
+                </a>
+
+                {% if is_granted('catalog.items.create') %}
+                    <a href="{{ path('admin_catalog_items_new') }}" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                        <span>Nuevo concepto</span>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <form method="get" class="pf-card mb-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-lg-5">
+                    <label for="catalog-item-search" class="form-label">Buscar</label>
+                    <input
+                        id="catalog-item-search"
+                        type="search"
+                        name="q"
+                        value="{{ search }}"
+                        class="form-control"
+                        placeholder="Código, concepto, categoría o unidad"
+                    >
+                </div>
+
+                <div class="col-md-3 col-lg-2">
+                    <label for="catalog-item-type" class="form-label">Tipo</label>
+                    <select id="catalog-item-type" name="type" class="form-select">
+                        <option value="all" {{ type == 'all' ? 'selected' : '' }}>Todos</option>
+                        <option value="service" {{ type == 'service' ? 'selected' : '' }}>Servicios</option>
+                        <option value="product" {{ type == 'product' ? 'selected' : '' }}>Productos</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3 col-lg-2">
+                    <label for="catalog-item-status" class="form-label">Estado</label>
+                    <select id="catalog-item-status" name="status" class="form-select">
+                        <option value="active" {{ status == 'active' ? 'selected' : '' }}>Activos</option>
+                        <option value="inactive" {{ status == 'inactive' ? 'selected' : '' }}>Inactivos</option>
+                        <option value="all" {{ status == 'all' ? 'selected' : '' }}>Todos</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6 col-lg-3 d-flex gap-2">
+                    <button type="submit" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <span>Filtrar</span>
+                    </button>
+
+                    <a href="{{ path('admin_catalog_items_index') }}" class="btn pf-button pf-button--secondary">
+                        Limpiar
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        <div class="pf-card">
+            <div class="pf-table-responsive">
+                <table class="pf-table">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Concepto</th>
+                            <th>Tipo</th>
+                            <th>Categoría</th>
+                            <th>Unidad</th>
+                            <th class="text-end">Precio base</th>
+                            <th>Estado</th>
+                            {% if is_granted('catalog.items.update') or is_granted('catalog.items.update_price') or is_granted('catalog.items.toggle_status') %}
+                                <th class="text-end">Acciones</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in page.items %}
+                            <tr>
+                                <td><code>{{ item.code }}</code></td>
+                                <td>{{ item.name }}</td>
+                                <td>{{ item.type.label }}</td>
+                                <td>{{ item.category.name }}</td>
+                                <td>{{ item.measurementUnit.name }}</td>
+                                <td class="text-end">MXN ${{ item.basePrice|number_format(2, '.', ',') }}</td>
+                                <td>
+                                    <span class="pf-status-badge {{ item.isActive ? 'pf-status-badge--success' : 'pf-status-badge--neutral' }}">
+                                        {{ item.isActive ? 'Activo' : 'Inactivo' }}
+                                    </span>
+                                </td>
+
+                                {% if is_granted('catalog.items.update') or is_granted('catalog.items.update_price') or is_granted('catalog.items.toggle_status') %}
+                                    <td>
+                                        <div class="pf-table__actions justify-content-end">
+                                            {% if is_granted('catalog.items.update_price') %}
+                                                <a
+                                                    href="{{ path('admin_catalog_item_price_rules_index', {item: item.id}) }}"
+                                                    class="btn pf-button pf-button--secondary pf-button--sm"
+                                                >
+                                                    <i class="bi bi-cash-stack" aria-hidden="true"></i>
+                                                    <span>Rangos</span>
+                                                </a>
+                                            {% endif %}
+                                            {% if is_granted('catalog.items.update') %}
+                                                <a
+                                                    href="{{ path('admin_catalog_items_edit', {id: item.id}) }}"
+                                                    class="btn pf-button pf-button--secondary pf-button--sm"
+                                                >
+                                                    <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                                    <span>Editar</span>
+                                                </a>
+                                            {% endif %}
+
+                                            {% if is_granted('catalog.items.toggle_status') %}
+                                                <form
+                                                    method="post"
+                                                    action="{{ path('admin_catalog_items_status', {
+                                                        id: item.id,
+                                                        q: search,
+                                                        type: type,
+                                                        status: status,
+                                                        page: page.currentPage
+                                                    }) }}"
+                                                >
+                                                    <input
+                                                        type="hidden"
+                                                        name="_token"
+                                                        value="{{ csrf_token('catalog_item_status_' ~ item.id) }}"
+                                                    >
+
+                                                    <button
+                                                        type="submit"
+                                                        class="btn pf-button pf-button--sm {{ item.isActive ? 'pf-button--danger' : 'pf-button--success' }}"
+                                                    >
+                                                        <i class="bi {{ item.isActive ? 'bi-pause-circle' : 'bi-check-circle' }}" aria-hidden="true"></i>
+                                                        <span>{{ item.isActive ? 'Desactivar' : 'Reactivar' }}</span>
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="{{ (is_granted('catalog.items.update') or is_granted('catalog.items.update_price') or is_granted('catalog.items.toggle_status')) ? 8 : 7 }}" class="text-center py-4">
+                                    No se encontraron conceptos comerciales.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if page.totalPages > 1 %}
+                <nav class="mt-4" aria-label="Paginación de conceptos comerciales">
+                    <ul class="pagination mb-0">
+                        <li class="page-item {{ page.currentPage == 1 ? 'disabled' : '' }}">
+                            <a class="page-link" href="{{ path('admin_catalog_items_index', {q: search, type: type, status: status, page: page.currentPage - 1}) }}">
+                                Anterior
+                            </a>
+                        </li>
+
+                        <li class="page-item disabled">
+                            <span class="page-link">Página {{ page.currentPage }} de {{ page.totalPages }}</span>
+                        </li>
+
+                        <li class="page-item {{ page.currentPage == page.totalPages ? 'disabled' : '' }}">
+                            <a class="page-link" href="{{ path('admin_catalog_items_index', {q: search, type: type, status: status, page: page.currentPage + 1}) }}">
+                                Siguiente
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
