@@ -1,0 +1,207 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Categorías comerciales | PrintFlow{% endblock %}
+{% block app_navigation_active %}catalog{% endblock %}
+{% block app_breadcrumb %}Catálogo / Categorías comerciales{% endblock %}
+
+{% set canReorder = is_granted('catalog.categories.manage') and status == 'active' and search is empty %}
+{% block app_content %}
+    <div class="pf-page">
+        <div class="pf-page-header">
+            <div>
+                <h1 class="pf-page-header__title">Categorías comerciales</h1>
+                <p class="pf-page-header__subtitle">
+                    Organiza los servicios y productos que se podrán utilizar en futuras cotizaciones.
+                </p>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                <a
+                    href="{{ path('admin_catalog_units_index') }}"
+                    class="btn pf-button pf-button--secondary"
+                >
+                    <i class="bi bi-rulers" aria-hidden="true"></i>
+                    <span>Unidades de medida</span>
+                </a>
+
+                {% if is_granted('catalog.categories.manage') %}
+                    <a
+                        href="{{ path('admin_catalog_categories_new') }}"
+                        class="btn pf-button pf-button--primary"
+                    >
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                        <span>Nueva categoría</span>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <form method="get" class="pf-card mb-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label for="catalog-category-search" class="form-label">Buscar</label>
+                    <input
+                        id="catalog-category-search"
+                        type="search"
+                        name="q"
+                        value="{{ search }}"
+                        class="form-control"
+                        placeholder="Código o nombre"
+                    >
+                </div>
+
+                <div class="col-md-3">
+                    <label for="catalog-category-status" class="form-label">Estado</label>
+                    <select id="catalog-category-status" name="status" class="form-select">
+                        <option value="active" {{ status == 'active' ? 'selected' : '' }}>Activas</option>
+                        <option value="inactive" {{ status == 'inactive' ? 'selected' : '' }}>Inactivas</option>
+                        <option value="all" {{ status == 'all' ? 'selected' : '' }}>Todas</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <span>Filtrar</span>
+                    </button>
+
+                    <a
+                        href="{{ path('admin_catalog_categories_index') }}"
+                        class="btn pf-button pf-button--secondary"
+                    >
+                        Limpiar
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        <div class="pf-card">
+            {% if canReorder %}
+            <p class="small text-body-secondary mb-3">
+                Arrastra las categorías para ajustar su orden de visualización.
+            </p>
+            {% endif %}
+            <div class="pf-table-responsive">
+                <table class="pf-table">
+                    <thead>
+                        <tr>
+                            {% if canReorder %}
+                            <th class="text-center" aria-label="Reordenar"></th>
+                            {% endif %}
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Descripción</th>
+                            <th>Orden</th>
+                            <th>Estado</th>
+                            {% if is_granted('catalog.categories.manage') %}
+                                <th class="text-end">Acciones</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody
+                        {% if canReorder %}
+                            data-controller="ui--sortable"
+                            data-ui--sortable-url-value="{{ path('admin_catalog_categories_reorder') }}"
+                            data-ui--sortable-token-value="{{ csrf_token('catalog_category_reorder') }}"
+                        {% endif %}
+                    >
+                        {% for category in page.items %}
+                            <tr data-id="{{ category.id }}" data-sortable-id="{{ category.id }}">
+                                {% if canReorder %}
+                                <td class="text-center">
+                                    <button
+                                        type="button"
+                                        class="pf-sortable__handle"
+                                        title="Arrastrar para reordenar"
+                                        aria-label="Arrastrar {{ category.name }} para reordenar"
+                                    >
+                                        <i class="bi bi-grip-vertical" aria-hidden="true"></i>
+                                    </button>
+                                </td>
+                                {% endif %}
+                                <td><code>{{ category.code }}</code></td>
+                                <td>{{ category.name }}</td>
+                                <td>{{ category.description ?: '—' }}</td>
+                                <td>{{ category.displayOrder }}</td>
+                                <td>
+                                    <span class="pf-status-badge {{ category.isActive ? 'pf-status-badge--success' : 'pf-status-badge--neutral' }}">
+                                        {{ category.isActive ? 'Activa' : 'Inactiva' }}
+                                    </span>
+                                </td>
+
+                                {% if is_granted('catalog.categories.manage') %}
+                                    <td>
+                                        <div class="pf-table__actions justify-content-end">
+                                            <a
+                                                href="{{ path('admin_catalog_categories_edit', {id: category.id}) }}"
+                                                class="btn pf-button pf-button--secondary pf-button--sm"
+                                            >
+                                                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                                <span>Editar</span>
+                                            </a>
+
+                                            <form
+                                                method="post"
+                                                action="{{ path('admin_catalog_categories_status', {id: category.id, q: search, status: status, page: page.currentPage}) }}"
+                                            >
+                                                <input
+                                                    type="hidden"
+                                                    name="_token"
+                                                    value="{{ csrf_token('catalog_category_status_' ~ category.id) }}"
+                                                >
+
+                                                <button
+                                                    type="submit"
+                                                    class="btn pf-button pf-button--sm {{ category.isActive ? 'pf-button--danger' : 'pf-button--success' }}"
+                                                >
+                                                    <i class="bi {{ category.isActive ? 'bi-pause-circle' : 'bi-check-circle' }}" aria-hidden="true"></i>
+                                                    <span>{{ category.isActive ? 'Desactivar' : 'Reactivar' }}</span>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="{{ is_granted('catalog.categories.manage') ? (canReorder ? 7 : 6) : 5 }}" class="text-center py-4">
+                                    No se encontraron categorías comerciales.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if page.totalPages > 1 %}
+                <nav class="mt-4" aria-label="Paginación de categorías">
+                    <ul class="pagination mb-0">
+                        <li class="page-item {{ page.currentPage == 1 ? 'disabled' : '' }}">
+                            <a
+                                class="page-link"
+                                href="{{ path('admin_catalog_categories_index', {q: search, status: status, page: page.currentPage - 1}) }}"
+                            >
+                                Anterior
+                            </a>
+                        </li>
+
+                        <li class="page-item disabled">
+                            <span class="page-link">
+                                Página {{ page.currentPage }} de {{ page.totalPages }}
+                            </span>
+                        </li>
+
+                        <li class="page-item {{ page.currentPage == page.totalPages ? 'disabled' : '' }}">
+                            <a
+                                class="page-link"
+                                href="{{ path('admin_catalog_categories_index', {q: search, status: status, page: page.currentPage + 1}) }}"
+                            >
+                                Siguiente
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

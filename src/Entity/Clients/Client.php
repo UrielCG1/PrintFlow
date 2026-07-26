@@ -10,6 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\UniqueConstraint(name: 'uniq_clients_tax_id', columns: ['tax_id'])]
 #[ORM\Index(name: 'idx_clients_active_name', columns: ['is_active', 'business_name'])]
 #[ORM\Index(name: 'idx_clients_deleted_at', columns: ['deleted_at'])]
+#[ORM\Index(name: 'idx_clients_category', columns: ['client_category_id'])]
 #[ORM\HasLifecycleCallbacks]
 class Client
 {
@@ -24,6 +25,28 @@ class Client
     #[ORM\Column(name: 'tax_id', length: 20, nullable: true)]
     private ?string $taxId = null;
 
+    #[ORM\Column(name: 'legal_name', length: 160, nullable: true)]
+    private ?string $legalName = null;
+
+    #[ORM\Column(name: 'tax_regime_code', length: 3, nullable: true)]
+    private ?string $taxRegimeCode = null;
+
+    #[ORM\Column(name: 'fiscal_postal_code', length: 5, nullable: true)]
+    private ?string $fiscalPostalCode = null;
+
+    #[ORM\Column(name: 'billing_email', length: 180, nullable: true)]
+    private ?string $billingEmail = null;
+
+    #[ORM\Column(name: 'default_cfdi_use_code', length: 10, nullable: true)]
+    private ?string $defaultCfdiUseCode = null;
+
+    #[ORM\ManyToOne(targetEntity: ClientCategory::class)]
+    #[ORM\JoinColumn(name: 'client_category_id', nullable: true, onDelete: 'RESTRICT')]
+    private ?ClientCategory $category = null;
+
+    #[ORM\Column(name: 'default_discount_percent', type: 'float', options: ['default' => '0'])]
+    private float $defaultDiscountPercent = 0.0;
+
     #[ORM\Column(length: 180, nullable: true)]
     private ?string $email = null;
 
@@ -36,13 +59,27 @@ class Client
     #[ORM\Column(name: 'is_active', options: ['default' => true])]
     private bool $isActive = true;
 
-    #[ORM\Column(name: 'created_at')]
+    #[ORM\Column(
+        name: 'created_at',
+        type: 'datetime_immutable',
+        options: ['comment' => '(DC2Type:datetime_immutable)']
+    )]
     private \DateTimeImmutable $createdAt;
 
-    #[ORM\Column(name: 'updated_at')]
+    #[ORM\Column(
+        name: 'updated_at',
+        type: 'datetime_immutable',
+        nullable: false,
+        options: ['comment' => '(DC2Type:datetime_immutable)']
+    )]
     private \DateTimeImmutable $updatedAt;
 
-    #[ORM\Column(name: 'deleted_at', nullable: true)]
+    #[ORM\Column(
+        name: 'deleted_at',
+        type: 'datetime_immutable',
+        nullable: true,
+        options: ['comment' => '(DC2Type:datetime_immutable)']
+    )]
     private ?\DateTimeImmutable $deletedAt = null;
 
     public function __construct()
@@ -80,6 +117,95 @@ class Client
         $taxId = trim((string) $taxId);
 
         $this->taxId = $taxId !== '' ? strtoupper($taxId) : null;
+
+        return $this;
+    }
+
+    public function getLegalName(): ?string
+    {
+        return $this->legalName;
+    }
+
+    public function setLegalName(?string $legalName): self
+    {
+        $legalName = trim((string) $legalName);
+        $this->legalName = $legalName !== '' ? $legalName : null;
+
+        return $this;
+    }
+
+    public function getTaxRegimeCode(): ?string
+    {
+        return $this->taxRegimeCode;
+    }
+
+    public function setTaxRegimeCode(?string $taxRegimeCode): self
+    {
+        $taxRegimeCode = trim((string) $taxRegimeCode);
+        $this->taxRegimeCode = $taxRegimeCode !== '' ? $taxRegimeCode : null;
+
+        return $this;
+    }
+
+    public function getFiscalPostalCode(): ?string
+    {
+        return $this->fiscalPostalCode;
+    }
+
+    public function setFiscalPostalCode(?string $fiscalPostalCode): self
+    {
+        $fiscalPostalCode = trim((string) $fiscalPostalCode);
+        $this->fiscalPostalCode = $fiscalPostalCode !== '' ? $fiscalPostalCode : null;
+
+        return $this;
+    }
+
+    public function getBillingEmail(): ?string
+    {
+        return $this->billingEmail;
+    }
+
+    public function setBillingEmail(?string $billingEmail): self
+    {
+        $billingEmail = trim((string) $billingEmail);
+        $this->billingEmail = $billingEmail !== '' ? strtolower($billingEmail) : null;
+
+        return $this;
+    }
+
+    public function getDefaultCfdiUseCode(): ?string
+    {
+        return $this->defaultCfdiUseCode;
+    }
+
+    public function setDefaultCfdiUseCode(?string $defaultCfdiUseCode): self
+    {
+        $defaultCfdiUseCode = trim((string) $defaultCfdiUseCode);
+        $this->defaultCfdiUseCode = $defaultCfdiUseCode !== '' ? strtoupper($defaultCfdiUseCode) : null;
+
+        return $this;
+    }
+
+    public function getCategory(): ?ClientCategory
+    {
+        return $this->category;
+    }
+
+    public function setCategory(?ClientCategory $category): self
+    {
+        $this->category = $category;
+
+        return $this;
+    }
+
+    public function getDefaultDiscountPercent(): float
+    {
+        return $this->defaultDiscountPercent;
+    }
+
+    public function setDefaultDiscountPercent(float $defaultDiscountPercent): self
+    {
+        $this->defaultDiscountPercent = $defaultDiscountPercent;
 
         return $this;
     }

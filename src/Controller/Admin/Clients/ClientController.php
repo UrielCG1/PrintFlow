@@ -74,11 +74,20 @@ final class ClientController extends AbstractController
         $data = new ClientData();
         $data->businessName = $client->getBusinessName();
         $data->taxId = $client->getTaxId();
+        $data->legalName = $client->getLegalName();
+        $data->taxRegimeCode = $client->getTaxRegimeCode();
+        $data->fiscalPostalCode = $client->getFiscalPostalCode();
+        $data->billingEmail = $client->getBillingEmail();
+        $data->defaultCfdiUseCode = $client->getDefaultCfdiUseCode();
+        $data->category = $client->getCategory();
+        $data->defaultDiscountPercent = $client->getDefaultDiscountPercent();
         $data->email = $client->getEmail();
         $data->phone = $client->getPhone();
         $data->notes = $client->getNotes();
 
-        $form = $this->createForm(ClientType::class, $data);
+        $form = $this->createForm(ClientType::class, $data, [
+            'current_category' => $client->getCategory(),
+        ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {

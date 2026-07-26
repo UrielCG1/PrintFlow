@@ -104,19 +104,32 @@ final class ClientManager
         $client
             ->setBusinessName((string) $data->businessName)
             ->setTaxId($data->taxId)
+            ->setLegalName($data->legalName)
+            ->setTaxRegimeCode($data->taxRegimeCode)
+            ->setFiscalPostalCode($data->fiscalPostalCode)
+            ->setBillingEmail($data->billingEmail)
+            ->setDefaultCfdiUseCode($data->defaultCfdiUseCode)
+            ->setCategory($data->category)
+            ->setDefaultDiscountPercent(round($data->defaultDiscountPercent, 2))
             ->setEmail($data->email)
             ->setPhone($data->phone)
             ->setNotes($data->notes);
     }
-
     /**
-     * @return array<string, bool|string|null>
+     * @return array<string, bool|float|int|string|null>
      */
     private function snapshot(Client $client): array
     {
         return [
             'business_name' => $client->getBusinessName(),
             'tax_id' => $client->getTaxId(),
+            'legal_name' => $client->getLegalName(),
+            'tax_regime_code' => $client->getTaxRegimeCode(),
+            'fiscal_postal_code' => $client->getFiscalPostalCode(),
+            'billing_email' => $client->getBillingEmail(),
+            'default_cfdi_use_code' => $client->getDefaultCfdiUseCode(),
+            'client_category_id' => $client->getCategory()?->getId(),
+            'default_discount_percent' => $client->getDefaultDiscountPercent(),
             'email' => $client->getEmail(),
             'phone' => $client->getPhone(),
             'notes' => $client->getNotes(),

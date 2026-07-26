@@ -26,7 +26,7 @@
             </a>
         {% endif %}
 
-        {% if is_granted('user.view') or is_granted('role.view') or is_granted('clients.view') %}
+        {% if is_granted('user.view') or is_granted('role.view') or is_granted('clients.view') or is_granted('catalog.view') %}
             <p class="pf-sidebar__section">Administración</p>
 
             {% if is_granted('user.view') %}
@@ -61,6 +61,17 @@
                 >
                     <i class="bi bi-people" aria-hidden="true"></i>
                     <span>Clientes</span>
+                </a>
+            {% endif %}
+            {% if is_granted('catalog.view') %}
+                <a
+                    href="{{ path('admin_catalog_categories_index') }}"
+                    class="pf-sidebar__link {{ current_navigation == 'catalog' ? 'is-active' : '' }}"
+                    {% if current_navigation == 'catalog' %}aria-current="page"{% endif %}
+                    data-action="ui--sidebar#close"
+                >
+                    <i class="bi bi-tags" aria-hidden="true"></i>
+                    <span>Catálogo</span>
                 </a>
             {% endif %}
         {% endif %}

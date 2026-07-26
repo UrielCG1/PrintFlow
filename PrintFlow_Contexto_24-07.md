@@ -398,10 +398,38 @@ erDiagram
         datetime created_at
     }
 
+    CLIENT_CATEGORIES {
+        int id PK
+        varchar name UK
+        text description "nullable"
+        int display_order
+        boolean is_active
+        datetime created_at
+        datetime updated_at
+    }
+
+    DELIVERY_ZONES {
+        int id PK
+        varchar name UK
+        text description "nullable"
+        decimal base_delivery_cost
+        int display_order
+        boolean is_active
+        datetime created_at
+        datetime updated_at
+    }
+
     CLIENTS {
         int id PK
+        int client_category_id FK "nullable"
         varchar business_name
         varchar tax_id UK "nullable"
+        varchar legal_name "nullable"
+        char tax_regime_code "nullable"
+        char fiscal_postal_code "nullable"
+        varchar billing_email "nullable"
+        varchar default_cfdi_use_code "nullable"
+        float default_discount_percent
         varchar email "nullable"
         varchar phone "nullable"
         text notes "nullable"
@@ -418,7 +446,12 @@ erDiagram
         varchar job_title "nullable"
         varchar email "nullable"
         varchar phone "nullable"
+        varchar phone_extension "nullable"
+        varchar mobile_phone "nullable"
+        varchar personal_mobile_phone "nullable"
+        varchar work_schedule "nullable"
         boolean is_primary
+        int primary_client_id UK "generada"
         boolean is_active
         datetime created_at
         datetime updated_at
@@ -427,6 +460,7 @@ erDiagram
     CLIENT_ADDRESSES {
         int id PK
         int client_id FK
+        int delivery_zone_id FK "nullable"
         varchar label
         varchar recipient_name "nullable"
         varchar street
@@ -438,13 +472,14 @@ erDiagram
         varchar state
         char country_code
         text references_text "nullable"
+        decimal delivery_cost
         boolean is_fiscal_address
         boolean is_delivery_address
         boolean is_default_fiscal
         boolean is_default_delivery
-        boolean is_active
         int default_fiscal_client_id UK "generada"
         int default_delivery_client_id UK "generada"
+        boolean is_active
         datetime created_at
         datetime updated_at
     }
@@ -454,8 +489,11 @@ erDiagram
     ROLES ||--o{ ROLE_PERMISSIONS : "incluye"
     PERMISSIONS ||--o{ ROLE_PERMISSIONS : "otorga"
     USERS o|--o{ AUDIT_LOGS : "actor_id · SET NULL"
+
+    CLIENT_CATEGORIES o|--o{ CLIENTS : "clasifica"
     CLIENTS ||--o{ CLIENT_CONTACTS : "registra"
     CLIENTS ||--o{ CLIENT_ADDRESSES : "posee"
+    DELIVERY_ZONES o|--o{ CLIENT_ADDRESSES : "agrupa"
 ```
 
 ### Tablas y reglas relevantes
@@ -468,38 +506,66 @@ erDiagram
 | `user_roles` | Asignación usuario–rol | PK compuesta, evita duplicados |
 | `role_permissions` | Asignación rol–permiso | PK compuesta, evita duplicados |
 | `audit_logs` | Historial transversal | Actor opcional; relación polimórfica lógica por `entity_type` + `entity_id`; JSON de snapshots |
-| `clients` | Entidad comercial | `tax_id` único si existe; baja lógica mediante `is_active`/`deleted_at`; índice por estado/nombre |
-| `client_contacts` | Personas de un cliente | FK `client_id` con `RESTRICT`; índices por cliente/activo y cliente/principal |
-| `client_addresses` | Direcciones fiscales y de entrega | FK a cliente; una predeterminada fiscal y una de entrega activas por cliente mediante columnas generadas/índices únicos |
+| `client_categories` | Clasificación comercial del cliente | `name` único; orden visual; estado activo/inactivo |
+| `delivery_zones` | Zonas de entrega configurables | `name` único; costo base de entrega, orden visual y estado activo/inactivo |
+| `clients` | Entidad comercial y fiscal | RFC único si existe; categoría opcional; datos fiscales y condiciones comerciales; baja lógica mediante `is_active`/`deleted_at` |
+| `client_contacts` | Personas de contacto de un cliente | FK `client_id` con `RESTRICT`; índices por cliente/activo y cliente/principal; un contacto principal activo por cliente |
+| `client_addresses` | Domicilios fiscales y de entrega | FK a cliente y zona de entrega opcional; una predeterminada fiscal activa y una de entrega activa por cliente mediante columnas generadas/índices únicos |
 
 ### Clientes
 
-`Client` normaliza el RFC/identificador fiscal a mayúsculas, el correo a minúsculas y convierte vacíos a `null`. Al desactivar, marca `deleted_at`; al reactivar, lo limpia. Sus timestamps son `DateTimeImmutable` en UTC y `updated_at` se actualiza mediante `PreUpdate`.
+`Client` es la entidad comercial principal y actúa como padre de contactos y direcciones. Incluye nombre comercial, categoría, correo y teléfono generales, notas internas, estado y baja lógica.
+
+También concentra la información fiscal y comercial reutilizable para futuras cotizaciones:
+
+- Razón social.
+- RFC o identificador fiscal.
+- Régimen fiscal.
+- Código postal fiscal.
+- Correo de facturación.
+- Uso CFDI predeterminado.
+- Categoría comercial.
+- Porcentaje de descuento predeterminado.
+
+El RFC se normaliza a mayúsculas, los correos a minúsculas y los valores vacíos se convierten a `null`. Al desactivar al cliente, se registra `deleted_at`; al reactivarlo, se limpia. Sus timestamps son `DateTimeImmutable` en UTC y `updated_at` se actualiza mediante `PreUpdate`.
+
+El código postal fiscal es un dato propio del cliente y no se actualiza automáticamente al crear o modificar una dirección, evitando cambios fiscales involuntarios.
 
 Permisos: `clients.view`, `clients.create`, `clients.update`, `clients.toggle_status`.
 
+### Categorías de cliente y zonas de entrega
+
+`ClientCategory` permite clasificar clientes para fines comerciales y operativos. Cuenta con nombre único, descripción opcional, orden de visualización y estado activo.
+
+`DeliveryZone` representa zonas configurables de entrega. Cada zona define un nombre único, descripción opcional, costo base de entrega, orden y estado activo. Una dirección puede asociarse opcionalmente a una zona; el costo final de entrega queda guardado en la dirección para permitir ajustes específicos por cliente o domicilio.
+
 ### Contactos de cliente
 
-Un contacto pertenece a un solo cliente y no puede existir sin él. Los campos actuales son nombre completo, puesto, correo, teléfono, `is_primary`, `is_active`, fechas de creación/actualización.
+Un contacto pertenece a un solo cliente y no puede existir sin él. Los campos actuales incluyen nombre completo, puesto, correo, teléfono, extensión, móvil laboral, móvil personal, horario de atención, `is_primary`, `is_active` y fechas de creación/actualización.
 
-Reglas de negocio esperadas y aplicadas por el manager:
+Reglas de negocio:
 
 - Un contacto inactivo no puede quedar como principal.
-- Al seleccionar un nuevo contacto principal, el anterior debe dejar de serlo de forma transaccional.
+- Al seleccionar un nuevo contacto principal, el anterior deja de serlo de forma transaccional.
 - No se registran contactos sobre clientes inactivos.
-- La consulta/edición valida que el contacto corresponda al cliente indicado en la ruta.
+- La consulta y edición validan que el contacto corresponda al cliente indicado en la ruta.
+- La base protege que solo exista un contacto principal activo por cliente.
 
 ### Direcciones de cliente
 
-Una dirección puede ser fiscal, de entrega o ambas. El modelo incluye etiqueta, destinatario, calle, exterior/interior, colonia, CP, municipio/alcaldía, estado, país, referencias y banderas de estado/uso.
+Una dirección pertenece a un cliente y puede ser fiscal, de entrega o ambas. El modelo incluye etiqueta, destinatario, calle, número exterior e interior, colonia, código postal, municipio o alcaldía, estado, país, referencias, zona de entrega, costo de entrega y banderas de uso, predeterminadas y estado.
 
 Reglas críticas:
 
+- Una dirección puede marcarse como domicilio fiscal, domicilio de entrega o ambos.
 - Solo direcciones activas pueden ser predeterminadas.
-- Por cliente puede existir **una** predeterminada fiscal activa y **una** predeterminada de entrega activa.
-- Si una dirección se marca predeterminada, el manager retira ese carácter de las demás antes de aplicar el cambio y deja auditoría `client_address.default_changed`.
-- La liberación temporal y el `flush()` previo evitan colisiones de índices únicos MySQL durante el reemplazo de predeterminadas.
+- Marcar una dirección como predeterminada fiscal activa automáticamente su uso fiscal; lo mismo aplica para entrega.
+- Por cliente puede existir una sola dirección predeterminada fiscal activa y una sola dirección predeterminada de entrega activa.
+- Al asignar una nueva predeterminada, el manager retira esa condición de las demás direcciones activas del mismo tipo dentro de una transacción y registra la auditoría `client_address.default_changed`.
+- La liberación temporal y el `flush()` previo evitan colisiones de índices únicos MySQL durante el reemplazo.
+- Al desactivar una dirección se eliminan sus marcas de predeterminada.
 - No se registran direcciones para clientes inactivos.
+- El costo de entrega se conserva en la dirección, aunque provenga inicialmente del costo base de su zona.
 
 ---
 

@@ -8,6 +8,9 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: ClientAddressRepository::class)]
 #[ORM\Table(name: 'client_addresses')]
 #[ORM\Index(name: 'idx_client_addresses_client_active', columns: ['client_id', 'is_active'])]
+#[ORM\Index(name: 'idx_client_addresses_delivery_zone', columns: ['delivery_zone_id'])]
+#[ORM\UniqueConstraint(name: 'uniq_client_addresses_default_fiscal', columns: ['default_fiscal_client_id'])]
+#[ORM\UniqueConstraint(name: 'uniq_client_addresses_default_delivery', columns: ['default_delivery_client_id'])]
 #[ORM\HasLifecycleCallbacks]
 class ClientAddress
 {
@@ -38,7 +41,11 @@ class ClientAddress
     #[ORM\Column(length: 120, nullable: true)]
     private ?string $neighborhood = null;
 
-    #[ORM\Column(name: 'postal_code', length: 5)]
+    #[ORM\Column(
+        name: 'postal_code',
+        length: 5,
+        options: ['fixed' => true]
+    )]
     private string $postalCode;
 
     #[ORM\Column(length: 120)]
@@ -47,11 +54,28 @@ class ClientAddress
     #[ORM\Column(length: 120)]
     private string $state;
 
-    #[ORM\Column(name: 'country_code', length: 2)]
+    #[ORM\Column(
+        name: 'country_code',
+        length: 2,
+        options: ['fixed' => true, 'default' => 'MX']
+    )]
     private string $countryCode = 'MX';
 
-    #[ORM\Column(name: 'references_text', type: 'text', nullable: true)]
+    #[ORM\Column(
+        name: 'references_text',
+        type: 'text',
+        length: 65535,
+        nullable: true,
+        options: ['default' => null]
+    )]
     private ?string $references = null;
+
+    #[ORM\ManyToOne(targetEntity: DeliveryZone::class)]
+    #[ORM\JoinColumn(name: 'delivery_zone_id', nullable: true, onDelete: 'RESTRICT')]
+    private ?DeliveryZone $deliveryZone = null;
+
+    #[ORM\Column(name: 'delivery_cost', type: 'decimal', precision: 12, scale: 2, options: ['default' => '0.00'])]
+    private string $deliveryCost = '0.00';
 
     #[ORM\Column(name: 'is_fiscal_address', options: ['default' => false])]
     private bool $isFiscalAddress = false;
@@ -65,13 +89,44 @@ class ClientAddress
     #[ORM\Column(name: 'is_default_delivery', options: ['default' => false])]
     private bool $isDefaultDelivery = false;
 
+    #[ORM\Column(
+        name: 'default_fiscal_client_id',
+        type: 'integer',
+        nullable: true,
+        insertable: false,
+        updatable: false,
+        generated: 'ALWAYS',
+        columnDefinition: 'INT GENERATED ALWAYS AS (CASE WHEN is_active = 1 AND is_fiscal_address = 1 AND is_default_fiscal = 1 THEN client_id ELSE NULL END) STORED',
+    )]
+    private ?int $defaultFiscalClientId = null;
+
+    #[ORM\Column(
+        name: 'default_delivery_client_id',
+        type: 'integer',
+        nullable: true,
+        insertable: false,
+        updatable: false,
+        generated: 'ALWAYS',
+        columnDefinition: 'INT GENERATED ALWAYS AS (CASE WHEN is_active = 1 AND is_delivery_address = 1 AND is_default_delivery = 1 THEN client_id ELSE NULL END) STORED',
+    )]
+    private ?int $defaultDeliveryClientId = null;
+
     #[ORM\Column(name: 'is_active', options: ['default' => true])]
     private bool $isActive = true;
 
-    #[ORM\Column(name: 'created_at')]
+    #[ORM\Column(
+        name: 'created_at',
+        type: 'datetime_immutable',
+        options: ['comment' => '(DC2Type:datetime_immutable)']
+    )]
     private \DateTimeImmutable $createdAt;
 
-    #[ORM\Column(name: 'updated_at')]
+    #[ORM\Column(
+        name: 'updated_at',
+        type: 'datetime_immutable',
+        nullable: false,
+        options: ['comment' => '(DC2Type:datetime_immutable)']
+    )]
     private \DateTimeImmutable $updatedAt;
 
     public function __construct(Client $client)
@@ -220,6 +275,35 @@ class ClientAddress
     public function getReferences(): ?string
     {
         return $this->references;
+    }
+
+    public function getDeliveryZone(): ?DeliveryZone
+    {
+        return $this->deliveryZone;
+    }
+
+    public function setDeliveryZone(?DeliveryZone $deliveryZone): self
+    {
+        $this->deliveryZone = $deliveryZone;
+
+        return $this;
+    }
+
+    public function getDeliveryCost(): string
+    {
+        return $this->deliveryCost;
+    }
+
+    public function setDeliveryCost(string $deliveryCost): self
+    {
+        $this->deliveryCost = number_format(
+            (float) str_replace(',', '.', trim($deliveryCost)),
+            2,
+            '.',
+            ''
+        );
+
+        return $this;
     }
 
     public function isFiscalAddress(): bool

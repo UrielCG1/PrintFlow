@@ -1,0 +1,205 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Unidades de medida | PrintFlow{% endblock %}
+{% block app_navigation_active %}catalog{% endblock %}
+{% block app_breadcrumb %}Catálogo / Unidades de medida{% endblock %}
+
+{% set canReorder = is_granted('catalog.units.manage') and status == 'active' and search is empty %}
+{% block app_content %}
+    <div class="pf-page">
+        <div class="pf-page-header">
+            <div>
+                <h1 class="pf-page-header__title">Unidades de medida</h1>
+                <p class="pf-page-header__subtitle">
+                    Define cómo se venden y calculan los conceptos comerciales.
+                </p>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                <a
+                    href="{{ path('admin_catalog_categories_index') }}"
+                    class="btn pf-button pf-button--secondary"
+                >
+                    <i class="bi bi-tags" aria-hidden="true"></i>
+                    <span>Categorías comerciales</span>
+                </a>
+
+                {% if is_granted('catalog.units.manage') %}
+                    <a
+                        href="{{ path('admin_catalog_units_new') }}"
+                        class="btn pf-button pf-button--primary"
+                    >
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                        <span>Nueva unidad</span>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <form method="get" class="pf-card mb-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label for="catalog-unit-search" class="form-label">Buscar</label>
+                    <input
+                        id="catalog-unit-search"
+                        type="search"
+                        name="q"
+                        value="{{ search }}"
+                        class="form-control"
+                        placeholder="Código o nombre"
+                    >
+                </div>
+
+                <div class="col-md-3">
+                    <label for="catalog-unit-status" class="form-label">Estado</label>
+                    <select id="catalog-unit-status" name="status" class="form-select">
+                        <option value="active" {{ status == 'active' ? 'selected' : '' }}>Activas</option>
+                        <option value="inactive" {{ status == 'inactive' ? 'selected' : '' }}>Inactivas</option>
+                        <option value="all" {{ status == 'all' ? 'selected' : '' }}>Todas</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <span>Filtrar</span>
+                    </button>
+
+                    <a
+                        href="{{ path('admin_catalog_units_index') }}"
+                        class="btn pf-button pf-button--secondary"
+                    >
+                        Limpiar
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        <div class="pf-card">
+            {% if canReorder %}
+            <p class="small text-body-secondary mb-3">
+                Arrastra las categorías para ajustar su orden de visualización.
+            </p>
+            {% endif %}
+            <div class="pf-table-responsive">
+                <table class="pf-table">
+                    <thead>
+                        <tr>
+                            {% if canReorder %}
+                            <th class="text-center" aria-label="Reordenar"></th>
+                            {% endif %}
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Orden</th>
+                            <th>Estado</th>
+                            {% if is_granted('catalog.units.manage') %}
+                                <th class="text-end">Acciones</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody
+                        {% if canReorder %}
+                            data-controller="ui--sortable"
+                            data-ui--sortable-url-value="{{ path('admin_catalog_units_reorder') }}"
+                            data-ui--sortable-token-value="{{ csrf_token('catalog_unit_reorder') }}"
+                        {% endif %}
+                    >
+                        {% for unit in page.items %}
+                            <tr data-id="{{ unit.id }}" data-sortable-id="{{ unit.id }}">
+                                {% if canReorder %}
+                                <td class="text-center">
+                                    <button
+                                        type="button"
+                                        class="pf-sortable__handle"
+                                        title="Arrastrar para reordenar"
+                                        aria-label="Arrastrar {{ unit.name }} para reordenar"
+                                    >
+                                        <i class="bi bi-grip-vertical" aria-hidden="true"></i>
+                                    </button>
+                                </td>
+                                {% endif %}
+                                <td><code>{{ unit.code }}</code></td>
+                                <td>{{ unit.name }}</td>
+                                <td>{{ unit.displayOrder }}</td>
+                                <td>
+                                    <span class="pf-status-badge {{ unit.isActive ? 'pf-status-badge--success' : 'pf-status-badge--neutral' }}">
+                                        {{ unit.isActive ? 'Activa' : 'Inactiva' }}
+                                    </span>
+                                </td>
+
+                                {% if is_granted('catalog.units.manage') %}
+                                    <td>
+                                        <div class="pf-table__actions justify-content-end">
+                                            <a
+                                                href="{{ path('admin_catalog_units_edit', {id: unit.id}) }}"
+                                                class="btn pf-button pf-button--secondary pf-button--sm"
+                                            >
+                                                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                                <span>Editar</span>
+                                            </a>
+
+                                            <form
+                                                method="post"
+                                                action="{{ path('admin_catalog_units_status', {id: unit.id, q: search, status: status, page: page.currentPage}) }}"
+                                            >
+                                                <input
+                                                    type="hidden"
+                                                    name="_token"
+                                                    value="{{ csrf_token('catalog_unit_status_' ~ unit.id) }}"
+                                                >
+
+                                                <button
+                                                    type="submit"
+                                                    class="btn pf-button pf-button--sm {{ unit.isActive ? 'pf-button--danger' : 'pf-button--success' }}"
+                                                >
+                                                    <i class="bi {{ unit.isActive ? 'bi-pause-circle' : 'bi-check-circle' }}" aria-hidden="true"></i>
+                                                    <span>{{ unit.isActive ? 'Desactivar' : 'Reactivar' }}</span>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="{{ is_granted('catalog.units.manage') ? (canReorder ? 6 : 5) : 4 }}" class="text-center py-4">
+                                    No se encontraron unidades de medida.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if page.totalPages > 1 %}
+                <nav class="mt-4" aria-label="Paginación de unidades de medida">
+                    <ul class="pagination mb-0">
+                        <li class="page-item {{ page.currentPage == 1 ? 'disabled' : '' }}">
+                            <a
+                                class="page-link"
+                                href="{{ path('admin_catalog_units_index', {q: search, status: status, page: page.currentPage - 1}) }}"
+                            >
+                                Anterior
+                            </a>
+                        </li>
+
+                        <li class="page-item disabled">
+                            <span class="page-link">
+                                Página {{ page.currentPage }} de {{ page.totalPages }}
+                            </span>
+                        </li>
+
+                        <li class="page-item {{ page.currentPage == page.totalPages ? 'disabled' : '' }}">
+                            <a
+                                class="page-link"
+                                href="{{ path('admin_catalog_units_index', {q: search, status: status, page: page.currentPage + 1}) }}"
+                            >
+                                Siguiente
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

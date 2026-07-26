@@ -2,6 +2,40 @@
     max-width: 52rem;
 }
 
+.pf-clients-form-card--wide {
+    max-width: 74rem;
+}
+
+.pf-clients-form-section {
+    padding: var(--pf-space-5) 0;
+    border-bottom: 1px solid var(--pf-color-border);
+}
+
+.pf-clients-form-section:first-child {
+    padding-top: 0;
+}
+
+.pf-clients-form-section:last-of-type {
+    border-bottom: 0;
+}
+
+.pf-clients-form-section__heading {
+    margin-bottom: var(--pf-space-4);
+}
+
+.pf-clients-form-section__heading h2 {
+    margin: 0;
+    color: var(--pf-color-text);
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.pf-clients-form-section__heading p {
+    margin: var(--pf-space-1) 0 0;
+    color: var(--pf-color-text-muted);
+    font-size: 0.875rem;
+}
+
 .pf-clients-form-grid,
 .pf-clients-filters {
     display: grid;
