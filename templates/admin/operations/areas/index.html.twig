@@ -1,0 +1,186 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Áreas operativas | PrintFlow{% endblock %}
+{% block app_navigation_active %}operations{% endblock %}
+{% block app_breadcrumb %}Operación / Áreas operativas{% endblock %}
+
+{% set canManage = is_granted('operation_areas.update') or is_granted('operation_areas.toggle_status') %}
+{% set canReorder = is_granted('operation_areas.reorder') and status == 'active' and search is empty %}
+
+{% block app_content %}
+    <div class="pf-page">
+        <div class="pf-page-header">
+            <div>
+                <h1 class="pf-page-header__title">Áreas operativas</h1>
+                <p class="pf-page-header__subtitle">
+                    Organiza las áreas del taller que agruparán las operaciones de producción.
+                </p>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                {% if is_granted('operations.view') %}
+                    <a href="{{ path('admin_operations_index') }}" class="btn pf-button pf-button--secondary">
+                        <i class="bi bi-diagram-3" aria-hidden="true"></i>
+                        <span>Operaciones</span>
+                    </a>
+                {% endif %}
+
+                {% if is_granted('operation_areas.create') %}
+                    <a href="{{ path('admin_operation_areas_new') }}" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                        <span>Nueva área</span>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <form method="get" class="pf-card mb-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label for="operation-area-search" class="form-label">Buscar</label>
+                    <input
+                        id="operation-area-search"
+                        type="search"
+                        name="q"
+                        value="{{ search }}"
+                        class="form-control"
+                        placeholder="Código o nombre"
+                    >
+                </div>
+
+                <div class="col-md-3">
+                    <label for="operation-area-status" class="form-label">Estado</label>
+                    <select id="operation-area-status" name="status" class="form-select">
+                        <option value="active" {{ status == 'active' ? 'selected' : '' }}>Activas</option>
+                        <option value="inactive" {{ status == 'inactive' ? 'selected' : '' }}>Inactivas</option>
+                        <option value="all" {{ status == 'all' ? 'selected' : '' }}>Todas</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <span>Filtrar</span>
+                    </button>
+
+                    <a href="{{ path('admin_operation_areas_index') }}" class="btn pf-button pf-button--secondary">
+                        Limpiar
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        <div class="pf-card">
+            {% if canReorder %}
+                <p class="small text-body-secondary mb-3">
+                    Arrastra las áreas activas para ajustar el orden global sugerido. No define un flujo obligatorio de producción.
+                </p>
+            {% endif %}
+
+            <div class="pf-table-responsive">
+                <table class="pf-table">
+                    <thead>
+                        <tr>
+                            {% if canReorder %}<th class="text-center" aria-label="Reordenar"></th>{% endif %}
+                            <th>Código</th>
+                            <th>Área</th>
+                            <th>Descripción</th>
+                            <th>Orden</th>
+                            <th>Estado</th>
+                            {% if canManage %}<th class="text-end">Acciones</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody
+                        {% if canReorder %}
+                            data-controller="ui--sortable"
+                            data-ui--sortable-url-value="{{ path('admin_operation_areas_reorder') }}"
+                            data-ui--sortable-token-value="{{ csrf_token('operation_area_reorder') }}"
+                        {% endif %}
+                    >
+                        {% for operationArea in page.items %}
+                            <tr data-id="{{ operationArea.id }}" data-sortable-id="{{ operationArea.id }}">
+                                {% if canReorder %}
+                                    <td class="text-center">
+                                        <button
+                                            type="button"
+                                            class="pf-sortable__handle"
+                                            title="Arrastrar para reordenar"
+                                            aria-label="Arrastrar {{ operationArea.name }} para reordenar"
+                                        >
+                                            <i class="bi bi-grip-vertical" aria-hidden="true"></i>
+                                        </button>
+                                    </td>
+                                {% endif %}
+                                <td><code>{{ operationArea.code }}</code></td>
+                                <td>{{ operationArea.name }}</td>
+                                <td>{{ operationArea.description ?: '—' }}</td>
+                                <td>{{ operationArea.displayOrder }}</td>
+                                <td>
+                                    <span class="pf-status-badge {{ operationArea.isActive ? 'pf-status-badge--success' : 'pf-status-badge--neutral' }}">
+                                        {{ operationArea.isActive ? 'Activa' : 'Inactiva' }}
+                                    </span>
+                                </td>
+                                {% if canManage %}
+                                    <td>
+                                        <div class="pf-table__actions justify-content-end">
+                                            {% if is_granted('operation_areas.update') %}
+                                                <a
+                                                    href="{{ path('admin_operation_areas_edit', {id: operationArea.id}) }}"
+                                                    class="btn pf-button pf-button--secondary pf-button--sm"
+                                                >
+                                                    <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                                    <span>Editar</span>
+                                                </a>
+                                            {% endif %}
+                                            {% if is_granted('operation_areas.toggle_status') %}
+                                                <form
+                                                    method="post"
+                                                    action="{{ path('admin_operation_areas_status', {id: operationArea.id, q: search, status: status, page: page.currentPage}) }}"
+                                                    data-controller="ui--confirm-action"
+                                                    data-action="submit->ui--confirm-action#submit"
+                                                    data-ui--confirm-action-title-value="{{ operationArea.isActive ? '¿Desactivar área operativa?' : '¿Reactivar área operativa?' }}"
+                                                    data-ui--confirm-action-text-value="{{ operationArea.isActive
+                                                        ? 'No se podrá desactivar mientras tenga operaciones activas vinculadas.'
+                                                        : 'El área volverá a estar disponible para operaciones futuras.' }}"
+                                                    data-ui--confirm-action-confirm-button-text-value="{{ operationArea.isActive ? 'Sí, desactivar' : 'Sí, reactivar' }}"
+                                                    data-ui--confirm-action-cancel-button-text-value="Cancelar"
+                                                    data-ui--confirm-action-icon-value="warning"
+                                                >
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('operation_area_status_' ~ operationArea.id) }}">
+                                                    <button type="submit" class="btn pf-button pf-button--sm {{ operationArea.isActive ? 'pf-button--danger' : 'pf-button--success' }}">
+                                                        <i class="bi {{ operationArea.isActive ? 'bi-pause-circle' : 'bi-check-circle' }}" aria-hidden="true"></i>
+                                                        <span>{{ operationArea.isActive ? 'Desactivar' : 'Reactivar' }}</span>
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="{{ canManage ? (canReorder ? 7 : 6) : (canReorder ? 6 : 5) }}" class="text-center py-4">
+                                    No se encontraron áreas operativas con los filtros seleccionados.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if page.totalPages > 1 %}
+                <nav class="mt-4" aria-label="Paginación de áreas operativas">
+                    <ul class="pagination mb-0">
+                        <li class="page-item {{ page.currentPage == 1 ? 'disabled' : '' }}">
+                            <a class="page-link" href="{{ path('admin_operation_areas_index', {q: search, status: status, page: page.currentPage - 1}) }}">Anterior</a>
+                        </li>
+                        <li class="page-item disabled"><span class="page-link">Página {{ page.currentPage }} de {{ page.totalPages }}</span></li>
+                        <li class="page-item {{ page.currentPage == page.totalPages ? 'disabled' : '' }}">
+                            <a class="page-link" href="{{ path('admin_operation_areas_index', {q: search, status: status, page: page.currentPage + 1}) }}">Siguiente</a>
+                        </li>
+                    </ul>
+                </nav>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

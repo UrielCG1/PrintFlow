@@ -116,7 +116,7 @@
             {% endif %}
         {% endif %}
 
-        {% if is_granted('suppliers.view') or is_granted('materials.view') or is_granted('material_categories.view') %}
+        {% if is_granted('suppliers.view') or is_granted('materials.view') or is_granted('material_categories.view') or is_granted('operations.view') or is_granted('operation_areas.view') %}
             <p class="pf-sidebar__section">Operación</p>
 
             {% if is_granted('suppliers.view') %}
@@ -152,6 +152,41 @@
                 >
                     <i class="bi bi-tags" aria-hidden="true"></i>
                     <span>Categorías de materiales</span>
+                </a>
+            {% endif %}
+            {% if is_granted('operations.view') %}
+                <a
+                    href="{{ path('admin_operations_index') }}"
+                    class="pf-sidebar__link {{ current_navigation == 'operations' ? 'is-active' : '' }}"
+                    {% if current_navigation == 'operations' %}aria-current="page"{% endif %}
+                    data-action="ui--sidebar#close"
+                >
+                    <i class="bi bi-diagram-3" aria-hidden="true"></i>
+                    <span>Operaciones</span>
+                </a>
+            {% endif %}
+
+            {% if is_granted('operation_areas.view') %}
+                <a
+                    href="{{ path('admin_operation_areas_index') }}"
+                    class="pf-sidebar__link {{ current_navigation == 'operation_areas' ? 'is-active' : '' }}"
+                    {% if current_navigation == 'operation_areas' %}aria-current="page"{% endif %}
+                    data-action="ui--sidebar#close"
+                >
+                    <i class="bi bi-diagram-2" aria-hidden="true"></i>
+                    <span>Áreas operativas</span>
+                </a>
+            {% endif %}
+
+            {% if is_granted('equipment.view') %}
+                <a
+                    href="{{ path('admin_equipment_index') }}"
+                    class="pf-sidebar__link {{ current_navigation == 'equipment' ? 'is-active' : '' }}"
+                    {% if current_navigation == 'equipment' %}aria-current="page"{% endif %}
+                    data-action="ui--sidebar#close"
+                >
+                    <i class="bi bi-tools" aria-hidden="true"></i>
+                    <span>Equipos</span>
                 </a>
             {% endif %}
         {% endif %}

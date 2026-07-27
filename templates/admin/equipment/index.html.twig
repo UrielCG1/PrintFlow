@@ -1,0 +1,203 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Equipos | PrintFlow{% endblock %}
+{% block app_navigation_active %}equipment{% endblock %}
+{% block app_breadcrumb %}Operación / Equipos{% endblock %}
+
+{% set canManage = is_granted('equipment.update') or is_granted('equipment.change_status') %}
+
+{% block app_content %}
+    <div class="pf-page">
+        <div class="pf-page-header">
+            <div>
+                <h1 class="pf-page-header__title">Equipos</h1>
+                <p class="pf-page-header__subtitle">
+                    Administra la ficha técnica de los equipos del taller. La capacidad es solo informativa y no genera cálculos automáticos.
+                </p>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                {% if is_granted('operations.view') %}
+                    <a href="{{ path('admin_operations_index') }}" class="btn pf-button pf-button--secondary">
+                        <i class="bi bi-diagram-3" aria-hidden="true"></i>
+                        <span>Operaciones</span>
+                    </a>
+                {% endif %}
+                {% if is_granted('equipment.create') %}
+                    <a href="{{ path('admin_equipment_new') }}" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                        <span>Nuevo equipo</span>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <form method="get" class="pf-card mb-4">
+            <div class="row g-3 align-items-end">
+                <div class="col-lg-3">
+                    <label for="equipment-search" class="form-label">Buscar</label>
+                    <input
+                        id="equipment-search"
+                        type="search"
+                        name="q"
+                        value="{{ search }}"
+                        class="form-control"
+                        placeholder="Código, nombre, marca o serie"
+                    >
+                </div>
+
+                <div class="col-md-4 col-lg-3">
+                    <label for="equipment-area" class="form-label">Área operativa</label>
+                    <select id="equipment-area" name="area" class="form-select">
+                        <option value="">Todas las áreas</option>
+                        {% for operationArea in operationAreas %}
+                            <option value="{{ operationArea.id }}" {{ selectedArea and selectedArea.id == operationArea.id ? 'selected' : '' }}>
+                                {{ operationArea.code }} — {{ operationArea.name }}{{ operationArea.isActive ? '' : ' (inactiva)' }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4 col-lg-3">
+                    <label for="equipment-operation" class="form-label">Operación primaria</label>
+                    <select id="equipment-operation" name="operation" class="form-select">
+                        <option value="">Todas las operaciones</option>
+                        {% for operation in operations %}
+                            <option value="{{ operation.id }}" {{ selectedOperation and selectedOperation.id == operation.id ? 'selected' : '' }}>
+                                {{ operation.code }} — {{ operation.name }}{{ operation.isActive ? '' : ' (inactiva)' }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4 col-lg-3">
+                    <label for="equipment-status" class="form-label">Estado</label>
+                    <select id="equipment-status" name="status" class="form-select">
+                        <option value="available" {{ status == 'available' ? 'selected' : '' }}>Disponibles</option>
+                        <option value="maintenance" {{ status == 'maintenance' ? 'selected' : '' }}>En mantenimiento</option>
+                        <option value="inactive" {{ status == 'inactive' ? 'selected' : '' }}>Inactivos</option>
+                        <option value="all" {{ status == 'all' ? 'selected' : '' }}>Todos</option>
+                    </select>
+                </div>
+
+                <div class="col-12 d-flex gap-2">
+                    <button type="submit" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <span>Filtrar</span>
+                    </button>
+                    <a href="{{ path('admin_equipment_index') }}" class="btn pf-button pf-button--secondary">Limpiar</a>
+                </div>
+            </div>
+        </form>
+
+        <div class="pf-card">
+            <p class="small text-body-secondary mb-3">
+                Solo los equipos <strong>disponibles</strong>, con una operación y área activas, podrán seleccionarse más adelante en una ejecución.
+            </p>
+
+            <div class="pf-table-responsive">
+                <table class="pf-table">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Equipo</th>
+                            <th>Operación / área</th>
+                            <th>Ficha técnica</th>
+                            <th>Estado</th>
+                            {% if canManage %}<th class="text-end">Acciones</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for equipment in page.items %}
+                            <tr>
+                                <td><code>{{ equipment.code }}</code></td>
+                                <td>
+                                    <strong>{{ equipment.name }}</strong>
+                                    {% if equipment.technology %}<small class="d-block text-body-secondary">{{ equipment.technology }}</small>{% endif %}
+                                    {% if equipment.brand or equipment.model %}
+                                        <small class="d-block text-body-secondary">
+                                            {{ equipment.brand ?: '' }}{% if equipment.brand and equipment.model %} {% endif %}{{ equipment.model ?: '' }}
+                                        </small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong>{{ equipment.primaryOperation.name }}</strong>
+                                    <small class="d-block text-body-secondary">{{ equipment.primaryOperation.operationArea.name }}</small>
+                                </td>
+                                <td>
+                                    {% if equipment.usableWidthCm %}<span>{{ equipment.usableWidthCm|number_format(2, '.', ',') }} cm</span>{% endif %}
+                                    {% if equipment.technicalCapacity %}<small class="{{ equipment.usableWidthCm ? 'd-block ' : '' }}text-body-secondary">{{ equipment.technicalCapacity }}</small>{% endif %}
+                                    {% if equipment.colorConfiguration %}<small class="d-block text-body-secondary">{{ equipment.colorConfiguration }}</small>{% endif %}
+                                    {% if not equipment.usableWidthCm and not equipment.technicalCapacity and not equipment.colorConfiguration %}—{% endif %}
+                                </td>
+                                <td>
+                                    <span class="pf-status-badge pf-status-badge--{{ equipment.status.badgeTone }}">
+                                        {{ equipment.status.label }}
+                                    </span>
+                                </td>
+                                {% if canManage %}
+                                    <td>
+                                        <div class="pf-table__actions justify-content-end">
+                                            {% if is_granted('equipment.update') %}
+                                                <a href="{{ path('admin_equipment_edit', {id: equipment.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm">
+                                                    <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                                    <span>Editar</span>
+                                                </a>
+                                            {% endif %}
+                                            {% if is_granted('equipment.change_status') %}
+                                                {% for targetStatus in equipment.status.allowedTransitions %}
+                                                    {% set buttonStyle = targetStatus.value == 'available' ? 'success' : (targetStatus.value == 'maintenance' ? 'secondary' : 'danger') %}
+                                                    <form
+                                                        method="post"
+                                                        action="{{ path('admin_equipment_status', {id: equipment.id, q: search, area: selectedArea ? selectedArea.id : null, operation: selectedOperation ? selectedOperation.id : null, status: status, page: page.currentPage}) }}"
+                                                        data-controller="ui--confirm-action"
+                                                        data-action="submit->ui--confirm-action#submit"
+                                                        data-ui--confirm-action-title-value="¿{{ targetStatus.transitionLabel }}?"
+                                                        data-ui--confirm-action-text-value="{{ targetStatus.value == 'available'
+                                                            ? 'El equipo volverá a estar disponible solo si su operación y área siguen activas.'
+                                                            : (targetStatus.value == 'maintenance'
+                                                                ? 'El equipo dejará de estar disponible para nuevas ejecuciones hasta que se marque como disponible.'
+                                                                : 'El equipo conservará su historial, pero dejará de estar disponible para nuevas ejecuciones.') }}"
+                                                        data-ui--confirm-action-confirm-button-text-value="Sí, continuar"
+                                                        data-ui--confirm-action-cancel-button-text-value="Cancelar"
+                                                        data-ui--confirm-action-icon-value="warning"
+                                                    >
+                                                        <input type="hidden" name="_token" value="{{ csrf_token('equipment_status_' ~ equipment.id) }}">
+                                                        <input type="hidden" name="status" value="{{ targetStatus.value }}">
+                                                        <button type="submit" class="btn pf-button pf-button--{{ buttonStyle }} pf-button--sm">
+                                                            <span>{{ targetStatus.transitionLabel }}</span>
+                                                        </button>
+                                                    </form>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="{{ canManage ? 6 : 5 }}" class="text-center py-4">
+                                    No se encontraron equipos con los filtros seleccionados.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if page.totalPages > 1 %}
+                <nav class="mt-4" aria-label="Paginación de equipos">
+                    <ul class="pagination mb-0">
+                        <li class="page-item {{ page.currentPage == 1 ? 'disabled' : '' }}">
+                            <a class="page-link" href="{{ path('admin_equipment_index', {q: search, area: selectedArea ? selectedArea.id : null, operation: selectedOperation ? selectedOperation.id : null, status: status, page: page.currentPage - 1}) }}">Anterior</a>
+                        </li>
+                        <li class="page-item disabled"><span class="page-link">Página {{ page.currentPage }} de {{ page.totalPages }}</span></li>
+                        <li class="page-item {{ page.currentPage == page.totalPages ? 'disabled' : '' }}">
+                            <a class="page-link" href="{{ path('admin_equipment_index', {q: search, area: selectedArea ? selectedArea.id : null, operation: selectedOperation ? selectedOperation.id : null, status: status, page: page.currentPage + 1}) }}">Siguiente</a>
+                        </li>
+                    </ul>
+                </nav>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
