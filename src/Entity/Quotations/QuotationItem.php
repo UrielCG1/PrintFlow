@@ -11,7 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\UniqueConstraint(name: 'uniq_quotation_items_line_number', columns: ['quotation_id', 'line_number'])]
 #[ORM\Index(name: 'idx_quotation_items_commercial_item', columns: ['commercial_item_id'])]
 #[ORM\HasLifecycleCallbacks]
-final class QuotationItem
+class QuotationItem
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

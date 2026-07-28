@@ -12,7 +12,7 @@ use App\Repository\Users\RoleRepository;
 use App\Service\Audit\AuditLogger;
 use Doctrine\ORM\EntityManagerInterface;
 
-final class RoleManager
+class RoleManager
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,

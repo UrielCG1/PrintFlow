@@ -18,7 +18,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_quotations_client_created_at', columns: ['client_id', 'created_at'])]
 #[ORM\Index(name: 'idx_quotations_created_by_user', columns: ['created_by_user_id'])]
 #[ORM\HasLifecycleCallbacks]
-final class Quotation
+class Quotation
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
