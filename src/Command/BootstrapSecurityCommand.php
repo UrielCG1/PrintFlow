@@ -155,23 +155,9 @@ final class BootstrapSecurityCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $roles = $this->seedRoles();
-        $permissions = $this->seedPermissions();
-        $this->assignPermissions($roles, $permissions);
-
-        $this->entityManager->flush();
-
-        $userRepository = $this->entityManager->getRepository(User::class);
-        $admin = $userRepository->findOneBy(['username' => 'admin']);
-
-        if ($admin instanceof User) {
-            $output->writeln('<info>Roles y permisos verificados. El usuario "admin" ya existe.</info>');
-
-            return Command::SUCCESS;
-        }
-
         $helper = $this->getHelper('question');
 
+        // No se consulta la base mientras el usuario captura los datos.
         $fullName = trim((string) $helper->ask(
             $input,
             $output,
@@ -192,15 +178,6 @@ final class BootstrapSecurityCommand extends Command
 
         if ($fullName === '' || $username === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $output->writeln('<error>Nombre, usuario y correo válido son obligatorios.</error>');
-
-            return Command::FAILURE;
-        }
-
-        if (
-            $userRepository->findOneBy(['username' => $username]) instanceof User
-            || $userRepository->findOneBy(['email' => $email]) instanceof User
-        ) {
-            $output->writeln('<error>Ya existe una cuenta con ese usuario o correo.</error>');
 
             return Command::FAILURE;
         }
@@ -233,6 +210,27 @@ final class BootstrapSecurityCommand extends Command
             ->setMustChangePassword(false);
 
         $admin->setPassword($this->passwordHasher->hashPassword($admin, $password));
+
+        // Fuerza una conexión nueva justo antes de consultar o escribir en MariaDB.
+        $this->entityManager->getConnection()->close();
+
+        $roles = $this->seedRoles();
+        $permissions = $this->seedPermissions();
+        $this->assignPermissions($roles, $permissions);
+
+        $this->entityManager->flush();
+
+        $userRepository = $this->entityManager->getRepository(User::class);
+
+        if (
+            $userRepository->findOneBy(['username' => $username]) instanceof User
+            || $userRepository->findOneBy(['email' => $email]) instanceof User
+        ) {
+            $output->writeln('<error>Ya existe una cuenta con ese usuario o correo.</error>');
+
+            return Command::FAILURE;
+        }
+
         $admin->addRole($roles['ROLE_ADMIN']);
 
         $this->entityManager->persist($admin);
