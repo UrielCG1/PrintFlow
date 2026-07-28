@@ -1,6 +1,6 @@
 doctrine:
     dbal:
-        url: '%env(resolve:DATABASE_URL)%'
+        url: '%env(DATABASE_URL)%'
 
         # Tabla técnica administrada por migración y DBAL, no por el ORM.
         schema_filter: '~^(?!quotation_folio_sequences$).*~'
