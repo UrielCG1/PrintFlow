@@ -1,124 +1,300 @@
+/* styles/modules/dashboard.css */
+
+/* =========================================================
+   BIENVENIDA
+   ========================================================= */
+
 .pf-dashboard-welcome {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-    padding: 1.5rem;
-    border: 1px solid var(--pf-color-border);
-    border-radius: var(--pf-radius-md);
-    background-color: var(--pf-color-surface);
+    gap: var(--pf-space-lg);
+
+    margin-bottom: var(--pf-space-xl);
+    padding: var(--pf-space-lg);
+
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-lg);
+    box-shadow: var(--pf-shadow-sm);
+}
+
+.pf-dashboard-welcome > div {
+    min-width: 0;
 }
 
 .pf-dashboard-welcome__eyebrow {
-    margin: 0 0 0.375rem;
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-sm);
-    font-weight: 650;
+    margin: 0 0 var(--pf-space-xs);
+
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-md);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-label-md);
+
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 .pf-dashboard-welcome h2 {
     margin: 0;
-    font-size: 1.25rem;
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-heading-lg);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-heading-lg);
+    letter-spacing: -0.01em;
 }
 
 .pf-dashboard-welcome p:not(.pf-dashboard-welcome__eyebrow) {
-    margin: 0.5rem 0 0;
-    color: var(--pf-color-text-muted);
+    margin: var(--pf-space-sm) 0 0;
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-md);
+    line-height: var(--pf-line-height-body-md);
+}
+
+/* =========================================================
+   SECCIÓN DE MÓDULOS
+   ========================================================= */
+
+.pf-dashboard-section {
+    min-width: 0;
 }
 
 .pf-dashboard-section__header {
-    margin-bottom: 1rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--pf-space-md);
+
+    margin-bottom: var(--pf-space-md);
 }
 
 .pf-dashboard-section__header h2 {
     margin: 0;
-    font-size: 1.125rem;
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-title-md);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-title-md);
 }
 
 .pf-dashboard-section__header p {
-    margin: 0.35rem 0 0;
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-sm);
+    margin: var(--pf-space-xs) 0 0;
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
 }
+
+/* =========================================================
+   CUADRÍCULA DE MÓDULOS
+   ========================================================= */
 
 .pf-dashboard-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1rem;
+    gap: var(--pf-space-md);
 }
 
 .pf-dashboard-card {
     height: 100%;
+
+    transition:
+        border-color var(--pf-transition-fast),
+        box-shadow var(--pf-transition-fast),
+        transform var(--pf-transition-fast);
 }
 
-.pf-dashboard-card .pf-card__body {
+.pf-dashboard-card:hover {
+    border-color: var(--pf-border-color-strong);
+    box-shadow: var(--pf-shadow-md);
+    transform: translateY(-1px);
+}
+
+/*
+ * El enlace ocupa todo el cuerpo de la tarjeta.
+ * El encabezado continúa controlado por card.css.
+ */
+.pf-dashboard-card .pf-card__body,
+.pf-dashboard-card > .card-body {
+    height: 100%;
     padding: 0;
 }
 
+/* =========================================================
+   ACCESO DIRECTO
+   ========================================================= */
+
 .pf-dashboard-shortcut {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns:
+        auto
+        minmax(0, 1fr)
+        auto;
     align-items: center;
-    gap: 1rem;
+    gap: var(--pf-space-md);
+
     min-height: 6.25rem;
-    padding: 1.25rem;
-    color: var(--pf-color-text-strong);
+    height: 100%;
+    padding: var(--pf-space-lg);
+
+    color: var(--pf-on-surface);
+    background-color: transparent;
+
     text-decoration: none;
-    transition: background-color var(--pf-transition-fast);
+
+    transition:
+        color var(--pf-transition-fast),
+        background-color var(--pf-transition-fast);
 }
 
 .pf-dashboard-shortcut:hover {
-    background-color: var(--pf-color-surface-subtle);
+    color: var(--pf-on-surface);
+    background-color:
+        rgba(var(--pf-primary-rgb), 0.035);
+
+    text-decoration: none;
 }
 
-.pf-dashboard-shortcut > span:not(.pf-dashboard-shortcut__icon) {
+.pf-dashboard-shortcut:focus-visible {
+    position: relative;
+    z-index: 1;
+
+    outline: none;
+    box-shadow:
+        inset 0 0 0 0.1875rem
+        rgba(var(--pf-primary-rgb), 0.22);
+}
+
+.pf-dashboard-shortcut > span:not(
+    .pf-dashboard-shortcut__icon
+) {
     display: grid;
-    gap: 0.25rem;
-    font-size: var(--pf-font-size-sm);
-    font-weight: 650;
+    min-width: 0;
+    gap: var(--pf-space-xs);
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-md);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-body-md);
 }
 
 .pf-dashboard-shortcut small {
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-xs);
-    font-weight: 400;
-    line-height: 1.4;
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-regular);
+    line-height: var(--pf-line-height-body-sm);
 }
 
 .pf-dashboard-shortcut > i {
-    color: var(--pf-color-text-muted);
+    color: var(--pf-secondary);
+
+    font-size: 1rem;
+    line-height: 1;
+
+    transition:
+        color var(--pf-transition-fast),
+        transform var(--pf-transition-fast);
 }
+
+.pf-dashboard-shortcut:hover > i {
+    color: var(--pf-primary);
+    transform: translateX(0.1875rem);
+}
+
+/* =========================================================
+   ICONO DEL MÓDULO
+   ========================================================= */
 
 .pf-dashboard-shortcut__icon,
 .pf-dashboard-empty__icon {
     display: grid;
-    width: 2.5rem;
-    height: 2.5rem;
+    flex-shrink: 0;
     place-items: center;
-    border: 1px solid #B3EFBA;
-    border-radius: var(--pf-radius-sm);
-    background-color: var(--pf-color-brand-soft);
-    color: #0A5A0F;
-    font-size: 1.125rem;
+
+    width: 3rem;
+    height: 3rem;
+
+    color: var(--pf-primary);
+    background-color:
+        rgba(var(--pf-primary-rgb), 0.08);
+
+    border: 1px solid
+        rgba(var(--pf-primary-rgb), 0.14);
+    border-radius: var(--pf-radius-md);
+
+    transition:
+        color var(--pf-transition-fast),
+        background-color var(--pf-transition-fast),
+        border-color var(--pf-transition-fast);
 }
 
-.pf-dashboard-empty .pf-card__body {
+.pf-dashboard-shortcut__icon i,
+.pf-dashboard-empty__icon i {
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.pf-dashboard-shortcut:hover
+    .pf-dashboard-shortcut__icon {
+    color: var(--pf-on-primary-container);
+    background-color:
+        rgba(var(--pf-primary-container-rgb), 0.14);
+    border-color:
+        rgba(var(--pf-primary-container-rgb), 0.24);
+}
+
+/* =========================================================
+   ESTADO SIN MÓDULOS
+   ========================================================= */
+
+.pf-dashboard-empty .pf-card__body,
+.pf-dashboard-empty > .card-body {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: var(--pf-space-md);
+
+    padding: var(--pf-space-lg);
+}
+
+.pf-dashboard-empty__icon {
+    color: var(--pf-secondary);
+    background-color: var(--pf-surface-container-high);
+    border-color: var(--pf-border-color);
 }
 
 .pf-dashboard-empty h2 {
     margin: 0;
-    font-size: 1rem;
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-md);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-body-md);
 }
 
 .pf-dashboard-empty p {
-    margin: 0.35rem 0 0;
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-sm);
+    margin: var(--pf-space-xs) 0 0;
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
 }
+
+/* =========================================================
+   RESPONSIVE: TABLET
+   ========================================================= */
 
 @media (max-width: 991.98px) {
     .pf-dashboard-grid {
@@ -126,14 +302,60 @@
     }
 }
 
+/* =========================================================
+   RESPONSIVE: MÓVIL
+   ========================================================= */
+
 @media (max-width: 575.98px) {
-    .pf-dashboard-welcome,
-    .pf-dashboard-empty .pf-card__body {
+    .pf-dashboard-welcome {
+        align-items: flex-start;
+        flex-direction: column;
+
+        margin-bottom: var(--pf-space-lg);
+        padding: var(--pf-space-md);
+    }
+
+    .pf-dashboard-welcome h2 {
+        font-size: var(--pf-font-size-title-md);
+        line-height: var(--pf-line-height-title-md);
+    }
+
+    .pf-dashboard-section__header {
         align-items: flex-start;
         flex-direction: column;
     }
 
     .pf-dashboard-grid {
         grid-template-columns: 1fr;
+    }
+
+    .pf-dashboard-shortcut {
+        min-height: 5.5rem;
+        padding: var(--pf-space-md);
+    }
+
+    .pf-dashboard-empty .pf-card__body,
+    .pf-dashboard-empty > .card-body {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: var(--pf-space-md);
+    }
+}
+
+/* =========================================================
+   REDUCCIÓN DE MOVIMIENTO
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+    .pf-dashboard-card,
+    .pf-dashboard-shortcut,
+    .pf-dashboard-shortcut > i,
+    .pf-dashboard-shortcut__icon {
+        transition: none;
+    }
+
+    .pf-dashboard-card:hover,
+    .pf-dashboard-shortcut:hover > i {
+        transform: none;
     }
 }

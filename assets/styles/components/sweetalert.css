@@ -1,8 +1,331 @@
-.pf-swal-actions {
-    gap: 0.75rem;
-    margin-top: 1.75rem;
+/* styles/components/sweetalert.css */
+
+/* =========================================================
+   VENTANA
+   ========================================================= */
+
+.swal2-popup.pf-swal-popup {
+    width: min(31rem, calc(100vw - 2rem));
+    padding: var(--pf-space-xl);
+
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-lg);
+    box-shadow: var(--pf-shadow-md);
+
+    font-family: var(--pf-font-family);
 }
 
-.pf-swal-actions .btn {
-    min-width: 6.25rem;
+/* =========================================================
+   TÍTULO
+   ========================================================= */
+
+.pf-swal-popup .pf-swal-title,
+.pf-swal-popup .swal2-title {
+    margin: 0;
+    padding: 0;
+
+    color: var(--pf-on-surface);
+
+    font-family: var(--pf-font-family);
+    font-size: var(--pf-font-size-title-md);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-title-md);
+    letter-spacing: -0.01em;
+}
+
+/* =========================================================
+   CONTENIDO
+   ========================================================= */
+
+.pf-swal-popup .pf-swal-content,
+.pf-swal-popup .swal2-html-container {
+    margin: var(--pf-space-sm) 0 0;
+    padding: 0;
+
+    color: var(--pf-on-surface-variant);
+
+    font-family: var(--pf-font-family);
+    font-size: var(--pf-font-size-body-md);
+    font-weight: var(--pf-font-weight-regular);
+    line-height: var(--pf-line-height-body-md);
+}
+
+.pf-swal-popup .swal2-html-container > :last-child {
+    margin-bottom: 0;
+}
+
+/* =========================================================
+   ICONO
+   ========================================================= */
+
+.pf-swal-popup .swal2-icon {
+    width: 3.5rem;
+    height: 3.5rem;
+    margin: 0 auto var(--pf-space-lg);
+
+    border-width: 0.1875rem;
+}
+
+/* Éxito */
+
+.pf-swal-popup .swal2-icon.swal2-success {
+    color: var(--pf-primary);
+    border-color:
+        rgba(var(--pf-primary-container-rgb), 0.3);
+}
+
+.pf-swal-popup
+    .swal2-success
+    [class^="swal2-success-line"] {
+    background-color: var(--pf-primary);
+}
+
+.pf-swal-popup .swal2-success-ring {
+    border-color:
+        rgba(var(--pf-primary-container-rgb), 0.25);
+}
+
+/* Advertencia */
+
+.pf-swal-popup .swal2-icon.swal2-warning {
+    color: var(--pf-tertiary);
+    background-color: var(--pf-tertiary-fixed);
+    border-color: var(--pf-tertiary-fixed-dim);
+}
+
+/* Error */
+
+.pf-swal-popup .swal2-icon.swal2-error {
+    color: var(--pf-error);
+    background-color: var(--pf-error-container);
+    border-color: rgba(var(--pf-error-rgb), 0.3);
+}
+
+.pf-swal-popup .swal2-x-mark-line-left,
+.pf-swal-popup .swal2-x-mark-line-right {
+    background-color: var(--pf-error);
+}
+
+/* Información */
+
+.pf-swal-popup .swal2-icon.swal2-info {
+    color: var(--pf-primary);
+    background-color: var(--pf-surface-container-low);
+    border-color: rgba(var(--pf-primary-rgb), 0.25);
+}
+
+/* Pregunta */
+
+.pf-swal-popup .swal2-icon.swal2-question {
+    color: var(--pf-secondary);
+    background-color: var(--pf-secondary-container);
+    border-color: var(--pf-secondary-fixed-dim);
+}
+
+/* =========================================================
+   ACCIONES
+   ========================================================= */
+
+.pf-swal-actions,
+.pf-swal-popup .swal2-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--pf-space-sm);
+
+    width: 100%;
+    margin: var(--pf-space-xl) 0 0;
+}
+
+.pf-swal-actions .pf-button,
+.pf-swal-actions .btn,
+.pf-swal-popup .swal2-actions .pf-button {
+    min-width: 7rem;
+    margin: 0;
+}
+
+/* =========================================================
+   BOTÓN DE CIERRE
+   ========================================================= */
+
+.pf-swal-popup .swal2-close {
+    width: 2.5rem;
+    height: 2.5rem;
+
+    color: var(--pf-secondary);
+    background-color: transparent;
+
+    border-radius: var(--pf-radius-pill);
+
+    font-family: var(--pf-font-family);
+    font-size: 1.75rem;
+    line-height: 1;
+
+    transition:
+        color var(--pf-transition-fast),
+        background-color var(--pf-transition-fast);
+}
+
+.pf-swal-popup .swal2-close:hover {
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-highest);
+}
+
+.pf-swal-popup .swal2-close:focus-visible {
+    outline: none;
+    box-shadow:
+        0 0 0 0.25rem rgba(var(--pf-primary-rgb), 0.18);
+}
+
+/* =========================================================
+   INPUTS DE SWEETALERT
+   ========================================================= */
+
+.pf-swal-popup .swal2-input,
+.pf-swal-popup .swal2-select,
+.pf-swal-popup .swal2-textarea {
+    margin: var(--pf-space-lg) 0 0;
+
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color-strong);
+    border-radius: var(--pf-radius-md);
+    box-shadow: none;
+
+    font-family: var(--pf-font-family);
+    font-size: var(--pf-font-size-body-md);
+}
+
+.pf-swal-popup .swal2-input,
+.pf-swal-popup .swal2-select {
+    min-height: 2.75rem;
+}
+
+.pf-swal-popup .swal2-textarea {
+    min-height: 7rem;
+    padding: 0.75rem 0.875rem;
+    resize: vertical;
+}
+
+.pf-swal-popup .swal2-input:focus,
+.pf-swal-popup .swal2-select:focus,
+.pf-swal-popup .swal2-textarea:focus {
+    border-color: var(--pf-primary);
+    outline: none;
+    box-shadow:
+        0 0 0 0.25rem rgba(var(--pf-primary-rgb), 0.16);
+}
+
+.pf-swal-popup .swal2-input::placeholder,
+.pf-swal-popup .swal2-textarea::placeholder {
+    color: var(--pf-secondary);
+    opacity: 0.72;
+}
+
+/* =========================================================
+   VALIDACIÓN
+   ========================================================= */
+
+.pf-swal-popup .swal2-validation-message {
+    margin: var(--pf-space-md) 0 0;
+    padding: var(--pf-space-sm) var(--pf-space-md);
+
+    color: var(--pf-on-error-container);
+    background-color: var(--pf-error-container);
+
+    border: 1px solid rgba(var(--pf-error-rgb), 0.22);
+    border-radius: var(--pf-radius-md);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
+}
+
+/* =========================================================
+   CARGA
+   ========================================================= */
+
+.pf-swal-popup .swal2-loader {
+    border-color:
+        var(--pf-primary)
+        transparent
+        var(--pf-primary)
+        transparent;
+}
+
+/* =========================================================
+   FONDO
+   ========================================================= */
+
+.swal2-container.swal2-backdrop-show {
+    background-color: rgba(11, 28, 48, 0.42);
+}
+
+/* =========================================================
+   ANIMACIONES
+   ========================================================= */
+
+.pf-swal-popup.swal2-show {
+    animation: pf-swal-enter var(--pf-transition-normal);
+}
+
+.pf-swal-popup.swal2-hide {
+    animation: pf-swal-exit var(--pf-transition-fast);
+}
+
+@keyframes pf-swal-enter {
+    from {
+        opacity: 0;
+        transform: translateY(0.5rem) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes pf-swal-exit {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(0.25rem) scale(0.98);
+    }
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 575.98px) {
+    .swal2-popup.pf-swal-popup {
+        padding: var(--pf-space-lg);
+    }
+
+    .pf-swal-actions,
+    .pf-swal-popup .swal2-actions {
+        align-items: stretch;
+        flex-direction: column-reverse;
+    }
+
+    .pf-swal-actions .pf-button,
+    .pf-swal-actions .btn,
+    .pf-swal-popup .swal2-actions .pf-button {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pf-swal-popup.swal2-show,
+    .pf-swal-popup.swal2-hide {
+        animation: none;
+    }
 }

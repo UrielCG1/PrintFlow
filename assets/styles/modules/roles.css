@@ -1,152 +1,315 @@
+/* styles/modules/roles.css */
+
+/* =========================================================
+   ESTRUCTURA DEL MÓDULO
+   ========================================================= */
+
 .pf-roles-page,
 .pf-role-form {
     display: grid;
-    gap: 1.5rem;
+    gap: var(--pf-content-gap);
+    min-width: 0;
 }
+
+/* =========================================================
+   ENCABEZADO
+   ========================================================= */
 
 .pf-roles-heading {
     display: flex;
-    align-items: end;
+    align-items: flex-end;
     justify-content: space-between;
-    gap: 1.5rem;
+    gap: var(--pf-space-lg);
 }
 
 .pf-roles-heading--form {
-    align-items: start;
+    align-items: flex-start;
+}
+
+.pf-roles-heading > div {
+    min-width: 0;
 }
 
 .pf-roles-heading__eyebrow {
-    margin: 0 0 0.4rem;
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-xs);
-    font-weight: 700;
+    margin: 0 0 var(--pf-space-xs);
+
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-md);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-label-md);
+
     letter-spacing: 0.08em;
     text-transform: uppercase;
 }
 
 .pf-roles-heading h1 {
     margin: 0;
-    color: var(--pf-color-text-strong);
-    font-size: clamp(1.65rem, 2vw, 2rem);
-    line-height: 1.2;
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-heading-xl);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-heading-xl);
+
+    letter-spacing: -0.02em;
 }
 
 .pf-roles-heading p:not(.pf-roles-heading__eyebrow) {
-    margin: 0.5rem 0 0;
-    color: var(--pf-color-text-muted);
+    max-width: 48rem;
+    margin: var(--pf-space-sm) 0 0;
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-md);
+    line-height: var(--pf-line-height-body-md);
 }
 
 .pf-roles-heading__action {
     flex-shrink: 0;
 }
 
+/* =========================================================
+   ENLACE PARA REGRESAR
+   ========================================================= */
+
 .pf-roles-back-link {
     display: inline-flex;
     align-items: center;
-    gap: 0.45rem;
-    margin-bottom: 1rem;
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-sm);
+    gap: var(--pf-space-sm);
+
+    width: fit-content;
+    margin-bottom: var(--pf-space-md);
+
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-medium);
+    line-height: var(--pf-line-height-body-sm);
+
     text-decoration: none;
+
+    transition:
+        color var(--pf-transition-fast),
+        transform var(--pf-transition-fast);
 }
 
 .pf-roles-back-link:hover {
-    color: var(--pf-color-text-strong);
+    color: var(--pf-on-surface);
+    text-decoration: none;
+    transform: translateX(-0.125rem);
 }
+
+.pf-roles-back-link i {
+    font-size: 0.875rem;
+    line-height: 1;
+}
+
+/* =========================================================
+   TARJETAS
+   ========================================================= */
 
 .pf-roles-table-card,
 .pf-role-form__card {
-    border: 1px solid var(--pf-color-border);
-    border-radius: var(--pf-radius-md);
-    background-color: var(--pf-color-surface);
+    min-width: 0;
+
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-lg);
+    box-shadow: var(--pf-shadow-sm);
 }
 
-.pf-roles-table-wrap {
-    overflow-x: auto;
+.pf-roles-table-card {
+    overflow: hidden;
 }
+
+/* =========================================================
+   CONTENEDOR DE TABLA
+   ========================================================= */
+
+.pf-roles-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+
+    scrollbar-color:
+        var(--pf-outline-variant)
+        transparent;
+    scrollbar-width: thin;
+}
+
+.pf-roles-table-wrap::-webkit-scrollbar {
+    height: 0.5rem;
+}
+
+.pf-roles-table-wrap::-webkit-scrollbar-track {
+    background-color: transparent;
+}
+
+.pf-roles-table-wrap::-webkit-scrollbar-thumb {
+    background-color: var(--pf-outline-variant);
+    border-radius: var(--pf-radius-pill);
+}
+
+/* =========================================================
+   TABLA DE ROLES
+   ========================================================= */
 
 .pf-roles-table {
     width: 100%;
     min-width: 64rem;
+
+    color: var(--pf-on-surface);
+
     border-collapse: collapse;
+
+    font-size: var(--pf-font-size-body-md);
+    line-height: var(--pf-line-height-body-md);
 }
 
 .pf-roles-table th,
 .pf-roles-table td {
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid var(--pf-color-border);
+    padding: var(--pf-space-md) var(--pf-space-lg);
+
+    border-bottom: 1px solid var(--pf-border-color);
+
     text-align: left;
     vertical-align: middle;
 }
 
+.pf-roles-table thead {
+    background-color: var(--pf-surface-container-low);
+}
+
 .pf-roles-table th {
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-xs);
-    font-weight: 700;
+    color: var(--pf-outline);
+    background-color: var(--pf-surface-container-low);
+
+    font-size: var(--pf-font-size-label-md);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-label-md);
+
     letter-spacing: 0.05em;
     text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.pf-roles-table tbody tr {
+    background-color: var(--pf-surface-container-lowest);
+
+    transition:
+        background-color var(--pf-transition-fast),
+        box-shadow var(--pf-transition-fast);
+}
+
+.pf-roles-table tbody tr:hover {
+    background-color:
+        rgba(var(--pf-primary-rgb), 0.035);
 }
 
 .pf-roles-table tbody tr:last-child td {
     border-bottom: 0;
 }
 
-.pf-roles-table tbody tr:hover {
-    background-color: var(--pf-color-surface-subtle);
-}
-
 .pf-roles-table__actions-column {
     width: 11rem;
+    text-align: right !important;
+    white-space: nowrap;
 }
+
+.pf-roles-table td:last-child {
+    text-align: right;
+}
+
+/* =========================================================
+   IDENTIDAD DEL ROL
+   ========================================================= */
 
 .pf-role-identity {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--pf-space-md);
+
     min-width: 15rem;
 }
 
 .pf-role-identity__icon,
 .pf-role-form__section-icon {
     display: grid;
-    width: 2.4rem;
-    height: 2.4rem;
     flex: 0 0 auto;
     place-items: center;
-    border: 1px solid #B3EFBA;
-    border-radius: var(--pf-radius-sm);
-    background-color: var(--pf-color-brand-soft);
-    color: #0A5A0F;
+
+    width: 2.5rem;
+    height: 2.5rem;
+
+    color: var(--pf-primary);
+    background-color:
+        rgba(var(--pf-primary-rgb), 0.06);
+
+    border: 1px solid
+        rgba(var(--pf-primary-rgb), 0.12);
+    border-radius: var(--pf-radius-md);
 }
 
-.pf-role-identity div {
+.pf-role-identity__icon i,
+.pf-role-form__section-icon i {
+    font-size: 1.125rem;
+    line-height: 1;
+}
+
+.pf-role-identity > div {
     display: grid;
-    gap: 0.18rem;
     min-width: 0;
+    gap: 0.125rem;
 }
 
 .pf-role-identity strong {
-    color: var(--pf-color-text-strong);
-    font-size: var(--pf-font-size-sm);
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-md);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-body-md);
 }
 
 .pf-role-identity span {
     overflow: hidden;
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-xs);
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
+
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
+/* =========================================================
+   CÓDIGO DEL ROL
+   ========================================================= */
+
 .pf-role-code {
-    display: inline-block;
-    padding: 0.25rem 0.45rem;
-    border: 1px solid var(--pf-color-border);
+    display: inline-flex;
+    align-items: center;
+
+    padding: 0.25rem 0.625rem;
+
+    color: var(--pf-secondary);
+    background-color: var(--pf-surface-container-high);
+
     border-radius: var(--pf-radius-sm);
-    background-color: var(--pf-color-surface-subtle);
-    color: var(--pf-color-text);
-    font-size: var(--pf-font-size-xs);
+
+    font-family: var(--pf-font-family-monospace);
+    font-size: var(--pf-font-size-label-sm);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-label-sm);
+
+    white-space: nowrap;
 }
+
+/* =========================================================
+   ELEMENTOS DE ESTADO
+   ========================================================= */
 
 .pf-role-badge,
 .pf-role-permission-count,
@@ -154,280 +317,606 @@
 .pf-role-action {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    font-size: var(--pf-font-size-xs);
-    font-weight: 700;
+    gap: 0.375rem;
+
+    font-size: var(--pf-font-size-label-sm);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-label-sm);
+
     white-space: nowrap;
 }
 
+.pf-role-badge i,
+.pf-role-permission-count i,
+.pf-role-status i,
+.pf-role-action i {
+    flex-shrink: 0;
+    font-size: 0.875rem;
+    line-height: 1;
+}
+
+/* =========================================================
+   TIPO DE ROL
+   ========================================================= */
+
 .pf-role-badge {
-    min-height: 1.65rem;
-    padding: 0.15rem 0.55rem;
-    border: 1px solid var(--pf-color-border);
-    border-radius: 999px;
-    background-color: var(--pf-color-surface-subtle);
-    color: var(--pf-color-text);
+    min-height: 1.625rem;
+    padding: 0.25rem 0.625rem;
+
+    color: var(--pf-on-secondary-container);
+    background-color: var(--pf-secondary-container);
+
+    border: 1px solid var(--pf-secondary-fixed-dim);
+    border-radius: var(--pf-radius-pill);
 }
 
 .pf-role-badge--protected {
-    border-color: #F3D68A;
-    background-color: #FFF8E4;
-    color: #6C4D00;
+    color: var(--pf-on-tertiary-fixed-variant);
+    background-color: var(--pf-tertiary-fixed);
+
+    border-color: var(--pf-tertiary-fixed-dim);
 }
 
+/* =========================================================
+   NÚMERO DE PERMISOS
+   ========================================================= */
+
 .pf-role-permission-count {
-    color: var(--pf-color-text);
+    color: var(--pf-on-surface-variant);
+}
+
+.pf-role-permission-count strong {
+    color: var(--pf-on-surface);
+    font-weight: var(--pf-font-weight-semibold);
+}
+
+.pf-role-permission-count i {
+    color: var(--pf-outline);
+}
+
+/* =========================================================
+   ESTADO ACTIVO / INACTIVO
+   ========================================================= */
+
+.pf-role-status {
+    min-height: 1.5rem;
 }
 
 .pf-role-status--active {
-    color: #0A5A0F;
+    color: var(--pf-primary);
 }
 
 .pf-role-status--inactive {
-    color: #7A5A00;
+    color: var(--pf-tertiary);
 }
 
+/*
+ * Reduce los iconos circulares usados como indicador de estado.
+ */
+.pf-role-status .bi-circle-fill,
+.pf-role-status .bi-dot {
+    font-size: 0.5rem;
+}
+
+/* =========================================================
+   ACCIÓN DE FILA
+   ========================================================= */
+
 .pf-role-action {
-    min-height: 2rem;
-    padding: 0.35rem 0.6rem;
-    border: 1px solid var(--pf-color-border);
-    border-radius: var(--pf-radius-sm);
-    color: var(--pf-color-text);
+    justify-content: center;
+
+    min-height: 2.25rem;
+    padding: 0.5rem 0.875rem;
+
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-md);
+
     text-decoration: none;
+
+    transition:
+        color var(--pf-transition-fast),
+        background-color var(--pf-transition-fast),
+        border-color var(--pf-transition-fast),
+        box-shadow var(--pf-transition-fast);
 }
 
 .pf-role-action:hover {
-    border-color: var(--pf-color-text-muted);
-    background-color: var(--pf-color-surface-subtle);
-    color: var(--pf-color-text-strong);
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-low);
+    border-color: var(--pf-border-color-strong);
+    text-decoration: none;
 }
 
-.pf-roles-table__muted {
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-xs);
+.pf-role-action:focus-visible {
+    outline: none;
+    box-shadow:
+        0 0 0 0.25rem
+        rgba(var(--pf-primary-rgb), 0.18);
 }
+
+/* Acción de consulta para roles protegidos */
+
+.pf-role-action--subtle {
+    background-color: var(--pf-surface-container-highest);
+    border-color: transparent;
+}
+
+.pf-role-action--subtle:hover {
+    background-color: var(--pf-surface-container-high);
+    border-color: var(--pf-border-color);
+}
+
+/* =========================================================
+   TEXTO AUXILIAR
+   ========================================================= */
+
+.pf-roles-table__muted {
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-sm);
+    line-height: var(--pf-line-height-label-sm);
+}
+
+/* =========================================================
+   ESTADO VACÍO
+   ========================================================= */
 
 .pf-roles-empty {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.9rem;
-    min-height: 12rem;
-    color: var(--pf-color-text-muted);
+    gap: var(--pf-space-md);
+
+    min-height: 13rem;
+    padding: var(--pf-space-xl);
+
+    color: var(--pf-secondary);
+    text-align: left;
 }
 
 .pf-roles-empty > i {
-    font-size: 1.75rem;
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+
+    width: 3rem;
+    height: 3rem;
+
+    color: var(--pf-outline);
+    background-color: var(--pf-surface-container-low);
+
+    border-radius: var(--pf-radius-pill);
+
+    font-size: 1.25rem;
+    line-height: 1;
 }
 
-.pf-roles-empty div {
+.pf-roles-empty > div {
     display: grid;
-    gap: 0.25rem;
+    gap: var(--pf-space-xs);
+    max-width: 28rem;
 }
 
 .pf-roles-empty strong {
-    color: var(--pf-color-text);
-    font-size: var(--pf-font-size-sm);
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-md);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-body-md);
 }
 
 .pf-roles-empty span {
-    font-size: var(--pf-font-size-xs);
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
 }
+
+/* =========================================================
+   FORMULARIO: DISTRIBUCIÓN
+   ========================================================= */
 
 .pf-role-form__grid {
     display: grid;
-    grid-template-columns: minmax(18rem, 0.8fr) minmax(0, 1.2fr);
-    gap: 1.5rem;
+    grid-template-columns:
+        minmax(18rem, 0.8fr)
+        minmax(0, 1.2fr);
     align-items: start;
+    gap: var(--pf-space-lg);
 }
 
 .pf-role-form__card {
-    padding: 1.5rem;
+    padding: var(--pf-space-lg);
 }
+
+/* =========================================================
+   FORMULARIO: ENCABEZADO DE SECCIÓN
+   ========================================================= */
 
 .pf-role-form__section-header {
     display: flex;
-    gap: 0.8rem;
-    margin-bottom: 1.5rem;
+    align-items: flex-start;
+    gap: var(--pf-space-md);
+
+    margin-bottom: var(--pf-space-lg);
+}
+
+.pf-role-form__section-header > div:last-child {
+    min-width: 0;
 }
 
 .pf-role-form__section-header h2 {
     margin: 0;
-    color: var(--pf-color-text-strong);
-    font-size: 1rem;
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-title-md);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-title-md);
 }
 
 .pf-role-form__section-header p {
-    margin: 0.3rem 0 0;
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-sm);
-    line-height: 1.45;
+    margin: var(--pf-space-xs) 0 0;
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
 }
+
+/* =========================================================
+   FORMULARIO: CAMPOS
+   ========================================================= */
 
 .pf-role-form__fields {
     display: grid;
-    gap: 1rem;
+    gap: var(--pf-space-md);
 }
 
 .pf-role-form label {
     display: block;
-    margin-bottom: 0.45rem;
-    color: var(--pf-color-text-strong);
-    font-size: var(--pf-font-size-sm);
-    font-weight: 650;
+    margin-bottom: var(--pf-space-sm);
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-body-sm);
 }
 
 .pf-role-form input[type="text"],
-.pf-role-form textarea {
+.pf-role-form textarea,
+.pf-role-form select,
+.pf-role-form .form-control,
+.pf-role-form .form-select {
     width: 100%;
     min-height: 2.75rem;
-    padding: 0.65rem 0.75rem;
-    border: 1px solid var(--pf-color-border);
-    border-radius: var(--pf-radius-sm);
+    padding: 0.625rem 0.875rem;
+
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color-strong);
+    border-radius: var(--pf-radius-md);
     outline: 0;
-    background-color: var(--pf-color-surface);
-    color: var(--pf-color-text-strong);
+    box-shadow: none;
+
     font: inherit;
+    font-size: var(--pf-font-size-body-md);
+    line-height: var(--pf-line-height-body-md);
+
+    transition:
+        background-color var(--pf-transition-fast),
+        border-color var(--pf-transition-fast),
+        box-shadow var(--pf-transition-fast);
 }
 
-.pf-role-form textarea {
+.pf-role-form textarea,
+.pf-role-form textarea.form-control {
     min-height: 7rem;
     resize: vertical;
 }
 
-.pf-role-form input:focus,
-.pf-role-form textarea:focus {
-    border-color: var(--pf-color-brand);
-    box-shadow: 0 0 0 0.2rem rgb(var(--pf-color-brand-rgb) / 0.16);
+.pf-role-form input::placeholder,
+.pf-role-form textarea::placeholder {
+    color: var(--pf-secondary);
+    opacity: 0.72;
 }
+
+.pf-role-form input:hover:not(:disabled),
+.pf-role-form textarea:hover:not(:disabled),
+.pf-role-form select:hover:not(:disabled) {
+    border-color: var(--pf-outline);
+}
+
+.pf-role-form input:focus,
+.pf-role-form textarea:focus,
+.pf-role-form select:focus,
+.pf-role-form .form-control:focus,
+.pf-role-form .form-select:focus {
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+
+    border-color: var(--pf-primary);
+
+    box-shadow:
+        0 0 0 0.25rem
+        rgba(var(--pf-primary-rgb), 0.16);
+}
+
+.pf-role-form input:disabled,
+.pf-role-form textarea:disabled,
+.pf-role-form select:disabled {
+    color: var(--pf-secondary);
+    background-color: var(--pf-surface-container-low);
+
+    border-color: var(--pf-border-color);
+
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+/* =========================================================
+   FORMULARIO: AYUDA Y ERRORES
+   ========================================================= */
 
 .pf-role-form small,
 .pf-role-form .form-text {
     display: block;
-    margin-top: 0.35rem;
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-xs);
-    line-height: 1.45;
+    margin-top: var(--pf-space-xs);
+
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-sm);
+    line-height: var(--pf-line-height-label-sm);
 }
 
-.pf-role-form ul {
+.pf-role-form .invalid-feedback,
+.pf-role-form .pf-form-errors {
+    margin-top: var(--pf-space-xs);
+
+    color: var(--pf-error);
+
+    font-size: var(--pf-font-size-label-sm);
+    font-weight: var(--pf-font-weight-medium);
+    line-height: var(--pf-line-height-label-sm);
+}
+
+.pf-role-form .invalid-feedback ul,
+.pf-role-form .pf-form-errors ul {
     display: grid;
-    gap: 0.25rem;
-    margin: 0.5rem 0 0;
+    gap: var(--pf-space-xs);
+
+    margin: 0;
     padding: 0;
-    color: var(--pf-color-danger);
-    font-size: var(--pf-font-size-xs);
+
     list-style: none;
 }
+
+.pf-role-form .is-invalid {
+    border-color: var(--pf-error);
+}
+
+.pf-role-form .is-invalid:focus {
+    border-color: var(--pf-error);
+
+    box-shadow:
+        0 0 0 0.25rem
+        rgba(var(--pf-error-rgb), 0.14);
+}
+
+/* =========================================================
+   FORMULARIO: PERMISOS
+   ========================================================= */
 
 .pf-role-form__permissions > div {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.65rem;
+    gap: var(--pf-space-sm);
 }
 
-.pf-role-form__permissions > div > div {
+.pf-role-form__permissions > div > div,
+.pf-role-form__permissions .form-check {
     display: flex;
-    align-items: start;
-    gap: 0.6rem;
+    align-items: flex-start;
+    gap: var(--pf-space-sm);
+
+    min-width: 0;
+    margin: 0;
     padding: 0.75rem;
-    border: 1px solid var(--pf-color-border);
-    border-radius: var(--pf-radius-sm);
-    background-color: var(--pf-color-surface-subtle);
+
+    background-color: var(--pf-surface-container-low);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-md);
+
+    transition:
+        background-color var(--pf-transition-fast),
+        border-color var(--pf-transition-fast);
+}
+
+.pf-role-form__permissions > div > div:hover,
+.pf-role-form__permissions .form-check:hover {
+    background-color: var(--pf-surface-container);
+    border-color: var(--pf-border-color-strong);
 }
 
 .pf-role-form__permissions input[type="checkbox"] {
+    flex: 0 0 auto;
+
     width: 1rem;
     height: 1rem;
-    flex: 0 0 auto;
-    margin-top: 0.15rem;
-    accent-color: var(--pf-color-brand);
+    margin: 0.15rem 0 0;
+
+    accent-color: var(--pf-primary);
+    cursor: pointer;
 }
 
 .pf-role-form__permissions label {
+    min-width: 0;
     margin: 0;
-    font-size: var(--pf-font-size-sm);
-    font-weight: 600;
-    line-height: 1.45;
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-body-sm);
+
+    cursor: pointer;
 }
+
+/* =========================================================
+   FORMULARIO: PIE
+   ========================================================= */
 
 .pf-role-form__footer {
     display: flex;
-    justify-content: end;
-    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--pf-space-sm);
+
+    padding-top: var(--pf-space-lg);
+
+    border-top: 1px solid var(--pf-border-color);
 }
+
+/* =========================================================
+   AVISO DE ROL PROTEGIDO
+   ========================================================= */
 
 .pf-role-protected-notice {
     display: flex;
-    gap: 0.6rem;
-    padding: 0.85rem 1rem;
-    border: 1px solid #F3D68A;
-    border-radius: var(--pf-radius-sm);
-    background-color: #FFF8E4;
-    color: #6C4D00;
-    font-size: var(--pf-font-size-sm);
-    line-height: 1.5;
+    align-items: flex-start;
+    gap: var(--pf-space-sm);
+
+    padding: var(--pf-space-md);
+
+    color: var(--pf-on-tertiary-fixed-variant);
+    background-color: var(--pf-tertiary-fixed);
+
+    border: 1px solid var(--pf-tertiary-fixed-dim);
+    border-radius: var(--pf-radius-md);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
 }
+
+.pf-role-protected-notice i {
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+
+    color: var(--pf-tertiary);
+
+    font-size: 1rem;
+    line-height: 1;
+}
+
+/* =========================================================
+   RESUMEN DEL ROL
+   ========================================================= */
 
 .pf-role-summary {
     display: grid;
-    gap: 1rem;
+    gap: var(--pf-space-md);
+
     margin: 0;
 }
 
-.pf-role-summary div {
+.pf-role-summary > div {
     display: grid;
-    gap: 0.25rem;
+    gap: var(--pf-space-xs);
 }
 
 .pf-role-summary dt {
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-xs);
-    font-weight: 700;
+    color: var(--pf-outline);
+
+    font-size: var(--pf-font-size-label-sm);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-label-sm);
+
     letter-spacing: 0.06em;
     text-transform: uppercase;
 }
 
 .pf-role-summary dd {
     margin: 0;
-    color: var(--pf-color-text-strong);
-    font-size: var(--pf-font-size-sm);
-    line-height: 1.5;
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
 }
+
+/* =========================================================
+   LISTA DE PERMISOS
+   ========================================================= */
 
 .pf-role-permission-list {
     display: grid;
-    gap: 0.55rem;
+    gap: var(--pf-space-sm);
+
     margin: 0;
     padding: 0;
+
     list-style: none;
 }
 
 .pf-role-permission-list li {
     display: flex;
-    align-items: start;
-    gap: 0.55rem;
-    padding: 0.7rem;
-    border: 1px solid var(--pf-color-border);
-    border-radius: var(--pf-radius-sm);
-    background-color: var(--pf-color-surface-subtle);
-    color: #0A5A0F;
+    align-items: flex-start;
+    gap: var(--pf-space-sm);
+
+    padding: 0.75rem;
+
+    color: var(--pf-primary);
+    background-color: var(--pf-surface-container-low);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-md);
 }
 
-.pf-role-permission-list span {
+.pf-role-permission-list li > i {
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+
+    color: var(--pf-primary);
+
+    font-size: 0.875rem;
+    line-height: 1;
+}
+
+.pf-role-permission-list li > span {
     display: grid;
-    gap: 0.15rem;
-    color: var(--pf-color-text);
+    min-width: 0;
+    gap: 0.125rem;
+
+    color: var(--pf-on-surface);
 }
 
 .pf-role-permission-list strong {
-    font-size: var(--pf-font-size-sm);
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-body-sm);
 }
 
 .pf-role-permission-list small {
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-xs);
+    margin: 0;
+
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-sm);
+    line-height: var(--pf-line-height-label-sm);
 }
+
+/* =========================================================
+   RESPONSIVE: TABLET
+   ========================================================= */
 
 @media (max-width: 991.98px) {
     .pf-role-form__grid {
@@ -437,16 +926,44 @@
 
 @media (max-width: 767.98px) {
     .pf-roles-heading {
-        align-items: stretch;
+        align-items: flex-start;
         flex-direction: column;
+    }
+
+    .pf-roles-heading h1 {
+        font-size: var(--pf-font-size-heading-lg);
+        line-height: var(--pf-line-height-heading-lg);
     }
 
     .pf-roles-heading__action {
         width: 100%;
     }
+
+    .pf-roles-heading__action .pf-button {
+        width: 100%;
+    }
 }
 
+/* =========================================================
+   RESPONSIVE: MÓVIL
+   ========================================================= */
+
 @media (max-width: 575.98px) {
+    .pf-roles-page,
+    .pf-role-form {
+        gap: var(--pf-space-md);
+    }
+
+    .pf-roles-table-card {
+        overflow: visible;
+
+        background-color: transparent;
+
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
     .pf-roles-table-wrap {
         overflow: visible;
     }
@@ -458,46 +975,88 @@
 
     .pf-roles-table thead {
         position: absolute;
+
         width: 1px;
         height: 1px;
         overflow: hidden;
+
         clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+
+        white-space: nowrap;
     }
 
     .pf-roles-table tbody {
         display: grid;
-        gap: 0.85rem;
-        padding: 0.85rem;
+        gap: var(--pf-space-md);
     }
 
     .pf-roles-table tbody tr {
         display: block;
         overflow: hidden;
-        border: 1px solid var(--pf-color-border);
-        border-radius: var(--pf-radius-sm);
+
+        background-color: var(--pf-surface-container-lowest);
+
+        border: 1px solid var(--pf-border-color);
+        border-radius: var(--pf-radius-lg);
+        box-shadow: var(--pf-shadow-sm);
+    }
+
+    .pf-roles-table tbody tr:hover {
+        background-color: var(--pf-surface-container-lowest);
     }
 
     .pf-roles-table td {
         display: grid;
-        grid-template-columns: 5.8rem minmax(0, 1fr);
-        gap: 0.7rem;
-        padding: 0.8rem 0.9rem;
+        grid-template-columns: 5.5rem minmax(0, 1fr);
+        gap: var(--pf-space-sm);
+
+        padding: 0.875rem var(--pf-space-md);
+
+        border-bottom: 1px solid var(--pf-border-color);
+
+        text-align: left;
+    }
+
+    .pf-roles-table tbody tr td:last-child {
+        border-bottom: 0;
+        text-align: left;
     }
 
     .pf-roles-table td::before {
-        color: var(--pf-color-text-muted);
-        font-size: 0.6875rem;
-        font-weight: 700;
+        color: var(--pf-outline);
+
+        font-size: var(--pf-font-size-label-sm);
+        font-weight: var(--pf-font-weight-bold);
+        line-height: var(--pf-line-height-label-sm);
+
         letter-spacing: 0.05em;
         text-transform: uppercase;
     }
 
-    .pf-roles-table td:nth-child(1)::before { content: "Rol"; }
-    .pf-roles-table td:nth-child(2)::before { content: "Código"; }
-    .pf-roles-table td:nth-child(3)::before { content: "Tipo"; }
-    .pf-roles-table td:nth-child(4)::before { content: "Permisos"; }
-    .pf-roles-table td:nth-child(5)::before { content: "Estado"; }
-    .pf-roles-table td:nth-child(6)::before { content: "Acciones"; }
+    .pf-roles-table td:nth-child(1)::before {
+        content: "Rol";
+    }
+
+    .pf-roles-table td:nth-child(2)::before {
+        content: "Código";
+    }
+
+    .pf-roles-table td:nth-child(3)::before {
+        content: "Tipo";
+    }
+
+    .pf-roles-table td:nth-child(4)::before {
+        content: "Permisos";
+    }
+
+    .pf-roles-table td:nth-child(5)::before {
+        content: "Estado";
+    }
+
+    .pf-roles-table td:nth-child(6)::before {
+        content: "Acciones";
+    }
 
     .pf-role-identity {
         min-width: 0;
@@ -507,8 +1066,13 @@
         white-space: normal;
     }
 
+    .pf-role-action {
+        width: 100%;
+    }
+
     .pf-roles-table td[colspan] {
         display: block;
+        padding: 0;
         border: 0;
     }
 
@@ -516,8 +1080,21 @@
         display: none;
     }
 
+    .pf-roles-empty {
+        align-items: center;
+        flex-direction: column;
+
+        padding: var(--pf-space-xl) var(--pf-space-md);
+
+        text-align: center;
+    }
+
     .pf-role-form__card {
-        padding: 1.1rem;
+        padding: var(--pf-space-md);
+    }
+
+    .pf-role-form__section-header {
+        margin-bottom: var(--pf-space-md);
     }
 
     .pf-role-form__permissions > div {
@@ -525,10 +1102,34 @@
     }
 
     .pf-role-form__footer {
+        align-items: stretch;
         flex-direction: column-reverse;
+
+        padding-top: var(--pf-space-md);
     }
 
     .pf-role-form__footer .pf-button {
         width: 100%;
+    }
+}
+
+/* =========================================================
+   REDUCCIÓN DE MOVIMIENTO
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+    .pf-roles-back-link,
+    .pf-roles-table tbody tr,
+    .pf-role-action,
+    .pf-role-form input,
+    .pf-role-form textarea,
+    .pf-role-form select,
+    .pf-role-form__permissions > div > div,
+    .pf-role-form__permissions .form-check {
+        transition: none;
+    }
+
+    .pf-roles-back-link:hover {
+        transform: none;
     }
 }

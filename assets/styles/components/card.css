@@ -1,41 +1,277 @@
-.pf-card {
+/* styles/components/card.css */
+
+/* =========================================================
+   TARJETA BASE
+   ========================================================= */
+
+.pf-card,
+.card.pf-card {
     overflow: hidden;
-    border-color: var(--pf-color-border);
-    border-radius: var(--pf-radius-md);
-    box-shadow: none;
+
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-lg);
+    box-shadow: var(--pf-shadow-sm);
 }
 
-.pf-card__header {
+/* =========================================================
+   ENCABEZADO
+   ========================================================= */
+
+.pf-card__header,
+.pf-card > .card-header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 1rem;
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid var(--pf-color-border);
-    background-color: var(--pf-color-surface);
+    gap: var(--pf-space-md);
+
+    padding: var(--pf-space-md) var(--pf-space-lg);
+
+    background-color: var(--pf-surface-container-lowest);
+    border-bottom: 1px solid var(--pf-border-color);
 }
+
+.pf-card__header-content {
+    min-width: 0;
+}
+
+.pf-card__header-actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--pf-space-sm);
+}
+
+/* =========================================================
+   TÍTULOS
+   ========================================================= */
 
 .pf-card__title {
     margin: 0;
-    font-size: 1rem;
-    font-weight: 650;
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-title-md);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-title-md);
     letter-spacing: -0.01em;
 }
 
 .pf-card__subtitle {
-    margin: 0.25rem 0 0;
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-sm);
+    margin: var(--pf-space-xs) 0 0;
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-regular);
+    line-height: var(--pf-line-height-body-sm);
 }
 
-.pf-card--padding-none .pf-card__body {
+/* =========================================================
+   CUERPO
+   ========================================================= */
+
+.pf-card__body,
+.pf-card > .card-body {
+    padding: var(--pf-space-lg);
+}
+
+/* =========================================================
+   PIE
+   ========================================================= */
+
+.pf-card__footer,
+.pf-card > .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--pf-space-md);
+
+    padding: var(--pf-space-md) var(--pf-space-lg);
+
+    color: var(--pf-on-surface-variant);
+    background-color: var(--pf-surface-container-low);
+
+    border-top: 1px solid var(--pf-border-color);
+
+    font-size: var(--pf-font-size-label-sm);
+    line-height: var(--pf-line-height-label-sm);
+}
+
+/* =========================================================
+   VARIANTES DE ESPACIADO
+   ========================================================= */
+
+.pf-card--padding-none .pf-card__body,
+.pf-card--padding-none > .card-body {
     padding: 0;
 }
 
-.pf-card--padding-compact .pf-card__body {
-    padding: 1rem;
+.pf-card--padding-compact .pf-card__body,
+.pf-card--padding-compact > .card-body {
+    padding: var(--pf-space-md);
 }
 
-.pf-card--padding-default .pf-card__body {
-    padding: 1.25rem;
+.pf-card--padding-default .pf-card__body,
+.pf-card--padding-default > .card-body {
+    padding: var(--pf-space-lg);
+}
+
+.pf-card--padding-large .pf-card__body,
+.pf-card--padding-large > .card-body {
+    padding: var(--pf-space-xl);
+}
+
+/* =========================================================
+   SUPERFICIES
+   ========================================================= */
+
+.pf-card--soft {
+    background-color: var(--pf-surface-container-low);
+}
+
+.pf-card--soft .pf-card__header,
+.pf-card--soft > .card-header {
+    background-color: var(--pf-surface-container-low);
+}
+
+.pf-card--flat {
+    box-shadow: none;
+}
+
+.pf-card--borderless {
+    border-color: transparent;
+}
+
+/* =========================================================
+   TARJETA DE ESTADÍSTICA
+   Usada para totales, permisos, sistemas, etc.
+   ========================================================= */
+
+.pf-card--stat {
+    display: flex;
+    align-items: center;
+    gap: var(--pf-space-md);
+
+    min-height: 5rem;
+    padding: var(--pf-space-md);
+}
+
+.pf-card__stat-icon {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+
+    width: 3rem;
+    height: 3rem;
+
+    color: var(--pf-primary);
+    background-color: rgba(var(--pf-primary-rgb), 0.08);
+
+    border-radius: var(--pf-radius-md);
+}
+
+.pf-card__stat-icon .bi {
+    font-size: 1.375rem;
+    line-height: 1;
+}
+
+.pf-card__stat-content {
+    display: grid;
+    min-width: 0;
+    gap: 0.125rem;
+}
+
+.pf-card__stat-label {
+    margin: 0;
+
+    color: var(--pf-outline);
+
+    font-size: var(--pf-font-size-label-sm);
+    font-weight: var(--pf-font-weight-medium);
+    line-height: var(--pf-line-height-label-sm);
+
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.pf-card__stat-value {
+    margin: 0;
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-heading-lg);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-heading-lg);
+}
+
+/* Variantes de color para estadísticas */
+
+.pf-card__stat-icon--warning {
+    color: var(--pf-tertiary);
+    background-color: rgba(var(--pf-tertiary-rgb), 0.1);
+}
+
+.pf-card__stat-icon--secondary {
+    color: var(--pf-secondary);
+    background-color: rgba(var(--pf-secondary-rgb), 0.1);
+}
+
+.pf-card__stat-icon--success {
+    color: var(--pf-primary-container);
+    background-color:
+        rgba(var(--pf-primary-container-rgb), 0.1);
+}
+
+.pf-card__stat-icon--danger {
+    color: var(--pf-error);
+    background-color: rgba(var(--pf-error-rgb), 0.1);
+}
+
+/* =========================================================
+   TARJETA INTERACTIVA
+   ========================================================= */
+
+.pf-card--interactive {
+    transition:
+        border-color var(--pf-transition-fast),
+        box-shadow var(--pf-transition-fast),
+        transform var(--pf-transition-fast);
+}
+
+.pf-card--interactive:hover {
+    border-color: var(--pf-border-color-strong);
+    box-shadow: var(--pf-shadow-md);
+    transform: translateY(-1px);
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 575.98px) {
+    .pf-card__header,
+    .pf-card > .card-header {
+        align-items: stretch;
+        flex-direction: column;
+        padding: var(--pf-space-md);
+    }
+
+    .pf-card__header-actions {
+        width: 100%;
+    }
+
+    .pf-card__body,
+    .pf-card > .card-body {
+        padding: var(--pf-space-md);
+    }
+
+    .pf-card__footer,
+    .pf-card > .card-footer {
+        align-items: stretch;
+        flex-direction: column;
+        padding: var(--pf-space-md);
+    }
 }

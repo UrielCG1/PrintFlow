@@ -1,27 +1,84 @@
+/* styles/components/form.css */
+
+/* =========================================================
+   FORMULARIO BASE
+   ========================================================= */
+
 .pf-form {
     display: grid;
-    gap: var(--pf-space-5);
+    gap: var(--pf-space-lg);
 }
+
+/* =========================================================
+   DISTRIBUCIÓN DE CAMPOS
+   ========================================================= */
 
 .pf-form-field {
     display: grid;
-    gap: var(--pf-space-2);
+    gap: var(--pf-space-sm);
+    min-width: 0;
 }
+
+.pf-form-grid {
+    display: grid;
+    gap: var(--pf-space-lg);
+}
+
+.pf-form-grid--2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.pf-form-grid--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* =========================================================
+   ETIQUETAS
+   ========================================================= */
 
 .pf-form .form-label {
     margin: 0;
-    color: var(--pf-color-text-strong);
-    font-size: var(--pf-font-size-sm);
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-sm);
     font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-body-sm);
 }
+
+.pf-form .form-label.required::after,
+.pf-form .form-label--required::after {
+    content: " *";
+    color: var(--pf-error);
+}
+
+/* =========================================================
+   CONTROLES
+   ========================================================= */
 
 .pf-form .form-control,
 .pf-form .form-select {
-    min-height: var(--pf-control-height);
-    border-color: var(--pf-color-border-strong);
-    border-radius: var(--pf-radius-sm);
-    color: var(--pf-color-text-strong);
+    min-height: 2.75rem;
+    padding: 0.625rem 0.875rem;
+
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+    border: 1px solid var(--pf-border-color-strong);
+    border-radius: var(--pf-radius-md);
     box-shadow: none;
+
+    font-size: var(--pf-font-size-body-md);
+    line-height: var(--pf-line-height-body-md);
+
+    transition:
+        color var(--pf-transition-fast),
+        background-color var(--pf-transition-fast),
+        border-color var(--pf-transition-fast),
+        box-shadow var(--pf-transition-fast);
+}
+
+.pf-form .form-select {
+    padding-right: 2.5rem;
 }
 
 .pf-form textarea.form-control {
@@ -30,79 +87,256 @@
 }
 
 .pf-form .form-control::placeholder {
-    color: var(--pf-color-text-muted);
-    opacity: 1;
+    color: var(--pf-secondary);
+    opacity: 0.72;
 }
 
-.pf-form .form-control:hover,
-.pf-form .form-select:hover {
-    border-color: var(--pf-color-text-muted);
+.pf-form .form-control:hover:not(:disabled):not([readonly]),
+.pf-form .form-select:hover:not(:disabled) {
+    border-color: var(--pf-outline);
 }
 
 .pf-form .form-control:focus,
 .pf-form .form-select:focus {
-    border-color: var(--pf-color-brand-hover);
-    box-shadow: 0 0 0 0.25rem var(--pf-focus-ring-color);
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+    border-color: var(--pf-primary);
+    box-shadow:
+        0 0 0 0.25rem rgba(var(--pf-primary-rgb), 0.16);
 }
+
+/* =========================================================
+   CONTROLES DESHABILITADOS Y SOLO LECTURA
+   ========================================================= */
+
+.pf-form .form-control:disabled,
+.pf-form .form-select:disabled {
+    color: var(--pf-secondary);
+    background-color: var(--pf-surface-container-low);
+    border-color: var(--pf-border-color);
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+.pf-form .form-control[readonly] {
+    color: var(--pf-on-surface-variant);
+    background-color: var(--pf-surface-container-low);
+}
+
+/* =========================================================
+   GRUPOS DE ENTRADA
+   ========================================================= */
+
+.pf-form .input-group-text {
+    min-height: 2.75rem;
+
+    color: var(--pf-secondary);
+    background-color: var(--pf-surface-container-low);
+    border-color: var(--pf-border-color-strong);
+
+    font-size: var(--pf-font-size-body-sm);
+}
+
+.pf-form .input-group:focus-within .input-group-text {
+    border-color: var(--pf-primary);
+}
+
+/* =========================================================
+   CHECKBOX Y RADIO
+   ========================================================= */
 
 .pf-form .form-check {
     display: flex;
     align-items: flex-start;
-    gap: var(--pf-space-2);
+    gap: var(--pf-space-sm);
+
+    min-height: 1.5rem;
+    margin: 0;
     padding-left: 0;
 }
 
 .pf-form .form-check-input {
     flex: 0 0 auto;
+
+    width: 1rem;
+    height: 1rem;
     margin: 0.18rem 0 0;
-    border-color: var(--pf-color-border-strong);
+
+    background-color: var(--pf-surface-container-lowest);
+    border-color: var(--pf-border-color-strong);
+    box-shadow: none;
+}
+
+.pf-form .form-check-input:hover {
+    border-color: var(--pf-outline);
+}
+
+.pf-form .form-check-input:focus {
+    border-color: var(--pf-primary);
+    box-shadow:
+        0 0 0 0.25rem rgba(var(--pf-primary-rgb), 0.16);
 }
 
 .pf-form .form-check-input:checked {
-    background-color: var(--pf-color-success);
-    border-color: var(--pf-color-success);
+    background-color: var(--pf-primary);
+    border-color: var(--pf-primary);
 }
 
 .pf-form .form-check-label {
-    color: var(--pf-color-text);
-    font-size: var(--pf-font-size-sm);
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
 }
 
-.pf-form-help {
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-sm);
+/* =========================================================
+   INTERRUPTOR
+   ========================================================= */
+
+.pf-form .form-switch {
+    align-items: center;
 }
 
-.pf-form-errors {
-    color: var(--pf-color-danger);
-    font-size: var(--pf-font-size-sm);
+.pf-form .form-switch .form-check-input {
+    width: 2.25rem;
+    height: 1.25rem;
+    margin-top: 0;
+}
+
+/* =========================================================
+   AYUDA Y DESCRIPCIONES
+   ========================================================= */
+
+.pf-form-help,
+.pf-form .form-text {
+    margin: 0;
+
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-sm);
+    line-height: var(--pf-line-height-label-sm);
+}
+
+/* =========================================================
+   ERRORES
+   ========================================================= */
+
+.pf-form-errors,
+.pf-form .invalid-feedback {
+    margin: 0;
+
+    color: var(--pf-error);
+
+    font-size: var(--pf-font-size-label-sm);
+    font-weight: var(--pf-font-weight-medium);
+    line-height: var(--pf-line-height-label-sm);
 }
 
 .pf-form-errors ul {
     margin: 0;
-    padding-left: 1.1rem;
+    padding-left: 1.125rem;
 }
 
+.pf-form .form-control.is-invalid,
+.pf-form .form-select.is-invalid,
 .pf-form .is-invalid {
-    border-color: var(--pf-color-danger);
+    border-color: var(--pf-error);
 }
+
+.pf-form .form-control.is-invalid:focus,
+.pf-form .form-select.is-invalid:focus {
+    border-color: var(--pf-error);
+    box-shadow:
+        0 0 0 0.25rem rgba(var(--pf-error-rgb), 0.14);
+}
+
+/* =========================================================
+   ESTADO VÁLIDO
+   ========================================================= */
+
+.pf-form .form-control.is-valid,
+.pf-form .form-select.is-valid {
+    border-color: var(--pf-primary-container);
+}
+
+.pf-form .form-control.is-valid:focus,
+.pf-form .form-select.is-valid:focus {
+    border-color: var(--pf-primary);
+    box-shadow:
+        0 0 0 0.25rem rgba(var(--pf-primary-rgb), 0.14);
+}
+
+/* =========================================================
+   FIELDSET
+   ========================================================= */
+
+.pf-form fieldset {
+    display: grid;
+    gap: var(--pf-space-md);
+
+    min-width: 0;
+    margin: 0;
+    padding: var(--pf-space-lg);
+
+    background-color: var(--pf-surface-container-lowest);
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-lg);
+}
+
+.pf-form legend {
+    float: none;
+    width: auto;
+    margin: 0;
+    padding: 0 var(--pf-space-xs);
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-md);
+    font-weight: var(--pf-font-weight-semibold);
+}
+
+/* =========================================================
+   ACCIONES
+   ========================================================= */
 
 .pf-form-actions {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     justify-content: flex-end;
-    gap: var(--pf-space-3);
-    padding-top: var(--pf-space-5);
-    border-top: 1px solid var(--pf-color-border);
+    gap: var(--pf-space-sm);
+
+    padding-top: var(--pf-space-lg);
+    border-top: 1px solid var(--pf-border-color);
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 767.98px) {
+    .pf-form-grid--2,
+    .pf-form-grid--3 {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 575.98px) {
+    .pf-form {
+        gap: var(--pf-space-md);
+    }
+
     .pf-form-actions {
         align-items: stretch;
         flex-direction: column-reverse;
+        padding-top: var(--pf-space-md);
     }
 
     .pf-form-actions .pf-button {
         width: 100%;
+    }
+
+    .pf-form fieldset {
+        padding: var(--pf-space-md);
     }
 }

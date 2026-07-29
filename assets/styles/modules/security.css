@@ -1,203 +1,484 @@
-.pf-public-body--auth {
-    background-color: var(--pf-color-surface);
+/* styles/modules/security.css */
+
+/* =========================================================
+   PÁGINA PÚBLICA DE AUTENTICACIÓN
+   ========================================================= */
+
+body.pf-public-body--auth {
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
 }
 
 .pf-public-body--auth .pf-public-shell {
     display: block;
+
+    width: 100%;
     min-height: 100vh;
     padding: 0;
+
+    overflow: visible;
+    background-color: var(--pf-surface-container-lowest);
 }
+
+/*
+ * Desactiva la decoración general de public-shell.css
+ * únicamente en las pantallas de autenticación.
+ */
+.pf-public-body--auth .pf-public-shell::before,
+.pf-public-body--auth .pf-public-shell::after {
+    display: none;
+}
+
+/* =========================================================
+   ESTRUCTURA PRINCIPAL
+   ========================================================= */
 
 .pf-auth {
     display: grid;
-    grid-template-columns: 45% 55%;
+    grid-template-columns:
+        minmax(20rem, 45%)
+        minmax(0, 55%);
+
+    width: 100%;
     min-height: 100vh;
-    background-color: var(--pf-color-surface);
+
+    background-color: var(--pf-surface-container-lowest);
 }
+
+/* =========================================================
+   PANEL VISUAL
+   ========================================================= */
 
 .pf-auth__visual {
     position: relative;
-    min-height: 100%;
+    isolation: isolate;
+
+    min-width: 0;
+    min-height: 100vh;
     overflow: hidden;
-    border-right: 1px solid var(--pf-color-border);
-    background-color: var(--pf-color-surface-subtle);
+
+    background-color: var(--pf-surface-container-low);
+    border-right: 1px solid var(--pf-border-color);
+}
+
+.pf-auth__visual::before {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(11, 28, 48, 0.08) 0%,
+            rgba(11, 28, 48, 0.28) 100%
+        );
+
+    content: "";
+    pointer-events: none;
 }
 
 .pf-auth__visual::after {
     position: absolute;
     inset: 0;
-    background-color: rgb(255 255 255 / 0.48);
+    z-index: 2;
+
+    background-color: rgba(248, 249, 255, 0.2);
+
     content: "";
+    pointer-events: none;
 }
 
 .pf-auth__visual-image {
+    display: block;
+
     width: 100%;
-    height: 100%;
+    height: 100vh;
+
     object-fit: cover;
-    filter: grayscale(100%);
+    object-position: center;
+
+    filter:
+        grayscale(100%)
+        contrast(0.92)
+        brightness(1.04);
+
+    transform: scale(1.01);
 }
+
+/* =========================================================
+   PANEL DEL FORMULARIO
+   ========================================================= */
 
 .pf-auth__panel {
     display: grid;
     place-items: center;
-    padding: clamp(3rem, 7vw, 7rem);
-    background-color: var(--pf-color-surface);
+
+    min-width: 0;
+    min-height: 100vh;
+    padding:
+        clamp(3rem, 6vw, 6rem)
+        clamp(2rem, 6vw, 6.5rem);
+
+    background-color: var(--pf-surface-container-lowest);
 }
 
 .pf-auth__form {
     width: min(100%, 36.25rem);
 }
 
-.pf-brand {
+/* =========================================================
+   MARCA
+   Se limita a .pf-auth para no modificar el sidebar.
+   ========================================================= */
+
+.pf-auth .pf-brand {
     display: inline-flex;
     align-items: center;
     gap: 0.75rem;
-    color: var(--pf-color-text-strong);
-    font-size: 1.85rem;
-    font-weight: 700;
-    letter-spacing: -0.04em;
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-heading-lg);
+    font-weight: var(--pf-font-weight-black);
+    line-height: var(--pf-line-height-heading-lg);
+    letter-spacing: -0.03em;
+
+    text-decoration: none;
 }
 
-.pf-brand__mark {
-    width: 2.25rem;
-    height: 2.25rem;
-    border-radius: 0.125rem;
-    background-color: var(--pf-color-brand);
+.pf-auth .pf-brand:hover {
+    color: var(--pf-on-surface);
+    text-decoration: none;
 }
+
+.pf-auth .pf-brand__mark {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+
+    width: 2.5rem;
+    height: 2.5rem;
+
+    color: var(--pf-on-primary);
+    background-color: var(--pf-primary);
+
+    border-radius: var(--pf-radius-md);
+    box-shadow: var(--pf-shadow-sm);
+}
+
+.pf-auth .pf-brand__mark i {
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+/* =========================================================
+   ENCABEZADO
+   ========================================================= */
 
 .pf-auth__header {
-    margin-top: 3.75rem;
-    margin-bottom: 2.5rem;
+    margin-top: var(--pf-space-2xl);
+    margin-bottom: var(--pf-space-xl);
 }
 
 .pf-auth__header h1 {
     margin: 0;
-    font-size: clamp(2.25rem, 3vw, 3rem);
-    font-weight: 650;
+
+    color: var(--pf-on-surface);
+
+    font-size: clamp(
+        var(--pf-font-size-heading-xl),
+        3vw,
+        3rem
+    );
+    font-weight: var(--pf-font-weight-bold);
     line-height: 1.1;
+    letter-spacing: -0.025em;
 }
 
 .pf-auth__header p {
     max-width: 34rem;
-    margin: 0.875rem 0 0;
-    color: var(--pf-color-text-muted);
-    font-size: 1rem;
+    margin: var(--pf-space-md) 0 0;
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-md);
     line-height: 1.6;
 }
 
+/* =========================================================
+   ALERTAS
+   ========================================================= */
+
 .pf-auth__alert {
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--pf-space-lg);
 }
+
+/* =========================================================
+   CAMPOS DEL FORMULARIO
+   ========================================================= */
 
 .pf-auth__form-fields {
     display: grid;
-    gap: 1.5rem;
+    gap: var(--pf-space-lg);
+}
+
+.pf-auth__field {
+    min-width: 0;
 }
 
 .pf-auth__field .form-label {
-    margin-bottom: 0.5rem;
-    color: var(--pf-color-text-strong);
-    font-size: var(--pf-font-size-sm);
-    font-weight: 600;
+    margin: 0 0 var(--pf-space-sm);
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-body-sm);
 }
 
+/* =========================================================
+   GRUPO DE ENTRADA
+   ========================================================= */
+
 .pf-auth__input-group {
-    border: 1px solid var(--pf-color-border);
-    border-radius: var(--pf-radius-sm);
+    display: flex;
+
+    min-height: 3.25rem;
+    overflow: hidden;
+
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color-strong);
+    border-radius: var(--pf-radius-md);
+    box-shadow: none;
+
     transition:
+        background-color var(--pf-transition-fast),
         border-color var(--pf-transition-fast),
         box-shadow var(--pf-transition-fast);
 }
 
+.pf-auth__input-group:hover {
+    border-color: var(--pf-outline);
+}
+
 .pf-auth__input-group:focus-within {
-    border-color: var(--pf-color-brand-hover);
-    box-shadow: 0 0 0 0.25rem rgb(var(--pf-color-brand-rgb) / 0.18);
+    border-color: var(--pf-primary);
+    box-shadow:
+        0 0 0 0.25rem
+        rgba(var(--pf-primary-rgb), 0.16);
 }
 
 .pf-auth__input-group .input-group-text {
-    width: 3.25rem;
+    display: inline-flex;
+    flex: 0 0 3.25rem;
+    align-items: center;
     justify-content: center;
-    border: 0;
-    background-color: var(--pf-color-surface);
-    color: var(--pf-color-text-muted);
-}
 
-.pf-auth__input-group .form-control {
-    min-height: 3.25rem;
-    border: 0;
-    padding-left: 0;
-    box-shadow: none;
-}
-
-.pf-auth__input-group .form-control:focus {
-    box-shadow: none;
-}
-
-.pf-auth__password-toggle {
     width: 3.25rem;
     min-height: 3.25rem;
     padding: 0;
+
+    color: var(--pf-secondary);
+    background-color: transparent;
+
     border: 0;
     border-radius: 0;
-    color: var(--pf-color-text-muted);
+}
+
+.pf-auth__input-group .input-group-text i {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.pf-auth__input-group .form-control {
+    min-width: 0;
+    min-height: 3.25rem;
+    padding: 0.75rem 0.875rem 0.75rem 0;
+
+    color: var(--pf-on-surface);
+    background-color: transparent;
+
+    border: 0;
+    border-radius: 0;
+    outline: 0;
+    box-shadow: none;
+
+    font-size: var(--pf-font-size-body-md);
+    line-height: var(--pf-line-height-body-md);
+}
+
+.pf-auth__input-group .form-control::placeholder {
+    color: var(--pf-secondary);
+    opacity: 0.7;
+}
+
+.pf-auth__input-group .form-control:focus {
+    color: var(--pf-on-surface);
+    background-color: transparent;
+    box-shadow: none;
+}
+
+/* =========================================================
+   VALIDACIÓN
+   ========================================================= */
+
+.pf-auth__input-group:has(.form-control.is-invalid) {
+    border-color: var(--pf-error);
+}
+
+.pf-auth__input-group:has(.form-control.is-invalid):focus-within {
+    border-color: var(--pf-error);
+    box-shadow:
+        0 0 0 0.25rem
+        rgba(var(--pf-error-rgb), 0.14);
+}
+
+.pf-auth__field .invalid-feedback,
+.pf-auth__field .pf-form-errors {
+    margin-top: var(--pf-space-xs);
+
+    color: var(--pf-error);
+
+    font-size: var(--pf-font-size-label-sm);
+    font-weight: var(--pf-font-weight-medium);
+    line-height: var(--pf-line-height-label-sm);
+}
+
+/* =========================================================
+   BOTÓN PARA MOSTRAR CONTRASEÑA
+   ========================================================= */
+
+.pf-auth__password-toggle {
+    display: inline-grid;
+    flex: 0 0 3.25rem;
+    place-items: center;
+
+    width: 3.25rem;
+    min-height: 3.25rem;
+    padding: 0;
+
+    color: var(--pf-secondary);
+    background-color: transparent;
+
+    border: 0;
+    border-radius: 0;
+
+    transition:
+        color var(--pf-transition-fast),
+        background-color var(--pf-transition-fast);
 }
 
 .pf-auth__password-toggle:hover {
-    background-color: var(--pf-color-surface-subtle);
-    color: var(--pf-color-text-strong);
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-low);
 }
+
+.pf-auth__password-toggle:focus-visible {
+    position: relative;
+    z-index: 1;
+
+    outline: none;
+    box-shadow:
+        inset 0 0 0 0.1875rem
+        rgba(var(--pf-primary-rgb), 0.2);
+}
+
+.pf-auth__password-toggle i {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+/* =========================================================
+   BOTÓN PRINCIPAL
+   ========================================================= */
 
 .pf-auth__submit {
+    width: 100%;
     min-height: 3.25rem;
-    margin-top: 0.25rem;
-    font-size: 1rem;
+    margin-top: var(--pf-space-xs);
+
+    font-size: var(--pf-font-size-body-md);
 }
 
+/* =========================================================
+   RECUPERACIÓN DE CONTRASEÑA
+   ========================================================= */
+
 .pf-auth__recovery-link {
-    display: inline-block;
-    margin-top: 2rem;
-    color: var(--pf-color-text-strong);
-    font-size: var(--pf-font-size-sm);
+    display: inline-flex;
+    align-items: center;
+
+    margin-top: var(--pf-space-xl);
+
+    color: var(--pf-primary);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-body-sm);
+
     text-decoration: underline;
+    text-decoration-thickness: 1px;
     text-underline-offset: 0.2em;
 }
 
-.pf-auth__recovery-link[aria-disabled="true"] {
-    cursor: not-allowed;
-    opacity: 0.8;
+.pf-auth__recovery-link:hover {
+    color: var(--pf-on-primary-fixed-variant);
 }
+
+.pf-auth__recovery-link[aria-disabled="true"] {
+    color: var(--pf-secondary);
+
+    cursor: not-allowed;
+    pointer-events: none;
+    opacity: 0.65;
+}
+
+/* =========================================================
+   INFORMACIÓN DE SOPORTE
+   ========================================================= */
 
 .pf-auth__support {
     display: grid;
-    gap: 1rem;
-    margin-top: 3.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--pf-color-border);
+    gap: var(--pf-space-md);
+
+    margin-top: var(--pf-space-2xl);
+    padding-top: var(--pf-space-lg);
+
+    border-top: 1px solid var(--pf-border-color);
 }
 
 .pf-auth__support-item {
     display: grid;
-    grid-template-columns: 1.75rem 1fr;
-    gap: 0.75rem;
-    align-items: start;
-    color: var(--pf-color-text-muted);
+    grid-template-columns: 1.75rem minmax(0, 1fr);
+    align-items: flex-start;
+    gap: var(--pf-space-sm);
+
+    color: var(--pf-on-surface-variant);
 }
 
 .pf-auth__support-item i {
-    color: var(--pf-color-text-muted);
-    font-size: 1.35rem;
+    color: var(--pf-secondary);
+
+    font-size: 1.125rem;
     line-height: 1.4;
+    text-align: center;
 }
 
 .pf-auth__support-item p {
     margin: 0;
-    font-size: var(--pf-font-size-sm);
+
+    font-size: var(--pf-font-size-body-sm);
     line-height: 1.55;
 }
 
+/* =========================================================
+   TABLET
+   ========================================================= */
+
 @media (max-width: 991.98px) {
     .pf-auth {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .pf-auth__visual {
@@ -206,29 +487,72 @@
 
     .pf-auth__panel {
         min-height: 100vh;
+        padding:
+            var(--pf-space-2xl)
+            var(--pf-space-xl);
     }
 }
 
+/* =========================================================
+   MÓVIL
+   ========================================================= */
+
 @media (max-width: 575.98px) {
     .pf-auth__panel {
-        align-items: start;
-        padding: 2.25rem 1.5rem;
+        align-items: flex-start;
+        padding:
+            var(--pf-space-xl)
+            var(--pf-space-md);
     }
 
-    .pf-brand {
-        font-size: 1.5rem;
+    .pf-auth__form {
+        width: 100%;
     }
 
-    .pf-brand__mark {
-        width: 1.8rem;
-        height: 1.8rem;
+    .pf-auth .pf-brand {
+        font-size: var(--pf-font-size-title-md);
+        line-height: var(--pf-line-height-title-md);
+    }
+
+    .pf-auth .pf-brand__mark {
+        width: 2rem;
+        height: 2rem;
+    }
+
+    .pf-auth .pf-brand__mark i {
+        font-size: 1rem;
     }
 
     .pf-auth__header {
-        margin-top: 3rem;
+        margin-top: var(--pf-space-2xl);
+        margin-bottom: var(--pf-space-lg);
+    }
+
+    .pf-auth__header h1 {
+        font-size: var(--pf-font-size-heading-xl);
+        line-height: var(--pf-line-height-heading-xl);
+    }
+
+    .pf-auth__form-fields {
+        gap: var(--pf-space-md);
     }
 
     .pf-auth__support {
-        margin-top: 2.5rem;
+        margin-top: var(--pf-space-xl);
+    }
+}
+
+/* =========================================================
+   REDUCCIÓN DE MOVIMIENTO
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+    .pf-auth__input-group,
+    .pf-auth__password-toggle {
+        transition: none;
+    }
+
+    .pf-auth__visual-image {
+        transform: none;
     }
 }

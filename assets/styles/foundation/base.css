@@ -1,16 +1,99 @@
+/* styles/foundation/base.css */
+/* =========================================================
+   CONFIGURACIÓN GENERAL
+   ========================================================= */
+
 html {
     min-height: 100%;
-    text-size-adjust: 100%;
+    color-scheme: light;
+    scroll-behavior: smooth;
 }
 
-body {
+body.pf-app {
     min-height: 100vh;
     margin: 0;
-    background-color: var(--pf-color-canvas);
-    color: var(--pf-color-text);
-    font-family: var(--pf-font-sans);
-    font-size: var(--pf-font-size-base);
-    line-height: var(--pf-line-height-base);
+
+    background-color: var(--pf-background);
+    color: var(--pf-on-surface);
+
+    font-family: var(--pf-font-family);
+    font-size: var(--pf-font-size-body-md);
+    font-weight: var(--pf-font-weight-regular);
+    line-height: var(--pf-line-height-body-md);
+
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+/* =========================================================
+   TIPOGRAFÍA GENERAL
+   ========================================================= */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    margin-top: 0;
+    color: var(--pf-on-surface);
+    font-family: var(--pf-font-family);
+    font-weight: var(--pf-font-weight-semibold);
+}
+
+h1 {
+    font-size: var(--pf-font-size-heading-xl);
+    line-height: var(--pf-line-height-heading-xl);
+    letter-spacing: -0.02em;
+    font-weight: var(--pf-font-weight-bold);
+}
+
+h2 {
+    font-size: var(--pf-font-size-heading-lg);
+    line-height: var(--pf-line-height-heading-lg);
+    letter-spacing: -0.01em;
+}
+
+h3,
+h4 {
+    font-size: var(--pf-font-size-title-md);
+    line-height: var(--pf-line-height-title-md);
+}
+
+p {
+    margin-top: 0;
+}
+
+small,
+.small {
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
+}
+
+code,
+kbd,
+pre,
+samp {
+    font-family: var(--pf-font-family-monospace);
+}
+
+/* =========================================================
+   ENLACES Y CONTROLES
+   ========================================================= */
+
+a {
+    color: var(--pf-primary);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+    transition:
+        color var(--pf-transition-fast),
+        background-color var(--pf-transition-fast),
+        border-color var(--pf-transition-fast);
+}
+
+a:hover {
+    color: var(--pf-on-primary-fixed-variant);
 }
 
 button,
@@ -20,51 +103,86 @@ textarea {
     font: inherit;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-    color: var(--pf-color-text-strong);
-    font-weight: var(--pf-font-weight-semibold);
-    letter-spacing: -0.02em;
+button,
+a,
+input,
+select,
+textarea {
+    -webkit-tap-highlight-color: transparent;
 }
 
-h1 {
-    font-size: clamp(1.75rem, 3vw, 2.25rem);
+:where(
+    a,
+    button,
+    input,
+    select,
+    textarea,
+    [tabindex]
+):focus-visible {
+    outline: 3px solid rgba(var(--pf-primary-rgb), 0.22);
+    outline-offset: 2px;
 }
 
-a {
-    color: var(--pf-color-link);
-    text-underline-offset: 0.18em;
+/* =========================================================
+   ELEMENTOS GENERALES
+   ========================================================= */
+
+img,
+svg {
+    vertical-align: middle;
 }
 
-a:hover {
-    color: var(--pf-color-link-hover);
+img {
+    max-width: 100%;
+    height: auto;
 }
 
-:focus-visible {
-    outline: var(--pf-focus-ring-width) solid var(--pf-focus-ring-color);
-    outline-offset: 0.2rem;
+hr {
+    margin: var(--pf-space-lg) 0;
+    color: var(--pf-outline-variant);
+    border: 0;
+    border-top: 1px solid;
+    opacity: 0.6;
 }
 
 ::selection {
-    background-color: var(--pf-color-brand-soft);
-    color: var(--pf-color-text-strong);
+    color: var(--pf-on-primary-fixed);
+    background-color: var(--pf-primary-fixed);
 }
 
-[hidden] {
-    display: none !important;
+/* =========================================================
+   UTILIDADES BASE PRINTFLOW
+   ========================================================= */
+
+.pf-text-muted {
+    color: var(--pf-text-muted) !important;
 }
 
-@media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        scroll-behavior: auto !important;
-        transition-duration: 0.01ms !important;
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-    }
+.pf-text-subtle {
+    color: var(--pf-text-subtle) !important;
+}
+
+.pf-surface {
+    background-color: var(--pf-surface-container-lowest);
+}
+
+.pf-surface-soft {
+    background-color: var(--pf-surface-container-low);
+}
+
+.pf-soft-shadow {
+    box-shadow: var(--pf-shadow-sm);
+}
+
+.pf-section-label {
+    margin-bottom: var(--pf-space-sm);
+
+    color: var(--pf-outline);
+
+    font-size: 0.625rem;
+    font-weight: var(--pf-font-weight-bold);
+    line-height: 0.875rem;
+
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }

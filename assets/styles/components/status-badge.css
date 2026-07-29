@@ -1,48 +1,164 @@
+/* styles/components/status-badge.css */
+
+/* =========================================================
+   BADGE BASE
+   ========================================================= */
+
 .pf-status-badge {
     display: inline-flex;
     align-items: center;
-    min-height: 1.75rem;
-    padding: 0.25rem 0.55rem;
+    justify-content: center;
+    gap: 0.375rem;
+
+    min-height: 1.625rem;
+    padding: 0.25rem 0.625rem;
+
+    color: var(--pf-on-surface-variant);
+    background-color: var(--pf-surface-container-high);
+
     border: 1px solid transparent;
-    border-radius: 999px;
-    font-size: var(--pf-font-size-xs);
-    font-weight: 650;
-    line-height: 1;
+    border-radius: var(--pf-radius-pill);
+
+    font-size: var(--pf-font-size-label-sm);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-label-sm);
+
     white-space: nowrap;
 }
 
-.pf-status-badge--neutral {
-    background-color: var(--pf-color-info-soft);
-    border-color: var(--pf-color-border);
-    color: var(--pf-color-text);
+/* =========================================================
+   ICONO Y PUNTO DE ESTADO
+   ========================================================= */
+
+.pf-status-badge .bi {
+    flex-shrink: 0;
+    font-size: 0.875rem;
+    line-height: 1;
 }
+
+.pf-status-badge__dot {
+    flex: 0 0 auto;
+
+    width: 0.5rem;
+    height: 0.5rem;
+
+    background-color: currentColor;
+    border-radius: var(--pf-radius-pill);
+}
+
+/* =========================================================
+   NEUTRAL
+   ========================================================= */
+
+.pf-status-badge--neutral {
+    color: var(--pf-on-surface-variant);
+    background-color: var(--pf-surface-container-high);
+    border-color: var(--pf-border-color);
+}
+
+/* =========================================================
+   MARCA
+   ========================================================= */
 
 .pf-status-badge--brand {
-    background-color: var(--pf-color-brand-soft);
-    border-color: #B3EFBA;
-    color: #0A5A0F;
+    color: var(--pf-on-primary-container);
+    background-color:
+        rgba(var(--pf-primary-container-rgb), 0.12);
+    border-color:
+        rgba(var(--pf-primary-container-rgb), 0.24);
 }
+
+/* =========================================================
+   ÉXITO
+   ========================================================= */
 
 .pf-status-badge--success {
-    background-color: var(--pf-color-success-soft);
-    border-color: #B3E6B6;
-    color: #0B5C10;
+    color: var(--pf-primary);
+    background-color:
+        rgba(var(--pf-primary-container-rgb), 0.1);
+    border-color:
+        rgba(var(--pf-primary-container-rgb), 0.22);
 }
+
+/* =========================================================
+   ADVERTENCIA
+   ========================================================= */
 
 .pf-status-badge--warning {
-    background-color: var(--pf-color-warning-soft);
-    border-color: #F1D899;
-    color: #6F4700;
+    color: var(--pf-on-tertiary-fixed-variant);
+    background-color: var(--pf-tertiary-fixed);
+    border-color: var(--pf-tertiary-fixed-dim);
 }
+
+/* =========================================================
+   PELIGRO
+   ========================================================= */
 
 .pf-status-badge--danger {
-    background-color: var(--pf-color-danger-soft);
-    border-color: #F4B8B2;
-    color: #8A1C13;
+    color: var(--pf-on-error-container);
+    background-color: var(--pf-error-container);
+    border-color:
+        rgba(var(--pf-error-rgb), 0.24);
 }
 
+/* =========================================================
+   INFORMACIÓN / SISTEMA
+   ========================================================= */
+
 .pf-status-badge--info {
-    background-color: var(--pf-color-info-soft);
-    border-color: var(--pf-color-border);
-    color: var(--pf-color-text-muted);
+    color: var(--pf-on-secondary-container);
+    background-color: var(--pf-secondary-container);
+    border-color: var(--pf-secondary-fixed-dim);
+}
+
+/* =========================================================
+   PROTEGIDO
+   Variante usada para roles del sistema no editables
+   ========================================================= */
+
+.pf-status-badge--protected {
+    color: var(--pf-on-tertiary-fixed-variant);
+    background-color: var(--pf-tertiary-fixed);
+    border-color: transparent;
+}
+
+/* =========================================================
+   ESTADO SIMPLE
+   Para mostrar Activo/Inactivo como texto con punto,
+   siguiendo la referencia visual.
+   ========================================================= */
+
+.pf-status-badge--plain {
+    min-height: auto;
+    padding: 0;
+
+    background-color: transparent;
+    border-color: transparent;
+}
+
+.pf-status-badge--plain.pf-status-badge--success {
+    color: var(--pf-primary);
+}
+
+.pf-status-badge--plain.pf-status-badge--danger {
+    color: var(--pf-error);
+}
+
+/* =========================================================
+   TAMAÑOS
+   ========================================================= */
+
+.pf-status-badge--sm {
+    min-height: 1.375rem;
+    padding: 0.1875rem 0.5rem;
+
+    font-size: 0.625rem;
+    line-height: 0.875rem;
+}
+
+.pf-status-badge--lg {
+    min-height: 2rem;
+    padding: 0.375rem 0.75rem;
+
+    font-size: var(--pf-font-size-label-md);
 }

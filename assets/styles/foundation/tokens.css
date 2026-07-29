@@ -1,101 +1,199 @@
+/* styles/foundation/tokens.css */
+/* =========================================================
+   PRINTFLOW DESIGN SYSTEM
+   Variables globales + configuración base de Bootstrap
+   ========================================================= */
+
 :root {
-    /* Marca */
-    --pf-color-brand: #27F52E;
-    --pf-color-brand-rgb: 39 245 46;
-    --pf-color-brand-hover: #16C61D;
-    --pf-color-brand-active: #10A816;
-    --pf-color-brand-soft: #E8FDEA;
-    --pf-color-brand-subtle: #F3FFF4;
-    --pf-color-brand-contrast: #171A18;
+    /* -----------------------------------------------------
+       Tipografía
+       ----------------------------------------------------- */
 
-    /* Superficies y bordes */
-    --pf-color-canvas: #F6F7F6;
-    --pf-color-surface: #FFFFFF;
-    --pf-color-surface-subtle: #F1F3F1;
-    --pf-color-surface-strong: #E7EBE8;
-    --pf-color-border: #DCE1DD;
-    --pf-color-border-strong: #B7C0B9;
-
-    /* Texto */
-    --pf-color-text-strong: #171A18;
-    --pf-color-text: #39413C;
-    --pf-color-text-muted: #6A746D;
-    --pf-color-text-inverse: #FFFFFF;
-    --pf-color-link: #137A1A;
-    --pf-color-link-hover: #0A5A0F;
-
-    /* Estados semánticos */
-    --pf-color-success: #168A1C;
-    --pf-color-success-soft: #E8F8E9;
-    --pf-color-warning: #9A6700;
-    --pf-color-warning-soft: #FFF7DD;
-    --pf-color-danger: #B42318;
-    --pf-color-danger-soft: #FDECEA;
-    --pf-color-info: #4D5A51;
-    --pf-color-info-soft: #EFF2F0;
-
-    /* Tipografía */
-    --pf-font-sans:
-        Inter,
-        ui-sans-serif,
+    --pf-font-family:
+        "Inter",
         system-ui,
         -apple-system,
         BlinkMacSystemFont,
         "Segoe UI",
         sans-serif;
 
-    --pf-font-size-xs: 0.75rem;
-    --pf-font-size-sm: 0.875rem;
-    --pf-font-size-base: 0.9375rem;
-    --pf-font-size-lg: 1.125rem;
-    --pf-font-size-xl: 1.25rem;
-    --pf-font-size-2xl: 1.5rem;
+    --pf-font-family-monospace:
+        "SFMono-Regular",
+        Consolas,
+        "Liberation Mono",
+        monospace;
+
+    --pf-font-size-label-sm: 0.6875rem;   /* 11px */
+    --pf-font-size-label-md: 0.75rem;     /* 12px */
+    --pf-font-size-body-sm: 0.8125rem;    /* 13px */
+    --pf-font-size-body-md: 0.875rem;     /* 14px */
+    --pf-font-size-title-md: 1.125rem;    /* 18px */
+    --pf-font-size-heading-lg: 1.5rem;    /* 24px */
+    --pf-font-size-heading-xl: 2rem;      /* 32px */
+
+    --pf-line-height-label-sm: 0.875rem;
+    --pf-line-height-label-md: 1rem;
+    --pf-line-height-body-sm: 1.125rem;
+    --pf-line-height-body-md: 1.25rem;
+    --pf-line-height-title-md: 1.5rem;
+    --pf-line-height-heading-lg: 2rem;
+    --pf-line-height-heading-xl: 2.5rem;
 
     --pf-font-weight-regular: 400;
     --pf-font-weight-medium: 500;
     --pf-font-weight-semibold: 600;
     --pf-font-weight-bold: 700;
+    --pf-font-weight-black: 900;
 
-    --pf-line-height-tight: 1.2;
-    --pf-line-height-base: 1.5;
-    --pf-line-height-relaxed: 1.65;
+    /* -----------------------------------------------------
+       Colores principales
+       ----------------------------------------------------- */
 
-    /* Espaciado */
-    --pf-space-1: 0.25rem;
-    --pf-space-2: 0.5rem;
-    --pf-space-3: 0.75rem;
-    --pf-space-4: 1rem;
-    --pf-space-5: 1.25rem;
-    --pf-space-6: 1.5rem;
-    --pf-space-8: 2rem;
-    --pf-space-10: 2.5rem;
-    --pf-space-page: clamp(1rem, 2vw, 2rem);
+    --pf-primary: #006e06;
+    --pf-primary-rgb: 0, 110, 6;
 
-    /* Controles y forma */
-    --pf-control-height: 2.625rem;
+    --pf-primary-container: #16c61d;
+    --pf-primary-container-rgb: 22, 198, 29;
 
-    --pf-radius-sm: 0.375rem;
-    --pf-radius-md: 0.625rem;
-    --pf-radius-lg: 0.875rem;
-    --pf-radius-pill: 999px;
+    --pf-primary-fixed: #76ff65;
+    --pf-primary-fixed-dim: #44e33c;
 
-    /* Elevación */
-    --pf-shadow-sm: 0 1px 2px rgb(23 26 24 / 0.05);
-    --pf-shadow-md: 0 8px 24px rgb(23 26 24 / 0.08);
-    --pf-shadow-lg: 0 16px 40px rgb(23 26 24 / 0.12);
+    --pf-on-primary: #ffffff;
+    --pf-on-primary-container: #004b03;
+    --pf-on-primary-fixed: #002201;
+    --pf-on-primary-fixed-variant: #005303;
 
-    /* Interacción */
-    --pf-transition-fast: 160ms ease;
-    --pf-transition-base: 220ms ease;
-    --pf-focus-ring-width: 0.2rem;
-    --pf-focus-ring-color: rgb(var(--pf-color-brand-rgb) / 0.28);
+    /* -----------------------------------------------------
+       Colores secundarios
+       ----------------------------------------------------- */
 
-    /* Capas: usar estos valores, nunca z-index improvisados */
-    --pf-z-dropdown: 1000;
-    --pf-z-sticky: 1020;
-    --pf-z-fixed: 1030;
-    --pf-z-modal-backdrop: 1040;
-    --pf-z-modal: 1050;
-    --pf-z-tooltip: 1080;
-    --pf-z-toast: 1090;
+    --pf-secondary: #565e74;
+    --pf-secondary-rgb: 86, 94, 116;
+
+    --pf-secondary-container: #dae2fd;
+    --pf-secondary-fixed: #dae2fd;
+    --pf-secondary-fixed-dim: #bec6e0;
+
+    --pf-on-secondary: #ffffff;
+    --pf-on-secondary-container: #5c647a;
+    --pf-on-secondary-fixed: #131b2e;
+    --pf-on-secondary-fixed-variant: #3f465c;
+
+    /* -----------------------------------------------------
+       Colores terciarios y advertencias
+       ----------------------------------------------------- */
+
+    --pf-tertiary: #855300;
+    --pf-tertiary-rgb: 133, 83, 0;
+
+    --pf-tertiary-container: #ee9800;
+    --pf-tertiary-fixed: #ffddb8;
+    --pf-tertiary-fixed-dim: #ffb95f;
+
+    --pf-on-tertiary: #ffffff;
+    --pf-on-tertiary-container: #5b3700;
+    --pf-on-tertiary-fixed: #2a1700;
+    --pf-on-tertiary-fixed-variant: #653e00;
+
+    /* -----------------------------------------------------
+       Errores
+       ----------------------------------------------------- */
+
+    --pf-error: #ba1a1a;
+    --pf-error-rgb: 186, 26, 26;
+
+    --pf-error-container: #ffdad6;
+    --pf-on-error: #ffffff;
+    --pf-on-error-container: #93000a;
+
+    /* -----------------------------------------------------
+       Superficies
+       ----------------------------------------------------- */
+
+    --pf-background: #f8f9ff;
+    --pf-on-background: #0b1c30;
+
+    --pf-surface: #f8f9ff;
+    --pf-surface-bright: #f8f9ff;
+    --pf-surface-dim: #cbdbf5;
+
+    --pf-surface-container-lowest: #ffffff;
+    --pf-surface-container-low: #eff4ff;
+    --pf-surface-container: #e5eeff;
+    --pf-surface-container-high: #dce9ff;
+    --pf-surface-container-highest: #d3e4fe;
+
+    --pf-surface-variant: #d3e4fe;
+    --pf-surface-tint: #006e06;
+
+    --pf-on-surface: #0b1c30;
+    --pf-on-surface-variant: #3d4a38;
+
+    --pf-inverse-surface: #213145;
+    --pf-inverse-on-surface: #eaf1ff;
+    --pf-inverse-primary: #44e33c;
+
+    /* -----------------------------------------------------
+       Bordes y texto auxiliar
+       ----------------------------------------------------- */
+
+    --pf-outline: #6d7b66;
+    --pf-outline-variant: #bccbb3;
+
+    --pf-border-color: rgba(109, 123, 102, 0.28);
+    --pf-border-color-strong: rgba(109, 123, 102, 0.48);
+
+    --pf-text: var(--pf-on-surface);
+    --pf-text-muted: var(--pf-secondary);
+    --pf-text-subtle: var(--pf-outline);
+
+    /* -----------------------------------------------------
+       Espaciado
+       ----------------------------------------------------- */
+
+    --pf-space-xs: 0.25rem;
+    --pf-space-sm: 0.5rem;
+    --pf-space-md: 1rem;
+    --pf-space-lg: 1.5rem;
+    --pf-space-xl: 2rem;
+    --pf-space-2xl: 3rem;
+
+    --pf-page-padding: 2rem;
+    --pf-content-gap: 1.5rem;
+
+    --pf-sidebar-width: 16.25rem; /* 260px */
+    --pf-header-height: 4rem;     /* 64px */
+
+    /* -----------------------------------------------------
+       Bordes y radios
+       ----------------------------------------------------- */
+
+    --pf-radius-sm: 0.25rem;
+    --pf-radius-md: 0.5rem;
+    --pf-radius-lg: 0.75rem;
+    --pf-radius-xl: 1rem;
+    --pf-radius-pill: 9999px;
+
+    /* -----------------------------------------------------
+       Sombras
+       ----------------------------------------------------- */
+
+    --pf-shadow-xs:
+        0 1px 2px rgba(11, 28, 48, 0.04);
+
+    --pf-shadow-sm:
+        0 1px 3px rgba(11, 28, 48, 0.06),
+        0 8px 16px -10px rgba(11, 28, 48, 0.12);
+
+    --pf-shadow-md:
+        0 2px 6px rgba(11, 28, 48, 0.08),
+        0 12px 24px -12px rgba(11, 28, 48, 0.16);
+
+    /* -----------------------------------------------------
+       Transiciones
+       ----------------------------------------------------- */
+
+    --pf-transition-fast: 150ms ease;
+    --pf-transition-normal: 220ms ease;
+
 }

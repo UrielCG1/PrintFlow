@@ -1,16 +1,136 @@
-.pf-public-body {
-    display: grid;
+/* styles/layout/public-shell.css */
+
+/* =========================================================
+   DOCUMENTO PÚBLICO
+   Login, recuperación de acceso y páginas sin sidebar
+   ========================================================= */
+
+body.pf-public-body {
+    min-width: 20rem;
     min-height: 100vh;
-    background-color: var(--pf-color-surface);
+    margin: 0;
+
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-low);
+
+    font-family: var(--pf-font-family);
+    font-size: var(--pf-font-size-body-md);
+    font-weight: var(--pf-font-weight-regular);
+    line-height: var(--pf-line-height-body-md);
+
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
 }
+
+/* =========================================================
+   CONTENEDOR PRINCIPAL
+   ========================================================= */
 
 .pf-public-shell {
+    position: relative;
+    isolation: isolate;
+
     display: grid;
     place-items: center;
+
     width: 100%;
-    padding: var(--pf-space-page);
+    min-height: 100vh;
+    padding: var(--pf-page-padding);
+
+    overflow: hidden;
+    background-color: var(--pf-surface-container-low);
 }
 
+/* =========================================================
+   DECORACIÓN DEL FONDO
+   ========================================================= */
+
+.pf-public-shell::before,
+.pf-public-shell::after {
+    position: absolute;
+    z-index: -1;
+
+    width: 24rem;
+    height: 24rem;
+
+    border-radius: var(--pf-radius-pill);
+
+    content: "";
+    pointer-events: none;
+}
+
+.pf-public-shell::before {
+    top: -10rem;
+    right: -8rem;
+
+    background-color: rgba(var(--pf-primary-rgb), 0.07);
+}
+
+.pf-public-shell::after {
+    bottom: -12rem;
+    left: -9rem;
+
+    background-color: rgba(var(--pf-secondary-rgb), 0.07);
+}
+
+/* =========================================================
+   CONTENIDO PÚBLICO
+   ========================================================= */
+
 .pf-public-content {
+    position: relative;
+    z-index: 1;
+
+    display: grid;
+    gap: var(--pf-space-lg);
+
     width: min(100%, 30rem);
+    margin-inline: auto;
+}
+
+/* La alerta ocupa todo el ancho del contenido */
+
+.pf-public-content > .pf-flash-stack {
+    width: 100%;
+    margin-bottom: 0;
+}
+
+/* =========================================================
+   PANEL PRINCIPAL
+   Aplica a una tarjeta colocada directamente dentro
+   del contenido público.
+   ========================================================= */
+
+.pf-public-content > .pf-card,
+.pf-public-content > .card {
+    width: 100%;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 575.98px) {
+    .pf-public-shell {
+        place-items: start center;
+
+        padding:
+            var(--pf-space-lg)
+            var(--pf-space-md);
+    }
+
+    .pf-public-content {
+        gap: var(--pf-space-md);
+    }
+}
+
+/* =========================================================
+   REDUCCIÓN DE MOVIMIENTO
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+    .pf-public-shell {
+        scroll-behavior: auto;
+    }
 }

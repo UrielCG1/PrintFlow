@@ -1,3 +1,5 @@
+{% set breadcrumb_parts = breadcrumb|split('/') %}
+
 <header class="pf-app-header">
     <div class="pf-app-header__start">
         <button
@@ -12,45 +14,111 @@
             <i class="bi bi-list" aria-hidden="true"></i>
         </button>
 
-        <p class="pf-app-header__breadcrumb">{{ breadcrumb }}</p>
+        <nav
+            class="pf-app-header__breadcrumb"
+            aria-label="Ruta de navegación"
+        >
+            {% for part in breadcrumb_parts %}
+                <span class="pf-app-header__breadcrumb-item">
+                    {{ part|trim }}
+                </span>
+
+                {% if not loop.last %}
+                    <span
+                        class="pf-app-header__breadcrumb-separator"
+                        aria-hidden="true"
+                    >
+                        /
+                    </span>
+                {% endif %}
+            {% endfor %}
+        </nav>
     </div>
 
     <div class="pf-app-header__end">
-        <div class="dropdown">
+        <div class="pf-app-header__actions">
             <button
                 type="button"
-                class="pf-user-menu__trigger"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
+                class="pf-app-header__icon-button"
+                aria-label="Notificaciones"
+                title="Notificaciones"
             >
-                <span class="pf-user-menu__avatar">
-                    {{ app.user.fullName|slice(0, 1)|upper }}
-                </span>
-
-                <span class="pf-user-menu__identity">
-                    <span class="pf-user-menu__name">{{ app.user.fullName }}</span>
-                    <span class="pf-user-menu__username">{{ app.user.username }}</span>
-                </span>
-
-                <i class="bi bi-chevron-down pf-user-menu__chevron" aria-hidden="true"></i>
+                <i class="bi bi-bell" aria-hidden="true"></i>
             </button>
 
-            <ul class="dropdown-menu dropdown-menu-end pf-user-menu__dropdown">
-                <li>
-                    <span class="dropdown-header">Sesión activa</span>
-                </li>
+            <button
+                type="button"
+                class="pf-app-header__icon-button"
+                aria-label="Configuración"
+                title="Configuración"
+            >
+                <i class="bi bi-gear" aria-hidden="true"></i>
+            </button>
+        </div>
 
-                <li><hr class="dropdown-divider"></li>
+        <div class="pf-app-header__user-zone">
+            <div class="dropdown pf-user-menu">
+                <button
+                    type="button"
+                    class="pf-user-menu__trigger"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                >
+                    <span class="pf-user-menu__identity">
+                        <span class="pf-user-menu__name">
+                            {{ app.user.fullName }}
+                        </span>
 
-                <li>
-                    <form method="post" action="{{ path('app_logout') }}">
-                        <button type="submit" class="dropdown-item pf-user-menu__logout">
-                            <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
-                            Cerrar sesión
-                        </button>
-                    </form>
-                </li>
-            </ul>
+                        <span class="pf-user-menu__username">
+                            {{ app.user.username }}
+                        </span>
+                    </span>
+
+                    <span class="pf-user-menu__avatar" aria-hidden="true">
+                        {{ app.user.fullName|slice(0, 1)|upper }}
+                    </span>
+                </button>
+
+                <ul
+                    class="
+                        dropdown-menu
+                        dropdown-menu-end
+                        pf-user-menu__dropdown
+                    "
+                >
+                    <li>
+                        <span class="dropdown-header">
+                            Sesión activa
+                        </span>
+                    </li>
+
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+
+                    <li>
+                        <form
+                            method="post"
+                            action="{{ path('app_logout') }}"
+                        >
+                            <button
+                                type="submit"
+                                class="
+                                    dropdown-item
+                                    pf-user-menu__logout
+                                "
+                            >
+                                <i
+                                    class="bi bi-box-arrow-right"
+                                    aria-hidden="true"
+                                ></i>
+
+                                Cerrar sesión
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
 </header>

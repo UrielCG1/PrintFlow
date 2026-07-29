@@ -1,128 +1,295 @@
+/* styles/components/button.css */
+
+/* =========================================================
+   BOTÓN BASE
+   ========================================================= */
+
 .pf-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: var(--pf-space-2);
-    min-height: var(--pf-control-height);
-    padding: 0.5625rem 0.875rem;
+    gap: var(--pf-space-sm);
+
+    min-height: 2.5rem;
+    padding: 0.625rem 1rem;
+
+    color: var(--pf-on-surface);
+    background-color: transparent;
     border: 1px solid transparent;
-    border-radius: var(--pf-radius-sm);
-    font-weight: var(--pf-font-weight-semibold);
+    border-radius: var(--pf-radius-md);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-bold);
     line-height: 1.2;
+    text-align: center;
     text-decoration: none;
+    white-space: nowrap;
+
+    cursor: pointer;
+    user-select: none;
+
     transition:
+        color var(--pf-transition-fast),
         background-color var(--pf-transition-fast),
         border-color var(--pf-transition-fast),
         box-shadow var(--pf-transition-fast),
-        color var(--pf-transition-fast);
-    white-space: nowrap;
+        transform var(--pf-transition-fast);
+}
+
+.pf-button:hover {
+    text-decoration: none;
+}
+
+.pf-button:active:not(:disabled):not(.disabled) {
+    transform: scale(0.97);
 }
 
 .pf-button .bi {
+    flex-shrink: 0;
     font-size: 1rem;
     line-height: 1;
 }
 
+/* =========================================================
+   TAMAÑOS
+   ========================================================= */
+
 .pf-button--sm {
     min-height: 2.125rem;
-    padding: 0.375rem 0.625rem;
-    font-size: var(--pf-font-size-sm);
+    padding: 0.4375rem 0.75rem;
+
+    font-size: var(--pf-font-size-label-md);
+    border-radius: var(--pf-radius-md);
 }
 
 .pf-button--lg {
     min-height: 3rem;
-    padding: 0.75rem 1.125rem;
-    font-size: var(--pf-font-size-lg);
+    padding: 0.75rem 1.5rem;
+
+    font-size: var(--pf-font-size-body-md);
 }
 
 .pf-button--icon {
-    width: var(--pf-control-height);
+    width: 2.5rem;
+    min-width: 2.5rem;
     padding: 0;
+    border-radius: var(--pf-radius-pill);
 }
 
-/* Primario */
+.pf-button--icon.pf-button--sm {
+    width: 2.125rem;
+    min-width: 2.125rem;
+}
+
+.pf-button--icon.pf-button--lg {
+    width: 3rem;
+    min-width: 3rem;
+}
+
+.pf-button--block {
+    width: 100%;
+}
+
+/* =========================================================
+   PRIMARIO
+   Acción principal de la pantalla
+   ========================================================= */
+
 .pf-button--primary,
 .pf-button.btn-primary {
-    color: var(--pf-color-brand-contrast);
-    background-color: var(--pf-color-brand);
-    border-color: var(--pf-color-brand);
+    color: var(--pf-on-primary-container);
+    background-color: var(--pf-primary-container);
+    border-color: var(--pf-primary-container);
+
+    box-shadow:
+        0 1px 2px rgba(var(--pf-primary-container-rgb), 0.12),
+        0 6px 14px -8px rgba(var(--pf-primary-container-rgb), 0.7);
 }
 
 .pf-button--primary:hover,
 .pf-button.btn-primary:hover {
-    color: var(--pf-color-brand-contrast);
-    background-color: var(--pf-color-brand-hover);
-    border-color: var(--pf-color-brand-hover);
+    color: var(--pf-on-primary);
+    background-color: var(--pf-primary);
+    border-color: var(--pf-primary);
 }
 
-/* Secundario */
+.pf-button--primary:active,
+.pf-button.btn-primary:active {
+    color: var(--pf-on-primary);
+    background-color: var(--pf-on-primary-fixed-variant);
+    border-color: var(--pf-on-primary-fixed-variant);
+}
+
+/* =========================================================
+   SECUNDARIO
+   Acciones como Editar, Cancelar o Volver
+   ========================================================= */
+
 .pf-button--secondary,
 .pf-button.btn-outline-secondary {
-    color: var(--pf-color-text-strong);
-    background-color: var(--pf-color-surface);
-    border-color: var(--pf-color-border-strong);
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+    border-color: var(--pf-border-color);
 }
 
 .pf-button--secondary:hover,
 .pf-button.btn-outline-secondary:hover {
-    color: var(--pf-color-text-strong);
-    background-color: var(--pf-color-surface-subtle);
-    border-color: var(--pf-color-text-muted);
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-low);
+    border-color: var(--pf-border-color-strong);
 }
 
-/* Éxito */
-.pf-button--success {
-    color: var(--pf-color-text-inverse);
-    background-color: var(--pf-color-success);
-    border-color: var(--pf-color-success);
+.pf-button--secondary:active,
+.pf-button.btn-outline-secondary:active {
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container);
+    border-color: var(--pf-outline);
 }
 
-.pf-button--success:hover {
-    color: var(--pf-color-text-inverse);
-    background-color: #0f7315;
-    border-color: #0f7315;
+/* =========================================================
+   SUTIL
+   Acción secundaria destacada, como Consultar
+   ========================================================= */
+
+.pf-button--subtle {
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-highest);
+    border-color: transparent;
 }
 
-/* Peligro */
+.pf-button--subtle:hover {
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-high);
+    border-color: var(--pf-border-color);
+}
+
+/* =========================================================
+   GHOST
+   Acciones sin fondo, como iconos del encabezado
+   ========================================================= */
+
+.pf-button--ghost {
+    color: var(--pf-secondary);
+    background-color: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.pf-button--ghost:hover {
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-highest);
+}
+
+/* =========================================================
+   ÉXITO
+   ========================================================= */
+
+.pf-button--success,
+.pf-button.btn-success {
+    color: var(--pf-on-primary);
+    background-color: var(--pf-primary);
+    border-color: var(--pf-primary);
+}
+
+.pf-button--success:hover,
+.pf-button.btn-success:hover {
+    color: var(--pf-on-primary);
+    background-color: var(--pf-on-primary-fixed-variant);
+    border-color: var(--pf-on-primary-fixed-variant);
+}
+
+/* =========================================================
+   PELIGRO
+   ========================================================= */
+
 .pf-button--danger,
 .pf-button.btn-outline-danger {
-    color: var(--pf-color-danger);
-    background-color: var(--pf-color-surface);
-    border-color: var(--pf-color-danger);
+    color: var(--pf-error);
+    background-color: var(--pf-surface-container-lowest);
+    border-color: var(--pf-error);
 }
 
 .pf-button--danger:hover,
 .pf-button.btn-outline-danger:hover {
-    color: var(--pf-color-text-inverse);
-    background-color: var(--pf-color-danger);
-    border-color: var(--pf-color-danger);
+    color: var(--pf-on-error);
+    background-color: var(--pf-error);
+    border-color: var(--pf-error);
 }
 
-/* Enlace */
+.pf-button--danger-subtle {
+    color: var(--pf-on-error-container);
+    background-color: var(--pf-error-container);
+    border-color: transparent;
+}
+
+.pf-button--danger-subtle:hover {
+    color: var(--pf-on-error);
+    background-color: var(--pf-error);
+    border-color: var(--pf-error);
+}
+
+/* =========================================================
+   ENLACE
+   ========================================================= */
+
 .pf-button--link,
 .pf-button.btn-link {
     min-height: auto;
-    padding: var(--pf-space-1) 0;
-    color: var(--pf-color-link);
-    background: transparent;
+    padding: var(--pf-space-xs) 0;
+
+    color: var(--pf-primary);
+    background-color: transparent;
     border-color: transparent;
+    border-radius: 0;
+    box-shadow: none;
+
     text-decoration: underline;
     text-underline-offset: 0.18em;
 }
 
 .pf-button--link:hover,
 .pf-button.btn-link:hover {
-    color: var(--pf-color-link-hover);
+    color: var(--pf-on-primary-fixed-variant);
 }
+
+/* =========================================================
+   FOCO
+   ========================================================= */
 
 .pf-button:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 0.25rem var(--pf-focus-ring-color);
+    box-shadow:
+        0 0 0 0.25rem rgba(var(--pf-primary-rgb), 0.22);
 }
+
+/* Mantiene visible el foco de botones primarios */
+.pf-button--primary:focus-visible,
+.pf-button.btn-primary:focus-visible {
+    box-shadow:
+        0 0 0 0.25rem rgba(var(--pf-primary-rgb), 0.22),
+        0 6px 14px -8px rgba(var(--pf-primary-container-rgb), 0.7);
+}
+
+/* =========================================================
+   DESHABILITADO
+   ========================================================= */
 
 .pf-button:disabled,
 .pf-button.disabled,
-.pf-button[aria-disabled='true'] {
+.pf-button[aria-disabled="true"] {
     pointer-events: none;
-    opacity: 0.58;
+    cursor: not-allowed;
+    opacity: 0.52;
+    box-shadow: none;
+    transform: none;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 575.98px) {
+    .pf-button--responsive {
+        width: 100%;
+    }
 }

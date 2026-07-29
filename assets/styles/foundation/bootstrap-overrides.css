@@ -1,43 +1,107 @@
-/*
+/* styles/foundation/bootstrap-overrides.css 
+ *
  * Puente entre Bootstrap y los tokens de PrintFlow.
  *
  * Aquí únicamente se mapean variables globales de Bootstrap.
- * Los estilos de botones, formularios, tablas y modales vivirán
- * en sus respectivos archivos dentro de components/.
+ * Los estilos específicos de botones, formularios, tablas,
+ * tarjetas y modales viven en components/.
  */
-:root {
-    --bs-body-font-family: var(--pf-font-sans);
-    --bs-body-font-size: var(--pf-font-size-base);
+
+:root,
+[data-bs-theme="light"] {
+    /* Tipografía y documento */
+    --bs-font-sans-serif: var(--pf-font-family);
+    --bs-font-monospace: var(--pf-font-family-monospace);
+
+    --bs-body-font-family: var(--pf-font-family);
+    --bs-body-font-size: var(--pf-font-size-body-md);
     --bs-body-font-weight: var(--pf-font-weight-regular);
-    --bs-body-line-height: var(--pf-line-height-base);
-    --bs-body-color: var(--pf-color-text);
-    --bs-body-bg: var(--pf-color-canvas);
+    --bs-body-line-height: 1.4286;
+    --bs-body-color: var(--pf-on-surface);
+    --bs-body-bg: var(--pf-background);
 
-    --bs-emphasis-color: var(--pf-color-text-strong);
-    --bs-secondary-color: var(--pf-color-text-muted);
-    --bs-secondary-bg: var(--pf-color-surface-subtle);
-    --bs-tertiary-bg: var(--pf-color-surface-strong);
+    /* Texto */
+    --bs-emphasis-color: var(--pf-on-surface);
+    --bs-emphasis-color-rgb: 11, 28, 48;
 
-    --bs-border-color: var(--pf-color-border);
+    --bs-secondary-color: var(--pf-secondary);
+    --bs-secondary-color-rgb: var(--pf-secondary-rgb);
+
+    --bs-tertiary-color: var(--pf-outline);
+
+    /* Superficies */
+    --bs-secondary-bg: var(--pf-surface-container-low);
+    --bs-tertiary-bg: var(--pf-surface-container);
+    --bs-body-bg-rgb: 248, 249, 255;
+
+    /* Bordes */
+    --bs-border-color: var(--pf-border-color);
+    --bs-border-color-translucent: rgba(109, 123, 102, 0.22);
+
     --bs-border-radius: var(--pf-radius-sm);
-    --bs-border-radius-sm: 0.25rem;
+    --bs-border-radius-sm: var(--pf-radius-sm);
     --bs-border-radius-lg: var(--pf-radius-md);
+    --bs-border-radius-xl: var(--pf-radius-lg);
+    --bs-border-radius-xxl: var(--pf-radius-xl);
+    --bs-border-radius-pill: var(--pf-radius-pill);
 
-    --bs-primary: var(--pf-color-brand);
-    --bs-primary-rgb: 39, 245, 46;
+    /* Principal */
+    --bs-primary: var(--pf-primary);
+    --bs-primary-rgb: var(--pf-primary-rgb);
+    --bs-primary-text-emphasis: var(--pf-on-primary-fixed-variant);
+    --bs-primary-bg-subtle: rgba(var(--pf-primary-rgb), 0.1);
+    --bs-primary-border-subtle: rgba(var(--pf-primary-rgb), 0.25);
 
-    --bs-success: var(--pf-color-success);
-    --bs-success-rgb: 22, 138, 28;
+    /* Secundario */
+    --bs-secondary: var(--pf-secondary);
+    --bs-secondary-rgb: var(--pf-secondary-rgb);
+    --bs-secondary-text-emphasis: var(--pf-on-secondary-fixed-variant);
+    --bs-secondary-bg-subtle: var(--pf-secondary-container);
+    --bs-secondary-border-subtle: var(--pf-secondary-fixed-dim);
 
-    --bs-warning: var(--pf-color-warning);
-    --bs-warning-rgb: 154, 103, 0;
+    /* Éxito */
+    --bs-success: var(--pf-primary-container);
+    --bs-success-rgb: var(--pf-primary-container-rgb);
+    --bs-success-text-emphasis: var(--pf-on-primary-container);
+    --bs-success-bg-subtle: rgba(var(--pf-primary-container-rgb), 0.1);
+    --bs-success-border-subtle: rgba(
+        var(--pf-primary-container-rgb),
+        0.25
+    );
 
-    --bs-danger: var(--pf-color-danger);
-    --bs-danger-rgb: 180, 35, 24;
+    /* Advertencia */
+    --bs-warning: var(--pf-tertiary-container);
+    --bs-warning-rgb: 238, 152, 0;
+    --bs-warning-text-emphasis: var(--pf-on-tertiary-fixed-variant);
+    --bs-warning-bg-subtle: var(--pf-tertiary-fixed);
+    --bs-warning-border-subtle: var(--pf-tertiary-fixed-dim);
 
-    --bs-link-color: var(--pf-color-link);
-    --bs-link-hover-color: var(--pf-color-link-hover);
+    /* Error */
+    --bs-danger: var(--pf-error);
+    --bs-danger-rgb: var(--pf-error-rgb);
+    --bs-danger-text-emphasis: var(--pf-on-error-container);
+    --bs-danger-bg-subtle: var(--pf-error-container);
+    --bs-danger-border-subtle: rgba(var(--pf-error-rgb), 0.25);
 
-    --bs-focus-ring-width: var(--pf-focus-ring-width);
-    --bs-focus-ring-color: var(--pf-focus-ring-color);
+    /* Claros y oscuros */
+    --bs-light: var(--pf-surface-container-low);
+    --bs-light-rgb: 239, 244, 255;
+
+    --bs-dark: var(--pf-inverse-surface);
+    --bs-dark-rgb: 33, 49, 69;
+
+    /* Enlaces */
+    --bs-link-color: var(--pf-primary);
+    --bs-link-color-rgb: var(--pf-primary-rgb);
+
+    --bs-link-hover-color: var(--pf-on-primary-fixed-variant);
+    --bs-link-hover-color-rgb: 0, 83, 3;
+
+    /* Foco y sombras */
+    --bs-focus-ring-width: 0.25rem;
+    --bs-focus-ring-opacity: 0.22;
+    --bs-focus-ring-color: rgba(var(--pf-primary-rgb), 0.22);
+
+    --bs-box-shadow-sm: var(--pf-shadow-sm);
+    --bs-box-shadow: var(--pf-shadow-md);
 }

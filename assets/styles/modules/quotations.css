@@ -1,129 +1,423 @@
+/* styles/modules/quotations.css */
+
+/* =========================================================
+   TARJETAS PRINCIPALES
+   ========================================================= */
+
 .quotation-list-card,
 .quotation-form-card {
-    border: 1px solid var(--pf-border-color, #dee2e6);
-    box-shadow: 0 0.35rem 1rem rgb(15 23 42 / 4%);
+    overflow: hidden;
+
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-lg);
+    box-shadow: var(--pf-shadow-sm);
 }
+
+/* =========================================================
+   ENCABEZADO DEL FORMULARIO
+   ========================================================= */
 
 .quotation-form-card__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: var(--pf-space-md);
 }
+
+.quotation-form-card__header > div {
+    min-width: 0;
+}
+
+.quotation-form-card__header h2 {
+    margin: 0;
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-title-md);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-title-md);
+}
+
+.quotation-form-card__header p {
+    margin: var(--pf-space-xs) 0 0;
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
+}
+
+/* =========================================================
+   NOTA DE CÁLCULO
+   ========================================================= */
 
 .quotation-calculation-note {
     display: flex;
-    gap: 1rem;
+    align-items: flex-start;
+    gap: var(--pf-space-md);
+
     height: 100%;
-    padding: 1.5rem;
-    border: 1px solid #c9f5ce;
-    border-radius: 0.75rem;
-    background: #f3fff4;
+    padding: var(--pf-space-lg);
+
+    color: var(--pf-on-surface-variant);
+    background-color:
+        rgba(var(--pf-primary-container-rgb), 0.06);
+
+    border: 1px solid
+        rgba(var(--pf-primary-container-rgb), 0.2);
+    border-radius: var(--pf-radius-lg);
 }
 
 .quotation-calculation-note__icon {
     display: grid;
     flex: 0 0 auto;
+    place-items: center;
+
     width: 2.75rem;
     height: 2.75rem;
-    place-items: center;
-    border-radius: 0.75rem;
-    background: var(--pf-brand-soft, #e8fdea);
-    color: var(--pf-brand-active, #10a816);
+
+    color: var(--pf-primary);
+    background-color:
+        rgba(var(--pf-primary-rgb), 0.09);
+
+    border-radius: var(--pf-radius-md);
+}
+
+.quotation-calculation-note__icon i {
     font-size: 1.25rem;
+    line-height: 1;
+}
+
+.quotation-calculation-note > div:last-child {
+    min-width: 0;
 }
 
 .quotation-calculation-note h2 {
-    margin: 0 0 0.4rem;
-    font-size: 1rem;
-    font-weight: 700;
+    margin: 0 0 var(--pf-space-xs);
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-md);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-body-md);
 }
 
 .quotation-calculation-note p {
-    margin: 0 0 0.35rem;
-    color: var(--bs-secondary-color);
-    font-size: 0.9rem;
+    margin: 0 0 var(--pf-space-xs);
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
 }
 
 .quotation-calculation-note small {
-    color: var(--bs-secondary-color);
+    display: block;
+
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-sm);
+    line-height: var(--pf-line-height-label-sm);
 }
+
+/* =========================================================
+   LISTA DE CONCEPTOS
+   ========================================================= */
 
 .quotation-items {
     display: grid;
-    gap: 1rem;
+    gap: var(--pf-space-md);
 }
 
+/* =========================================================
+   CONCEPTO DE COTIZACIÓN
+   ========================================================= */
+
 .quotation-item {
-    padding: 1rem;
-    border: 1px solid var(--pf-border-color, #dee2e6);
-    border-radius: 0.7rem;
-    background: #fff;
+    padding: var(--pf-space-md);
+
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-lg);
+
+    transition:
+        border-color var(--pf-transition-fast),
+        box-shadow var(--pf-transition-fast);
+}
+
+.quotation-item:hover {
+    border-color: var(--pf-border-color-strong);
+    box-shadow: var(--pf-shadow-xs);
 }
 
 .quotation-item__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
-    padding-bottom: 0.85rem;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid var(--pf-border-color, #dee2e6);
+    gap: var(--pf-space-md);
+
+    margin-bottom: var(--pf-space-md);
+    padding-bottom: var(--pf-space-sm);
+
+    border-bottom: 1px solid var(--pf-border-color);
+}
+
+.quotation-item__header > div {
+    min-width: 0;
 }
 
 .quotation-item__number {
-    color: var(--bs-secondary-color);
-    font-size: 0.875rem;
+    margin: 0;
+
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
 }
 
 .quotation-item__number strong {
-    color: var(--bs-body-color);
+    color: var(--pf-on-surface);
+    font-weight: var(--pf-font-weight-bold);
 }
 
+/* =========================================================
+   RESUMEN ECONÓMICO DEL CONCEPTO
+   ========================================================= */
+
+.quotation-item__summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--pf-space-md);
+
+    margin-top: var(--pf-space-md);
+    padding-top: var(--pf-space-md);
+
+    border-top: 1px solid var(--pf-border-color);
+}
+
+.quotation-item__amount {
+    display: grid;
+    gap: 0.125rem;
+    min-width: 8rem;
+    text-align: right;
+}
+
+.quotation-item__amount-label {
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-sm);
+    font-weight: var(--pf-font-weight-medium);
+    line-height: var(--pf-line-height-label-sm);
+
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.quotation-item__amount-value {
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-md);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-body-md);
+}
+
+/* =========================================================
+   ESTADO VACÍO DE CONCEPTOS
+   ========================================================= */
+
 .quotation-items-empty {
-    padding: 2rem 1rem;
-    color: var(--bs-secondary-color);
+    display: grid;
+    justify-items: center;
+    gap: var(--pf-space-sm);
+
+    padding: var(--pf-space-xl) var(--pf-space-md);
+
+    color: var(--pf-secondary);
     text-align: center;
+
+    background-color: var(--pf-surface-container-low);
+    border: 1px dashed var(--pf-border-color-strong);
+    border-radius: var(--pf-radius-lg);
 }
 
 .quotation-items-empty i {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-size: 1.75rem;
+    display: grid;
+    place-items: center;
+
+    width: 3rem;
+    height: 3rem;
+
+    color: var(--pf-outline);
+    background-color: var(--pf-surface-container-high);
+
+    border-radius: var(--pf-radius-pill);
+
+    font-size: 1.25rem;
+    line-height: 1;
 }
 
 .quotation-items-empty p {
+    max-width: 30rem;
     margin: 0;
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
 }
+
+/* =========================================================
+   ACCIONES DEL FORMULARIO
+   ========================================================= */
 
 .quotation-form-actions {
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     justify-content: flex-end;
-    gap: 0.75rem;
-    padding-top: 0.5rem;
+    gap: var(--pf-space-sm);
+
+    padding-top: var(--pf-space-lg);
+
+    border-top: 1px solid var(--pf-border-color);
 }
 
+/* =========================================================
+   ESTADO VACÍO DEL MÓDULO
+   ========================================================= */
+
 .quotation-empty-state {
-    padding: 3rem 1.5rem;
+    display: grid;
+    justify-items: center;
+
+    padding: var(--pf-space-2xl) var(--pf-space-lg);
+
+    color: var(--pf-secondary);
     text-align: center;
 }
 
 .quotation-empty-state > i {
-    display: block;
-    margin-bottom: 0.75rem;
-    color: var(--bs-secondary-color);
-    font-size: 2rem;
+    display: grid;
+    place-items: center;
+
+    width: 3.5rem;
+    height: 3.5rem;
+    margin-bottom: var(--pf-space-md);
+
+    color: var(--pf-primary);
+    background-color:
+        rgba(var(--pf-primary-rgb), 0.08);
+
+    border-radius: var(--pf-radius-pill);
+
+    font-size: 1.5rem;
+    line-height: 1;
 }
 
 .quotation-empty-state h2 {
-    margin-bottom: 0.5rem;
-    font-size: 1.1rem;
+    margin: 0 0 var(--pf-space-sm);
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-title-md);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-title-md);
 }
 
 .quotation-empty-state p {
-    margin-bottom: 1rem;
-    color: var(--bs-secondary-color);
+    max-width: 32rem;
+    margin: 0 0 var(--pf-space-lg);
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-md);
+    line-height: var(--pf-line-height-body-md);
 }
+
+/* =========================================================
+   TOTALES DE LA COTIZACIÓN
+   ========================================================= */
+
+.quotation-totals {
+    display: grid;
+    gap: var(--pf-space-sm);
+
+    margin-left: auto;
+    padding: var(--pf-space-lg);
+
+    background-color: var(--pf-surface-container-low);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-lg);
+}
+
+.quotation-totals__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--pf-space-xl);
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
+}
+
+.quotation-totals__row strong {
+    color: var(--pf-on-surface);
+    font-weight: var(--pf-font-weight-semibold);
+    white-space: nowrap;
+}
+
+.quotation-totals__row--total {
+    margin-top: var(--pf-space-xs);
+    padding-top: var(--pf-space-md);
+
+    color: var(--pf-on-surface);
+
+    border-top: 1px solid var(--pf-border-color);
+
+    font-size: var(--pf-font-size-title-md);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-title-md);
+}
+
+.quotation-totals__row--total strong {
+    color: var(--pf-primary);
+    font-weight: var(--pf-font-weight-bold);
+}
+
+/* =========================================================
+   RESPONSIVE: TABLET
+   ========================================================= */
+
+@media (max-width: 767.98px) {
+    .quotation-calculation-note {
+        padding: var(--pf-space-md);
+    }
+
+    .quotation-item__summary {
+        justify-content: flex-start;
+    }
+
+    .quotation-item__amount {
+        text-align: left;
+    }
+
+    .quotation-totals {
+        width: 100%;
+        margin-left: 0;
+    }
+}
+
+/* =========================================================
+   RESPONSIVE: MÓVIL
+   ========================================================= */
 
 @media (max-width: 575.98px) {
     .quotation-form-card__header,
@@ -133,8 +427,28 @@
         flex-direction: column;
     }
 
+    .quotation-calculation-note {
+        flex-direction: column;
+    }
+
     .quotation-form-actions .btn,
-    .quotation-form-card__header .btn {
+    .quotation-form-actions .pf-button,
+    .quotation-form-card__header .btn,
+    .quotation-form-card__header .pf-button,
+    .quotation-item__header .btn,
+    .quotation-item__header .pf-button {
         width: 100%;
+    }
+
+    .quotation-empty-state {
+        padding: var(--pf-space-xl) var(--pf-space-md);
+    }
+
+    .quotation-totals {
+        padding: var(--pf-space-md);
+    }
+
+    .quotation-totals__row {
+        gap: var(--pf-space-md);
     }
 }

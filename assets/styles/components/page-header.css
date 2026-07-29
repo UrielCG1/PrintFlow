@@ -1,38 +1,98 @@
+/* styles/components/page-header.css */
+
+/* =========================================================
+   ENCABEZADO DE PÁGINA
+   ========================================================= */
+
 .pf-page-header {
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 1.25rem;
-    margin-bottom: 1.5rem;
+    gap: var(--pf-space-lg);
+
+    margin-bottom: var(--pf-space-lg);
 }
 
 .pf-page-header__content {
     min-width: 0;
 }
 
+/* =========================================================
+   JERARQUÍA DE TEXTO
+   ========================================================= */
+
 .pf-page-header__eyebrow {
-    margin: 0 0 0.25rem;
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-sm);
-    font-weight: 600;
+    display: block;
+
+    margin: 0 0 var(--pf-space-xs);
+
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-md);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-label-md);
+
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 .pf-page-header__title {
     margin: 0;
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-heading-xl);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-heading-xl);
+
+    letter-spacing: -0.02em;
 }
 
 .pf-page-header__description {
     max-width: 48rem;
-    margin: 0.5rem 0 0;
-    color: var(--pf-color-text-muted);
+    margin: var(--pf-space-sm) 0 0;
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-md);
+    font-weight: var(--pf-font-weight-regular);
+    line-height: var(--pf-line-height-body-md);
 }
+
+/* =========================================================
+   ACCIONES
+   ========================================================= */
 
 .pf-page-header__actions {
     display: flex;
+    flex-shrink: 0;
     flex-wrap: wrap;
+    align-items: center;
     justify-content: flex-end;
-    gap: 0.75rem;
+    gap: var(--pf-space-sm);
 }
+
+/* =========================================================
+   VARIANTES
+   ========================================================= */
+
+.pf-page-header--compact {
+    margin-bottom: var(--pf-space-md);
+}
+
+.pf-page-header--compact .pf-page-header__title {
+    font-size: var(--pf-font-size-heading-lg);
+    line-height: var(--pf-line-height-heading-lg);
+}
+
+.pf-page-header--bordered {
+    padding-bottom: var(--pf-space-lg);
+    border-bottom: 1px solid var(--pf-border-color);
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
 
 @media (max-width: 767.98px) {
     .pf-page-header {
@@ -41,6 +101,23 @@
     }
 
     .pf-page-header__actions {
+        width: 100%;
         justify-content: flex-start;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .pf-page-header {
+        gap: var(--pf-space-md);
+        margin-bottom: var(--pf-space-md);
+    }
+
+    .pf-page-header__title {
+        font-size: var(--pf-font-size-heading-lg);
+        line-height: var(--pf-line-height-heading-lg);
+    }
+
+    .pf-page-header__actions .pf-button {
+        width: 100%;
     }
 }

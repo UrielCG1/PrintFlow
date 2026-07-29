@@ -1,26 +1,186 @@
-.pf-modal .modal-content {
-    overflow: hidden;
-    border: 1px solid var(--pf-color-border);
-    border-radius: var(--pf-radius-lg);
-    box-shadow: var(--pf-shadow-lg);
+/* styles/components/modal.css */
+
+/* =========================================================
+   CONTENEDOR
+   ========================================================= */
+
+.pf-modal .modal-dialog {
+    margin-block: var(--pf-space-lg);
 }
 
-.pf-modal .modal-header,
-.pf-modal .modal-footer {
-    padding: var(--pf-space-4) var(--pf-space-5);
-    border-color: var(--pf-color-border);
+.pf-modal .modal-content {
+    overflow: hidden;
+
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-lg);
+    box-shadow: var(--pf-shadow-md);
+}
+
+/* =========================================================
+   ENCABEZADO
+   ========================================================= */
+
+.pf-modal .modal-header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--pf-space-md);
+
+    padding: var(--pf-space-lg);
+
+    background-color: var(--pf-surface-container-lowest);
+    border-bottom: 1px solid var(--pf-border-color);
+}
+
+.pf-modal .modal-header__content {
+    flex: 1;
+    min-width: 0;
 }
 
 .pf-modal .modal-title {
     margin: 0;
-    font-size: var(--pf-font-size-lg);
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-title-md);
     font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-title-md);
+    letter-spacing: -0.01em;
 }
+
+.pf-modal .modal-subtitle {
+    margin: var(--pf-space-xs) 0 0;
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
+}
+
+/* =========================================================
+   BOTÓN DE CIERRE
+   ========================================================= */
+
+.pf-modal .btn-close {
+    flex-shrink: 0;
+
+    margin: 0;
+    padding: var(--pf-space-sm);
+
+    border-radius: var(--pf-radius-pill);
+    opacity: 0.55;
+
+    transition:
+        background-color var(--pf-transition-fast),
+        opacity var(--pf-transition-fast);
+}
+
+.pf-modal .btn-close:hover {
+    background-color: var(--pf-surface-container-highest);
+    opacity: 0.85;
+}
+
+.pf-modal .btn-close:focus {
+    box-shadow:
+        0 0 0 0.25rem rgba(var(--pf-primary-rgb), 0.18);
+}
+
+/* =========================================================
+   CUERPO
+   ========================================================= */
 
 .pf-modal .modal-body {
-    padding: var(--pf-space-5);
+    padding: var(--pf-space-lg);
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-md);
+    line-height: var(--pf-line-height-body-md);
 }
 
+.pf-modal .modal-body > :last-child {
+    margin-bottom: 0;
+}
+
+/* =========================================================
+   PIE Y ACCIONES
+   ========================================================= */
+
 .pf-modal .modal-footer {
-    gap: var(--pf-space-3);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--pf-space-sm);
+
+    padding: var(--pf-space-md) var(--pf-space-lg);
+
+    background-color: var(--pf-surface-container-low);
+    border-top: 1px solid var(--pf-border-color);
+}
+
+/* =========================================================
+   VARIANTES
+   ========================================================= */
+
+.pf-modal--compact .modal-header,
+.pf-modal--compact .modal-body,
+.pf-modal--compact .modal-footer {
+    padding-inline: var(--pf-space-md);
+}
+
+.pf-modal--compact .modal-header,
+.pf-modal--compact .modal-body {
+    padding-block: var(--pf-space-md);
+}
+
+.pf-modal--danger .modal-header {
+    background-color: var(--pf-error-container);
+}
+
+.pf-modal--danger .modal-title {
+    color: var(--pf-on-error-container);
+}
+
+.pf-modal--warning .modal-header {
+    background-color: var(--pf-tertiary-fixed);
+}
+
+.pf-modal--warning .modal-title {
+    color: var(--pf-on-tertiary-fixed-variant);
+}
+
+/* =========================================================
+   BACKDROP
+   ========================================================= */
+
+.modal-backdrop.show {
+    opacity: 0.42;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 575.98px) {
+    .pf-modal .modal-dialog {
+        margin: var(--pf-space-sm);
+    }
+
+    .pf-modal .modal-header,
+    .pf-modal .modal-body,
+    .pf-modal .modal-footer {
+        padding: var(--pf-space-md);
+    }
+
+    .pf-modal .modal-footer {
+        align-items: stretch;
+        flex-direction: column-reverse;
+    }
+
+    .pf-modal .modal-footer .pf-button {
+        width: 100%;
+    }
 }

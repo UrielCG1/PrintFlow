@@ -1,4 +1,11 @@
+/* styles/modules/clients.css */
+
+/* =========================================================
+   CONTENEDOR DEL FORMULARIO
+   ========================================================= */
+
 .pf-clients-form-card {
+    width: 100%;
     max-width: 52rem;
 }
 
@@ -6,9 +13,26 @@
     max-width: 74rem;
 }
 
+/*
+ * El formulario está colocado directamente dentro de .pf-card,
+ * sin un elemento .pf-card__body. Por eso el espaciado interior
+ * se aplica aquí.
+ */
+.pf-clients-form-card > .pf-form {
+    padding: var(--pf-space-lg);
+}
+
+/* =========================================================
+   SECCIONES DEL FORMULARIO
+   ========================================================= */
+
 .pf-clients-form-section {
-    padding: var(--pf-space-5) 0;
-    border-bottom: 1px solid var(--pf-color-border);
+    display: grid;
+    gap: var(--pf-space-lg);
+
+    padding: var(--pf-space-lg) 0;
+
+    border-bottom: 1px solid var(--pf-border-color);
 }
 
 .pf-clients-form-section:first-child {
@@ -16,75 +40,257 @@
 }
 
 .pf-clients-form-section:last-of-type {
+    padding-bottom: 0;
     border-bottom: 0;
 }
 
+/* =========================================================
+   ENCABEZADO DE SECCIÓN
+   ========================================================= */
+
 .pf-clients-form-section__heading {
-    margin-bottom: var(--pf-space-4);
+    display: grid;
+    gap: var(--pf-space-xs);
 }
 
 .pf-clients-form-section__heading h2 {
     margin: 0;
-    color: var(--pf-color-text);
-    font-size: 1rem;
-    font-weight: 700;
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-title-md);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-title-md);
+    letter-spacing: -0.01em;
 }
 
 .pf-clients-form-section__heading p {
-    margin: var(--pf-space-1) 0 0;
-    color: var(--pf-color-text-muted);
-    font-size: 0.875rem;
+    max-width: 46rem;
+    margin: 0;
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-regular);
+    line-height: var(--pf-line-height-body-sm);
 }
 
-.pf-clients-form-grid,
+/* =========================================================
+   DISTRIBUCIÓN DE CAMPOS
+   ========================================================= */
+
+.pf-clients-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--pf-space-lg);
+    min-width: 0;
+}
+
+.pf-clients-form-grid > * {
+    min-width: 0;
+}
+
+/* =========================================================
+   FILTROS DEL LISTADO
+   ========================================================= */
+
 .pf-clients-filters {
     display: grid;
-    gap: var(--pf-space-4);
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: end;
+    gap: var(--pf-space-md);
+
+    margin-bottom: var(--pf-space-lg);
+    padding: var(--pf-space-lg);
+
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-lg);
+    box-shadow: var(--pf-shadow-sm);
 }
 
-.pf-clients-filters {
-    align-items: end;
-    margin-bottom: var(--pf-space-5);
+.pf-clients-filters > * {
+    min-width: 0;
+}
+
+.pf-clients-filters label {
+    margin-bottom: var(--pf-space-sm);
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-body-sm);
+}
+
+.pf-clients-filters .form-control,
+.pf-clients-filters .form-select {
+    min-height: 2.75rem;
+    padding: 0.625rem 0.875rem;
+
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color-strong);
+    border-radius: var(--pf-radius-md);
+    box-shadow: none;
+
+    font-size: var(--pf-font-size-body-md);
+    line-height: var(--pf-line-height-body-md);
+
+    transition:
+        border-color var(--pf-transition-fast),
+        box-shadow var(--pf-transition-fast);
+}
+
+.pf-clients-filters .form-control:hover,
+.pf-clients-filters .form-select:hover {
+    border-color: var(--pf-outline);
+}
+
+.pf-clients-filters .form-control:focus,
+.pf-clients-filters .form-select:focus {
+    border-color: var(--pf-primary);
+    box-shadow:
+        0 0 0 0.25rem rgba(var(--pf-primary-rgb), 0.16);
 }
 
 .pf-clients-filters__actions {
     display: flex;
+    align-items: center;
     justify-content: flex-end;
+    gap: var(--pf-space-sm);
 }
+
+/* =========================================================
+   PAGINACIÓN
+   ========================================================= */
 
 .pf-clients-pagination {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--pf-space-2);
+    align-items: center;
     justify-content: flex-end;
-    margin-top: var(--pf-space-5);
+    gap: var(--pf-space-sm);
+
+    margin-top: var(--pf-space-lg);
 }
 
-.pf-clients-pagination a {
+.pf-clients-pagination a,
+.pf-clients-pagination span {
+    display: inline-grid;
+    place-items: center;
+
     min-width: 2.25rem;
+    min-height: 2.25rem;
     padding: 0.375rem 0.625rem;
-    border: 1px solid var(--pf-color-border);
-    border-radius: var(--pf-radius-sm);
-    color: var(--pf-color-text);
+
+    color: var(--pf-secondary);
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-md);
+
+    font-size: var(--pf-font-size-label-md);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-label-md);
+
     text-align: center;
+    text-decoration: none;
+
+    transition:
+        color var(--pf-transition-fast),
+        background-color var(--pf-transition-fast),
+        border-color var(--pf-transition-fast),
+        box-shadow var(--pf-transition-fast);
+}
+
+.pf-clients-pagination a:hover {
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-low);
+    border-color: var(--pf-border-color-strong);
     text-decoration: none;
 }
 
-.pf-clients-pagination a:hover,
-.pf-clients-pagination a.is-active {
-    border-color: var(--pf-color-brand);
-    background-color: var(--pf-color-brand);
-    color: var(--pf-color-brand-contrast);
+.pf-clients-pagination a:focus-visible {
+    outline: none;
+    box-shadow:
+        0 0 0 0.25rem rgba(var(--pf-primary-rgb), 0.18);
 }
 
-@media (max-width: 575.98px) {
+.pf-clients-pagination a.is-active,
+.pf-clients-pagination [aria-current="page"] {
+    color: var(--pf-on-primary);
+    background-color: var(--pf-primary);
+    border-color: var(--pf-primary);
+}
+
+.pf-clients-pagination .is-disabled,
+.pf-clients-pagination [aria-disabled="true"] {
+    color: var(--pf-outline);
+    background-color: var(--pf-surface-container-low);
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+/* =========================================================
+   RESPONSIVE: TABLET
+   ========================================================= */
+
+@media (max-width: 767.98px) {
+    .pf-clients-form-card > .pf-form {
+        padding: var(--pf-space-md);
+    }
+
+    .pf-clients-form-section {
+        gap: var(--pf-space-md);
+        padding: var(--pf-space-md) 0;
+    }
+
     .pf-clients-form-grid,
     .pf-clients-filters {
         grid-template-columns: 1fr;
     }
 
+    .pf-clients-filters {
+        padding: var(--pf-space-md);
+    }
+
+    .pf-clients-filters__actions {
+        justify-content: flex-start;
+    }
+}
+
+/* =========================================================
+   RESPONSIVE: MÓVIL
+   ========================================================= */
+
+@media (max-width: 575.98px) {
+    .pf-clients-form-card {
+        border-radius: var(--pf-radius-md);
+    }
+
+    .pf-clients-form-section__heading h2 {
+        font-size: var(--pf-font-size-body-md);
+        line-height: var(--pf-line-height-body-md);
+    }
+
+    .pf-clients-form-grid {
+        gap: var(--pf-space-md);
+    }
+
+    .pf-clients-filters__actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
     .pf-clients-filters__actions .pf-button {
         width: 100%;
+    }
+
+    .pf-clients-pagination {
+        justify-content: center;
+        margin-top: var(--pf-space-md);
     }
 }

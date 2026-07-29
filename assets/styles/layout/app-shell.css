@@ -1,33 +1,114 @@
+/* styles/layout/app-shell.css */
+
+/* =========================================================
+   DOCUMENTO DE LA APLICACIÓN
+   ========================================================= */
+
+body.pf-app,
 .pf-app-body {
     min-width: 20rem;
-    background-color: var(--pf-color-canvas);
+
+    color: var(--pf-on-surface);
+    background-color: var(--pf-background);
 }
+
+/* =========================================================
+   ESTRUCTURA PRINCIPAL
+   ========================================================= */
 
 .pf-app-shell {
     display: grid;
-    grid-template-columns: 17rem minmax(0, 1fr);
+    grid-template-columns:
+        var(--pf-sidebar-width)
+        minmax(0, 1fr);
+
+    width: 100%;
     min-height: 100vh;
+
+    background-color: var(--pf-background);
 }
+
+/* =========================================================
+   ÁREA DERECHA DE LA APLICACIÓN
+   Header + contenido
+   ========================================================= */
 
 .pf-app-stage {
     display: flex;
-    min-width: 0;
     flex-direction: column;
+
+    min-width: 0;
+    min-height: 100vh;
+
+    background-color: var(--pf-background);
 }
 
+/* =========================================================
+   CONTENIDO PRINCIPAL
+   ========================================================= */
+
 .pf-app-content {
+    display: flex;
     flex: 1;
+    flex-direction: column;
+
+    min-width: 0;
+    min-height: calc(
+        100vh - var(--pf-header-height)
+    );
+
+    background-color: var(--pf-background);
 }
+
+/* =========================================================
+   CONTENEDOR DE PÁGINA
+   ========================================================= */
 
 .pf-page {
     width: min(100%, 90rem);
     margin-inline: auto;
-    padding: var(--pf-space-page);
+    padding: var(--pf-page-padding);
 }
+
+.pf-page--full {
+    width: 100%;
+    max-width: none;
+}
+
+.pf-page--compact {
+    width: min(100%, 64rem);
+}
+
+.pf-page--narrow {
+    width: min(100%, 48rem);
+}
+
+/* =========================================================
+   DISTRIBUCIÓN INTERNA DE PÁGINA
+   ========================================================= */
+
+.pf-page__content {
+    display: grid;
+    gap: var(--pf-content-gap);
+    min-width: 0;
+}
+
+.pf-page__section {
+    min-width: 0;
+}
+
+/* =========================================================
+   BACKDROP DEL SIDEBAR
+   Solo visible en dispositivos pequeños
+   ========================================================= */
 
 .pf-app-sidebar-backdrop {
     display: none;
 }
+
+/* =========================================================
+   TABLET Y MÓVIL
+   ========================================================= */
 
 @media (max-width: 991.98px) {
     .pf-app-shell {
@@ -36,24 +117,69 @@
 
     .pf-app-sidebar-backdrop {
         position: fixed;
-        z-index: 50;
         inset: 0;
+        z-index: 1030;
+
         display: block;
+
         width: 100%;
+        height: 100%;
+        padding: 0;
+
+        background-color: rgba(11, 28, 48, 0.42);
         border: 0;
-        background-color: rgb(23 26 24 / 0.35);
+
         cursor: default;
         opacity: 0;
+        visibility: hidden;
         pointer-events: none;
-        transition: opacity var(--pf-transition-base);
+
+        transition:
+            opacity var(--pf-transition-normal),
+            visibility var(--pf-transition-normal);
     }
 
     .pf-app-sidebar-backdrop.is-visible {
         opacity: 1;
+        visibility: visible;
         pointer-events: auto;
     }
 
     body.pf-sidebar-open {
         overflow: hidden;
+    }
+}
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 767.98px) {
+    .pf-page {
+        padding: var(--pf-space-lg);
+    }
+}
+
+/* =========================================================
+   MÓVIL
+   ========================================================= */
+
+@media (max-width: 575.98px) {
+    .pf-page {
+        padding: var(--pf-space-md);
+    }
+
+    .pf-page__content {
+        gap: var(--pf-space-md);
+    }
+}
+
+/* =========================================================
+   ACCESIBILIDAD
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+    .pf-app-sidebar-backdrop {
+        transition: none;
     }
 }

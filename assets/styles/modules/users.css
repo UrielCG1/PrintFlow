@@ -1,291 +1,558 @@
-.pf-users-page {
+/* styles/modules/users.css */
+
+/* =========================================================
+   ESTRUCTURA DEL MÓDULO
+   ========================================================= */
+
+.pf-users-page,
+.pf-user-form {
     display: grid;
-    gap: 1.5rem;
+    gap: var(--pf-content-gap);
+    min-width: 0;
 }
+
+/* =========================================================
+   ENCABEZADO
+   ========================================================= */
 
 .pf-users-heading {
     display: flex;
-    align-items: end;
+    align-items: flex-end;
     justify-content: space-between;
-    gap: 1.5rem;
+    gap: var(--pf-space-lg);
 }
 
 .pf-users-heading--form {
-    align-items: start;
+    align-items: flex-start;
+}
+
+.pf-users-heading > div {
+    min-width: 0;
 }
 
 .pf-users-heading__eyebrow {
-    margin: 0 0 0.4rem;
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-xs);
-    font-weight: 700;
+    margin: 0 0 var(--pf-space-xs);
+
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-md);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-label-md);
+
     letter-spacing: 0.08em;
     text-transform: uppercase;
 }
 
 .pf-users-heading h1 {
     margin: 0;
-    color: var(--pf-color-text-strong);
-    font-size: clamp(1.65rem, 2vw, 2rem);
-    line-height: 1.2;
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-heading-xl);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-heading-xl);
+
+    letter-spacing: -0.02em;
 }
 
 .pf-users-heading p:not(.pf-users-heading__eyebrow) {
-    margin: 0.5rem 0 0;
-    color: var(--pf-color-text-muted);
+    max-width: 48rem;
+    margin: var(--pf-space-sm) 0 0;
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-md);
+    line-height: var(--pf-line-height-body-md);
 }
 
 .pf-users-heading__action {
     flex-shrink: 0;
 }
 
+/* =========================================================
+   ENLACE PARA REGRESAR
+   ========================================================= */
+
 .pf-users-back-link {
     display: inline-flex;
     align-items: center;
-    gap: 0.45rem;
-    margin-bottom: 1rem;
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-sm);
+    gap: var(--pf-space-sm);
+
+    width: fit-content;
+    margin-bottom: var(--pf-space-md);
+
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-medium);
+    line-height: var(--pf-line-height-body-sm);
+
     text-decoration: none;
+
+    transition:
+        color var(--pf-transition-fast),
+        transform var(--pf-transition-fast);
 }
 
 .pf-users-back-link:hover {
-    color: var(--pf-color-text-strong);
+    color: var(--pf-on-surface);
+    text-decoration: none;
+    transform: translateX(-0.125rem);
 }
+
+.pf-users-back-link i {
+    font-size: 0.875rem;
+    line-height: 1;
+}
+
+/* =========================================================
+   TARJETAS
+   ========================================================= */
 
 .pf-users-toolbar,
 .pf-users-table-card,
 .pf-user-form__card {
-    border: 1px solid var(--pf-color-border);
-    border-radius: var(--pf-radius-md);
-    background-color: var(--pf-color-surface);
+    min-width: 0;
+
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-lg);
+    box-shadow: var(--pf-shadow-sm);
 }
+
+.pf-users-table-card {
+    overflow: hidden;
+}
+
+/* =========================================================
+   BARRA DE BÚSQUEDA
+   ========================================================= */
 
 .pf-users-toolbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
-    padding: 1rem;
+    gap: var(--pf-space-md);
+
+    padding: var(--pf-space-md);
 }
 
 .pf-users-search {
     display: flex;
+    flex: 1;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--pf-space-sm);
+
     width: min(100%, 42rem);
+    min-width: 0;
 }
 
 .pf-users-search__field {
     display: flex;
-    min-width: 0;
     flex: 1;
     align-items: center;
-    gap: 0.65rem;
-    min-height: 2.7rem;
-    padding: 0 0.85rem;
-    border: 1px solid var(--pf-color-border);
-    border-radius: var(--pf-radius-sm);
-    background-color: var(--pf-color-surface);
+    gap: var(--pf-space-sm);
+
+    min-width: 0;
+    min-height: 2.75rem;
+    padding: 0 var(--pf-space-md);
+
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color-strong);
+    border-radius: var(--pf-radius-md);
+
+    transition:
+        border-color var(--pf-transition-fast),
+        box-shadow var(--pf-transition-fast);
+}
+
+.pf-users-search__field:hover {
+    border-color: var(--pf-outline);
 }
 
 .pf-users-search__field:focus-within {
-    border-color: var(--pf-color-brand);
-    box-shadow: 0 0 0 0.2rem rgb(var(--pf-color-brand-rgb) / 0.16);
+    border-color: var(--pf-primary);
+    box-shadow:
+        0 0 0 0.25rem
+        rgba(var(--pf-primary-rgb), 0.16);
 }
 
 .pf-users-search__field i {
-    color: var(--pf-color-text-muted);
+    flex-shrink: 0;
+
+    color: var(--pf-secondary);
+
+    font-size: 1rem;
+    line-height: 1;
 }
 
 .pf-users-search__field input {
     width: 100%;
+    min-width: 0;
+    min-height: 2.625rem;
+    padding: 0;
+
+    color: var(--pf-on-surface);
+    background-color: transparent;
+
     border: 0;
     outline: 0;
-    background: transparent;
-    color: var(--pf-color-text-strong);
-    font-size: var(--pf-font-size-sm);
+    box-shadow: none;
+
+    font: inherit;
+    font-size: var(--pf-font-size-body-md);
+    line-height: var(--pf-line-height-body-md);
+}
+
+.pf-users-search__field input::placeholder {
+    color: var(--pf-secondary);
+    opacity: 0.72;
 }
 
 .pf-users-search__clear {
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-sm);
-    text-decoration: underline;
-    text-underline-offset: 0.18em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 2.5rem;
+    padding-inline: var(--pf-space-sm);
+
+    color: var(--pf-secondary);
+
+    border-radius: var(--pf-radius-md);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-medium);
+    line-height: var(--pf-line-height-body-sm);
+
+    text-decoration: none;
+    white-space: nowrap;
+
+    transition:
+        color var(--pf-transition-fast),
+        background-color var(--pf-transition-fast);
+}
+
+.pf-users-search__clear:hover {
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-low);
+    text-decoration: none;
 }
 
 .pf-users-toolbar__count {
     flex-shrink: 0;
     margin: 0;
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-sm);
+
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
+
+    white-space: nowrap;
 }
 
-.pf-button--secondary {
-    border-color: var(--pf-color-border);
-    background-color: var(--pf-color-surface);
-    color: var(--pf-color-text-strong);
+.pf-users-toolbar__count strong {
+    color: var(--pf-on-surface);
+    font-weight: var(--pf-font-weight-bold);
 }
 
-.pf-button--secondary:hover {
-    border-color: var(--pf-color-text-muted);
-    background-color: var(--pf-color-surface-subtle);
-    color: var(--pf-color-text-strong);
-}
+/* =========================================================
+   CONTENEDOR DE TABLA
+   ========================================================= */
 
 .pf-users-table-wrap {
+    width: 100%;
     overflow-x: auto;
+
+    scrollbar-color:
+        var(--pf-outline-variant)
+        transparent;
+    scrollbar-width: thin;
 }
+
+.pf-users-table-wrap::-webkit-scrollbar {
+    height: 0.5rem;
+}
+
+.pf-users-table-wrap::-webkit-scrollbar-track {
+    background-color: transparent;
+}
+
+.pf-users-table-wrap::-webkit-scrollbar-thumb {
+    background-color: var(--pf-outline-variant);
+    border-radius: var(--pf-radius-pill);
+}
+
+/* =========================================================
+   TABLA DE USUARIOS
+   ========================================================= */
 
 .pf-users-table {
     width: 100%;
     min-width: 72rem;
+
+    color: var(--pf-on-surface);
+
     border-collapse: collapse;
+
+    font-size: var(--pf-font-size-body-md);
+    line-height: var(--pf-line-height-body-md);
 }
 
 .pf-users-table th,
 .pf-users-table td {
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid var(--pf-color-border);
+    padding: var(--pf-space-md) var(--pf-space-lg);
+
+    border-bottom: 1px solid var(--pf-border-color);
+
     text-align: left;
     vertical-align: middle;
 }
 
+.pf-users-table thead {
+    background-color: var(--pf-surface-container-low);
+}
+
 .pf-users-table th {
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-xs);
-    font-weight: 700;
+    color: var(--pf-outline);
+    background-color: var(--pf-surface-container-low);
+
+    font-size: var(--pf-font-size-label-md);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-label-md);
+
     letter-spacing: 0.05em;
     text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.pf-users-table tbody tr {
+    background-color: var(--pf-surface-container-lowest);
+
+    transition: background-color var(--pf-transition-fast);
+}
+
+.pf-users-table tbody tr:hover {
+    background-color:
+        rgba(var(--pf-primary-rgb), 0.035);
 }
 
 .pf-users-table tbody tr:last-child td {
     border-bottom: 0;
 }
 
-.pf-users-table tbody tr:hover {
-    background-color: var(--pf-color-surface-subtle);
-}
-
 .pf-users-table__actions-column {
     width: 15rem;
+    text-align: right !important;
+    white-space: nowrap;
 }
+
+/* =========================================================
+   IDENTIDAD DEL USUARIO
+   ========================================================= */
 
 .pf-user-identity {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--pf-space-md);
+
     min-width: 13rem;
 }
 
 .pf-user-identity__avatar {
     display: grid;
-    width: 2.4rem;
-    height: 2.4rem;
     flex: 0 0 auto;
     place-items: center;
-    border: 1px solid #B3EFBA;
-    border-radius: 50%;
-    background-color: var(--pf-color-brand-soft);
-    color: #0A5A0F;
-    font-size: var(--pf-font-size-sm);
-    font-weight: 700;
+
+    width: 2.5rem;
+    height: 2.5rem;
+
+    color: var(--pf-primary);
+    background-color:
+        rgba(var(--pf-primary-rgb), 0.08);
+
+    border: 1px solid
+        rgba(var(--pf-primary-rgb), 0.16);
+    border-radius: var(--pf-radius-pill);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: 1;
 }
 
-.pf-user-identity div {
+.pf-user-identity > div {
     display: grid;
-    gap: 0.15rem;
+    min-width: 0;
+    gap: 0.125rem;
 }
 
 .pf-user-identity strong {
-    color: var(--pf-color-text-strong);
-    font-size: var(--pf-font-size-sm);
+    overflow: hidden;
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-md);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-body-md);
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .pf-user-identity span:not(.pf-user-identity__avatar) {
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-xs);
+    overflow: hidden;
+
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-sm);
+    line-height: var(--pf-line-height-label-sm);
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
+
+/* =========================================================
+   CONTACTO
+   ========================================================= */
 
 .pf-users-table__email {
     display: block;
-    color: var(--pf-color-text);
-    font-size: var(--pf-font-size-sm);
+    max-width: 18rem;
+    overflow: hidden;
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
+
     text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .pf-users-table__email:hover {
-    color: var(--pf-color-text-strong);
+    color: var(--pf-primary);
     text-decoration: underline;
 }
 
 .pf-users-table__phone,
 .pf-users-table__muted {
     display: block;
-    margin-top: 0.2rem;
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-xs);
+    margin-top: 0.125rem;
+
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-sm);
+    line-height: var(--pf-line-height-label-sm);
 }
+
+/* =========================================================
+   ROLES ASIGNADOS
+   ========================================================= */
 
 .pf-user-roles {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.35rem;
-    max-width: 14rem;
+    gap: 0.375rem;
+
+    max-width: 15rem;
 }
 
 .pf-user-role {
     display: inline-flex;
     align-items: center;
-    min-height: 1.65rem;
-    padding: 0.15rem 0.5rem;
-    border: 1px solid var(--pf-color-border);
-    border-radius: 999px;
-    background-color: var(--pf-color-surface-subtle);
-    color: var(--pf-color-text);
-    font-size: var(--pf-font-size-xs);
-    font-weight: 600;
+
+    min-height: 1.625rem;
+    padding: 0.25rem 0.625rem;
+
+    color: var(--pf-on-secondary-container);
+    background-color: var(--pf-secondary-container);
+
+    border: 1px solid var(--pf-secondary-fixed-dim);
+    border-radius: var(--pf-radius-pill);
+
+    font-size: var(--pf-font-size-label-sm);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-label-sm);
+
+    white-space: nowrap;
 }
 
 .pf-user-roles__empty {
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-xs);
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-sm);
+    line-height: var(--pf-line-height-label-sm);
 }
+
+/* =========================================================
+   ESTADO
+   ========================================================= */
 
 .pf-user-status {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    font-size: var(--pf-font-size-xs);
-    font-weight: 700;
+    gap: 0.375rem;
+
+    font-size: var(--pf-font-size-label-sm);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-label-sm);
+
     white-space: nowrap;
 }
 
 .pf-user-status--active {
-    color: #0A5A0F;
+    color: var(--pf-primary);
 }
 
 .pf-user-status--inactive {
-    color: #7A5A00;
+    color: var(--pf-tertiary);
 }
+
+.pf-user-status .bi-circle-fill,
+.pf-user-status .bi-dot {
+    font-size: 0.5rem;
+}
+
+/* =========================================================
+   ÚLTIMO ACCESO
+   ========================================================= */
 
 .pf-users-table__last-login {
     display: grid;
-    gap: 0.15rem;
-    color: var(--pf-color-text);
-    font-size: var(--pf-font-size-sm);
+    gap: 0.125rem;
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-medium);
+    line-height: var(--pf-line-height-body-sm);
+
     white-space: nowrap;
 }
 
 .pf-users-table__last-login span {
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-xs);
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-sm);
+    font-weight: var(--pf-font-weight-regular);
+    line-height: var(--pf-line-height-label-sm);
 }
+
+/* =========================================================
+   ACCIONES
+   ========================================================= */
 
 .pf-user-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.35rem;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.375rem;
 }
 
 .pf-user-actions form {
@@ -295,16 +562,31 @@
 .pf-user-action {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    min-height: 2rem;
-    padding: 0.35rem 0.5rem;
-    border: 1px solid var(--pf-color-border);
-    border-radius: var(--pf-radius-sm);
-    background-color: var(--pf-color-surface);
-    color: var(--pf-color-text);
-    font-size: var(--pf-font-size-xs);
-    font-weight: 600;
+    justify-content: center;
+    gap: 0.375rem;
+
+    min-height: 2.25rem;
+    padding: 0.5rem 0.75rem;
+
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-md);
+
+    font: inherit;
+    font-size: var(--pf-font-size-label-sm);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-label-sm);
+
     text-decoration: none;
+    white-space: nowrap;
+
+    transition:
+        color var(--pf-transition-fast),
+        background-color var(--pf-transition-fast),
+        border-color var(--pf-transition-fast),
+        box-shadow var(--pf-transition-fast);
 }
 
 button.pf-user-action {
@@ -312,156 +594,292 @@ button.pf-user-action {
 }
 
 .pf-user-action:hover {
-    border-color: var(--pf-color-text-muted);
-    background-color: var(--pf-color-surface-subtle);
-    color: var(--pf-color-text-strong);
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-low);
+    border-color: var(--pf-border-color-strong);
+    text-decoration: none;
+}
+
+.pf-user-action:focus-visible {
+    outline: none;
+    box-shadow:
+        0 0 0 0.25rem
+        rgba(var(--pf-primary-rgb), 0.18);
+}
+
+.pf-user-action i {
+    flex-shrink: 0;
+    font-size: 0.875rem;
+    line-height: 1;
 }
 
 .pf-user-action--danger {
-    color: var(--pf-color-danger);
+    color: var(--pf-error);
+}
+
+.pf-user-action--danger:hover {
+    color: var(--pf-on-error-container);
+    background-color: var(--pf-error-container);
+    border-color:
+        rgba(var(--pf-error-rgb), 0.25);
 }
 
 .pf-user-action--success {
-    color: #0A5A0F;
+    color: var(--pf-primary);
+}
+
+.pf-user-action--success:hover {
+    color: var(--pf-on-primary-container);
+    background-color:
+        rgba(var(--pf-primary-container-rgb), 0.1);
+    border-color:
+        rgba(var(--pf-primary-container-rgb), 0.24);
 }
 
 .pf-user-actions__self {
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-xs);
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-sm);
+    line-height: var(--pf-line-height-label-sm);
 }
+
+/* =========================================================
+   ESTADO VACÍO
+   ========================================================= */
 
 .pf-users-empty {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.9rem;
+    gap: var(--pf-space-md);
+
     min-height: 13rem;
-    color: var(--pf-color-text-muted);
+    padding: var(--pf-space-xl);
+
+    color: var(--pf-secondary);
     text-align: left;
 }
 
 .pf-users-empty > i {
-    font-size: 1.75rem;
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+
+    width: 3rem;
+    height: 3rem;
+
+    color: var(--pf-outline);
+    background-color: var(--pf-surface-container-low);
+
+    border-radius: var(--pf-radius-pill);
+
+    font-size: 1.25rem;
+    line-height: 1;
 }
 
-.pf-users-empty div {
+.pf-users-empty > div {
     display: grid;
-    gap: 0.25rem;
+    max-width: 28rem;
+    gap: var(--pf-space-xs);
 }
 
 .pf-users-empty strong {
-    color: var(--pf-color-text);
-    font-size: var(--pf-font-size-sm);
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-md);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-body-md);
 }
 
 .pf-users-empty span {
-    font-size: var(--pf-font-size-xs);
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
 }
 
+/* =========================================================
+   PAGINACIÓN
+   ========================================================= */
+
 .pf-users-pagination {
-    display: flex;
+    display: grid;
+    grid-template-columns:
+        minmax(7rem, 1fr)
+        auto
+        minmax(7rem, 1fr);
     align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 1rem 1.25rem;
-    border-top: 1px solid var(--pf-color-border);
+    gap: var(--pf-space-md);
+
+    padding: var(--pf-space-md) var(--pf-space-lg);
+
+    background-color: var(--pf-surface-container-low);
+    border-top: 1px solid var(--pf-border-color);
+}
+
+.pf-users-pagination > :first-child {
+    justify-self: start;
+}
+
+.pf-users-pagination > :last-child {
+    justify-self: end;
 }
 
 .pf-users-pagination__button {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    min-height: 2.3rem;
-    padding: 0.45rem 0.7rem;
-    border: 1px solid var(--pf-color-border);
-    border-radius: var(--pf-radius-sm);
-    color: var(--pf-color-text);
-    font-size: var(--pf-font-size-sm);
+    justify-content: center;
+    gap: var(--pf-space-sm);
+
+    min-height: 2.25rem;
+    padding: 0.5rem 0.75rem;
+
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-md);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-body-sm);
+
     text-decoration: none;
+
+    transition:
+        color var(--pf-transition-fast),
+        background-color var(--pf-transition-fast),
+        border-color var(--pf-transition-fast);
 }
 
 .pf-users-pagination__button:hover {
-    background-color: var(--pf-color-surface-subtle);
-    color: var(--pf-color-text-strong);
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-high);
+    border-color: var(--pf-border-color-strong);
+    text-decoration: none;
 }
 
-.pf-users-pagination__button.is-disabled {
+.pf-users-pagination__button.is-disabled,
+.pf-users-pagination__button[aria-disabled="true"] {
+    color: var(--pf-outline);
+
     cursor: not-allowed;
-    opacity: 0.48;
+    pointer-events: none;
+    opacity: 0.55;
 }
 
 .pf-users-pagination__summary {
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-sm);
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
+
+    text-align: center;
+    white-space: nowrap;
 }
 
 .pf-users-pagination__summary strong {
-    color: var(--pf-color-text);
+    color: var(--pf-on-surface);
+    font-weight: var(--pf-font-weight-bold);
 }
 
-.pf-user-form {
-    display: grid;
-    gap: 1.5rem;
-}
+/* =========================================================
+   FORMULARIO: DISTRIBUCIÓN
+   ========================================================= */
 
 .pf-user-form__grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(20rem, 0.8fr);
-    gap: 1.5rem;
+    grid-template-columns:
+        minmax(0, 1.2fr)
+        minmax(20rem, 0.8fr);
     align-items: start;
+    gap: var(--pf-space-lg);
 }
 
 .pf-user-form__sidebar {
     display: grid;
-    gap: 1.5rem;
+    gap: var(--pf-space-lg);
 }
 
 .pf-user-form__card {
-    padding: 1.5rem;
+    padding: var(--pf-space-lg);
 }
+
+/* =========================================================
+   FORMULARIO: ENCABEZADO DE SECCIÓN
+   ========================================================= */
 
 .pf-user-form__section-header {
     display: flex;
-    gap: 0.8rem;
-    margin-bottom: 1.5rem;
+    align-items: flex-start;
+    gap: var(--pf-space-md);
+
+    margin-bottom: var(--pf-space-lg);
+}
+
+.pf-user-form__section-header > div:last-child {
+    min-width: 0;
 }
 
 .pf-user-form__section-icon {
     display: grid;
-    width: 2.4rem;
-    height: 2.4rem;
     flex: 0 0 auto;
     place-items: center;
-    border: 1px solid #B3EFBA;
-    border-radius: var(--pf-radius-sm);
-    background-color: var(--pf-color-brand-soft);
-    color: #0A5A0F;
+
+    width: 2.5rem;
+    height: 2.5rem;
+
+    color: var(--pf-primary);
+    background-color:
+        rgba(var(--pf-primary-rgb), 0.07);
+
+    border: 1px solid
+        rgba(var(--pf-primary-rgb), 0.14);
+    border-radius: var(--pf-radius-md);
+}
+
+.pf-user-form__section-icon i {
+    font-size: 1.125rem;
+    line-height: 1;
 }
 
 .pf-user-form__section-header h2 {
     margin: 0;
-    color: var(--pf-color-text-strong);
-    font-size: 1rem;
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-title-md);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-title-md);
 }
 
 .pf-user-form__section-header p {
-    margin: 0.3rem 0 0;
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-sm);
-    line-height: 1.45;
+    margin: var(--pf-space-xs) 0 0;
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
 }
+
+/* =========================================================
+   FORMULARIO: CAMPOS
+   ========================================================= */
 
 .pf-user-form__fields {
     display: grid;
-    gap: 1rem;
+    gap: var(--pf-space-md);
 }
 
 .pf-user-form label {
     display: block;
-    margin-bottom: 0.45rem;
-    color: var(--pf-color-text-strong);
-    font-size: var(--pf-font-size-sm);
-    font-weight: 650;
+    margin-bottom: var(--pf-space-sm);
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-body-sm);
 }
 
 .pf-user-form input[type="text"],
@@ -469,72 +887,186 @@ button.pf-user-action {
 .pf-user-form input[type="tel"],
 .pf-user-form input[type="password"],
 .pf-user-form textarea,
-.pf-user-form select {
+.pf-user-form select,
+.pf-user-form .form-control,
+.pf-user-form .form-select {
     width: 100%;
     min-height: 2.75rem;
-    padding: 0.65rem 0.75rem;
-    border: 1px solid var(--pf-color-border);
-    border-radius: var(--pf-radius-sm);
+    padding: 0.625rem 0.875rem;
+
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color-strong);
+    border-radius: var(--pf-radius-md);
     outline: 0;
-    background-color: var(--pf-color-surface);
-    color: var(--pf-color-text-strong);
+    box-shadow: none;
+
     font: inherit;
+    font-size: var(--pf-font-size-body-md);
+    line-height: var(--pf-line-height-body-md);
+
+    transition:
+        background-color var(--pf-transition-fast),
+        border-color var(--pf-transition-fast),
+        box-shadow var(--pf-transition-fast);
+}
+
+.pf-user-form textarea,
+.pf-user-form textarea.form-control {
+    min-height: 7rem;
+    resize: vertical;
+}
+
+.pf-user-form input::placeholder,
+.pf-user-form textarea::placeholder {
+    color: var(--pf-secondary);
+    opacity: 0.72;
+}
+
+.pf-user-form input:hover:not(:disabled),
+.pf-user-form textarea:hover:not(:disabled),
+.pf-user-form select:hover:not(:disabled) {
+    border-color: var(--pf-outline);
 }
 
 .pf-user-form input:focus,
 .pf-user-form textarea:focus,
-.pf-user-form select:focus {
-    border-color: var(--pf-color-brand);
-    box-shadow: 0 0 0 0.2rem rgb(var(--pf-color-brand-rgb) / 0.16);
+.pf-user-form select:focus,
+.pf-user-form .form-control:focus,
+.pf-user-form .form-select:focus {
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+
+    border-color: var(--pf-primary);
+
+    box-shadow:
+        0 0 0 0.25rem
+        rgba(var(--pf-primary-rgb), 0.16);
 }
+
+.pf-user-form input:disabled,
+.pf-user-form textarea:disabled,
+.pf-user-form select:disabled {
+    color: var(--pf-secondary);
+    background-color: var(--pf-surface-container-low);
+
+    border-color: var(--pf-border-color);
+
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+/* =========================================================
+   FORMULARIO: AYUDA Y ERRORES
+   ========================================================= */
 
 .pf-user-form small,
 .pf-user-form .form-text {
     display: block;
-    margin-top: 0.35rem;
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-xs);
-    line-height: 1.45;
+    margin-top: var(--pf-space-xs);
+
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-sm);
+    line-height: var(--pf-line-height-label-sm);
 }
 
-.pf-user-form ul {
+.pf-user-form .invalid-feedback,
+.pf-user-form .pf-form-errors {
+    margin-top: var(--pf-space-xs);
+
+    color: var(--pf-error);
+
+    font-size: var(--pf-font-size-label-sm);
+    font-weight: var(--pf-font-weight-medium);
+    line-height: var(--pf-line-height-label-sm);
+}
+
+.pf-user-form .invalid-feedback ul,
+.pf-user-form .pf-form-errors ul {
     display: grid;
-    gap: 0.25rem;
-    margin: 0.5rem 0 0;
+    gap: var(--pf-space-xs);
+
+    margin: 0;
     padding: 0;
-    color: var(--pf-color-danger);
-    font-size: var(--pf-font-size-xs);
+
     list-style: none;
 }
 
-.pf-user-form__roles > div {
-    display: grid;
-    gap: 0.55rem;
+.pf-user-form .is-invalid {
+    border-color: var(--pf-error);
 }
 
-.pf-user-form__roles > div > div {
+.pf-user-form .is-invalid:focus {
+    border-color: var(--pf-error);
+
+    box-shadow:
+        0 0 0 0.25rem
+        rgba(var(--pf-error-rgb), 0.14);
+}
+
+/* =========================================================
+   FORMULARIO: ROLES
+   ========================================================= */
+
+.pf-user-form__roles > div {
+    display: grid;
+    gap: var(--pf-space-sm);
+}
+
+.pf-user-form__roles > div > div,
+.pf-user-form__roles .form-check {
     display: flex;
-    align-items: start;
-    gap: 0.6rem;
-    padding: 0.7rem;
-    border: 1px solid var(--pf-color-border);
-    border-radius: var(--pf-radius-sm);
-    background-color: var(--pf-color-surface-subtle);
+    align-items: flex-start;
+    gap: var(--pf-space-sm);
+
+    min-width: 0;
+    margin: 0;
+    padding: 0.75rem;
+
+    background-color: var(--pf-surface-container-low);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-md);
+
+    transition:
+        background-color var(--pf-transition-fast),
+        border-color var(--pf-transition-fast);
+}
+
+.pf-user-form__roles > div > div:hover,
+.pf-user-form__roles .form-check:hover {
+    background-color: var(--pf-surface-container);
+    border-color: var(--pf-border-color-strong);
 }
 
 .pf-user-form__roles input[type="checkbox"] {
+    flex: 0 0 auto;
+
     width: 1rem;
     height: 1rem;
-    flex: 0 0 auto;
-    margin-top: 0.15rem;
-    accent-color: var(--pf-color-brand);
+    margin: 0.15rem 0 0;
+
+    accent-color: var(--pf-primary);
+    cursor: pointer;
 }
 
 .pf-user-form__roles label {
+    min-width: 0;
     margin: 0;
-    font-size: var(--pf-font-size-sm);
-    font-weight: 600;
-    line-height: 1.45;
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-body-sm);
+
+    cursor: pointer;
+}
+
+.pf-user-form__roles input[type="checkbox"]:disabled {
+    cursor: not-allowed;
 }
 
 .pf-user-form__roles input[type="checkbox"]:disabled + label {
@@ -542,52 +1074,100 @@ button.pf-user-action {
     opacity: 0.6;
 }
 
+/* =========================================================
+   FORMULARIO: AVISO
+   ========================================================= */
+
 .pf-user-form__notice {
     display: flex;
-    gap: 0.55rem;
-    margin: 0 0 1rem;
-    padding: 0.75rem;
-    border: 1px solid #F3D68A;
-    border-radius: var(--pf-radius-sm);
-    background-color: #FFF8E4;
-    color: #6C4D00;
-    font-size: var(--pf-font-size-xs);
-    line-height: 1.45;
+    align-items: flex-start;
+    gap: var(--pf-space-sm);
+
+    margin: 0 0 var(--pf-space-md);
+    padding: var(--pf-space-md);
+
+    color: var(--pf-on-tertiary-fixed-variant);
+    background-color: var(--pf-tertiary-fixed);
+
+    border: 1px solid var(--pf-tertiary-fixed-dim);
+    border-radius: var(--pf-radius-md);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
 }
+
+.pf-user-form__notice i {
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+
+    color: var(--pf-tertiary);
+
+    font-size: 1rem;
+    line-height: 1;
+}
+
+/* =========================================================
+   RESUMEN DE CUENTA
+   ========================================================= */
 
 .pf-user-form__account-summary {
     display: grid;
-    gap: 0.3rem;
+    gap: var(--pf-space-xs);
 }
 
 .pf-user-form__summary-label {
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-xs);
-    font-weight: 700;
+    color: var(--pf-outline);
+
+    font-size: var(--pf-font-size-label-sm);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-label-sm);
+
     letter-spacing: 0.06em;
     text-transform: uppercase;
 }
 
 .pf-user-form__account-summary strong {
-    color: var(--pf-color-text-strong);
-    font-size: var(--pf-font-size-sm);
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-md);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-body-md);
 }
 
 .pf-user-form__account-summary span:last-child {
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-xs);
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-sm);
+    line-height: var(--pf-line-height-label-sm);
 }
+
+/* =========================================================
+   FORMULARIO: PIE
+   ========================================================= */
 
 .pf-user-form__footer {
     display: flex;
-    justify-content: end;
-    gap: 0.75rem;
-    padding-top: 0.25rem;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--pf-space-sm);
+
+    padding-top: var(--pf-space-lg);
+
+    border-top: 1px solid var(--pf-border-color);
 }
+
+/* =========================================================
+   RESTABLECIMIENTO DE CONTRASEÑA
+   ========================================================= */
 
 .pf-user-reset-form {
     width: min(100%, 42rem);
 }
+
+/* =========================================================
+   RESPONSIVE: TABLET
+   ========================================================= */
 
 @media (max-width: 991.98px) {
     .pf-user-form__grid {
@@ -598,11 +1178,20 @@ button.pf-user-action {
 @media (max-width: 767.98px) {
     .pf-users-heading,
     .pf-users-toolbar {
-        align-items: stretch;
+        align-items: flex-start;
         flex-direction: column;
     }
 
+    .pf-users-heading h1 {
+        font-size: var(--pf-font-size-heading-lg);
+        line-height: var(--pf-line-height-heading-lg);
+    }
+
     .pf-users-heading__action {
+        width: 100%;
+    }
+
+    .pf-users-heading__action .pf-button {
         width: 100%;
     }
 
@@ -612,7 +1201,7 @@ button.pf-user-action {
     }
 
     .pf-users-search__field {
-        min-width: 100%;
+        flex-basis: 100%;
     }
 
     .pf-users-toolbar__count {
@@ -620,7 +1209,34 @@ button.pf-user-action {
     }
 }
 
+/* =========================================================
+   RESPONSIVE: MÓVIL
+   ========================================================= */
+
 @media (max-width: 575.98px) {
+    .pf-users-page,
+    .pf-user-form {
+        gap: var(--pf-space-md);
+    }
+
+    .pf-users-toolbar {
+        padding: var(--pf-space-md);
+    }
+
+    .pf-users-search__clear {
+        width: 100%;
+    }
+
+    .pf-users-table-card {
+        overflow: visible;
+
+        background-color: transparent;
+
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
     .pf-users-table-wrap {
         overflow: visible;
     }
@@ -632,50 +1248,61 @@ button.pf-user-action {
 
     .pf-users-table thead {
         position: absolute;
+
         width: 1px;
         height: 1px;
         overflow: hidden;
+
         clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+
         white-space: nowrap;
     }
 
     .pf-users-table tbody {
         display: grid;
-        gap: 0.85rem;
-        padding: 0.85rem;
+        gap: var(--pf-space-md);
     }
 
     .pf-users-table tbody tr {
         display: block;
         overflow: hidden;
-        border: 1px solid var(--pf-color-border);
-        border-radius: var(--pf-radius-sm);
-        background-color: var(--pf-color-surface);
+
+        background-color: var(--pf-surface-container-lowest);
+
+        border: 1px solid var(--pf-border-color);
+        border-radius: var(--pf-radius-lg);
+        box-shadow: var(--pf-shadow-sm);
     }
 
     .pf-users-table tbody tr:hover {
-        background-color: var(--pf-color-surface);
+        background-color: var(--pf-surface-container-lowest);
     }
 
     .pf-users-table td {
         display: grid;
-        grid-template-columns: 6.6rem minmax(0, 1fr);
-        gap: 0.75rem;
-        padding: 0.8rem 0.9rem;
-        border-bottom: 1px solid var(--pf-color-border);
+        grid-template-columns: 6.25rem minmax(0, 1fr);
+        gap: var(--pf-space-sm);
+
+        padding: 0.875rem var(--pf-space-md);
+
+        border-bottom: 1px solid var(--pf-border-color);
     }
 
-    .pf-users-table td:last-child {
+    .pf-users-table tbody tr td:last-child {
         border-bottom: 0;
     }
 
     .pf-users-table td::before {
         align-self: start;
-        color: var(--pf-color-text-muted);
-        font-size: 0.6875rem;
-        font-weight: 700;
+
+        color: var(--pf-outline);
+
+        font-size: var(--pf-font-size-label-sm);
+        font-weight: var(--pf-font-weight-bold);
+        line-height: var(--pf-line-height-label-sm);
+
         letter-spacing: 0.05em;
-        line-height: 1.5;
         text-transform: uppercase;
     }
 
@@ -707,6 +1334,11 @@ button.pf-user-action {
         min-width: 0;
     }
 
+    .pf-user-identity strong,
+    .pf-user-identity span:not(.pf-user-identity__avatar) {
+        white-space: normal;
+    }
+
     .pf-users-table__email,
     .pf-users-table__phone,
     .pf-user-roles,
@@ -715,7 +1347,10 @@ button.pf-user-action {
     }
 
     .pf-users-table__email {
+        max-width: none;
+
         overflow-wrap: anywhere;
+        white-space: normal;
     }
 
     .pf-user-roles {
@@ -723,11 +1358,17 @@ button.pf-user-action {
     }
 
     .pf-user-actions {
-        align-items: flex-start;
+        align-items: stretch;
+        justify-content: flex-start;
+    }
+
+    .pf-user-action {
+        flex: 1 1 auto;
     }
 
     .pf-users-table td[colspan] {
         display: block;
+        padding: 0;
         border: 0;
     }
 
@@ -736,32 +1377,75 @@ button.pf-user-action {
     }
 
     .pf-users-empty {
+        align-items: center;
+        flex-direction: column;
+
         min-height: 10rem;
+        padding: var(--pf-space-xl) var(--pf-space-md);
+
+        text-align: center;
     }
 
     .pf-users-pagination {
+        display: flex;
         align-items: stretch;
         flex-direction: column;
+
+        padding: var(--pf-space-md);
+    }
+
+    .pf-users-pagination > * {
+        justify-self: auto;
     }
 
     .pf-users-pagination__button {
-        justify-content: center;
+        width: 100%;
     }
 
     .pf-users-pagination__summary {
         order: -1;
-        text-align: center;
     }
 
     .pf-user-form__card {
-        padding: 1.1rem;
+        padding: var(--pf-space-md);
+    }
+
+    .pf-user-form__section-header {
+        margin-bottom: var(--pf-space-md);
     }
 
     .pf-user-form__footer {
+        align-items: stretch;
         flex-direction: column-reverse;
+
+        padding-top: var(--pf-space-md);
     }
 
     .pf-user-form__footer .pf-button {
         width: 100%;
+    }
+}
+
+/* =========================================================
+   REDUCCIÓN DE MOVIMIENTO
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+    .pf-users-back-link,
+    .pf-users-search__field,
+    .pf-users-search__clear,
+    .pf-users-table tbody tr,
+    .pf-user-action,
+    .pf-users-pagination__button,
+    .pf-user-form input,
+    .pf-user-form textarea,
+    .pf-user-form select,
+    .pf-user-form__roles > div > div,
+    .pf-user-form__roles .form-check {
+        transition: none;
+    }
+
+    .pf-users-back-link:hover {
+        transform: none;
     }
 }

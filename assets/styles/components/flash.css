@@ -1,38 +1,166 @@
+/* styles/components/flash.css */
+
+/* =========================================================
+   CONTENEDOR DE MENSAJES
+   ========================================================= */
+
 .pf-flash-stack {
     display: grid;
-    gap: var(--pf-space-2);
-    margin-bottom: var(--pf-space-4);
+    gap: var(--pf-space-sm);
+    margin-bottom: var(--pf-space-lg);
 }
+
+/* =========================================================
+   MENSAJE BASE
+   ========================================================= */
 
 .pf-flash {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--pf-space-md);
+
     margin: 0;
-    padding: var(--pf-space-3) var(--pf-space-4);
-    border-radius: var(--pf-radius-md);
-    box-shadow: var(--pf-shadow-sm);
-    font-size: var(--pf-font-size-sm);
+    padding: var(--pf-space-md) var(--pf-space-lg);
+
+    border: 1px solid transparent;
+    border-radius: var(--pf-radius-lg);
+    box-shadow: var(--pf-shadow-xs);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
 }
+
+.pf-flash__icon {
+    display: grid;
+    flex-shrink: 0;
+    place-items: center;
+
+    width: 1.5rem;
+    height: 1.5rem;
+
+    font-size: 1rem;
+}
+
+.pf-flash__content {
+    flex: 1;
+    min-width: 0;
+}
+
+.pf-flash__title {
+    margin: 0 0 var(--pf-space-xs);
+
+    color: inherit;
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-body-sm);
+}
+
+.pf-flash__message {
+    margin: 0;
+    color: inherit;
+}
+
+/* =========================================================
+   ÉXITO
+   ========================================================= */
 
 .pf-flash.alert-success {
-    --bs-alert-color: #0b5c10;
-    --bs-alert-bg: var(--pf-color-success-soft);
-    --bs-alert-border-color: #b3e6b6;
+    --bs-alert-color: var(--pf-on-primary-container);
+    --bs-alert-bg:
+        rgba(var(--pf-primary-container-rgb), 0.08);
+    --bs-alert-border-color:
+        rgba(var(--pf-primary-container-rgb), 0.22);
+
+    color: var(--pf-on-primary-container);
+    background-color:
+        rgba(var(--pf-primary-container-rgb), 0.08);
+    border-color:
+        rgba(var(--pf-primary-container-rgb), 0.22);
 }
 
-.pf-flash.alert-warning {
-    --bs-alert-color: #6f4700;
-    --bs-alert-bg: var(--pf-color-warning-soft);
-    --bs-alert-border-color: #f1d899;
+.pf-flash.alert-success .pf-flash__icon {
+    color: var(--pf-primary);
 }
 
-.pf-flash.alert-danger {
-    --bs-alert-color: #8a1c13;
-    --bs-alert-bg: var(--pf-color-danger-soft);
-    --bs-alert-border-color: #f4b8b2;
-}
+/* =========================================================
+   INFORMACIÓN
+   ========================================================= */
 
 .pf-flash.alert-info,
 .pf-flash.alert-secondary {
-    --bs-alert-color: var(--pf-color-text);
-    --bs-alert-bg: var(--pf-color-info-soft);
-    --bs-alert-border-color: var(--pf-color-border);
+    --bs-alert-color: var(--pf-on-surface-variant);
+    --bs-alert-bg: var(--pf-surface-container-low);
+    --bs-alert-border-color: var(--pf-border-color);
+
+    color: var(--pf-on-surface-variant);
+    background-color: var(--pf-surface-container-low);
+    border-color: var(--pf-border-color);
+}
+
+.pf-flash.alert-info .pf-flash__icon,
+.pf-flash.alert-secondary .pf-flash__icon {
+    color: var(--pf-primary);
+}
+
+/* =========================================================
+   ADVERTENCIA
+   ========================================================= */
+
+.pf-flash.alert-warning {
+    --bs-alert-color: var(--pf-on-tertiary-fixed-variant);
+    --bs-alert-bg: var(--pf-tertiary-fixed);
+    --bs-alert-border-color: var(--pf-tertiary-fixed-dim);
+
+    color: var(--pf-on-tertiary-fixed-variant);
+    background-color: var(--pf-tertiary-fixed);
+    border-color: var(--pf-tertiary-fixed-dim);
+}
+
+.pf-flash.alert-warning .pf-flash__icon {
+    color: var(--pf-tertiary);
+}
+
+/* =========================================================
+   ERROR
+   ========================================================= */
+
+.pf-flash.alert-danger {
+    --bs-alert-color: var(--pf-on-error-container);
+    --bs-alert-bg: var(--pf-error-container);
+    --bs-alert-border-color:
+        rgba(var(--pf-error-rgb), 0.25);
+
+    color: var(--pf-on-error-container);
+    background-color: var(--pf-error-container);
+    border-color: rgba(var(--pf-error-rgb), 0.25);
+}
+
+.pf-flash.alert-danger .pf-flash__icon {
+    color: var(--pf-error);
+}
+
+/* =========================================================
+   BOTÓN DE CIERRE
+   ========================================================= */
+
+.pf-flash .btn-close {
+    flex-shrink: 0;
+    margin-left: auto;
+    padding: 0.25rem;
+    opacity: 0.55;
+}
+
+.pf-flash .btn-close:hover {
+    opacity: 0.85;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 575.98px) {
+    .pf-flash {
+        padding: var(--pf-space-md);
+    }
 }

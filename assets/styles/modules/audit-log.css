@@ -1,340 +1,771 @@
+/* styles/modules/audit-log.css */
+
+/* =========================================================
+   PÁGINA
+   ========================================================= */
+
 .pf-audit-page {
     display: grid;
-    gap: 1.5rem;
+    gap: var(--pf-content-gap);
+    min-width: 0;
 }
+
+/* =========================================================
+   ENCABEZADO
+   ========================================================= */
 
 .pf-audit-heading {
     display: flex;
-    align-items: end;
+    align-items: flex-end;
     justify-content: space-between;
-    gap: 1rem;
+    gap: var(--pf-space-lg);
+}
+
+.pf-audit-heading > div {
+    min-width: 0;
 }
 
 .pf-audit-heading__eyebrow {
-    margin: 0 0 0.4rem;
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-xs);
-    font-weight: 700;
+    margin: 0 0 var(--pf-space-xs);
+
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-md);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-label-md);
+
     letter-spacing: 0.08em;
     text-transform: uppercase;
 }
 
 .pf-audit-heading h1 {
     margin: 0;
-    color: var(--pf-color-text-strong);
-    font-size: clamp(1.65rem, 2vw, 2rem);
-    line-height: 1.2;
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-heading-xl);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-heading-xl);
+
+    letter-spacing: -0.02em;
 }
 
 .pf-audit-heading__description {
-    margin: 0.5rem 0 0;
-    color: var(--pf-color-text-muted);
+    max-width: 48rem;
+    margin: var(--pf-space-sm) 0 0;
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-body-md);
+    line-height: var(--pf-line-height-body-md);
 }
 
+/* =========================================================
+   RESUMEN
+   ========================================================= */
+
 .pf-audit-summary {
+    flex-shrink: 0;
     margin: 0;
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-sm);
+    padding: var(--pf-space-sm) var(--pf-space-md);
+
+    color: var(--pf-secondary);
+    background-color: var(--pf-surface-container-low);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-pill);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
+
+    white-space: nowrap;
 }
 
 .pf-audit-summary strong {
-    color: var(--pf-color-text-strong);
+    color: var(--pf-on-surface);
+    font-weight: var(--pf-font-weight-bold);
 }
 
-.pf-audit-filter,
-.pf-audit-table-card {
-    border: 1px solid var(--pf-color-border);
-    border-radius: var(--pf-radius-md);
-    background-color: var(--pf-color-surface);
-}
+/* =========================================================
+   FILTROS
+   ========================================================= */
 
 .pf-audit-filter {
     display: grid;
-    grid-template-columns: minmax(14rem, 1.5fr) minmax(13rem, 1fr) repeat(2, minmax(9rem, 0.65fr)) auto;
-    gap: 1rem;
+    grid-template-columns:
+        minmax(14rem, 1.5fr)
+        minmax(13rem, 1fr)
+        repeat(2, minmax(9rem, 0.65fr))
+        auto;
     align-items: end;
-    padding: 1.25rem;
+    gap: var(--pf-space-md);
+
+    padding: var(--pf-space-lg);
+
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-lg);
+    box-shadow: var(--pf-shadow-sm);
 }
 
 .pf-audit-filter__field {
     display: grid;
-    gap: 0.45rem;
+    gap: var(--pf-space-sm);
+    min-width: 0;
 }
 
 .pf-audit-filter label {
-    color: var(--pf-color-text-strong);
-    font-size: var(--pf-font-size-sm);
-    font-weight: 650;
+    margin: 0;
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-body-sm);
 }
 
 .pf-audit-filter input,
 .pf-audit-filter select {
     width: 100%;
     min-height: 2.75rem;
-    padding: 0.6rem 0.75rem;
-    border: 1px solid var(--pf-color-border);
-    border-radius: var(--pf-radius-sm);
+    padding: 0.625rem 0.875rem;
+
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color-strong);
+    border-radius: var(--pf-radius-md);
     outline: 0;
-    background-color: var(--pf-color-surface);
-    color: var(--pf-color-text-strong);
+    box-shadow: none;
+
     font: inherit;
+    font-size: var(--pf-font-size-body-md);
+    line-height: var(--pf-line-height-body-md);
+
+    transition:
+        color var(--pf-transition-fast),
+        background-color var(--pf-transition-fast),
+        border-color var(--pf-transition-fast),
+        box-shadow var(--pf-transition-fast);
+}
+
+.pf-audit-filter select {
+    padding-right: 2.5rem;
+}
+
+.pf-audit-filter input::placeholder {
+    color: var(--pf-secondary);
+    opacity: 0.72;
+}
+
+.pf-audit-filter input:hover,
+.pf-audit-filter select:hover {
+    border-color: var(--pf-outline);
 }
 
 .pf-audit-filter input:focus,
 .pf-audit-filter select:focus {
-    border-color: var(--pf-color-brand);
-    box-shadow: 0 0 0 0.2rem rgb(var(--pf-color-brand-rgb) / 0.16);
+    border-color: var(--pf-primary);
+    box-shadow:
+        0 0 0 0.25rem rgba(var(--pf-primary-rgb), 0.16);
 }
+
+/* =========================================================
+   ACCIONES DEL FILTRO
+   ========================================================= */
 
 .pf-audit-filter__actions {
     display: flex;
-    gap: 0.6rem;
     align-items: center;
+    gap: var(--pf-space-sm);
 }
 
 .pf-audit-filter__clear {
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 2.5rem;
+    padding-inline: var(--pf-space-sm);
+
+    color: var(--pf-secondary);
+
+    border-radius: var(--pf-radius-md);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-medium);
+
     text-decoration: none;
     white-space: nowrap;
+
+    transition:
+        color var(--pf-transition-fast),
+        background-color var(--pf-transition-fast);
 }
 
 .pf-audit-filter__clear:hover {
-    color: var(--pf-color-text-strong);
-    text-decoration: underline;
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-low);
+    text-decoration: none;
+}
+
+/* =========================================================
+   CONTENEDOR DE TABLA
+   ========================================================= */
+
+.pf-audit-table-card {
+    min-width: 0;
+    overflow: hidden;
+
+    background-color: var(--pf-surface-container-lowest);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-lg);
+    box-shadow: var(--pf-shadow-sm);
 }
 
 .pf-audit-table-wrap {
+    width: 100%;
     overflow-x: auto;
+
+    scrollbar-color:
+        var(--pf-outline-variant)
+        transparent;
+    scrollbar-width: thin;
 }
+
+.pf-audit-table-wrap::-webkit-scrollbar {
+    height: 0.5rem;
+}
+
+.pf-audit-table-wrap::-webkit-scrollbar-track {
+    background-color: transparent;
+}
+
+.pf-audit-table-wrap::-webkit-scrollbar-thumb {
+    background-color: var(--pf-outline-variant);
+    border-radius: var(--pf-radius-pill);
+}
+
+/* =========================================================
+   TABLA
+   ========================================================= */
 
 .pf-audit-table {
     width: 100%;
     min-width: 73rem;
+
+    color: var(--pf-on-surface);
+
     border-collapse: collapse;
+
+    font-size: var(--pf-font-size-body-md);
+    line-height: var(--pf-line-height-body-md);
 }
 
 .pf-audit-table th,
 .pf-audit-table td {
-    padding: 1rem 1.15rem;
-    border-bottom: 1px solid var(--pf-color-border);
+    padding: var(--pf-space-md) 1.25rem;
+
+    border-bottom: 1px solid var(--pf-border-color);
+
     text-align: left;
     vertical-align: middle;
 }
 
+.pf-audit-table thead {
+    background-color: var(--pf-surface-container-low);
+}
+
 .pf-audit-table th {
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-xs);
-    font-weight: 700;
+    color: var(--pf-outline);
+    background-color: var(--pf-surface-container-low);
+
+    font-size: var(--pf-font-size-label-md);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-label-md);
+
     letter-spacing: 0.05em;
     text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.pf-audit-table tbody tr {
+    background-color: var(--pf-surface-container-lowest);
+
+    transition: background-color var(--pf-transition-fast);
+}
+
+.pf-audit-table tbody tr:hover {
+    background-color: rgba(var(--pf-primary-rgb), 0.035);
 }
 
 .pf-audit-table tbody tr:last-child td {
     border-bottom: 0;
 }
 
-.pf-audit-table tbody tr:hover {
-    background-color: var(--pf-color-surface-subtle);
-}
+/* =========================================================
+   FECHA
+   ========================================================= */
 
 .pf-audit-date {
     display: grid;
-    gap: 0.15rem;
+    gap: 0.125rem;
     white-space: nowrap;
 }
 
 .pf-audit-date strong {
-    color: var(--pf-color-text-strong);
-    font-size: var(--pf-font-size-sm);
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-body-sm);
 }
 
-.pf-audit-date span,
-.pf-audit-actor span,
-.pf-audit-entity span {
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-xs);
+.pf-audit-date span {
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-sm);
+    line-height: var(--pf-line-height-label-sm);
 }
+
+/* =========================================================
+   ACTOR
+   ========================================================= */
 
 .pf-audit-actor {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
+    gap: var(--pf-space-sm);
+
     min-width: 11rem;
 }
 
 .pf-audit-actor__icon {
     display: grid;
-    width: 2rem;
-    height: 2rem;
     flex: 0 0 auto;
     place-items: center;
-    border: 1px solid var(--pf-color-border);
-    border-radius: 50%;
-    background-color: var(--pf-color-surface-subtle);
-    color: var(--pf-color-text-muted);
+
+    width: 2.25rem;
+    height: 2.25rem;
+
+    color: var(--pf-secondary);
+    background-color: var(--pf-surface-container-high);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-pill);
 }
 
-.pf-audit-actor div,
-.pf-audit-entity {
+.pf-audit-actor__icon i {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.pf-audit-actor > div {
     display: grid;
-    gap: 0.15rem;
+    min-width: 0;
+    gap: 0.125rem;
 }
 
-.pf-audit-actor strong,
-.pf-audit-entity strong {
-    color: var(--pf-color-text-strong);
-    font-size: var(--pf-font-size-sm);
+.pf-audit-actor strong {
+    overflow: hidden;
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-body-sm);
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
+
+.pf-audit-actor span:not(.pf-audit-actor__icon) {
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-sm);
+    line-height: var(--pf-line-height-label-sm);
+}
+
+/* =========================================================
+   ACCIÓN
+   ========================================================= */
 
 .pf-audit-action {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    min-height: 1.75rem;
-    padding: 0.2rem 0.55rem;
-    border: 1px solid var(--pf-color-border);
-    border-radius: 999px;
-    background-color: var(--pf-color-surface-subtle);
-    color: var(--pf-color-text);
-    font-size: var(--pf-font-size-xs);
-    font-weight: 700;
+    gap: 0.375rem;
+
+    min-height: 1.625rem;
+    padding: 0.25rem 0.625rem;
+
+    color: var(--pf-on-surface-variant);
+    background-color: var(--pf-surface-container-high);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-pill);
+
+    font-size: var(--pf-font-size-label-sm);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-label-sm);
+
     white-space: nowrap;
 }
+
+.pf-audit-action i {
+    flex-shrink: 0;
+    font-size: 0.875rem;
+    line-height: 1;
+}
+
+/* Usuarios */
 
 .pf-audit-action--user {
-    border-color: #B3EFBA;
-    background-color: var(--pf-color-brand-soft);
-    color: #0A5A0F;
+    color: var(--pf-on-primary-container);
+    background-color:
+        rgba(var(--pf-primary-container-rgb), 0.1);
+    border-color:
+        rgba(var(--pf-primary-container-rgb), 0.24);
 }
+
+/* Autenticación */
 
 .pf-audit-action--authentication {
-    border-color: #B9D6FC;
-    background-color: #EDF5FF;
-    color: #174B87;
+    color: var(--pf-on-secondary-container);
+    background-color: var(--pf-secondary-container);
+    border-color: var(--pf-secondary-fixed-dim);
 }
+
+/* Roles */
 
 .pf-audit-action--role {
-    border-color: #E0C7FF;
-    background-color: #F8F0FF;
-    color: #60308B;
+    color: var(--pf-on-tertiary-fixed-variant);
+    background-color: var(--pf-tertiary-fixed);
+    border-color: var(--pf-tertiary-fixed-dim);
 }
 
+/* =========================================================
+   ENTIDAD
+   ========================================================= */
+
+.pf-audit-entity {
+    display: grid;
+    gap: 0.125rem;
+}
+
+.pf-audit-entity strong {
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-body-sm);
+}
+
+.pf-audit-entity span {
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-sm);
+    line-height: var(--pf-line-height-label-sm);
+}
+
+/* =========================================================
+   DIRECCIÓN IP
+   ========================================================= */
+
 .pf-audit-ip {
-    color: var(--pf-color-text-muted);
-    font-family: monospace;
-    font-size: var(--pf-font-size-xs);
+    color: var(--pf-secondary);
+
+    font-family: var(--pf-font-family-monospace);
+    font-size: var(--pf-font-size-label-sm);
+    line-height: var(--pf-line-height-label-sm);
+
     white-space: nowrap;
+}
+
+/* =========================================================
+   DETALLE DESPLEGABLE
+   ========================================================= */
+
+.pf-audit-details {
+    min-width: 7rem;
 }
 
 .pf-audit-details summary {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--pf-space-xs);
+
+    min-height: 2rem;
+    padding: 0.375rem 0.625rem;
+
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-highest);
+
+    border-radius: var(--pf-radius-md);
+
     cursor: pointer;
-    color: var(--pf-color-text);
-    font-size: var(--pf-font-size-sm);
-    font-weight: 650;
+    list-style: none;
+
+    font-size: var(--pf-font-size-label-md);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-label-md);
+
+    white-space: nowrap;
+
+    transition:
+        color var(--pf-transition-fast),
+        background-color var(--pf-transition-fast);
+}
+
+.pf-audit-details summary::-webkit-details-marker {
+    display: none;
+}
+
+.pf-audit-details summary::after {
+    display: inline-block;
+
+    width: 0.45rem;
+    height: 0.45rem;
+    margin-left: var(--pf-space-xs);
+
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+
+    content: "";
+    transform: rotate(45deg) translateY(-0.125rem);
+
+    transition: transform var(--pf-transition-fast);
+}
+
+.pf-audit-details summary:hover {
+    background-color: var(--pf-surface-container-high);
+}
+
+.pf-audit-details summary:focus-visible {
+    outline: none;
+    box-shadow:
+        0 0 0 0.25rem rgba(var(--pf-primary-rgb), 0.18);
 }
 
 .pf-audit-details[open] summary {
-    margin-bottom: 0.75rem;
+    margin-bottom: var(--pf-space-md);
+    background-color: var(--pf-surface-container-high);
 }
+
+.pf-audit-details[open] summary::after {
+    transform: rotate(225deg) translate(-0.125rem, -0.125rem);
+}
+
+/* =========================================================
+   CAMBIOS ANTES / DESPUÉS
+   ========================================================= */
 
 .pf-audit-change-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(12rem, 1fr));
-    gap: 0.75rem;
+    gap: var(--pf-space-sm);
+
+    min-width: 28rem;
 }
 
 .pf-audit-change-card {
-    padding: 0.8rem;
-    border: 1px solid var(--pf-color-border);
-    border-radius: var(--pf-radius-sm);
-    background-color: var(--pf-color-surface-subtle);
+    padding: var(--pf-space-md);
+
+    background-color: var(--pf-surface-container-low);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-md);
 }
 
 .pf-audit-change-card h3 {
-    margin: 0 0 0.65rem;
-    color: var(--pf-color-text-strong);
-    font-size: var(--pf-font-size-xs);
+    margin: 0 0 var(--pf-space-sm);
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-label-sm);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-label-sm);
+
     letter-spacing: 0.05em;
     text-transform: uppercase;
 }
 
 .pf-audit-change-card dl {
     display: grid;
-    gap: 0.55rem;
+    gap: var(--pf-space-sm);
     margin: 0;
 }
 
 .pf-audit-change-card dl div {
     display: grid;
-    gap: 0.15rem;
+    gap: 0.125rem;
 }
 
 .pf-audit-change-card dt {
-    color: var(--pf-color-text-muted);
-    font-size: 0.6875rem;
-    font-weight: 700;
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-label-sm);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-label-sm);
 }
 
 .pf-audit-change-card dd {
     margin: 0;
-    color: var(--pf-color-text);
-    font-size: var(--pf-font-size-xs);
+
+    color: var(--pf-on-surface-variant);
+
+    font-size: var(--pf-font-size-label-sm);
+    line-height: var(--pf-line-height-label-sm);
+
     overflow-wrap: anywhere;
 }
+
+/* =========================================================
+   ESTADO VACÍO
+   ========================================================= */
 
 .pf-audit-empty {
     display: grid;
     min-height: 13rem;
+    padding: var(--pf-space-xl);
     place-items: center;
-    color: var(--pf-color-text-muted);
+
+    color: var(--pf-secondary);
     text-align: center;
 }
 
+.pf-audit-empty > div {
+    max-width: 28rem;
+}
+
 .pf-audit-empty i {
-    display: block;
-    margin-bottom: 0.6rem;
-    font-size: 1.8rem;
+    display: grid;
+    place-items: center;
+
+    width: 3rem;
+    height: 3rem;
+    margin: 0 auto var(--pf-space-sm);
+
+    color: var(--pf-outline);
+    background-color: var(--pf-surface-container-low);
+
+    border-radius: var(--pf-radius-pill);
+
+    font-size: 1.25rem;
 }
 
 .pf-audit-empty strong {
     display: block;
-    color: var(--pf-color-text-strong);
-    font-size: var(--pf-font-size-sm);
+    margin-bottom: var(--pf-space-xs);
+
+    color: var(--pf-on-surface);
+
+    font-size: var(--pf-font-size-body-md);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-body-md);
 }
 
+/* =========================================================
+   PAGINACIÓN
+   ========================================================= */
+
 .pf-audit-pagination {
-    display: flex;
+    display: grid;
+    grid-template-columns:
+        minmax(7rem, 1fr)
+        auto
+        minmax(7rem, 1fr);
     align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
+    gap: var(--pf-space-md);
+}
+
+.pf-audit-pagination > :first-child {
+    justify-self: start;
+}
+
+.pf-audit-pagination > :last-child {
+    justify-self: end;
 }
 
 .pf-audit-pagination__summary {
-    color: var(--pf-color-text-muted);
-    font-size: var(--pf-font-size-sm);
+    color: var(--pf-secondary);
+
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
+
+    text-align: center;
+    white-space: nowrap;
 }
 
-@media (max-width: 1100px) {
+/* =========================================================
+   RESPONSIVE: ESCRITORIO REDUCIDO
+   ========================================================= */
+
+@media (max-width: 1199.98px) {
     .pf-audit-filter {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    .pf-audit-filter__actions {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+    }
 }
 
-@media (max-width: 575.98px) {
-    .pf-audit-heading,
-    .pf-audit-pagination {
-        align-items: stretch;
+/* =========================================================
+   RESPONSIVE: TABLET
+   ========================================================= */
+
+@media (max-width: 767.98px) {
+    .pf-audit-heading {
+        align-items: flex-start;
         flex-direction: column;
+    }
+
+    .pf-audit-heading h1 {
+        font-size: var(--pf-font-size-heading-lg);
+        line-height: var(--pf-line-height-heading-lg);
+    }
+
+    .pf-audit-summary {
+        align-self: flex-start;
+    }
+}
+
+/* =========================================================
+   RESPONSIVE: MÓVIL
+   ========================================================= */
+
+@media (max-width: 575.98px) {
+    .pf-audit-page {
+        gap: var(--pf-space-md);
     }
 
     .pf-audit-filter {
         grid-template-columns: 1fr;
-        padding: 1rem;
+        padding: var(--pf-space-md);
     }
 
-    .pf-audit-filter__actions .pf-button {
-        flex: 1;
+    .pf-audit-filter__actions {
+        grid-column: auto;
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .pf-audit-filter__actions .pf-button,
+    .pf-audit-filter__clear {
+        width: 100%;
+    }
+
+    .pf-audit-table-card {
+        overflow: visible;
+
+        background-color: transparent;
+
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
     }
 
     .pf-audit-table-wrap {
@@ -348,49 +779,89 @@
 
     .pf-audit-table thead {
         position: absolute;
+
         width: 1px;
         height: 1px;
         overflow: hidden;
+
         clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+
+        white-space: nowrap;
     }
 
     .pf-audit-table tbody {
         display: grid;
-        gap: 0.85rem;
-        padding: 0.85rem;
+        gap: var(--pf-space-md);
     }
 
     .pf-audit-table tbody tr {
         display: block;
         overflow: hidden;
-        border: 1px solid var(--pf-color-border);
-        border-radius: var(--pf-radius-sm);
+
+        background-color: var(--pf-surface-container-lowest);
+
+        border: 1px solid var(--pf-border-color);
+        border-radius: var(--pf-radius-lg);
+        box-shadow: var(--pf-shadow-sm);
+    }
+
+    .pf-audit-table tbody tr:hover {
+        background-color: var(--pf-surface-container-lowest);
     }
 
     .pf-audit-table td {
         display: grid;
-        grid-template-columns: 5.8rem minmax(0, 1fr);
-        gap: 0.7rem;
-        padding: 0.8rem 0.9rem;
+        grid-template-columns: 5.5rem minmax(0, 1fr);
+        gap: var(--pf-space-sm);
+
+        padding: 0.875rem var(--pf-space-md);
+
+        border-bottom: 1px solid var(--pf-border-color);
+    }
+
+    .pf-audit-table tbody tr td:last-child {
+        border-bottom: 0;
     }
 
     .pf-audit-table td::before {
-        color: var(--pf-color-text-muted);
-        font-size: 0.6875rem;
-        font-weight: 700;
+        color: var(--pf-outline);
+
+        font-size: var(--pf-font-size-label-sm);
+        font-weight: var(--pf-font-weight-bold);
+        line-height: var(--pf-line-height-label-sm);
+
         letter-spacing: 0.05em;
         text-transform: uppercase;
     }
 
-    .pf-audit-table td:nth-child(1)::before { content: "Fecha"; }
-    .pf-audit-table td:nth-child(2)::before { content: "Usuario"; }
-    .pf-audit-table td:nth-child(3)::before { content: "Acción"; }
-    .pf-audit-table td:nth-child(4)::before { content: "Entidad"; }
-    .pf-audit-table td:nth-child(5)::before { content: "IP"; }
-    .pf-audit-table td:nth-child(6)::before { content: "Detalle"; }
+    .pf-audit-table td:nth-child(1)::before {
+        content: "Fecha";
+    }
+
+    .pf-audit-table td:nth-child(2)::before {
+        content: "Usuario";
+    }
+
+    .pf-audit-table td:nth-child(3)::before {
+        content: "Acción";
+    }
+
+    .pf-audit-table td:nth-child(4)::before {
+        content: "Entidad";
+    }
+
+    .pf-audit-table td:nth-child(5)::before {
+        content: "IP";
+    }
+
+    .pf-audit-table td:nth-child(6)::before {
+        content: "Detalle";
+    }
 
     .pf-audit-table td[colspan] {
         display: block;
+        padding: 0;
         border: 0;
     }
 
@@ -398,12 +869,35 @@
         display: none;
     }
 
+    .pf-audit-details {
+        min-width: 0;
+    }
+
+    .pf-audit-details summary {
+        justify-content: center;
+        width: 100%;
+    }
+
     .pf-audit-change-grid {
         grid-template-columns: 1fr;
+        min-width: 0;
+    }
+
+    .pf-audit-pagination {
+        display: flex;
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .pf-audit-pagination > * {
+        justify-self: auto;
+    }
+
+    .pf-audit-pagination > span:empty {
+        display: none;
     }
 
     .pf-audit-pagination .pf-button {
-        justify-content: center;
         width: 100%;
     }
 
