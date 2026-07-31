@@ -43,18 +43,6 @@
     text-transform: uppercase;
 }
 
-.pf-users-heading h1 {
-    margin: 0;
-
-    color: var(--pf-on-surface);
-
-    font-size: var(--pf-font-size-heading-xl);
-    font-weight: var(--pf-font-weight-bold);
-    line-height: var(--pf-line-height-heading-xl);
-
-    letter-spacing: -0.02em;
-}
-
 .pf-users-heading p:not(.pf-users-heading__eyebrow) {
     max-width: 48rem;
     margin: var(--pf-space-sm) 0 0;
@@ -843,15 +831,6 @@ button.pf-user-action {
     line-height: 1;
 }
 
-.pf-user-form__section-header h2 {
-    margin: 0;
-
-    color: var(--pf-on-surface);
-
-    font-size: var(--pf-font-size-title-md);
-    font-weight: var(--pf-font-weight-semibold);
-    line-height: var(--pf-line-height-title-md);
-}
 
 .pf-user-form__section-header p {
     margin: var(--pf-space-xs) 0 0;

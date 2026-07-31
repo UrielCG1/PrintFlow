@@ -43,18 +43,6 @@
     text-transform: uppercase;
 }
 
-.pf-roles-heading h1 {
-    margin: 0;
-
-    color: var(--pf-on-surface);
-
-    font-size: var(--pf-font-size-heading-xl);
-    font-weight: var(--pf-font-weight-bold);
-    line-height: var(--pf-line-height-heading-xl);
-
-    letter-spacing: -0.02em;
-}
-
 .pf-roles-heading p:not(.pf-roles-heading__eyebrow) {
     max-width: 48rem;
     margin: var(--pf-space-sm) 0 0;
@@ -546,16 +534,6 @@
 
 .pf-role-form__section-header > div:last-child {
     min-width: 0;
-}
-
-.pf-role-form__section-header h2 {
-    margin: 0;
-
-    color: var(--pf-on-surface);
-
-    font-size: var(--pf-font-size-title-md);
-    font-weight: var(--pf-font-weight-semibold);
-    line-height: var(--pf-line-height-title-md);
 }
 
 .pf-role-form__section-header p {

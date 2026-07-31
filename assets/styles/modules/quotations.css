@@ -31,16 +31,6 @@
     min-width: 0;
 }
 
-.quotation-form-card__header h2 {
-    margin: 0;
-
-    color: var(--pf-on-surface);
-
-    font-size: var(--pf-font-size-title-md);
-    font-weight: var(--pf-font-weight-semibold);
-    line-height: var(--pf-line-height-title-md);
-}
-
 .quotation-form-card__header p {
     margin: var(--pf-space-xs) 0 0;
 
@@ -95,15 +85,6 @@
     min-width: 0;
 }
 
-.quotation-calculation-note h2 {
-    margin: 0 0 var(--pf-space-xs);
-
-    color: var(--pf-on-surface);
-
-    font-size: var(--pf-font-size-body-md);
-    font-weight: var(--pf-font-weight-bold);
-    line-height: var(--pf-line-height-body-md);
-}
 
 .quotation-calculation-note p {
     margin: 0 0 var(--pf-space-xs);
@@ -317,16 +298,6 @@
 
     font-size: 1.5rem;
     line-height: 1;
-}
-
-.quotation-empty-state h2 {
-    margin: 0 0 var(--pf-space-sm);
-
-    color: var(--pf-on-surface);
-
-    font-size: var(--pf-font-size-title-md);
-    font-weight: var(--pf-font-weight-semibold);
-    line-height: var(--pf-line-height-title-md);
 }
 
 .quotation-empty-state p {

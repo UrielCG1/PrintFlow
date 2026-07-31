@@ -38,17 +38,6 @@
     text-transform: uppercase;
 }
 
-.pf-audit-heading h1 {
-    margin: 0;
-
-    color: var(--pf-on-surface);
-
-    font-size: var(--pf-font-size-heading-xl);
-    font-weight: var(--pf-font-weight-bold);
-    line-height: var(--pf-line-height-heading-xl);
-
-    letter-spacing: -0.02em;
-}
 
 .pf-audit-heading__description {
     max-width: 48rem;
@@ -576,19 +565,6 @@
 
     border: 1px solid var(--pf-border-color);
     border-radius: var(--pf-radius-md);
-}
-
-.pf-audit-change-card h3 {
-    margin: 0 0 var(--pf-space-sm);
-
-    color: var(--pf-on-surface);
-
-    font-size: var(--pf-font-size-label-sm);
-    font-weight: var(--pf-font-weight-bold);
-    line-height: var(--pf-line-height-label-sm);
-
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
 }
 
 .pf-audit-change-card dl {

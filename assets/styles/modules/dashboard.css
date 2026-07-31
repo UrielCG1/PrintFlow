@@ -38,17 +38,6 @@
     text-transform: uppercase;
 }
 
-.pf-dashboard-welcome h2 {
-    margin: 0;
-
-    color: var(--pf-on-surface);
-
-    font-size: var(--pf-font-size-heading-lg);
-    font-weight: var(--pf-font-weight-semibold);
-    line-height: var(--pf-line-height-heading-lg);
-    letter-spacing: -0.01em;
-}
-
 .pf-dashboard-welcome p:not(.pf-dashboard-welcome__eyebrow) {
     margin: var(--pf-space-sm) 0 0;
 
@@ -73,16 +62,6 @@
     gap: var(--pf-space-md);
 
     margin-bottom: var(--pf-space-md);
-}
-
-.pf-dashboard-section__header h2 {
-    margin: 0;
-
-    color: var(--pf-on-surface);
-
-    font-size: var(--pf-font-size-title-md);
-    font-weight: var(--pf-font-weight-semibold);
-    line-height: var(--pf-line-height-title-md);
 }
 
 .pf-dashboard-section__header p {

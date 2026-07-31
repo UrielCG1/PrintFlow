@@ -53,16 +53,6 @@
     gap: var(--pf-space-xs);
 }
 
-.pf-clients-form-section__heading h2 {
-    margin: 0;
-
-    color: var(--pf-on-surface);
-
-    font-size: var(--pf-font-size-title-md);
-    font-weight: var(--pf-font-weight-semibold);
-    line-height: var(--pf-line-height-title-md);
-    letter-spacing: -0.01em;
-}
 
 .pf-clients-form-section__heading p {
     max-width: 46rem;
