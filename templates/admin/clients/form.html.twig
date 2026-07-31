@@ -7,14 +7,15 @@
 {% block app_breadcrumb %}{{ pageTitle }}{% endblock %}
 
 {% block app_content %}
-    <div class="pf-page">
+    <div class="pf-page__content">
         <div class="pf-page-header">
-            <div>
-                <h1>{{ pageTitle }}</h1>
+            <div class="pf-page-header__content">
+                <h1 class="pf-page-header__title">{{ pageTitle }}</h1>
                 <p class="pf-page-header__description">
                     La información registrada estará disponible para futuras cotizaciones y órdenes.
                 </p>
             </div>
+
             {% if client %}
                 <div class="pf-page-header__actions">
                     {% if is_granted('clients.contacts.view') %}
@@ -43,78 +44,81 @@
         <div class="pf-card pf-clients-form-card pf-clients-form-card--wide">
             {% form_theme form 'form/printflow_theme.html.twig' %}
 
-            {{ form_start(form, { attr: { class: 'pf-form' } }) }}
+            {{ form_start(form, { attr: { class: 'pf-form pf-card__body' } }) }}
                 <div class="pf-clients-form-section">
-                <div class="pf-clients-form-section__heading">
-                    <h2>Información general</h2>
-                    <p>Identifica al cliente y su clasificación comercial.</p>
+                    <div class="pf-clients-form-section__heading">
+                        <h2>Información general</h2>
+                        <p>Identifica al cliente y su clasificación comercial.</p>
+                    </div>
+
+                    <div class="pf-clients-form-grid">
+                        {{ form_row(form.businessName) }}
+                        {{ form_row(form.category) }}
+                    </div>
+
+                    <div class="pf-clients-form-grid">
+                        {{ form_row(form.email) }}
+                        {{ form_row(form.phone) }}
+                    </div>
                 </div>
 
-                <div class="pf-clients-form-grid">
-                    {{ form_row(form.businessName) }}
-                    {{ form_row(form.category) }}
+                <div class="pf-clients-form-section">
+                    <div class="pf-clients-form-section__heading">
+                        <h2>Facturación</h2>
+                        <p>Estos datos se conservarán independientes de los domicilios de entrega.</p>
+                    </div>
+
+                    {{ form_row(form.legalName) }}
+
+                    <div class="pf-clients-form-grid">
+                        {{ form_row(form.taxId) }}
+                        {{ form_row(form.taxRegimeCode) }}
+                    </div>
+
+                    <div class="pf-clients-form-grid">
+                        {{ form_row(form.fiscalPostalCode) }}
+                        {{ form_row(form.defaultCfdiUseCode) }}
+                    </div>
+
+                    {{ form_row(form.billingEmail) }}
                 </div>
 
-                <div class="pf-clients-form-grid">
-                    {{ form_row(form.email) }}
-                    {{ form_row(form.phone) }}
-                </div>
-            </div>
+                <div class="pf-clients-form-section">
+                    <div class="pf-clients-form-section__heading">
+                        <h2>Condiciones comerciales</h2>
+                        <p>El descuento se usará como propuesta inicial en cotizaciones futuras.</p>
+                    </div>
 
-            <div class="pf-clients-form-section">
-                <div class="pf-clients-form-section__heading">
-                    <h2>Facturación</h2>
-                    <p>Estos datos se conservarán independientes de los domicilios de entrega.</p>
-                </div>
-
-                {{ form_row(form.legalName) }}
-
-                <div class="pf-clients-form-grid">
-                    {{ form_row(form.taxId) }}
-                    {{ form_row(form.taxRegimeCode) }}
+                    <div class="pf-clients-form-grid">
+                        {{ form_row(form.defaultDiscountPercent) }}
+                    </div>
                 </div>
 
-                <div class="pf-clients-form-grid">
-                    {{ form_row(form.fiscalPostalCode) }}
-                    {{ form_row(form.defaultCfdiUseCode) }}
+                <div class="pf-clients-form-section">
+                    <div class="pf-clients-form-section__heading">
+                        <h2>Notas internas</h2>
+                        <p>Información operativa que no aparecerá en documentos del cliente.</p>
+                    </div>
+
+                    {{ form_row(form.notes) }}
                 </div>
 
-                {{ form_row(form.billingEmail) }}
-            </div>
+                <div class="pf-form-actions">
+                    <a
+                        href="{{ path('admin_clients_index') }}"
+                        class="btn pf-button pf-button--secondary"
+                    >
+                        Cancelar
+                    </a>
 
-            <div class="pf-clients-form-section">
-                <div class="pf-clients-form-section__heading">
-                    <h2>Condiciones comerciales</h2>
-                    <p>El descuento se usará como propuesta inicial en cotizaciones futuras.</p>
+                    <button
+                        type="submit"
+                        class="btn pf-button pf-button--primary"
+                    >
+                        <i class="bi bi-check-lg" aria-hidden="true"></i>
+                        {{ client ? 'Guardar cambios' : 'Registrar cliente' }}
+                    </button>
                 </div>
-
-                <div class="pf-clients-form-grid">
-                    {{ form_row(form.defaultDiscountPercent) }}
-                </div>
-            </div>
-
-            <div class="pf-clients-form-section">
-                <div class="pf-clients-form-section__heading">
-                    <h2>Notas internas</h2>
-                    <p>Información operativa que no aparecerá en documentos del cliente.</p>
-                </div>
-
-                {{ form_row(form.notes) }}
-            </div>
-
-            <div class="pf-form-actions">
-                <a
-                    href="{{ path('admin_clients_index') }}"
-                    class="btn pf-button pf-button--secondary"
-                >
-                    Cancelar
-                </a>
-
-                <button type="submit" class="btn pf-button pf-button--primary">
-                    <i class="bi bi-check-lg" aria-hidden="true"></i>
-                    {{ client ? 'Guardar cambios' : 'Registrar cliente' }}
-                </button>
-            </div>
             {{ form_end(form) }}
         </div>
     </div>

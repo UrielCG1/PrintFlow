@@ -5,6 +5,7 @@
 {% block app_breadcrumb %}Catálogo / Categorías comerciales{% endblock %}
 
 {% set canReorder = is_granted('catalog.categories.manage') and status == 'active' and search is empty %}
+
 {% block app_content %}
     <div class="pf-page__content">
         <div class="pf-page-header">
@@ -96,9 +97,9 @@
 
         <div class="pf-card pf-card--padding-none">
             {% if canReorder %}
-            <p class="pf-card__body small text-body-secondary mb-0">
-                Arrastra las categorías para ajustar su orden de visualización.
-            </p>
+                <p class="pf-card__body small text-body-secondary mb-0">
+                    Arrastra las categorías para ajustar su orden de visualización.
+                </p>
             {% endif %}
 
             <div class="pf-table-responsive pf-table-responsive--flat">
@@ -106,10 +107,10 @@
                     <thead>
                         <tr>
                             {% if canReorder %}
-                            <th
-                                class="pf-table__cell--center"
-                                aria-label="Reordenar"
-                            ></th>
+                                <th
+                                    class="pf-table__cell--center"
+                                    aria-label="Reordenar"
+                                ></th>
                             {% endif %}
 
                             <th>Código</th>
@@ -134,16 +135,16 @@
                         {% for category in page.items %}
                             <tr data-id="{{ category.id }}" data-sortable-id="{{ category.id }}">
                                 {% if canReorder %}
-                                <td class="pf-table__cell--center">
-                                    <button
-                                        type="button"
-                                        class="pf-sortable__handle"
-                                        title="Arrastrar para reordenar"
-                                        aria-label="Arrastrar {{ category.name }} para reordenar"
-                                    >
-                                        <i class="bi bi-grip-vertical" aria-hidden="true"></i>
-                                    </button>
-                                </td>
+                                    <td class="pf-table__cell--center">
+                                        <button
+                                            type="button"
+                                            class="pf-sortable__handle"
+                                            title="Arrastrar para reordenar"
+                                            aria-label="Arrastrar {{ category.name }} para reordenar"
+                                        >
+                                            <i class="bi bi-grip-vertical" aria-hidden="true"></i>
+                                        </button>
+                                    </td>
                                 {% endif %}
 
                                 <td>
@@ -220,9 +221,9 @@
                     aria-label="Paginación de categorías"
                 >
                     <ul class="pf-table-footer__pagination">
-                        <li class="{{ page.currentPage == 1 ? 'disabled' : '' }}">
+                        <li class="pf-table-footer__pagination-item {{ page.currentPage == 1 ? 'disabled' : '' }}">
                             <a
-                                class="pf-button pf-button--secondary pf-button--sm {{ page.currentPage == 1 ? 'disabled' : '' }}"
+                                class="btn pf-button pf-button--secondary pf-button--sm {{ page.currentPage == 1 ? 'disabled' : '' }}"
                                 href="{{ path('admin_catalog_categories_index', {q: search, status: status, page: page.currentPage - 1}) }}"
                             >
                                 Anterior
@@ -235,9 +236,9 @@
                             </span>
                         </li>
 
-                        <li class="{{ page.currentPage == page.totalPages ? 'disabled' : '' }}">
+                        <li class="pf-table-footer__pagination-item {{ page.currentPage == page.totalPages ? 'disabled' : '' }}">
                             <a
-                                class="pf-button pf-button--secondary pf-button--sm {{ page.currentPage == page.totalPages ? 'disabled' : '' }}"
+                                class="btn pf-button pf-button--secondary pf-button--sm {{ page.currentPage == page.totalPages ? 'disabled' : '' }}"
                                 href="{{ path('admin_catalog_categories_index', {q: search, status: status, page: page.currentPage + 1}) }}"
                             >
                                 Siguiente

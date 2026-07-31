@@ -5,10 +5,10 @@
 {% block app_breadcrumb %}Clientes{% endblock %}
 
 {% block app_content %}
-    <div class="pf-page">
+    <div class="pf-page__content">
         <div class="pf-page-header">
-            <div>
-                <h1>Clientes</h1>
+            <div class="pf-page-header__content">
+                <h1 class="pf-page-header__title">Clientes</h1>
                 <p class="pf-page-header__description">
                     Administra los clientes disponibles para cotizaciones y órdenes.
                 </p>
@@ -25,10 +25,11 @@
             {% endif %}
         </div>
 
-        <div class="pf-card">
-            <form class="pf-clients-filters" method="get">
-                <div>
+        <div class="pf-card pf-card--padding-none">
+            <form class="pf-clients-filters pf-form pf-card__body" method="get">
+                <div class="pf-form-field">
                     <label class="form-label" for="clients-search">Buscar</label>
+
                     <input
                         id="clients-search"
                         class="form-control"
@@ -39,9 +40,14 @@
                     >
                 </div>
 
-                <div>
+                <div class="pf-form-field">
                     <label class="form-label" for="clients-status">Estado</label>
-                    <select id="clients-status" class="form-select" name="status">
+
+                    <select
+                        id="clients-status"
+                        class="form-select"
+                        name="status"
+                    >
                         <option value="active" {{ status == 'active' ? 'selected' }}>Activos</option>
                         <option value="inactive" {{ status == 'inactive' ? 'selected' }}>Inactivos</option>
                         <option value="all" {{ status == 'all' ? 'selected' }}>Todos</option>
@@ -49,42 +55,50 @@
                 </div>
 
                 <div class="pf-clients-filters__actions">
-                    <button type="submit" class="btn pf-button pf-button--secondary">
+                    <button
+                        type="submit"
+                        class="btn pf-button pf-button--primary"
+                    >
                         <i class="bi bi-search" aria-hidden="true"></i>
                         Buscar
                     </button>
                 </div>
             </form>
 
-            <div class="pf-table-responsive">
-                <table class="table pf-table">
+            <div class="pf-table-responsive pf-table-responsive--flat">
+                <table class="pf-table">
                     <thead>
                         <tr>
                             <th>Cliente</th>
                             <th>RFC</th>
                             <th>Contacto</th>
                             <th>Estado</th>
-                            <th class="text-end">Acciones</th>
+                            <th class="pf-table__actions-cell">Acciones</th>
                         </tr>
                     </thead>
+
                     <tbody>
                         {% for client in page.items %}
                             <tr>
                                 <td>
-                                    <strong>{{ client.businessName }}</strong>
+                                    <strong class="pf-table__primary">{{ client.businessName }}</strong>
                                 </td>
+
                                 <td>{{ client.taxId ?: '—' }}</td>
+
                                 <td>
                                     {% if client.email %}<div>{{ client.email }}</div>{% endif %}
                                     {% if client.phone %}<div>{{ client.phone }}</div>{% endif %}
                                     {% if not client.email and not client.phone %}—{% endif %}
                                 </td>
+
                                 <td>
-                                    <span class="pf-status-badge {{ client.active ? 'pf-status-badge--success' : 'pf-status-badge--neutral' }}">
+                                    <span class="pf-status-badge {{ client.active ? 'pf-status-badge--success' : 'pf-status-badge--warning' }}">
                                         {{ client.active ? 'Activo' : 'Inactivo' }}
                                     </span>
                                 </td>
-                                <td class="text-end">
+
+                                <td class="pf-table__actions-cell">
                                     <div class="pf-table__actions">
                                         {% if is_granted('clients.update') %}
                                             <a
@@ -138,7 +152,10 @@
             </div>
 
             {% if page.pageCount > 1 %}
-                <nav class="pf-clients-pagination" aria-label="Paginación de clientes">
+                <nav
+                    class="pf-clients-pagination pf-table-footer"
+                    aria-label="Paginación de clientes"
+                >
                     {% for number in 1..page.pageCount %}
                         <a
                             href="{{ path('admin_clients_index', {
@@ -146,7 +163,7 @@
                                 status: status,
                                 page: number
                             }) }}"
-                            class="{{ number == page.currentPage ? 'is-active' }}"
+                            class="btn pf-button pf-button--sm {{ number == page.currentPage ? 'pf-button--primary' : 'pf-button--secondary' }}"
                         >
                             {{ number }}
                         </a>

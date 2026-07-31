@@ -7,17 +7,17 @@
 {% block app_breadcrumb %}Clientes / Contactos{% endblock %}
 
 {% block app_content %}
-    <div class="pf-page">
+    <div class="pf-page__content">
         <div class="pf-page-header">
-            <div>
+            <div class="pf-page-header__content">
                 <a
                     href="{{ path('admin_clients_edit', { id: client.id }) }}"
-                    class="pf-page-header__back"
+                    class="pf-page-header__back pf-button pf-button--link"
                 >
                     ← Volver al cliente
                 </a>
 
-                <h1>Contactos de {{ client.businessName }}</h1>
+                <h1 class="pf-page-header__title">Contactos de {{ client.businessName }}</h1>
                 <p class="pf-page-header__description">
                     Define las personas que recibirán cotizaciones, órdenes y notificaciones.
                 </p>
@@ -41,32 +41,36 @@
             </div>
         {% endif %}
 
-        <div class="pf-card">
-            <div class="pf-table-responsive">
-                <table class="table pf-table">
+        <div class="pf-card pf-card--padding-none">
+            <div class="pf-table-responsive pf-table-responsive--flat">
+                <table class="pf-table">
                     <thead>
                         <tr>
                             <th>Contacto</th>
                             <th>Datos</th>
                             <th>Tipo</th>
                             <th>Estado</th>
-                            <th class="text-end">Acciones</th>
+                            <th class="pf-table__actions-cell">Acciones</th>
                         </tr>
                     </thead>
+
                     <tbody>
                         {% for contact in contacts %}
                             <tr>
                                 <td>
-                                    <strong>{{ contact.fullName }}</strong>
+                                    <strong class="pf-table__primary">{{ contact.fullName }}</strong>
+
                                     {% if contact.jobTitle %}
                                         <div>{{ contact.jobTitle }}</div>
                                     {% endif %}
                                 </td>
+
                                 <td>
                                     {% if contact.email %}<div>{{ contact.email }}</div>{% endif %}
                                     {% if contact.phone %}<div>{{ contact.phone }}</div>{% endif %}
                                     {% if not contact.email and not contact.phone %}—{% endif %}
                                 </td>
+
                                 <td>
                                     {% if contact.primary %}
                                         <span class="pf-status-badge pf-status-badge--info">
@@ -76,12 +80,14 @@
                                         —
                                     {% endif %}
                                 </td>
+
                                 <td>
-                                    <span class="pf-status-badge {{ contact.active ? 'pf-status-badge--success' : 'pf-status-badge--neutral' }}">
+                                    <span class="pf-status-badge {{ contact.active ? 'pf-status-badge--success' : 'pf-status-badge--warning' }}">
                                         {{ contact.active ? 'Activo' : 'Inactivo' }}
                                     </span>
                                 </td>
-                                <td class="text-end">
+
+                                <td class="pf-table__actions-cell">
                                     <div class="pf-table__actions">
                                         {% if is_granted('clients.contacts.update') %}
                                             <a

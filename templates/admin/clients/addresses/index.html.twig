@@ -7,17 +7,17 @@
 {% block app_breadcrumb %}Clientes / Direcciones{% endblock %}
 
 {% block app_content %}
-    <div class="pf-page">
+    <div class="pf-page__content">
         <div class="pf-page-header">
-            <div>
+            <div class="pf-page-header__content">
                 <a
                     href="{{ path('admin_clients_edit', { id: client.id }) }}"
-                    class="pf-page-header__back"
+                    class="pf-page-header__back pf-button pf-button--link"
                 >
                     ← Volver al cliente
                 </a>
 
-                <h1>Direcciones de {{ client.businessName }}</h1>
+                <h1 class="pf-page-header__title">Direcciones de {{ client.businessName }}</h1>
                 <p class="pf-page-header__description">
                     Administra los domicilios fiscales y de entrega disponibles para cotizaciones y órdenes.
                 </p>
@@ -40,22 +40,23 @@
             </div>
         {% endif %}
 
-        <div class="pf-card">
-            <div class="pf-table-responsive">
-                <table class="table pf-table">
+        <div class="pf-card pf-card--padding-none">
+            <div class="pf-table-responsive pf-table-responsive--flat">
+                <table class="pf-table">
                     <thead>
                         <tr>
                             <th>Dirección</th>
                             <th>Usos</th>
                             <th>Estado</th>
-                            <th class="text-end">Acciones</th>
+                            <th class="pf-table__actions-cell">Acciones</th>
                         </tr>
                     </thead>
+
                     <tbody>
                         {% for address in addresses %}
                             <tr>
                                 <td>
-                                    <strong>{{ address.label }}</strong>
+                                    <strong class="pf-table__primary">{{ address.label }}</strong>
 
                                     {% if address.recipientName %}
                                         <div>{{ address.recipientName }}</div>
@@ -78,6 +79,7 @@
                                         {{ address.state }}
                                     </div>
                                 </td>
+
                                 <td>
                                     {% if address.fiscalAddress %}
                                         <span class="pf-status-badge pf-status-badge--info">
@@ -91,12 +93,14 @@
                                         </span>
                                     {% endif %}
                                 </td>
+
                                 <td>
-                                    <span class="pf-status-badge {{ address.active ? 'pf-status-badge--success' : 'pf-status-badge--neutral' }}">
+                                    <span class="pf-status-badge {{ address.active ? 'pf-status-badge--success' : 'pf-status-badge--warning' }}">
                                         {{ address.active ? 'Activa' : 'Inactiva' }}
                                     </span>
                                 </td>
-                                <td class="text-end">
+
+                                <td class="pf-table__actions-cell">
                                     <div class="pf-table__actions">
                                         {% if is_granted('clients.addresses.update') %}
                                             <a

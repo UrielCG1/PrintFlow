@@ -223,26 +223,12 @@
                                 <td>{{ item.category.name }}</td>
                                 <td>{{ item.measurementUnit.name }}</td>
 
-                                <td
-                                    class="
-                                        pf-table__cell--right
-                                        pf-table__cell--nowrap
-                                    "
-                                >
+                                <td class="pf-table__cell--right pf-table__cell--nowrap">
                                     MXN ${{ item.basePrice|number_format(2, '.', ',') }}
                                 </td>
 
                                 <td>
-                                    <span
-                                        class="
-                                            pf-status-badge
-                                            {{
-                                                item.isActive
-                                                    ? 'pf-status-badge--success'
-                                                    : 'pf-status-badge--warning'
-                                            }}
-                                        "
-                                    >
+                                    <span class="pf-status-badge {{ item.isActive ? 'pf-status-badge--success' : 'pf-status-badge--warning' }}">
                                         <span
                                             class="pf-status-badge__dot"
                                             aria-hidden="true"
@@ -261,12 +247,7 @@
                                                         'admin_catalog_item_price_rules_index',
                                                         {item: item.id}
                                                     ) }}"
-                                                    class="
-                                                        btn
-                                                        pf-button
-                                                        pf-button--subtle
-                                                        pf-button--sm
-                                                    "
+                                                    class="btn pf-button pf-button--subtle pf-button--sm"
                                                 >
                                                     <i
                                                         class="bi bi-cash-stack"
@@ -283,12 +264,7 @@
                                                         'admin_catalog_items_edit',
                                                         {id: item.id}
                                                     ) }}"
-                                                    class="
-                                                        btn
-                                                        pf-button
-                                                        pf-button--secondary
-                                                        pf-button--sm
-                                                    "
+                                                    class="btn pf-button pf-button--secondary pf-button--sm"
                                                 >
                                                     <i
                                                         class="bi bi-pencil-square"
@@ -323,16 +299,7 @@
 
                                                     <button
                                                         type="submit"
-                                                        class="
-                                                            btn
-                                                            pf-button
-                                                            pf-button--sm
-                                                            {{
-                                                                item.isActive
-                                                                    ? 'pf-button--danger'
-                                                                    : 'pf-button--success'
-                                                            }}
-                                                        "
+                                                        class="btn pf-button pf-button--sm {{ item.isActive ? 'pf-button--danger' : 'pf-button--success' }}"
                                                     >
                                                         <i
                                                             class="bi {{
@@ -402,11 +369,7 @@
                     >
                         {% if page.currentPage > 1 %}
                             <a
-                                class="
-                                    pf-button
-                                    pf-button--secondary
-                                    pf-button--sm
-                                "
+                                class="btn pf-button pf-button--secondary pf-button--sm"
                                 href="{{ path(
                                     'admin_catalog_items_index',
                                     {
@@ -426,12 +389,7 @@
                             </a>
                         {% else %}
                             <span
-                                class="
-                                    pf-button
-                                    pf-button--secondary
-                                    pf-button--sm
-                                    disabled
-                                "
+                                class="pf-button pf-button--secondary pf-button--sm disabled"
                                 aria-disabled="true"
                             >
                                 <i
@@ -445,11 +403,7 @@
 
                         {% if page.currentPage < page.totalPages %}
                             <a
-                                class="
-                                    pf-button
-                                    pf-button--secondary
-                                    pf-button--sm
-                                "
+                                class="btn pf-button pf-button--secondary pf-button--sm"
                                 href="{{ path(
                                     'admin_catalog_items_index',
                                     {
@@ -469,12 +423,7 @@
                             </a>
                         {% else %}
                             <span
-                                class="
-                                    pf-button
-                                    pf-button--secondary
-                                    pf-button--sm
-                                    disabled
-                                "
+                                class="pf-button pf-button--secondary pf-button--sm disabled"
                                 aria-disabled="true"
                             >
                                 <span>Siguiente</span>

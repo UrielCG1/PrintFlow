@@ -7,17 +7,17 @@
 {% block app_breadcrumb %}Clientes / {{ pageTitle }}{% endblock %}
 
 {% block app_content %}
-    <div class="pf-page">
+    <div class="pf-page__content">
         <div class="pf-page-header">
-            <div>
+            <div class="pf-page-header__content">
                 <a
                     href="{{ path('admin_client_addresses_index', { clientId: client.id }) }}"
-                    class="pf-page-header__back"
+                    class="pf-page-header__back pf-button pf-button--link"
                 >
                     ← Volver a direcciones
                 </a>
 
-                <h1>{{ pageTitle }}</h1>
+                <h1 class="pf-page-header__title">{{ pageTitle }}</h1>
                 <p class="pf-page-header__description">
                     Cliente: {{ client.businessName }}
                 </p>
@@ -27,7 +27,7 @@
         <div class="pf-card pf-clients-form-card">
             {% form_theme form 'form/printflow_theme.html.twig' %}
 
-            {{ form_start(form, { attr: { class: 'pf-form' } }) }}
+            {{ form_start(form, { attr: { class: 'pf-form pf-card__body' } }) }}
                 {{ form_row(form.label) }}
                 {{ form_row(form.recipientName) }}
 
@@ -67,7 +67,10 @@
                         Cancelar
                     </a>
 
-                    <button type="submit" class="btn pf-button pf-button--primary">
+                    <button
+                        type="submit"
+                        class="btn pf-button pf-button--primary"
+                    >
                         <i class="bi bi-check-lg" aria-hidden="true"></i>
                         {{ address ? 'Guardar cambios' : 'Registrar dirección' }}
                     </button>
