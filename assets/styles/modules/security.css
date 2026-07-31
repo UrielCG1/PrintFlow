@@ -1,19 +1,23 @@
 /* styles/modules/security.css */
 
 /* =========================================================
-   PÁGINA DE AUTENTICACIÓN
+   DOCUMENTO DE AUTENTICACIÓN
    ========================================================= */
 
 body.pf-public-body--auth {
+    min-height: 100vh;
+
     color: var(--pf-on-surface);
     background-color: var(--pf-on-surface);
 }
 
 .pf-public-body--auth .pf-public-shell {
     display: block;
+
     width: 100%;
     min-height: 100vh;
     padding: 0;
+
     overflow: hidden;
     background-color: transparent;
 }
@@ -46,16 +50,15 @@ body.pf-public-body--auth {
    ========================================================= */
 
 .pf-auth__visual {
-    position: absolute;
+    position: fixed;
     inset: 0;
     z-index: -2;
 
     width: 100%;
-    min-height: 100vh;
+    height: 100%;
     overflow: hidden;
 
-    border: 0;
-    background-color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-low);
 }
 
 .pf-auth__visual::before {
@@ -65,10 +68,10 @@ body.pf-public-body--auth {
 
     background:
         linear-gradient(
-            135deg,
-            rgba(11, 28, 48, 0.76) 0%,
-            rgba(11, 28, 48, 0.48) 42%,
-            rgba(0, 75, 3, 0.38) 100%
+            180deg,
+            rgba(248, 249, 255, 0.5) 0%,
+            rgba(248, 249, 255, 0.64) 48%,
+            rgba(248, 249, 255, 0.76) 100%
         );
 
     content: "";
@@ -82,9 +85,9 @@ body.pf-public-body--auth {
 
     background:
         radial-gradient(
-            circle at center,
-            rgba(255, 255, 255, 0.04) 0%,
-            rgba(11, 28, 48, 0.18) 100%
+            circle at 50% 45%,
+            rgba(255, 255, 255, 0.08) 0%,
+            rgba(11, 28, 48, 0.1) 100%
         );
 
     content: "";
@@ -95,17 +98,17 @@ body.pf-public-body--auth {
     display: block;
 
     width: 100%;
-    height: 100vh;
+    height: 100%;
 
     object-fit: cover;
     object-position: center;
 
     filter:
-        saturate(0.8)
-        contrast(1.03)
-        brightness(0.92);
+        saturate(0.78)
+        contrast(0.96)
+        brightness(1.04);
 
-    transform: scale(1.02);
+    transform: scale(1.015);
 }
 
 /* =========================================================
@@ -113,85 +116,66 @@ body.pf-public-body--auth {
    ========================================================= */
 
 .pf-auth__panel {
+    position: relative;
+    z-index: 1;
+
     display: grid;
     place-items: center;
 
     width: 100%;
-    min-height: auto;
-    padding: 0;
-
-    background-color: transparent;
-}
-
-.pf-auth__form {
-    width: min(100%, 31rem);
-    padding: var(--pf-space-xl);
-
-    color: var(--pf-on-surface);
-    background-color: rgba(255, 255, 255, 0.82);
-
-    border: 1px solid rgba(255, 255, 255, 0.62);
-    border-radius: var(--pf-radius-xl);
-
-    box-shadow:
-        0 1.5rem 4rem rgba(11, 28, 48, 0.28),
-        inset 0 1px 0 rgba(255, 255, 255, 0.68);
-
-    backdrop-filter: blur(1rem);
-    -webkit-backdrop-filter: blur(1rem);
 }
 
 /* =========================================================
-   MARCA Y LOGO
+   TARJETA TRANSLÚCIDA
+   ========================================================= */
+
+.pf-auth__form {
+    width: min(100%, 30rem);
+    padding: var(--pf-space-xl);
+
+    color: var(--pf-on-surface);
+    background-color: rgba(255, 255, 255, 0.72);
+
+    border: 1px solid rgba(255, 255, 255, 0.68);
+    border-radius: var(--pf-radius-xl);
+
+    box-shadow:
+        0 1.5rem 3.5rem rgba(11, 28, 48, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.72);
+
+    backdrop-filter: blur(1.125rem) saturate(1.08);
+    -webkit-backdrop-filter: blur(1.125rem) saturate(1.08);
+}
+
+/* =========================================================
+   LOGO
    ========================================================= */
 
 .pf-auth .pf-brand {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--pf-space-sm);
 
     width: 100%;
-
-    color: var(--pf-on-surface);
-
-    font-size: var(--pf-font-size-heading-lg);
-    font-weight: var(--pf-font-weight-black);
-    line-height: var(--pf-line-height-heading-lg);
-    letter-spacing: -0.03em;
+    margin-bottom: var(--pf-space-xl);
 
     text-align: center;
-    text-decoration: none;
 }
 
 .pf-auth .pf-brand__mark {
-    display: grid;
-    flex: 0 0 auto;
-    place-items: center;
+    display: block;
 
-    width: 2.75rem;
-    height: 2.75rem;
+    width: min(100%, 11rem);
+    height: auto;
+    max-height: 3.5rem;
 
-    color: var(--pf-on-primary);
-    background-color: var(--pf-primary);
+    object-fit: contain;
+    object-position: center;
 
-    border-radius: var(--pf-radius-md);
-
-    box-shadow:
-        0 0.5rem 1rem
-        rgba(var(--pf-primary-rgb), 0.22);
-}
-
-.pf-auth .pf-brand__mark::before {
-    font-family: "bootstrap-icons";
-    font-size: 1.25rem;
-    line-height: 1;
-
-    content: "\f52f";
-}
-
-.pf-auth .pf-brand__name {
-    color: var(--pf-on-surface);
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 /* =========================================================
@@ -199,10 +183,9 @@ body.pf-public-body--auth {
    ========================================================= */
 
 .pf-auth__header {
-    margin-top: var(--pf-space-xl);
-    margin-bottom: var(--pf-space-lg);
+    margin: 0 0 var(--pf-space-xl);
 
-    text-align: center;
+    text-align: left;
 }
 
 .pf-auth__header h1 {
@@ -210,20 +193,20 @@ body.pf-public-body--auth {
 
     color: var(--pf-on-surface);
 
-    font-size: var(--pf-font-size-heading-xl);
+    font-size: var(--pf-font-size-title-md);
     font-weight: var(--pf-font-weight-bold);
-    line-height: var(--pf-line-height-heading-xl);
-    letter-spacing: -0.025em;
+    line-height: var(--pf-line-height-title-md);
+    letter-spacing: -0.015em;
 }
 
 .pf-auth__header p {
     max-width: 27rem;
-    margin: var(--pf-space-sm) auto 0;
+    margin: var(--pf-space-sm) 0 0;
 
-    color: var(--pf-on-surface-variant);
+    color: var(--pf-secondary);
 
     font-size: var(--pf-font-size-body-md);
-    line-height: 1.6;
+    line-height: var(--pf-line-height-body-md);
 }
 
 /* =========================================================
@@ -250,26 +233,30 @@ body.pf-public-body--auth {
 .pf-auth__field .form-label {
     margin: 0 0 var(--pf-space-sm);
 
-    color: var(--pf-on-surface);
+    color: var(--pf-on-surface-variant);
 
-    font-size: var(--pf-font-size-body-sm);
-    font-weight: var(--pf-font-weight-semibold);
-    line-height: var(--pf-line-height-body-sm);
+    font-size: var(--pf-font-size-label-md);
+    font-weight: var(--pf-font-weight-bold);
+    line-height: var(--pf-line-height-label-md);
+
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
 }
 
 /* =========================================================
-   GRUPOS DE ENTRADA
+   GRUPO DE CAMPO
    ========================================================= */
 
 .pf-auth__input-group {
     display: flex;
 
-    min-height: 3.25rem;
+    min-height: 2.875rem;
     overflow: hidden;
 
-    background-color: rgba(255, 255, 255, 0.7);
+    color: var(--pf-on-surface);
+    background-color: rgba(255, 255, 255, 0.5);
 
-    border: 1px solid var(--pf-border-color-strong);
+    border: 1px solid var(--pf-outline-variant);
     border-radius: var(--pf-radius-md);
     box-shadow: none;
 
@@ -280,17 +267,17 @@ body.pf-public-body--auth {
 }
 
 .pf-auth__input-group:hover {
-    background-color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(255, 255, 255, 0.68);
     border-color: var(--pf-outline);
 }
 
 .pf-auth__input-group:focus-within {
-    background-color: var(--pf-surface-container-lowest);
+    background-color: rgba(255, 255, 255, 0.86);
     border-color: var(--pf-primary);
 
     box-shadow:
         0 0 0 0.25rem
-        rgba(var(--pf-primary-rgb), 0.16);
+        rgba(var(--pf-primary-rgb), 0.15);
 }
 
 /* =========================================================
@@ -299,17 +286,17 @@ body.pf-public-body--auth {
 
 .pf-auth__input-group .input-group-text {
     display: inline-flex;
-    flex: 0 0 3.25rem;
+    flex: 0 0 3rem;
     align-items: center;
     justify-content: center;
 
-    width: 3.25rem;
-    min-height: 3.25rem;
+    width: 3rem;
+    min-height: 2.875rem;
     padding: 0;
 
     color: var(--pf-on-primary-container);
     background-color:
-        rgba(var(--pf-primary-container-rgb), 0.16);
+        rgba(var(--pf-primary-container-rgb), 0.14);
 
     border: 0;
     border-right: 1px solid
@@ -320,18 +307,18 @@ body.pf-public-body--auth {
 .pf-auth__input-group .input-group-text i {
     color: var(--pf-on-primary-container);
 
-    font-size: 1.0625rem;
+    font-size: 1rem;
     line-height: 1;
 }
 
 /* =========================================================
-   CAMPOS
+   INPUT
    ========================================================= */
 
 .pf-auth__input-group .form-control {
     min-width: 0;
-    min-height: 3.25rem;
-    padding: 0.75rem var(--pf-space-md);
+    min-height: 2.875rem;
+    padding: 0.625rem var(--pf-space-md);
 
     color: var(--pf-on-surface);
     background-color: transparent;
@@ -341,13 +328,14 @@ body.pf-public-body--auth {
     outline: 0;
     box-shadow: none;
 
+    font: inherit;
     font-size: var(--pf-font-size-body-md);
     line-height: var(--pf-line-height-body-md);
 }
 
 .pf-auth__input-group .form-control::placeholder {
     color: var(--pf-secondary);
-    opacity: 0.72;
+    opacity: 0.82;
 }
 
 .pf-auth__input-group .form-control:focus {
@@ -362,27 +350,23 @@ body.pf-public-body--auth {
 
 .pf-auth__password-toggle {
     display: inline-grid;
-    flex: 0 0 3.25rem;
+    flex: 0 0 3rem;
     place-items: center;
 
-    width: 3.25rem;
-    min-width: 3.25rem;
-    min-height: 3.25rem;
+    width: 3rem;
+    min-width: 3rem;
+    min-height: 2.875rem;
     padding: 0;
 
     color: var(--pf-on-primary-container);
     background-color:
-        rgba(var(--pf-primary-container-rgb), 0.16);
+        rgba(var(--pf-primary-container-rgb), 0.14);
 
     border: 0;
     border-left: 1px solid
         rgba(var(--pf-primary-container-rgb), 0.18);
     border-radius: 0;
     box-shadow: none;
-
-    transition:
-        color var(--pf-transition-fast),
-        background-color var(--pf-transition-fast);
 }
 
 .pf-auth__password-toggle:hover {
@@ -398,7 +382,7 @@ body.pf-public-body--auth {
 
     box-shadow:
         inset 0 0 0 0.1875rem
-        rgba(var(--pf-primary-rgb), 0.24);
+        rgba(var(--pf-primary-rgb), 0.25);
 }
 
 .pf-auth__password-toggle i {
@@ -409,19 +393,19 @@ body.pf-public-body--auth {
 }
 
 /* =========================================================
-   BOTÓN DE ACCESO
+   BOTÓN PRINCIPAL
    ========================================================= */
 
 .pf-auth__submit {
     width: 100%;
-    min-height: 3.25rem;
+    min-height: 3rem;
     margin-top: var(--pf-space-xs);
 
     font-size: var(--pf-font-size-body-md);
 }
 
 /* =========================================================
-   RECUPERACIÓN
+   RECUPERACIÓN DE CONTRASEÑA
    ========================================================= */
 
 .pf-auth__recovery-link {
@@ -460,7 +444,8 @@ body.pf-public-body--auth {
 
 .pf-auth__support {
     display: grid;
-    gap: var(--pf-space-md);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--pf-space-sm);
 
     margin-top: var(--pf-space-xl);
     padding-top: var(--pf-space-lg);
@@ -469,28 +454,34 @@ body.pf-public-body--auth {
 }
 
 .pf-auth__support-item {
-    display: grid;
-    grid-template-columns: 2.25rem minmax(0, 1fr);
+    display: flex;
     align-items: flex-start;
     gap: var(--pf-space-sm);
 
+    min-width: 0;
+    padding: var(--pf-space-sm);
+
     color: var(--pf-on-surface-variant);
+    background-color: rgba(255, 255, 255, 0.28);
+
+    border-radius: var(--pf-radius-md);
 }
 
 .pf-auth__support-item > i {
     display: grid;
+    flex: 0 0 auto;
     place-items: center;
 
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2rem;
+    height: 2rem;
 
     color: var(--pf-on-primary-container);
     background-color:
-        rgba(var(--pf-primary-container-rgb), 0.16);
+        rgba(var(--pf-primary-container-rgb), 0.14);
 
     border-radius: var(--pf-radius-md);
 
-    font-size: 1rem;
+    font-size: 0.875rem;
     line-height: 1;
 }
 
@@ -498,12 +489,12 @@ body.pf-public-body--auth {
     align-self: center;
     margin: 0;
 
-    font-size: var(--pf-font-size-body-sm);
-    line-height: 1.5;
+    font-size: var(--pf-font-size-label-sm);
+    line-height: var(--pf-line-height-label-sm);
 }
 
 /* =========================================================
-   RESPONSIVE
+   TABLET
    ========================================================= */
 
 @media (max-width: 767.98px) {
@@ -514,16 +505,23 @@ body.pf-public-body--auth {
     .pf-auth__form {
         padding: var(--pf-space-lg);
     }
+
+    .pf-auth__support {
+        grid-template-columns: 1fr;
+    }
 }
+
+/* =========================================================
+   MÓVIL
+   ========================================================= */
 
 @media (max-width: 575.98px) {
     .pf-auth {
         align-items: flex-start;
 
-        min-height: 100vh;
         padding:
-            var(--pf-space-lg)
-            var(--pf-space-md);
+            var(--pf-space-md)
+            var(--pf-space-sm);
     }
 
     .pf-auth__panel {
@@ -531,29 +529,23 @@ body.pf-public-body--auth {
     }
 
     .pf-auth__form {
-        padding: var(--pf-space-lg) var(--pf-space-md);
+        padding:
+            var(--pf-space-lg)
+            var(--pf-space-md);
 
         border-radius: var(--pf-radius-lg);
     }
 
     .pf-auth .pf-brand {
-        font-size: var(--pf-font-size-title-md);
-        line-height: var(--pf-line-height-title-md);
-    }
-
-    .pf-auth .pf-brand__mark {
-        width: 2.25rem;
-        height: 2.25rem;
-    }
-
-    .pf-auth__header {
-        margin-top: var(--pf-space-lg);
         margin-bottom: var(--pf-space-lg);
     }
 
-    .pf-auth__header h1 {
-        font-size: var(--pf-font-size-heading-lg);
-        line-height: var(--pf-line-height-heading-lg);
+    .pf-auth .pf-brand__mark {
+        width: min(100%, 9.5rem);
+    }
+
+    .pf-auth__header {
+        margin-bottom: var(--pf-space-lg);
     }
 
     .pf-auth__form-fields {
@@ -566,7 +558,7 @@ body.pf-public-body--auth {
 }
 
 /* =========================================================
-   COMPATIBILIDAD SIN BACKDROP FILTER
+   NAVEGADORES SIN BACKDROP FILTER
    ========================================================= */
 
 @supports not (
@@ -574,7 +566,7 @@ body.pf-public-body--auth {
     (-webkit-backdrop-filter: blur(1rem))
 ) {
     .pf-auth__form {
-        background-color: rgba(255, 255, 255, 0.94);
+        background-color: rgba(255, 255, 255, 0.9);
     }
 }
 
@@ -583,8 +575,7 @@ body.pf-public-body--auth {
    ========================================================= */
 
 @media (prefers-reduced-motion: reduce) {
-    .pf-auth__input-group,
-    .pf-auth__password-toggle {
+    .pf-auth__input-group {
         transition: none;
     }
 
