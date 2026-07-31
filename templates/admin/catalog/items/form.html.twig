@@ -5,11 +5,11 @@
 {% block app_breadcrumb %}Catálogo / Conceptos comerciales / {{ pageTitle }}{% endblock %}
 
 {% block app_content %}
-    <div class="pf-page">
+    <div class="pf-page__content">
         <div class="pf-page-header">
-            <div>
+            <div class="pf-page-header__content">
                 <h1 class="pf-page-header__title">{{ pageTitle }}</h1>
-                <p class="pf-page-header__subtitle">
+                <p class="pf-page-header__description">
                     Define la información comercial base que se utilizará en las cotizaciones.
                 </p>
             </div>
@@ -22,7 +22,7 @@
                 </div>
             {% endif %}
 
-            {{ form_start(form, {attr: {class: 'pf-form', novalidate: 'novalidate'}}) }}
+            {{ form_start(form, {attr: {class: 'pf-form pf-card__body', novalidate: 'novalidate'}}) }}
                 <div class="row g-3">
                     <div class="col-md-4">
                         {{ form_row(form.code) }}
@@ -53,12 +53,18 @@
                     </div>
                 </div>
 
-                <div class="pf-form-actions mt-4">
-                    <a href="{{ path('admin_catalog_items_index') }}" class="btn pf-button pf-button--secondary">
+                <div class="pf-form-actions">
+                    <a
+                        href="{{ path('admin_catalog_items_index') }}"
+                        class="btn pf-button pf-button--secondary"
+                    >
                         Cancelar
                     </a>
 
-                    <button type="submit" class="btn pf-button pf-button--primary">
+                    <button
+                        type="submit"
+                        class="btn pf-button pf-button--primary"
+                    >
                         <i class="bi bi-check-lg" aria-hidden="true"></i>
                         <span>{{ item ? 'Guardar cambios' : 'Crear concepto' }}</span>
                     </button>
