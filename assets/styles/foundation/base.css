@@ -47,18 +47,21 @@ h1 {
     line-height: var(--pf-line-height-heading-xl);
     letter-spacing: -0.02em;
     font-weight: var(--pf-font-weight-bold);
+    color: var(--pf-on-primary-container);
 }
 
 h2 {
     font-size: var(--pf-font-size-heading-lg);
     line-height: var(--pf-line-height-heading-lg);
     letter-spacing: -0.01em;
+    color: var(--pf-on-primary-fixed);
 }
 
 h3,
 h4 {
     font-size: var(--pf-font-size-title-md);
     line-height: var(--pf-line-height-title-md);
+    color: var(--pf-on-primary-fixed-variant);
 }
 
 p {

@@ -18,7 +18,7 @@
             {% if is_granted('user.create') %}
                 <a
                     href="{{ path('admin_users_new') }}"
-                    class="btn btn-primary pf-button pf-users-heading__action"
+                    class="btn pf-button pf-button--primary pf-users-heading__action"
                 >
                     <i class="bi bi-person-plus" aria-hidden="true"></i>
                     Crear usuario
@@ -45,14 +45,17 @@
                     >
                 </div>
 
-                <button type="submit" class="btn pf-button pf-button--secondary">
+                <button
+                    type="submit"
+                    class="btn pf-button pf-button--secondary"
+                >
                     Buscar
                 </button>
 
                 {% if search %}
                     <a
                         href="{{ path('admin_users_index') }}"
-                        class="pf-users-search__clear"
+                        class="btn pf-button pf-button--subtle pf-button--sm"
                     >
                         Limpiar
                     </a>
@@ -149,7 +152,7 @@
                                         {% if is_granted('user.update') %}
                                             <a
                                                 href="{{ path('admin_users_edit', {id: managed_user.id}) }}"
-                                                class="pf-user-action"
+                                                class="btn pf-button pf-button--secondary pf-button--sm"
                                             >
                                                 <i class="bi bi-pencil-square" aria-hidden="true"></i>
                                                 Editar
@@ -159,7 +162,7 @@
                                         {% if is_granted('user.reset_password') %}
                                             <a
                                                 href="{{ path('admin_users_reset_password', {id: managed_user.id}) }}"
-                                                class="pf-user-action"
+                                                class="btn pf-button pf-button--subtle pf-button--sm"
                                             >
                                                 <i class="bi bi-key" aria-hidden="true"></i>
                                                 Contraseña
@@ -179,7 +182,7 @@
 
                                                 <button
                                                     type="submit"
-                                                    class="pf-user-action {{ managed_user.active ? 'pf-user-action--danger' : 'pf-user-action--success' }}"
+                                                    class="btn pf-button pf-button--sm {{ managed_user.active ? 'pf-button--danger' : 'pf-button--success' }}"
                                                 >
                                                     <i
                                                         class="bi {{ managed_user.active ? 'bi-person-dash' : 'bi-person-check' }}"
@@ -216,13 +219,13 @@
                     {% if page > 1 %}
                         <a
                             href="{{ path('admin_users_index', {q: search, page: page - 1}) }}"
-                            class="pf-users-pagination__button"
+                            class="btn pf-button pf-button--secondary pf-button--sm"
                         >
                             <i class="bi bi-arrow-left" aria-hidden="true"></i>
                             Anterior
                         </a>
                     {% else %}
-                        <span class="pf-users-pagination__button is-disabled">
+                        <span class="pf-button pf-button--secondary pf-button--sm disabled">
                             <i class="bi bi-arrow-left" aria-hidden="true"></i>
                             Anterior
                         </span>
@@ -235,13 +238,13 @@
                     {% if page < total_pages %}
                         <a
                             href="{{ path('admin_users_index', {q: search, page: page + 1}) }}"
-                            class="pf-users-pagination__button"
+                            class="btn pf-button pf-button--secondary pf-button--sm"
                         >
                             Siguiente
                             <i class="bi bi-arrow-right" aria-hidden="true"></i>
                         </a>
                     {% else %}
-                        <span class="pf-users-pagination__button is-disabled">
+                        <span class="pf-button pf-button--secondary pf-button--sm disabled">
                             Siguiente
                             <i class="bi bi-arrow-right" aria-hidden="true"></i>
                         </span>
