@@ -11,7 +11,7 @@
 %}
 
 {% block app_content %}
-    <div class="pf-page">
+    <div class="pf-page__content">
         <header class="pf-page-header">
             <div class="pf-page-header__content">
                 <h1 class="pf-page-header__title">
@@ -55,7 +55,7 @@
         <form
             method="get"
             action="{{ path('admin_catalog_items_index') }}"
-            class="pf-card pf-form mb-4"
+            class="pf-card pf-form"
             aria-label="Filtros de conceptos comerciales"
         >
             <div class="pf-card__body">
@@ -239,7 +239,7 @@
                                             {{
                                                 item.isActive
                                                     ? 'pf-status-badge--success'
-                                                    : 'pf-status-badge--neutral'
+                                                    : 'pf-status-badge--warning'
                                             }}
                                         "
                                     >
@@ -264,7 +264,7 @@
                                                     class="
                                                         btn
                                                         pf-button
-                                                        pf-button--secondary
+                                                        pf-button--subtle
                                                         pf-button--sm
                                                     "
                                                 >
