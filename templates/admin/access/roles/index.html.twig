@@ -18,7 +18,7 @@
             {% if is_granted('role.manage') %}
                 <a
                     href="{{ path('admin_roles_new') }}"
-                    class="btn btn-primary pf-button pf-roles-heading__action"
+                    class="btn pf-button pf-button--primary pf-roles-heading__action"
                 >
                     <i class="bi bi-shield-plus" aria-hidden="true"></i>
                     Crear rol
@@ -94,7 +94,7 @@
                                     {% if is_granted('role.manage') %}
                                         <a
                                             href="{{ path('admin_roles_edit', {id: role.id}) }}"
-                                            class="pf-role-action"
+                                            class="pf-role-action {{ is_protected ? 'pf-role-action--subtle' : '' }}"
                                         >
                                             <i
                                                 class="bi {{ is_protected ? 'bi-eye' : 'bi-pencil-square' }}"

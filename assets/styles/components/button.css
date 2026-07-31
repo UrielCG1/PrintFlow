@@ -127,23 +127,23 @@
 
 .pf-button--secondary,
 .pf-button.btn-outline-secondary {
-    color: var(--pf-on-surface);
-    background-color: var(--pf-surface-container-lowest);
-    border-color: var(--pf-border-color);
+    color: var(--pf-on-secondary-fixed-variant);
+    background-color: var(--pf-secondary-container);
+    border-color: var(--pf-secondary-fixed-dim);
 }
 
 .pf-button--secondary:hover,
 .pf-button.btn-outline-secondary:hover {
-    color: var(--pf-on-surface);
-    background-color: var(--pf-surface-container-low);
-    border-color: var(--pf-border-color-strong);
+    color: var(--pf-on-secondary-fixed);
+    background-color: var(--pf-secondary-fixed-dim);
+    border-color: var(--pf-secondary);
 }
 
 .pf-button--secondary:active,
 .pf-button.btn-outline-secondary:active {
-    color: var(--pf-on-surface);
-    background-color: var(--pf-surface-container);
-    border-color: var(--pf-outline);
+    color: var(--pf-on-secondary);
+    background-color: var(--pf-secondary);
+    border-color: var(--pf-secondary);
 }
 
 /* =========================================================
@@ -154,13 +154,13 @@
 .pf-button--subtle {
     color: var(--pf-on-surface);
     background-color: var(--pf-surface-container-highest);
-    border-color: transparent;
+    border-color: var(--pf-outline-variant);
 }
 
 .pf-button--subtle:hover {
     color: var(--pf-on-surface);
     background-color: var(--pf-surface-container-high);
-    border-color: var(--pf-border-color);
+    border-color: var(--pf-outline);
 }
 
 /* =========================================================
@@ -196,6 +196,30 @@
     color: var(--pf-on-primary);
     background-color: var(--pf-on-primary-fixed-variant);
     border-color: var(--pf-on-primary-fixed-variant);
+}
+
+/* =========================================================
+   WARNING
+   ========================================================= */
+.pf-button--warning,
+.pf-button.btn-warning {
+    color: var(--pf-on-tertiary-fixed-variant);
+    background-color: var(--pf-tertiary-fixed);
+    border-color: var(--pf-tertiary-fixed-dim);
+}
+
+.pf-button--warning:hover,
+.pf-button.btn-warning:hover {
+    color: var(--pf-on-tertiary);
+    background-color: var(--pf-tertiary);
+    border-color: var(--pf-tertiary);
+}
+
+.pf-button--warning:active,
+.pf-button.btn-warning:active {
+    color: var(--pf-on-tertiary);
+    background-color: var(--pf-on-tertiary-fixed-variant);
+    border-color: var(--pf-on-tertiary-fixed-variant);
 }
 
 /* =========================================================
