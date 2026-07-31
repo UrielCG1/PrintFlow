@@ -256,7 +256,7 @@ body.pf-public-body--auth {
     margin: 0;
     padding-bottom: 0.75rem;
 
-    color: var(--pf-on-surface);
+    color: var(--pf-on-primary-fixed);
 
     font-size: clamp(1.75rem, 2.5vw, 2.25rem);
     font-weight: var(--pf-font-weight-black);
