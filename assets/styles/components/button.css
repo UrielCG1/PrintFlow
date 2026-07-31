@@ -230,13 +230,12 @@
 .pf-button.btn-outline-danger {
     color: var(--pf-error);
 
-    background:
-        linear-gradient(
-            135deg,
-            rgba(var(--pf-primary-rgb), 0.09),
-            rgba(var(--pf-secondary-rgb), 0.16)
-        );
-
+    background-color: color-mix(
+        in srgb,
+        var(--pf-error) 15%,
+        transparent
+    );
+    
     border-color: rgba(var(--pf-primary-rgb), 0.22);
 
     box-shadow:
