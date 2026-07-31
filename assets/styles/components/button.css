@@ -229,15 +229,38 @@
 .pf-button--danger,
 .pf-button.btn-outline-danger {
     color: var(--pf-error);
-    background-color: var(--pf-surface-container-lowest);
-    border-color: var(--pf-error);
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(var(--pf-primary-rgb), 0.09),
+            rgba(var(--pf-secondary-rgb), 0.16)
+        );
+
+    border-color: rgba(var(--pf-primary-rgb), 0.22);
+
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.45),
+        0 2px 8px rgba(var(--pf-secondary-rgb), 0.08);
 }
 
 .pf-button--danger:hover,
 .pf-button.btn-outline-danger:hover {
     color: var(--pf-on-error);
     background-color: var(--pf-error);
+    background-image: none;
     border-color: var(--pf-error);
+
+    box-shadow:
+        0 4px 12px rgba(var(--pf-error-rgb), 0.22);
+}
+
+.pf-button--danger:active,
+.pf-button.btn-outline-danger:active {
+    color: var(--pf-on-error);
+    background-color: var(--pf-on-error-container);
+    background-image: none;
+    border-color: var(--pf-on-error-container);
 }
 
 .pf-button--danger-subtle {
@@ -251,7 +274,6 @@
     background-color: var(--pf-error);
     border-color: var(--pf-error);
 }
-
 /* =========================================================
    ENLACE
    ========================================================= */

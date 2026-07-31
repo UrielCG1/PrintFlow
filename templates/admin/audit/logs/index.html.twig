@@ -90,20 +90,33 @@
             </p>
         </header>
 
-        <form method="get" action="{{ path('admin_audit_index') }}" class="pf-audit-filter">
-            <div class="pf-audit-filter__field">
-                <label for="q">Buscar</label>
+        <form
+            method="get"
+            action="{{ path('admin_audit_index') }}"
+            class="pf-audit-filter pf-form"
+        >
+            <div class="pf-audit-filter__field pf-form-field">
+                <label for="q" class="form-label">Buscar</label>
+
                 <input
                     id="q"
                     name="q"
                     value="{{ search }}"
+                    class="form-control"
                     placeholder="Acción, módulo o usuario"
                 >
             </div>
 
-            <div class="pf-audit-filter__field">
-                <label for="actor">Usuario responsable</label>
-                <select id="actor" name="actor">
+            <div class="pf-audit-filter__field pf-form-field">
+                <label for="actor" class="form-label">
+                    Usuario responsable
+                </label>
+
+                <select
+                    id="actor"
+                    name="actor"
+                    class="form-select"
+                >
                     <option value="">Todos los usuarios</option>
 
                     {% for user in users %}
@@ -115,23 +128,43 @@
                 </select>
             </div>
 
-            <div class="pf-audit-filter__field">
-                <label for="from">Desde</label>
-                <input id="from" type="date" name="from" value="{{ from }}">
+            <div class="pf-audit-filter__field pf-form-field">
+                <label for="from" class="form-label">Desde</label>
+
+                <input
+                    id="from"
+                    type="date"
+                    name="from"
+                    value="{{ from }}"
+                    class="form-control"
+                >
             </div>
 
-            <div class="pf-audit-filter__field">
-                <label for="to">Hasta</label>
-                <input id="to" type="date" name="to" value="{{ to }}">
+            <div class="pf-audit-filter__field pf-form-field">
+                <label for="to" class="form-label">Hasta</label>
+
+                <input
+                    id="to"
+                    type="date"
+                    name="to"
+                    value="{{ to }}"
+                    class="form-control"
+                >
             </div>
 
             <div class="pf-audit-filter__actions">
-                <button type="submit" class="btn btn-primary pf-button">
+                <button
+                    type="submit"
+                    class="btn pf-button pf-button--primary"
+                >
                     <i class="bi bi-funnel" aria-hidden="true"></i>
                     Filtrar
                 </button>
 
-                <a href="{{ path('admin_audit_index') }}" class="pf-audit-filter__clear">
+                <a
+                    href="{{ path('admin_audit_index') }}"
+                    class="pf-audit-filter__clear"
+                >
                     Limpiar
                 </a>
             </div>
@@ -150,6 +183,7 @@
                             <th>Detalle</th>
                         </tr>
                     </thead>
+
                     <tbody>
                         {% for log in logs %}
                             {% set action_label = action_labels[log.action]|default(log.action|replace({'.': ' · ', '_': ' '})|title) %}
@@ -170,32 +204,43 @@
                                         <span>{{ log.createdAt|date('H:i:s', 'America/Mexico_City') }}</span>
                                     </div>
                                 </td>
+
                                 <td>
                                     <div class="pf-audit-actor">
                                         <span class="pf-audit-actor__icon">
-                                            <i class="bi {{ log.actor ? 'bi-person' : 'bi-cpu' }}" aria-hidden="true"></i>
+                                            <i
+                                                class="bi {{ log.actor ? 'bi-person' : 'bi-cpu' }}"
+                                                aria-hidden="true"
+                                            ></i>
                                         </span>
+
                                         <div>
                                             <strong>{{ log.actor ? log.actor.fullName : 'Sistema' }}</strong>
                                             <span>{{ log.actor ? '@' ~ log.actor.username : 'Proceso interno' }}</span>
                                         </div>
                                     </div>
                                 </td>
+
                                 <td>
                                     <span class="pf-audit-action {{ action_tone }}">
                                         <i class="bi bi-clock-history" aria-hidden="true"></i>
                                         {{ action_label }}
                                     </span>
                                 </td>
+
                                 <td>
                                     <div class="pf-audit-entity">
                                         <strong>{{ log.entityType|capitalize }}</strong>
                                         <span>#{{ log.entityId ?? '—' }}</span>
                                     </div>
                                 </td>
+
                                 <td>
-                                    <span class="pf-audit-ip">{{ log.ipAddress ?? '—' }}</span>
+                                    <span class="pf-audit-ip">
+                                        {{ log.ipAddress ?? '—' }}
+                                    </span>
                                 </td>
+
                                 <td>
                                     {% if log.oldValues or log.newValues %}
                                         <details class="pf-audit-details">
@@ -205,10 +250,12 @@
                                                 {% if log.oldValues %}
                                                     <section class="pf-audit-change-card">
                                                         <h3>Antes</h3>
+
                                                         <dl>
                                                             {% for field, value in log.oldValues %}
                                                                 <div>
                                                                     <dt>{{ field_labels[field]|default(field) }}</dt>
+
                                                                     <dd>
                                                                         {% if value is iterable %}
                                                                             {{ value|json_encode(constant('JSON_UNESCAPED_UNICODE')) ?: '—' }}
@@ -231,10 +278,12 @@
                                                 {% if log.newValues %}
                                                     <section class="pf-audit-change-card">
                                                         <h3>Después</h3>
+
                                                         <dl>
                                                             {% for field, value in log.newValues %}
                                                                 <div>
                                                                     <dt>{{ field_labels[field]|default(field) }}</dt>
+
                                                                     <dd>
                                                                         {% if value is iterable %}
                                                                             {{ value|json_encode(constant('JSON_UNESCAPED_UNICODE')) ?: '—' }}
@@ -266,7 +315,11 @@
                                     <div class="pf-audit-empty">
                                         <div>
                                             <i class="bi bi-journal-x" aria-hidden="true"></i>
-                                            <strong>No hay registros para los filtros seleccionados.</strong>
+
+                                            <strong>
+                                                No hay registros para los filtros seleccionados.
+                                            </strong>
+
                                             Ajusta o limpia los filtros para consultar otros eventos.
                                         </div>
                                     </div>
@@ -279,7 +332,10 @@
         </section>
 
         {% if totalPages > 1 %}
-            <nav class="pf-audit-pagination" aria-label="Paginación de bitácora">
+            <nav
+                class="pf-audit-pagination"
+                aria-label="Paginación de bitácora"
+            >
                 {% if page > 1 %}
                     <a
                         href="{{ path('admin_audit_index', routeParameters|merge({page: page - 1})) }}"
