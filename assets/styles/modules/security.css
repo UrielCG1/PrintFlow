@@ -9,7 +9,7 @@ body.pf-public-body--auth {
     min-height: 100vh;
 
     color: var(--pf-on-surface);
-    background-color: var(--pf-surface-container-low);
+    background-color: var(--pf-on-error-container-low);
 }
 
 .pf-public-body--auth .pf-public-shell {
@@ -77,7 +77,7 @@ body.pf-public-body--auth {
     height: 100%;
     overflow: hidden;
 
-    background-color: var(--pf-surface-container-low);
+    background-color: var(--pf-on-error-container-low);
 }
 .pf-auth__visual::before {
     position: absolute;
@@ -298,7 +298,7 @@ body.pf-public-body--auth {
     max-width: 27rem;
     margin: var(--pf-space-md) 0 0;
 
-    color: var(--pf-on-surface-variant);
+    color: var(--pf-on-error);
 
     font-size: var(--pf-font-size-body-md);
     line-height: 1.55;
@@ -328,7 +328,7 @@ body.pf-public-body--auth {
 .pf-auth__field .form-label {
     margin: 0 0 var(--pf-space-sm);
 
-    color: var(--pf-on-surface-variant);
+    color: var(--pf-on-error);
 
     font-size: var(--pf-font-size-label-md);
     font-weight: var(--pf-font-weight-bold);
@@ -429,7 +429,7 @@ body.pf-public-body--auth {
 }
 
 .pf-auth__input-group .form-control::placeholder {
-    color: var(--pf-secondary);
+    color: var(--pf-on-error);
     opacity: 0.82;
 }
 
@@ -541,7 +541,7 @@ body.pf-public-body--auth {
 }
 
 .pf-auth__recovery-link[aria-disabled="true"] {
-    color: var(--pf-secondary);
+    color: var(--pf-on-error);
 
     cursor: not-allowed;
     pointer-events: none;
