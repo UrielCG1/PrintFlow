@@ -224,7 +224,7 @@
 .pf-sidebar__link.is-active,
 .pf-sidebar__link[aria-current="page"] {
     color: var(--pf-on-primary-container);
-    background-color: var(--pf-primary-container);
+    background-color: #16c61d47;
 
     font-weight: var(--pf-font-weight-bold);
 
