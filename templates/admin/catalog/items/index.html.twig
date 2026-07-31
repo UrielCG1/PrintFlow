@@ -4,83 +4,183 @@
 {% block app_navigation_active %}catalog{% endblock %}
 {% block app_breadcrumb %}Catálogo / Conceptos comerciales{% endblock %}
 
+{% set canManage =
+    is_granted('catalog.items.update')
+    or is_granted('catalog.items.update_price')
+    or is_granted('catalog.items.toggle_status')
+%}
+
 {% block app_content %}
     <div class="pf-page">
-        <div class="pf-page-header">
-            <div>
-                <h1 class="pf-page-header__title">Conceptos comerciales</h1>
-                <p class="pf-page-header__subtitle">
+        <header class="pf-page-header">
+            <div class="pf-page-header__content">
+                <h1 class="pf-page-header__title">
+                    Conceptos comerciales
+                </h1>
+
+                <p class="pf-page-header__description">
                     Administra los productos y servicios disponibles para las cotizaciones.
                 </p>
             </div>
 
-            <div class="d-flex flex-wrap gap-2">
-                <a href="{{ path('admin_catalog_categories_index') }}" class="btn pf-button pf-button--secondary">
+            <div class="pf-page-header__actions">
+                <a
+                    href="{{ path('admin_catalog_categories_index') }}"
+                    class="btn pf-button pf-button--secondary"
+                >
                     <i class="bi bi-tags" aria-hidden="true"></i>
                     <span>Categorías</span>
                 </a>
 
-                <a href="{{ path('admin_catalog_units_index') }}" class="btn pf-button pf-button--secondary">
+                <a
+                    href="{{ path('admin_catalog_units_index') }}"
+                    class="btn pf-button pf-button--secondary"
+                >
                     <i class="bi bi-rulers" aria-hidden="true"></i>
                     <span>Unidades</span>
                 </a>
 
                 {% if is_granted('catalog.items.create') %}
-                    <a href="{{ path('admin_catalog_items_new') }}" class="btn pf-button pf-button--primary">
+                    <a
+                        href="{{ path('admin_catalog_items_new') }}"
+                        class="btn pf-button pf-button--primary"
+                    >
                         <i class="bi bi-plus-lg" aria-hidden="true"></i>
                         <span>Nuevo concepto</span>
                     </a>
                 {% endif %}
             </div>
-        </div>
+        </header>
 
-        <form method="get" class="pf-card mb-4">
-            <div class="row g-3 align-items-end">
-                <div class="col-lg-5">
-                    <label for="catalog-item-search" class="form-label">Buscar</label>
-                    <input
-                        id="catalog-item-search"
-                        type="search"
-                        name="q"
-                        value="{{ search }}"
-                        class="form-control"
-                        placeholder="Código, concepto, categoría o unidad"
-                    >
-                </div>
+        <form
+            method="get"
+            action="{{ path('admin_catalog_items_index') }}"
+            class="pf-card pf-form mb-4"
+            aria-label="Filtros de conceptos comerciales"
+        >
+            <div class="pf-card__body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-lg-5 pf-form-field">
+                        <label
+                            for="catalog-item-search"
+                            class="form-label"
+                        >
+                            Buscar
+                        </label>
 
-                <div class="col-md-3 col-lg-2">
-                    <label for="catalog-item-type" class="form-label">Tipo</label>
-                    <select id="catalog-item-type" name="type" class="form-select">
-                        <option value="all" {{ type == 'all' ? 'selected' : '' }}>Todos</option>
-                        <option value="service" {{ type == 'service' ? 'selected' : '' }}>Servicios</option>
-                        <option value="product" {{ type == 'product' ? 'selected' : '' }}>Productos</option>
-                    </select>
-                </div>
+                        <input
+                            id="catalog-item-search"
+                            type="search"
+                            name="q"
+                            value="{{ search }}"
+                            class="form-control"
+                            placeholder="Código, concepto, categoría o unidad"
+                        >
+                    </div>
 
-                <div class="col-md-3 col-lg-2">
-                    <label for="catalog-item-status" class="form-label">Estado</label>
-                    <select id="catalog-item-status" name="status" class="form-select">
-                        <option value="active" {{ status == 'active' ? 'selected' : '' }}>Activos</option>
-                        <option value="inactive" {{ status == 'inactive' ? 'selected' : '' }}>Inactivos</option>
-                        <option value="all" {{ status == 'all' ? 'selected' : '' }}>Todos</option>
-                    </select>
-                </div>
+                    <div class="col-md-3 col-lg-2 pf-form-field">
+                        <label
+                            for="catalog-item-type"
+                            class="form-label"
+                        >
+                            Tipo
+                        </label>
 
-                <div class="col-md-6 col-lg-3 d-flex gap-2">
-                    <button type="submit" class="btn pf-button pf-button--primary">
-                        <i class="bi bi-search" aria-hidden="true"></i>
-                        <span>Filtrar</span>
-                    </button>
+                        <select
+                            id="catalog-item-type"
+                            name="type"
+                            class="form-select"
+                        >
+                            <option
+                                value="all"
+                                {{ type == 'all' ? 'selected' : '' }}
+                            >
+                                Todos
+                            </option>
 
-                    <a href="{{ path('admin_catalog_items_index') }}" class="btn pf-button pf-button--secondary">
-                        Limpiar
-                    </a>
+                            <option
+                                value="service"
+                                {{ type == 'service' ? 'selected' : '' }}
+                            >
+                                Servicios
+                            </option>
+
+                            <option
+                                value="product"
+                                {{ type == 'product' ? 'selected' : '' }}
+                            >
+                                Productos
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3 col-lg-2 pf-form-field">
+                        <label
+                            for="catalog-item-status"
+                            class="form-label"
+                        >
+                            Estado
+                        </label>
+
+                        <select
+                            id="catalog-item-status"
+                            name="status"
+                            class="form-select"
+                        >
+                            <option
+                                value="active"
+                                {{ status == 'active' ? 'selected' : '' }}
+                            >
+                                Activos
+                            </option>
+
+                            <option
+                                value="inactive"
+                                {{ status == 'inactive' ? 'selected' : '' }}
+                            >
+                                Inactivos
+                            </option>
+
+                            <option
+                                value="all"
+                                {{ status == 'all' ? 'selected' : '' }}
+                            >
+                                Todos
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6 col-lg-3">
+                        <div class="pf-card__header-actions">
+                            <button
+                                type="submit"
+                                class="btn pf-button pf-button--primary"
+                            >
+                                <i class="bi bi-search" aria-hidden="true"></i>
+                                <span>Filtrar</span>
+                            </button>
+
+                            <a
+                                href="{{ path('admin_catalog_items_index') }}"
+                                class="btn pf-button pf-button--secondary"
+                            >
+                                <i
+                                    class="bi bi-arrow-counterclockwise"
+                                    aria-hidden="true"
+                                ></i>
+                                <span>Limpiar</span>
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </form>
 
-        <div class="pf-card">
-            <div class="pf-table-responsive">
+        <section
+            class="pf-card pf-card--padding-none"
+            aria-label="Listado de conceptos comerciales"
+        >
+            <div class="pf-table-responsive pf-table-responsive--flat">
                 <table class="pf-table">
                     <thead>
                         <tr>
@@ -89,46 +189,112 @@
                             <th>Tipo</th>
                             <th>Categoría</th>
                             <th>Unidad</th>
-                            <th class="text-end">Precio base</th>
+
+                            <th class="pf-table__cell--right">
+                                Precio base
+                            </th>
+
                             <th>Estado</th>
-                            {% if is_granted('catalog.items.update') or is_granted('catalog.items.update_price') or is_granted('catalog.items.toggle_status') %}
-                                <th class="text-end">Acciones</th>
+
+                            {% if canManage %}
+                                <th class="pf-table__actions-cell">
+                                    Acciones
+                                </th>
                             {% endif %}
                         </tr>
                     </thead>
+
                     <tbody>
                         {% for item in page.items %}
                             <tr>
-                                <td><code>{{ item.code }}</code></td>
-                                <td>{{ item.name }}</td>
+                                <td>
+                                    <code class="pf-table__code">
+                                        {{ item.code }}
+                                    </code>
+                                </td>
+
+                                <td>
+                                    <span class="pf-table__primary">
+                                        {{ item.name }}
+                                    </span>
+                                </td>
+
                                 <td>{{ item.type.label }}</td>
                                 <td>{{ item.category.name }}</td>
                                 <td>{{ item.measurementUnit.name }}</td>
-                                <td class="text-end">MXN ${{ item.basePrice|number_format(2, '.', ',') }}</td>
+
+                                <td
+                                    class="
+                                        pf-table__cell--right
+                                        pf-table__cell--nowrap
+                                    "
+                                >
+                                    MXN ${{ item.basePrice|number_format(2, '.', ',') }}
+                                </td>
+
                                 <td>
-                                    <span class="pf-status-badge {{ item.isActive ? 'pf-status-badge--success' : 'pf-status-badge--neutral' }}">
+                                    <span
+                                        class="
+                                            pf-status-badge
+                                            {{
+                                                item.isActive
+                                                    ? 'pf-status-badge--success'
+                                                    : 'pf-status-badge--neutral'
+                                            }}
+                                        "
+                                    >
+                                        <span
+                                            class="pf-status-badge__dot"
+                                            aria-hidden="true"
+                                        ></span>
+
                                         {{ item.isActive ? 'Activo' : 'Inactivo' }}
                                     </span>
                                 </td>
 
-                                {% if is_granted('catalog.items.update') or is_granted('catalog.items.update_price') or is_granted('catalog.items.toggle_status') %}
-                                    <td>
-                                        <div class="pf-table__actions justify-content-end">
+                                {% if canManage %}
+                                    <td class="pf-table__actions-cell">
+                                        <div class="pf-table__actions">
                                             {% if is_granted('catalog.items.update_price') %}
                                                 <a
-                                                    href="{{ path('admin_catalog_item_price_rules_index', {item: item.id}) }}"
-                                                    class="btn pf-button pf-button--secondary pf-button--sm"
+                                                    href="{{ path(
+                                                        'admin_catalog_item_price_rules_index',
+                                                        {item: item.id}
+                                                    ) }}"
+                                                    class="
+                                                        btn
+                                                        pf-button
+                                                        pf-button--secondary
+                                                        pf-button--sm
+                                                    "
                                                 >
-                                                    <i class="bi bi-cash-stack" aria-hidden="true"></i>
+                                                    <i
+                                                        class="bi bi-cash-stack"
+                                                        aria-hidden="true"
+                                                    ></i>
+
                                                     <span>Rangos</span>
                                                 </a>
                                             {% endif %}
+
                                             {% if is_granted('catalog.items.update') %}
                                                 <a
-                                                    href="{{ path('admin_catalog_items_edit', {id: item.id}) }}"
-                                                    class="btn pf-button pf-button--secondary pf-button--sm"
+                                                    href="{{ path(
+                                                        'admin_catalog_items_edit',
+                                                        {id: item.id}
+                                                    ) }}"
+                                                    class="
+                                                        btn
+                                                        pf-button
+                                                        pf-button--secondary
+                                                        pf-button--sm
+                                                    "
                                                 >
-                                                    <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                                    <i
+                                                        class="bi bi-pencil-square"
+                                                        aria-hidden="true"
+                                                    ></i>
+
                                                     <span>Editar</span>
                                                 </a>
                                             {% endif %}
@@ -136,26 +302,54 @@
                                             {% if is_granted('catalog.items.toggle_status') %}
                                                 <form
                                                     method="post"
-                                                    action="{{ path('admin_catalog_items_status', {
-                                                        id: item.id,
-                                                        q: search,
-                                                        type: type,
-                                                        status: status,
-                                                        page: page.currentPage
-                                                    }) }}"
+                                                    action="{{ path(
+                                                        'admin_catalog_items_status',
+                                                        {
+                                                            id: item.id,
+                                                            q: search,
+                                                            type: type,
+                                                            status: status,
+                                                            page: page.currentPage
+                                                        }
+                                                    ) }}"
                                                 >
                                                     <input
                                                         type="hidden"
                                                         name="_token"
-                                                        value="{{ csrf_token('catalog_item_status_' ~ item.id) }}"
+                                                        value="{{ csrf_token(
+                                                            'catalog_item_status_' ~ item.id
+                                                        ) }}"
                                                     >
 
                                                     <button
                                                         type="submit"
-                                                        class="btn pf-button pf-button--sm {{ item.isActive ? 'pf-button--danger' : 'pf-button--success' }}"
+                                                        class="
+                                                            btn
+                                                            pf-button
+                                                            pf-button--sm
+                                                            {{
+                                                                item.isActive
+                                                                    ? 'pf-button--danger'
+                                                                    : 'pf-button--success'
+                                                            }}
+                                                        "
                                                     >
-                                                        <i class="bi {{ item.isActive ? 'bi-pause-circle' : 'bi-check-circle' }}" aria-hidden="true"></i>
-                                                        <span>{{ item.isActive ? 'Desactivar' : 'Reactivar' }}</span>
+                                                        <i
+                                                            class="bi {{
+                                                                item.isActive
+                                                                    ? 'bi-pause-circle'
+                                                                    : 'bi-check-circle'
+                                                            }}"
+                                                            aria-hidden="true"
+                                                        ></i>
+
+                                                        <span>
+                                                            {{
+                                                                item.isActive
+                                                                    ? 'Desactivar'
+                                                                    : 'Reactivar'
+                                                            }}
+                                                        </span>
                                                     </button>
                                                 </form>
                                             {% endif %}
@@ -165,8 +359,27 @@
                             </tr>
                         {% else %}
                             <tr>
-                                <td colspan="{{ (is_granted('catalog.items.update') or is_granted('catalog.items.update_price') or is_granted('catalog.items.toggle_status')) ? 8 : 7 }}" class="text-center py-4">
-                                    No se encontraron conceptos comerciales.
+                                <td
+                                    colspan="{{ canManage ? 8 : 7 }}"
+                                    class="pf-table__empty"
+                                >
+                                    <div class="pf-table__empty-content">
+                                        <span
+                                            class="pf-table__empty-icon"
+                                            aria-hidden="true"
+                                        >
+                                            <i class="bi bi-inbox"></i>
+                                        </span>
+
+                                        <p class="pf-table__empty-title">
+                                            No se encontraron conceptos comerciales
+                                        </p>
+
+                                        <p class="pf-table__empty-description">
+                                            Modifica los filtros de búsqueda o registra
+                                            un nuevo concepto.
+                                        </p>
+                                    </div>
                                 </td>
                             </tr>
                         {% endfor %}
@@ -175,26 +388,106 @@
             </div>
 
             {% if page.totalPages > 1 %}
-                <nav class="mt-4" aria-label="Paginación de conceptos comerciales">
-                    <ul class="pagination mb-0">
-                        <li class="page-item {{ page.currentPage == 1 ? 'disabled' : '' }}">
-                            <a class="page-link" href="{{ path('admin_catalog_items_index', {q: search, type: type, status: status, page: page.currentPage - 1}) }}">
-                                Anterior
-                            </a>
-                        </li>
+                <footer class="pf-table-footer">
+                    <p class="pf-table-footer__summary">
+                        Página
+                        <strong>{{ page.currentPage }}</strong>
+                        de
+                        <strong>{{ page.totalPages }}</strong>
+                    </p>
 
-                        <li class="page-item disabled">
-                            <span class="page-link">Página {{ page.currentPage }} de {{ page.totalPages }}</span>
-                        </li>
+                    <nav
+                        class="pf-table-footer__pagination"
+                        aria-label="Paginación de conceptos comerciales"
+                    >
+                        {% if page.currentPage > 1 %}
+                            <a
+                                class="
+                                    pf-button
+                                    pf-button--secondary
+                                    pf-button--sm
+                                "
+                                href="{{ path(
+                                    'admin_catalog_items_index',
+                                    {
+                                        q: search,
+                                        type: type,
+                                        status: status,
+                                        page: page.currentPage - 1
+                                    }
+                                ) }}"
+                            >
+                                <i
+                                    class="bi bi-chevron-left"
+                                    aria-hidden="true"
+                                ></i>
 
-                        <li class="page-item {{ page.currentPage == page.totalPages ? 'disabled' : '' }}">
-                            <a class="page-link" href="{{ path('admin_catalog_items_index', {q: search, type: type, status: status, page: page.currentPage + 1}) }}">
-                                Siguiente
+                                <span>Anterior</span>
                             </a>
-                        </li>
-                    </ul>
-                </nav>
+                        {% else %}
+                            <span
+                                class="
+                                    pf-button
+                                    pf-button--secondary
+                                    pf-button--sm
+                                    disabled
+                                "
+                                aria-disabled="true"
+                            >
+                                <i
+                                    class="bi bi-chevron-left"
+                                    aria-hidden="true"
+                                ></i>
+
+                                <span>Anterior</span>
+                            </span>
+                        {% endif %}
+
+                        {% if page.currentPage < page.totalPages %}
+                            <a
+                                class="
+                                    pf-button
+                                    pf-button--secondary
+                                    pf-button--sm
+                                "
+                                href="{{ path(
+                                    'admin_catalog_items_index',
+                                    {
+                                        q: search,
+                                        type: type,
+                                        status: status,
+                                        page: page.currentPage + 1
+                                    }
+                                ) }}"
+                            >
+                                <span>Siguiente</span>
+
+                                <i
+                                    class="bi bi-chevron-right"
+                                    aria-hidden="true"
+                                ></i>
+                            </a>
+                        {% else %}
+                            <span
+                                class="
+                                    pf-button
+                                    pf-button--secondary
+                                    pf-button--sm
+                                    disabled
+                                "
+                                aria-disabled="true"
+                            >
+                                <span>Siguiente</span>
+
+                                <i
+                                    class="bi bi-chevron-right"
+                                    aria-hidden="true"
+                                ></i>
+                            </span>
+                        {% endif %}
+                    </nav>
+                </footer>
             {% endif %}
-        </div>
+        </section>
     </div>
 {% endblock %}
