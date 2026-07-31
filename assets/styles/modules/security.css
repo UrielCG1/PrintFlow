@@ -162,7 +162,6 @@ body.pf-public-body--auth {
     border-radius: 0;
     box-shadow: none;
 }
-
 .pf-auth__form::before {
     position: absolute;
     inset:
@@ -173,25 +172,33 @@ body.pf-public-body--auth {
 
     background:
         linear-gradient(
-            145deg,
-            rgba(255, 255, 255, 0.44),
-            rgba(255, 255, 255, 0.26)
+            135deg,
+            rgba(255, 255, 255, 0.32) 0%,
+            rgba(255, 255, 255, 0.14) 48%,
+            rgba(255, 255, 255, 0.22) 100%
         );
 
-    border: 1px solid rgba(255, 255, 255, 0.52);
+    border: 1px solid rgba(255, 255, 255, 0.48);
     border-radius: var(--pf-radius-xl);
 
     box-shadow:
-        0 1.5rem 3.5rem rgba(11, 28, 48, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        0 1.5rem 3.5rem rgba(11, 28, 48, 0.24),
+        inset 0 1px 0 rgba(255, 255, 255, 0.72),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.12);
 
-    backdrop-filter: blur(0.75rem) saturate(1.12);
-    -webkit-backdrop-filter: blur(0.75rem) saturate(1.12);
+    backdrop-filter:
+        blur(1.25rem)
+        saturate(1.4)
+        brightness(1.08);
+
+    -webkit-backdrop-filter:
+        blur(1.25rem)
+        saturate(1.4)
+        brightness(1.08);
 
     content: "";
     pointer-events: none;
 }
-
 
 /* =========================================================
    LOGO
@@ -212,7 +219,7 @@ body.pf-public-body--auth {
 .pf-auth .pf-brand__mark {
     display: block;
 
-    width: 11rem;
+    width: 5rem;
     height: 3rem;
 
     object-fit: contain;
@@ -810,7 +817,7 @@ body.pf-public-body--auth {
     (-webkit-backdrop-filter: blur(1rem))
 ) {
     .pf-auth__form::before {
-        background-color: rgba(255, 255, 255, 0.84);
+        background-color: rgba(255, 255, 255, 0.74);
     }
 }
 
