@@ -68,7 +68,7 @@
                 </div>
             </form>
 
-            <div class="pf-card pf-card--padding-none pf-table-responsive pf-table-responsive--flat overflow-hidden">
+            <div class="pf-card pf-card--padding-none pf-table-responsive overflow-hidden rounded-3">
                 <table class="pf-table">
                     <thead>
                         <tr>
@@ -84,7 +84,9 @@
                         {% for client in page.items %}
                             <tr>
                                 <td>
-                                    <strong class="pf-table__primary">{{ client.businessName }}</strong>
+                                    <strong class="pf-table__primary">
+                                        {{ client.businessName }}
+                                    </strong>
                                 </td>
 
                                 <td>{{ client.taxId ?: '—' }}</td>
