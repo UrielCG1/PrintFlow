@@ -118,13 +118,9 @@
                     </twig:Ui:Button>
                 </form>
 
-                {# TODO: sustituir href cuando exista app_password_reset_request. #}
                 <a
-                    href="#"
+                    href="{{ path('app_forgot_password_request') }}"
                     class="pf-auth__recovery-link"
-                    data-future-route="app_password_reset_request"
-                    aria-disabled="true"
-                    tabindex="-1"
                 >
                     ¿Olvidaste tu contraseña?
                 </a>

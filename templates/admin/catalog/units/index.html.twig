@@ -95,13 +95,14 @@
             </div>
         </form>
 
-        <div class="pf-card pf-card--padding-none">
-            {% if canReorder %}
-                <p class="pf-card__body small text-body-secondary mb-0">
-                    Arrastra las categorías para ajustar su orden de visualización.
-                </p>
-            {% endif %}
+        {% if canReorder %}
+            <p class="pf-card__body small text-body-secondary mb-0">
+                Arrastra las categorías para ajustar su orden de visualización.
+            </p>
+        {% endif %}
 
+        <div class="pf-card pf-card--padding-none">
+            
             <div class="pf-table-responsive pf-table-responsive--flat">
                 <table class="pf-table">
                     <thead>
