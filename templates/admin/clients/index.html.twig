@@ -25,9 +25,9 @@
             {% endif %}
         </div>
 
-        <div class="pf-card pf-card--padding-none overflow-hidden">
+        <div class="d-grid gap-4">
             <form
-                class="pf-clients-filters pf-form pf-card__body p-4 mb-0"
+                class="pf-card pf-clients-filters pf-form pf-card__body mb-0"
                 method="get"
             >
                 <div class="pf-form-field">
@@ -57,7 +57,7 @@
                     </select>
                 </div>
 
-                <div class="pf-clients-filters__actions pt-2">
+                <div class="pf-clients-filters__actions">
                     <button
                         type="submit"
                         class="btn pf-button pf-button--primary"
@@ -68,7 +68,7 @@
                 </div>
             </form>
 
-            <div class="pf-table-responsive pf-table-responsive--flat mt-3">
+            <div class="pf-card pf-card--padding-none pf-table-responsive pf-table-responsive--flat overflow-hidden">
                 <table class="pf-table">
                     <thead>
                         <tr>
@@ -84,25 +84,15 @@
                         {% for client in page.items %}
                             <tr>
                                 <td>
-                                    <strong class="pf-table__primary">
-                                        {{ client.businessName }}
-                                    </strong>
+                                    <strong class="pf-table__primary">{{ client.businessName }}</strong>
                                 </td>
 
                                 <td>{{ client.taxId ?: '—' }}</td>
 
                                 <td>
-                                    {% if client.email %}
-                                        <div>{{ client.email }}</div>
-                                    {% endif %}
-
-                                    {% if client.phone %}
-                                        <div>{{ client.phone }}</div>
-                                    {% endif %}
-
-                                    {% if not client.email and not client.phone %}
-                                        —
-                                    {% endif %}
+                                    {% if client.email %}<div>{{ client.email }}</div>{% endif %}
+                                    {% if client.phone %}<div>{{ client.phone }}</div>{% endif %}
+                                    {% if not client.email and not client.phone %}—{% endif %}
                                 </td>
 
                                 <td>
