@@ -93,11 +93,10 @@ class ResetPasswordController extends AbstractController
             /** @var User $user */
             $user = $this->resetPasswordHelper->validateTokenAndFetchUser($token);
         } catch (ResetPasswordExceptionInterface $e) {
-            $this->addFlash('reset_password_error', sprintf(
-                '%s - %s',
-                ResetPasswordExceptionInterface::MESSAGE_PROBLEM_VALIDATE,
-                $e->getReason()
-            ));
+            $this->addFlash(
+                'reset_password_error',
+                'No fue posible procesar la solicitud. Solicita un nuevo enlace e inténtalo nuevamente.'
+            );
 
             return $this->redirectToRoute('app_forgot_password_request');
         }

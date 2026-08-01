@@ -1,22 +1,67 @@
-{% extends 'base.html.twig' %}
+{% extends 'reset_password/layout.html.twig' %}
 
-{% block title %}Reset your password{% endblock %}
+{% block title %}Recuperar contraseña | PrintFlow{% endblock %}
 
-{% block body %}
-    {% for flash_error in app.flashes('reset_password_error') %}
-        <div class="alert alert-danger" role="alert">{{ flash_error }}</div>
-    {% endfor %}
-    <h1>Reset your password</h1>
+{% block reset_header %}
+    <h1>Recuperar contraseña</h1>
 
-    {{ form_start(requestForm) }}
-        {{ form_row(requestForm.email) }}
-        <div>
-            <small>
-                Enter your email address, and we will send you a
-                link to reset your password.
-            </small>
+    <p>
+        Ingresa el correo electrónico asociado a tu cuenta.
+        Te enviaremos un enlace para crear una nueva contraseña.
+    </p>
+{% endblock %}
+
+{% block reset_content %}
+    {{ form_start(requestForm, {
+        attr: {
+            class: 'pf-form pf-auth__form-fields',
+            novalidate: 'novalidate'
+        }
+    }) }}
+        <div class="pf-auth__field">
+            <label
+                for="{{ requestForm.email.vars.id }}"
+                class="form-label"
+            >
+                Correo electrónico
+            </label>
+
+            <div class="input-group pf-auth__input-group">
+                <span class="input-group-text">
+                    <i class="bi bi-envelope" aria-hidden="true"></i>
+                </span>
+
+                {{ form_widget(requestForm.email, {
+                    attr: {
+                        class: 'form-control',
+                        placeholder: 'correo@ejemplo.com',
+                        autocomplete: 'email',
+                        autofocus: true
+                    }
+                }) }}
+            </div>
+
+            {% if requestForm.email.vars.errors|length > 0 %}
+                <div class="pf-auth__field-errors" role="alert">
+                    {{ form_errors(requestForm.email) }}
+                </div>
+            {% endif %}
         </div>
 
-        <button class="btn btn-primary">Send password reset email</button>
+        <twig:Ui:Button
+            type="submit"
+            class="pf-button--success pf-button--block pf-auth__submit"
+        >
+            <i class="bi bi-send me-2" aria-hidden="true"></i>
+            Enviar enlace de recuperación
+        </twig:Ui:Button>
     {{ form_end(requestForm) }}
+
+    <a
+        href="{{ path('app_login') }}"
+        class="pf-auth__recovery-link pf-auth__recovery-link--center"
+    >
+        <i class="bi bi-arrow-left me-2" aria-hidden="true"></i>
+        Volver al inicio de sesión
+    </a>
 {% endblock %}

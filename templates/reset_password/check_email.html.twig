@@ -1,11 +1,57 @@
-{% extends 'base.html.twig' %}
+{% extends 'reset_password/layout.html.twig' %}
 
-{% block title %}Password Reset Email Sent{% endblock %}
+{% block title %}Correo enviado | PrintFlow{% endblock %}
 
-{% block body %}
+{% block reset_header %}
+    <h1>Revisa tu correo</h1>
+
     <p>
-        If an account matching your email exists, then an email was just sent that contains a link that you can use to reset your password.
-        This link will expire in {{ resetToken.expirationMessageKey|trans(resetToken.expirationMessageData, 'ResetPasswordBundle') }}.
+        Hemos procesado tu solicitud de recuperación de contraseña.
     </p>
-    <p>If you don't receive an email please check your spam folder or <a href="{{ path('app_forgot_password_request') }}">try again</a>.</p>
+{% endblock %}
+
+{% block reset_content %}
+    <div class="pf-auth__notice" role="status">
+        <div class="pf-auth__notice-icon">
+            <i class="bi bi-envelope-check" aria-hidden="true"></i>
+        </div>
+
+        <div class="pf-auth__notice-content">
+            <p>
+                Si existe una cuenta asociada al correo proporcionado,
+                recibirás un mensaje con un enlace para restablecer tu
+                contraseña.
+            </p>
+
+            <p>
+                El enlace estará disponible hasta el
+                <strong>
+                    {{ resetToken.expiresAt|date('d/m/Y \a \l\a\s H:i') }}
+                </strong>.
+            </p>
+
+            <p>
+                Si no encuentras el mensaje, revisa la carpeta de correo
+                no deseado o spam.
+            </p>
+        </div>
+    </div>
+
+    <div class="pf-auth__actions">
+        <a
+            href="{{ path('app_forgot_password_request') }}"
+            class="btn pf-button pf-button--success pf-button--block pf-auth__submit"
+        >
+            <i class="bi bi-arrow-clockwise me-2" aria-hidden="true"></i>
+            Enviar un nuevo enlace
+        </a>
+
+        <a
+            href="{{ path('app_login') }}"
+            class="pf-auth__recovery-link pf-auth__recovery-link--center"
+        >
+            <i class="bi bi-arrow-left me-2" aria-hidden="true"></i>
+            Volver al inicio de sesión
+        </a>
+    </div>
 {% endblock %}

@@ -1,12 +1,139 @@
-{% extends 'base.html.twig' %}
+{% extends 'reset_password/layout.html.twig' %}
 
-{% block title %}Reset your password{% endblock %}
+{% block title %}Crear nueva contraseña | PrintFlow{% endblock %}
 
-{% block body %}
-    <h1>Reset your password</h1>
+{% block reset_header %}
+    <h1>Crea una nueva contraseña</h1>
 
-    {{ form_start(resetForm) }}
-        {{ form_row(resetForm.plainPassword) }}
-        <button class="btn btn-primary">Reset password</button>
+    <p>
+        Ingresa y confirma la nueva contraseña que utilizarás para
+        acceder a PrintFlow.
+    </p>
+{% endblock %}
+
+{% block reset_content %}
+    {{ form_start(resetForm, {
+        attr: {
+            class: 'pf-form pf-auth__form-fields',
+            novalidate: 'novalidate'
+        }
+    }) }}
+        {% if resetForm.plainPassword.vars.errors|length > 0 %}
+            <div class="pf-auth__field-errors pf-auth__field-errors--general">
+                {{ form_errors(resetForm.plainPassword) }}
+            </div>
+        {% endif %}
+
+        <div class="pf-auth__field">
+            <label
+                for="{{ resetForm.plainPassword.first.vars.id }}"
+                class="form-label"
+            >
+                Nueva contraseña
+            </label>
+
+            <div
+                class="input-group pf-auth__input-group"
+                data-controller="ui--password-visibility"
+            >
+                <span class="input-group-text">
+                    <i class="bi bi-lock" aria-hidden="true"></i>
+                </span>
+
+                {{ form_widget(resetForm.plainPassword.first, {
+                    attr: {
+                        class: 'form-control',
+                        placeholder: 'Nueva contraseña',
+                        autocomplete: 'new-password',
+                        'data-ui--password-visibility-target': 'input'
+                    }
+                }) }}
+
+                <button
+                    type="button"
+                    class="btn pf-button pf-button--ghost pf-auth__password-toggle"
+                    data-ui--password-visibility-target="toggle"
+                    data-action="ui--password-visibility#toggle"
+                    aria-label="Mostrar contraseña"
+                    aria-pressed="false"
+                >
+                    <i
+                        class="bi bi-eye"
+                        aria-hidden="true"
+                        data-ui--password-visibility-target="icon"
+                    ></i>
+                </button>
+            </div>
+
+            {% if resetForm.plainPassword.first.vars.errors|length > 0 %}
+                <div class="pf-auth__field-errors" role="alert">
+                    {{ form_errors(resetForm.plainPassword.first) }}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="pf-auth__field">
+            <label
+                for="{{ resetForm.plainPassword.second.vars.id }}"
+                class="form-label"
+            >
+                Confirmar contraseña
+            </label>
+
+            <div
+                class="input-group pf-auth__input-group"
+                data-controller="ui--password-visibility"
+            >
+                <span class="input-group-text">
+                    <i class="bi bi-shield-lock" aria-hidden="true"></i>
+                </span>
+
+                {{ form_widget(resetForm.plainPassword.second, {
+                    attr: {
+                        class: 'form-control',
+                        placeholder: 'Repite la nueva contraseña',
+                        autocomplete: 'new-password',
+                        'data-ui--password-visibility-target': 'input'
+                    }
+                }) }}
+
+                <button
+                    type="button"
+                    class="btn pf-button pf-button--ghost pf-auth__password-toggle"
+                    data-ui--password-visibility-target="toggle"
+                    data-action="ui--password-visibility#toggle"
+                    aria-label="Mostrar contraseña"
+                    aria-pressed="false"
+                >
+                    <i
+                        class="bi bi-eye"
+                        aria-hidden="true"
+                        data-ui--password-visibility-target="icon"
+                    ></i>
+                </button>
+            </div>
+
+            {% if resetForm.plainPassword.second.vars.errors|length > 0 %}
+                <div class="pf-auth__field-errors" role="alert">
+                    {{ form_errors(resetForm.plainPassword.second) }}
+                </div>
+            {% endif %}
+        </div>
+
+        <twig:Ui:Button
+            type="submit"
+            class="pf-button--success pf-button--block pf-auth__submit"
+        >
+            <i class="bi bi-check-circle me-2" aria-hidden="true"></i>
+            Guardar nueva contraseña
+        </twig:Ui:Button>
     {{ form_end(resetForm) }}
+
+    <a
+        href="{{ path('app_login') }}"
+        class="pf-auth__recovery-link pf-auth__recovery-link--center"
+    >
+        <i class="bi bi-arrow-left me-2" aria-hidden="true"></i>
+        Volver al inicio de sesión
+    </a>
 {% endblock %}

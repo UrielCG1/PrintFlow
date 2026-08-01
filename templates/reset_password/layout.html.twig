@@ -1,0 +1,66 @@
+{% extends 'layouts/public.html.twig' %}
+
+{% block body_class %}pf-public-body pf-public-body--auth{% endblock %}
+
+{% block public_frame %}
+    <section class="pf-auth">
+        <aside class="pf-auth__visual" aria-hidden="true">
+            <img
+                class="pf-auth__visual-image"
+                src="{{ asset('images/illustrations/pexels-pixabay-206290.jpg') }}"
+                alt=""
+            >
+        </aside>
+
+        <div class="pf-auth__panel">
+            <div class="pf-auth__form">
+                <div class="pf-brand">
+                    <img
+                        class="pf-brand__mark"
+                        src="{{ asset('images/brand/logo.png') }}"
+                        alt="PrintFlow"
+                    >
+
+                    <span class="pf-brand__name visually-hidden">
+                        PrintFlow
+                    </span>
+                </div>
+
+                <header class="pf-auth__header">
+                    {% block reset_header %}{% endblock %}
+                </header>
+
+                {% for flash_error in app.flashes('reset_password_error') %}
+                    <div
+                        class="alert alert-danger pf-auth__alert"
+                        role="alert"
+                    >
+                        <i class="bi bi-exclamation-circle me-2" aria-hidden="true"></i>
+                        {{ flash_error }}
+                    </div>
+                {% endfor %}
+
+                {% include 'partials/_flash_messages.html.twig' %}
+
+                {% block reset_content %}{% endblock %}
+            </div>
+        </div>
+    </section>
+
+    <div class="pf-auth__support pf-auth__support--footer">
+        <div class="pf-auth__support-item">
+            <i class="bi bi-headset" aria-hidden="true"></i>
+            <p>Soporte técnico</p>
+        </div>
+
+        <div class="pf-auth__support-item">
+            <i class="bi bi-shield-lock" aria-hidden="true"></i>
+            <p>Privacidad</p>
+        </div>
+
+        <div class="pf-auth__support-item">
+            <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+            <p>Términos de servicio</p>
+        </div>
+    </div>
+{% endblock %}
