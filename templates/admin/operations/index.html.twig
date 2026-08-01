@@ -8,24 +8,31 @@
 {% set canReorder = is_granted('operations.reorder') and status == 'active' and search is empty and selectedArea is not null and selectedArea.isActive %}
 
 {% block app_content %}
-    <div class="pf-page">
+    <div class="pf-page__content">
         <div class="pf-page-header">
-            <div>
+            <div class="pf-page-header__content">
                 <h1 class="pf-page-header__title">Operaciones</h1>
-                <p class="pf-page-header__subtitle">
+                <p class="pf-page-header__description">
                     Administra las etapas reutilizables del taller. Su orden es sugerido por área y no impone el flujo de una orden futura.
                 </p>
             </div>
 
-            <div class="d-flex flex-wrap gap-2">
+            <div class="pf-page-header__actions">
                 {% if is_granted('operation_areas.view') %}
-                    <a href="{{ path('admin_operation_areas_index') }}" class="btn pf-button pf-button--secondary">
+                    <a
+                        href="{{ path('admin_operation_areas_index') }}"
+                        class="btn pf-button pf-button--secondary"
+                    >
                         <i class="bi bi-diagram-2" aria-hidden="true"></i>
                         <span>Áreas operativas</span>
                     </a>
                 {% endif %}
+
                 {% if is_granted('operations.create') %}
-                    <a href="{{ path('admin_operations_new') }}" class="btn pf-button pf-button--primary">
+                    <a
+                        href="{{ path('admin_operations_new') }}"
+                        class="btn pf-button pf-button--primary"
+                    >
                         <i class="bi bi-plus-lg" aria-hidden="true"></i>
                         <span>Nueva operación</span>
                     </a>
@@ -33,10 +40,11 @@
             </div>
         </div>
 
-        <form method="get" class="pf-card mb-4">
-            <div class="row g-3 align-items-end">
-                <div class="col-lg-4">
+        <form method="get" class="pf-card pf-form">
+            <div class="pf-card__body row g-3 align-items-end">
+                <div class="col-lg-4 pf-form-field">
                     <label for="operation-search" class="form-label">Buscar</label>
+
                     <input
                         id="operation-search"
                         type="search"
@@ -47,10 +55,12 @@
                     >
                 </div>
 
-                <div class="col-md-4 col-lg-3">
+                <div class="col-md-4 col-lg-3 pf-form-field">
                     <label for="operation-area" class="form-label">Área operativa</label>
+
                     <select id="operation-area" name="area" class="form-select">
                         <option value="">Todas las áreas</option>
+
                         {% for operationArea in operationAreas %}
                             <option value="{{ operationArea.id }}" {{ selectedArea and selectedArea.id == operationArea.id ? 'selected' : '' }}>
                                 {{ operationArea.code }} — {{ operationArea.name }}{{ operationArea.isActive ? '' : ' (inactiva)' }}
@@ -59,8 +69,9 @@
                     </select>
                 </div>
 
-                <div class="col-md-4 col-lg-2">
+                <div class="col-md-4 col-lg-2 pf-form-field">
                     <label for="operation-status" class="form-label">Estado</label>
+
                     <select id="operation-status" name="status" class="form-select">
                         <option value="active" {{ status == 'active' ? 'selected' : '' }}>Activas</option>
                         <option value="inactive" {{ status == 'inactive' ? 'selected' : '' }}>Inactivas</option>
@@ -68,41 +79,57 @@
                     </select>
                 </div>
 
-                <div class="col-md-8 col-lg-3 d-flex gap-2">
-                    <button type="submit" class="btn pf-button pf-button--primary">
+                <div class="col-md-8 col-lg-3 pf-card__header-actions">
+                    <button
+                        type="submit"
+                        class="btn pf-button pf-button--primary"
+                    >
                         <i class="bi bi-search" aria-hidden="true"></i>
                         <span>Filtrar</span>
                     </button>
-                    <a href="{{ path('admin_operations_index') }}" class="btn pf-button pf-button--secondary">Limpiar</a>
+
+                    <a
+                        href="{{ path('admin_operations_index') }}"
+                        class="btn pf-button pf-button--secondary"
+                    >
+                        Limpiar
+                    </a>
                 </div>
             </div>
         </form>
 
-        <div class="pf-card">
+        <div class="pf-card pf-card--padding-none">
             {% if canReorder %}
-                <p class="small text-body-secondary mb-3">
+                <p class="pf-card__body small text-body-secondary mb-0">
                     Arrastra las operaciones activas dentro de <strong>{{ selectedArea.name }}</strong> para cambiar el orden sugerido de esta área.
                 </p>
             {% elseif is_granted('operations.reorder') and status == 'active' and search is empty %}
-                <p class="small text-body-secondary mb-3">
+                <p class="pf-card__body small text-body-secondary mb-0">
                     Selecciona una sola área activa para habilitar el reordenamiento. No se permiten movimientos entre áreas por arrastre.
                 </p>
             {% endif %}
 
-            <div class="pf-table-responsive">
+            <div class="pf-table-responsive pf-table-responsive--flat">
                 <table class="pf-table">
                     <thead>
                         <tr>
-                            {% if canReorder %}<th class="text-center" aria-label="Reordenar"></th>{% endif %}
+                            {% if canReorder %}
+                                <th class="pf-table__cell--center" aria-label="Reordenar"></th>
+                            {% endif %}
+
                             <th>Código</th>
                             <th>Operación</th>
                             <th>Área</th>
                             <th>Descripción</th>
                             <th>Orden en área</th>
                             <th>Estado</th>
-                            {% if canManage %}<th class="text-end">Acciones</th>{% endif %}
+
+                            {% if canManage %}
+                                <th class="pf-table__actions-cell">Acciones</th>
+                            {% endif %}
                         </tr>
                     </thead>
+
                     <tbody
                         {% if canReorder %}
                             data-controller="ui--sortable"
@@ -113,7 +140,7 @@
                         {% for operation in page.items %}
                             <tr data-id="{{ operation.id }}" data-sortable-id="{{ operation.id }}">
                                 {% if canReorder %}
-                                    <td class="text-center">
+                                    <td class="pf-table__cell--center">
                                         <button
                                             type="button"
                                             class="pf-sortable__handle"
@@ -124,25 +151,38 @@
                                         </button>
                                     </td>
                                 {% endif %}
-                                <td><code>{{ operation.code }}</code></td>
-                                <td>{{ operation.name }}</td>
+
+                                <td>
+                                    <code class="pf-table__code">{{ operation.code }}</code>
+                                </td>
+
+                                <td>
+                                    <span class="pf-table__primary">{{ operation.name }}</span>
+                                </td>
+
                                 <td>{{ operation.operationArea.name }}</td>
                                 <td>{{ operation.description ?: '—' }}</td>
                                 <td>{{ operation.displayOrder }}</td>
+
                                 <td>
-                                    <span class="pf-status-badge {{ operation.isActive ? 'pf-status-badge--success' : 'pf-status-badge--neutral' }}">
+                                    <span class="pf-status-badge {{ operation.isActive ? 'pf-status-badge--success' : 'pf-status-badge--warning' }}">
                                         {{ operation.isActive ? 'Activa' : 'Inactiva' }}
                                     </span>
                                 </td>
+
                                 {% if canManage %}
-                                    <td>
-                                        <div class="pf-table__actions justify-content-end">
+                                    <td class="pf-table__actions-cell">
+                                        <div class="pf-table__actions">
                                             {% if is_granted('operations.update') %}
-                                                <a href="{{ path('admin_operations_edit', {id: operation.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm">
+                                                <a
+                                                    href="{{ path('admin_operations_edit', {id: operation.id}) }}"
+                                                    class="btn pf-button pf-button--secondary pf-button--sm"
+                                                >
                                                     <i class="bi bi-pencil-square" aria-hidden="true"></i>
                                                     <span>Editar</span>
                                                 </a>
                                             {% endif %}
+
                                             {% if is_granted('operations.toggle_status') %}
                                                 <form
                                                     method="post"
@@ -158,7 +198,11 @@
                                                     data-ui--confirm-action-icon-value="warning"
                                                 >
                                                     <input type="hidden" name="_token" value="{{ csrf_token('operation_status_' ~ operation.id) }}">
-                                                    <button type="submit" class="btn pf-button pf-button--sm {{ operation.isActive ? 'pf-button--danger' : 'pf-button--success' }}">
+
+                                                    <button
+                                                        type="submit"
+                                                        class="btn pf-button pf-button--sm {{ operation.isActive ? 'pf-button--danger' : 'pf-button--success' }}"
+                                                    >
                                                         <i class="bi {{ operation.isActive ? 'bi-pause-circle' : 'bi-check-circle' }}" aria-hidden="true"></i>
                                                         <span>{{ operation.isActive ? 'Desactivar' : 'Reactivar' }}</span>
                                                     </button>
@@ -170,7 +214,10 @@
                             </tr>
                         {% else %}
                             <tr>
-                                <td colspan="{{ canManage ? (canReorder ? 8 : 7) : (canReorder ? 7 : 6) }}" class="text-center py-4">
+                                <td
+                                    colspan="{{ canManage ? (canReorder ? 8 : 7) : (canReorder ? 7 : 6) }}"
+                                    class="pf-table__empty"
+                                >
                                     No se encontraron operaciones con los filtros seleccionados.
                                 </td>
                             </tr>
@@ -180,14 +227,33 @@
             </div>
 
             {% if page.totalPages > 1 %}
-                <nav class="mt-4" aria-label="Paginación de operaciones">
-                    <ul class="pagination mb-0">
-                        <li class="page-item {{ page.currentPage == 1 ? 'disabled' : '' }}">
-                            <a class="page-link" href="{{ path('admin_operations_index', {q: search, area: selectedArea ? selectedArea.id : null, status: status, page: page.currentPage - 1}) }}">Anterior</a>
+                <nav
+                    class="pf-table-footer"
+                    aria-label="Paginación de operaciones"
+                >
+                    <ul class="pf-table-footer__pagination">
+                        <li class="pf-table-footer__pagination-item {{ page.currentPage == 1 ? 'disabled' : '' }}">
+                            <a
+                                class="btn pf-button pf-button--secondary pf-button--sm {{ page.currentPage == 1 ? 'disabled' : '' }}"
+                                href="{{ path('admin_operations_index', {q: search, area: selectedArea ? selectedArea.id : null, status: status, page: page.currentPage - 1}) }}"
+                            >
+                                Anterior
+                            </a>
                         </li>
-                        <li class="page-item disabled"><span class="page-link">Página {{ page.currentPage }} de {{ page.totalPages }}</span></li>
-                        <li class="page-item {{ page.currentPage == page.totalPages ? 'disabled' : '' }}">
-                            <a class="page-link" href="{{ path('admin_operations_index', {q: search, area: selectedArea ? selectedArea.id : null, status: status, page: page.currentPage + 1}) }}">Siguiente</a>
+
+                        <li class="pf-table-footer__pagination-item">
+                            <span class="pf-table-footer__summary">
+                                Página {{ page.currentPage }} de {{ page.totalPages }}
+                            </span>
+                        </li>
+
+                        <li class="pf-table-footer__pagination-item {{ page.currentPage == page.totalPages ? 'disabled' : '' }}">
+                            <a
+                                class="btn pf-button pf-button--secondary pf-button--sm {{ page.currentPage == page.totalPages ? 'disabled' : '' }}"
+                                href="{{ path('admin_operations_index', {q: search, area: selectedArea ? selectedArea.id : null, status: status, page: page.currentPage + 1}) }}"
+                            >
+                                Siguiente
+                            </a>
                         </li>
                     </ul>
                 </nav>

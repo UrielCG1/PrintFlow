@@ -9,9 +9,9 @@
 {% block app_content %}
     {% set status = quotation.status.value %}
 
-    <section class="pf-page">
+    <section class="pf-page__content">
         <header class="pf-page-header">
-            <div>
+            <div class="pf-page-header__content">
                 <p class="pf-page-header__eyebrow">Comercial</p>
                 <h1 class="pf-page-header__title">
                     Editar cotización{% if quotation.folio %} {{ quotation.folio }}{% else %} #{{ quotation.id }}{% endif %}
@@ -21,7 +21,7 @@
                 </p>
             </div>
 
-            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2">
+            <div class="pf-page-header__actions">
                 <span class="pf-status-badge pf-status-badge--warning">
                     {{ status == 'DRAFT' ? 'Borrador' : status }}
                 </span>
@@ -42,11 +42,11 @@
         } only %}
 
         {% if quotation.editable and is_granted('quotations.issue') %}
-            <section class="pf-card mt-4">
-                <div class="p-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+            <section class="pf-card">
+                <div class="pf-card__body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
                     <div>
-                        <h2 class="h5 mb-1">Emitir cotización</h2>
-                        <p class="mb-0 text-muted">
+                        <h2 class="pf-card__title">Emitir cotización</h2>
+                        <p class="pf-card__description">
                             Al emitir se asignará el folio definitivo y el borrador quedará bloqueado.
                         </p>
                     </div>

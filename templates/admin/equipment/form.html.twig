@@ -5,11 +5,11 @@
 {% block app_breadcrumb %}Operación / Equipos / {{ pageTitle }}{% endblock %}
 
 {% block app_content %}
-    <div class="pf-page">
+    <div class="pf-page__content">
         <div class="pf-page-header">
-            <div>
+            <div class="pf-page-header__content">
                 <h1 class="pf-page-header__title">{{ pageTitle }}</h1>
-                <p class="pf-page-header__subtitle">
+                <p class="pf-page-header__description">
                     Registra datos técnicos consultables del equipo. La planificación de capacidad y mantenimiento se modelarán después.
                 </p>
             </div>
@@ -18,45 +18,54 @@
         <div class="pf-card">
             {% form_theme form 'form/printflow_theme.html.twig' %}
 
-            {{ form_start(form, {attr: {class: 'pf-form', novalidate: 'novalidate'}}) }}
-                <section class="mb-4">
-                    <h2 class="h6 mb-1">Asignación e identificación</h2>
-                    <p class="small text-body-secondary mb-3">
+            {{ form_start(form, {attr: {class: 'pf-form pf-card__body', novalidate: 'novalidate'}}) }}
+                <section class="pf-form-section">
+                    <h2 class="pf-form-section__title">Asignación e identificación</h2>
+                    <p class="pf-form-section__description">
                         El área se deriva de la operación primaria. Si el equipo está disponible, dicha operación y su área deben permanecer activas.
                     </p>
 
                     <div class="row g-3">
-                        <div class="col-md-6">{{ form_row(form.primaryOperation) }}</div>
-                        <div class="col-md-6">{{ form_row(form.code) }}</div>
-                        <div class="col-md-8">{{ form_row(form.name) }}</div>
-                        <div class="col-md-4">{{ form_row(form.technology) }}</div>
+                        <div class="col-md-6 pf-form-field">{{ form_row(form.primaryOperation) }}</div>
+                        <div class="col-md-6 pf-form-field">{{ form_row(form.code) }}</div>
+                        <div class="col-md-8 pf-form-field">{{ form_row(form.name) }}</div>
+                        <div class="col-md-4 pf-form-field">{{ form_row(form.technology) }}</div>
                     </div>
                 </section>
 
-                <section class="mb-4">
-                    <h2 class="h6 mb-1">Ficha técnica</h2>
-                    <p class="small text-body-secondary mb-3">
+                <section class="pf-form-section">
+                    <h2 class="pf-form-section__title">Ficha técnica</h2>
+                    <p class="pf-form-section__description">
                         Estos datos documentan el equipo; no se usarán para calcular automáticamente tiempos, costos ni disponibilidad.
                     </p>
 
                     <div class="row g-3">
-                        <div class="col-md-4">{{ form_row(form.brand) }}</div>
-                        <div class="col-md-4">{{ form_row(form.model) }}</div>
-                        <div class="col-md-4">{{ form_row(form.serialNumber) }}</div>
-                        <div class="col-md-4">{{ form_row(form.usableWidthCm) }}</div>
-                        <div class="col-md-4">{{ form_row(form.technicalCapacity) }}</div>
-                        <div class="col-md-4">{{ form_row(form.colorConfiguration) }}</div>
+                        <div class="col-md-4 pf-form-field">{{ form_row(form.brand) }}</div>
+                        <div class="col-md-4 pf-form-field">{{ form_row(form.model) }}</div>
+                        <div class="col-md-4 pf-form-field">{{ form_row(form.serialNumber) }}</div>
+                        <div class="col-md-4 pf-form-field">{{ form_row(form.usableWidthCm) }}</div>
+                        <div class="col-md-4 pf-form-field">{{ form_row(form.technicalCapacity) }}</div>
+                        <div class="col-md-4 pf-form-field">{{ form_row(form.colorConfiguration) }}</div>
                     </div>
                 </section>
 
-                <section class="mb-4">
-                    <h2 class="h6 mb-1">Notas operativas</h2>
+                <section class="pf-form-section">
+                    <h2 class="pf-form-section__title">Notas operativas</h2>
                     {{ form_row(form.observations) }}
                 </section>
 
                 <div class="pf-form-actions">
-                    <a href="{{ path('admin_equipment_index') }}" class="btn pf-button pf-button--secondary">Cancelar</a>
-                    <button type="submit" class="btn pf-button pf-button--primary">
+                    <a
+                        href="{{ path('admin_equipment_index') }}"
+                        class="btn pf-button pf-button--secondary"
+                    >
+                        Cancelar
+                    </a>
+
+                    <button
+                        type="submit"
+                        class="btn pf-button pf-button--primary"
+                    >
                         <i class="bi bi-check-lg" aria-hidden="true"></i>
                         <span>{{ equipment ? 'Guardar cambios' : 'Crear equipo' }}</span>
                     </button>

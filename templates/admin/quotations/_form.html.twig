@@ -10,28 +10,28 @@
     <div class="row g-4">
         <div class="col-12 col-xl-8">
             <section class="pf-card h-100">
-                <header class="p-4 border-bottom">
-                    <h2 class="h5 mb-1">Información general</h2>
-                    <p class="mb-0 text-muted">
+                <header class="pf-card__header">
+                    <h2 class="pf-card__title">Información general</h2>
+                    <p class="pf-card__description">
                         Define el cliente, vigencia y condiciones del borrador.
                     </p>
                 </header>
 
-                <div class="p-4">
+                <div class="pf-card__body">
                     <div class="row g-3">
-                        <div class="col-12">
+                        <div class="col-12 pf-form-field">
                             {{ form_row(form.client) }}
                         </div>
 
-                        <div class="col-md-6">
+                        <div class="col-md-6 pf-form-field">
                             {{ form_row(form.expiresAt) }}
                         </div>
 
-                        <div class="col-md-6">
+                        <div class="col-md-6 pf-form-field">
                             {{ form_row(form.discountPercent) }}
                         </div>
 
-                        <div class="col-12">
+                        <div class="col-12 pf-form-field">
                             {{ form_row(form.notes) }}
                         </div>
                     </div>
@@ -41,13 +41,13 @@
 
         <div class="col-12 col-xl-4">
             <aside class="pf-card h-100">
-                <div class="p-4">
+                <div class="pf-card__body">
                     <div class="d-flex align-items-start gap-3">
                         <i class="bi bi-calculator fs-4 text-success" aria-hidden="true"></i>
 
                         <div>
-                            <h2 class="h5 mb-1">Cálculo protegido</h2>
-                            <p class="mb-2 text-muted">
+                            <h2 class="pf-card__title">Cálculo protegido</h2>
+                            <p class="pf-card__description">
                                 Al guardar, PrintFlow resuelve el precio vigente por rango,
                                 descuentos, IVA y total final.
                             </p>
@@ -62,10 +62,10 @@
 
         <div class="col-12">
             <section class="pf-card">
-                <header class="p-4 border-bottom d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                <header class="pf-card__header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
                     <div>
-                        <h2 class="h5 mb-1">Partidas</h2>
-                        <p class="mb-0 text-muted">
+                        <h2 class="pf-card__title">Partidas</h2>
+                        <p class="pf-card__description">
                             Agrega los conceptos comerciales y la cantidad correspondiente.
                         </p>
                     </div>
@@ -80,7 +80,7 @@
                     </button>
                 </header>
 
-                <div class="p-4">
+                <div class="pf-card__body">
                     {{ form_errors(form.items) }}
 
                     <div
@@ -111,11 +111,11 @@
                                 </header>
 
                                 <div class="row g-3">
-                                    <div class="col-12 col-lg-8">
+                                    <div class="col-12 col-lg-8 pf-form-field">
                                         {{ form_row(itemForm.commercialItem) }}
                                     </div>
 
-                                    <div class="col-12 col-lg-4">
+                                    <div class="col-12 col-lg-4 pf-form-field">
                                         {{ form_row(itemForm.quantity) }}
                                     </div>
                                 </div>
@@ -124,10 +124,10 @@
                     </div>
 
                     <div
-                        class="d-none py-5 text-center text-muted"
+                        class="d-none pf-table__empty-content"
                         data-ui--quotation-form-target="emptyState"
                     >
-                        <i class="bi bi-list-check d-block mb-2 fs-3" aria-hidden="true"></i>
+                        <i class="bi bi-list-check pf-table__empty-icon" aria-hidden="true"></i>
                         No hay partidas. Agrega al menos una para continuar.
                     </div>
                 </div>
@@ -137,7 +137,7 @@
 
     {{ form_rest(form) }}
 
-    <footer class="pf-form-actions mt-4">
+    <footer class="pf-form-actions">
         <a
             href="{{ path('admin_quotations_index') }}"
             class="btn pf-button pf-button--secondary"

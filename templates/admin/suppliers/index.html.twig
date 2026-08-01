@@ -5,27 +5,31 @@
 {% block app_breadcrumb %}Operación / Proveedores{% endblock %}
 
 {% block app_content %}
-    <div class="pf-page">
+    <div class="pf-page__content">
         <div class="pf-page-header">
-            <div>
+            <div class="pf-page-header__content">
                 <h1 class="pf-page-header__title">Proveedores</h1>
-                <p class="pf-page-header__subtitle">
+                <p class="pf-page-header__description">
                     Administra las empresas que abastecen la operación de PrintFlow.
                 </p>
             </div>
 
             {% if is_granted('suppliers.create') %}
-                <a href="{{ path('admin_suppliers_new') }}" class="btn pf-button pf-button--primary">
+                <a
+                    href="{{ path('admin_suppliers_new') }}"
+                    class="btn pf-button pf-button--primary"
+                >
                     <i class="bi bi-truck" aria-hidden="true"></i>
                     <span>Nuevo proveedor</span>
                 </a>
             {% endif %}
         </div>
 
-        <form method="get" class="pf-card mb-4">
-            <div class="row g-3 align-items-end">
-                <div class="col-lg-6">
+        <form method="get" class="pf-card pf-form">
+            <div class="pf-card__body row g-3 align-items-end">
+                <div class="col-lg-6 pf-form-field">
                     <label for="supplier-search" class="form-label">Buscar</label>
+
                     <input
                         id="supplier-search"
                         type="search"
@@ -36,8 +40,9 @@
                     >
                 </div>
 
-                <div class="col-md-4 col-lg-3">
+                <div class="col-md-4 col-lg-3 pf-form-field">
                     <label for="supplier-status" class="form-label">Estado</label>
+
                     <select id="supplier-status" name="status" class="form-select">
                         <option value="active" {{ status == 'active' ? 'selected' : '' }}>Activos</option>
                         <option value="inactive" {{ status == 'inactive' ? 'selected' : '' }}>Inactivos</option>
@@ -45,13 +50,19 @@
                     </select>
                 </div>
 
-                <div class="col-md-8 col-lg-3 d-flex gap-2">
-                    <button type="submit" class="btn pf-button pf-button--primary">
+                <div class="col-md-8 col-lg-3 pf-card__header-actions">
+                    <button
+                        type="submit"
+                        class="btn pf-button pf-button--primary"
+                    >
                         <i class="bi bi-search" aria-hidden="true"></i>
                         <span>Filtrar</span>
                     </button>
 
-                    <a href="{{ path('admin_suppliers_index') }}" class="btn pf-button pf-button--secondary">
+                    <a
+                        href="{{ path('admin_suppliers_index') }}"
+                        class="btn pf-button pf-button--secondary"
+                    >
                         Limpiar
                     </a>
                 </div>
@@ -60,8 +71,8 @@
 
         {% set canManage = is_granted('suppliers.update') or is_granted('suppliers.toggle_status') %}
 
-        <div class="pf-card">
-            <div class="pf-table-responsive">
+        <div class="pf-card pf-card--padding-none">
+            <div class="pf-table-responsive pf-table-responsive--flat">
                 <table class="pf-table">
                     <thead>
                         <tr>
@@ -70,36 +81,45 @@
                             <th>RFC</th>
                             <th>Contacto</th>
                             <th>Estado</th>
+
                             {% if canManage %}
-                                <th class="text-end">Acciones</th>
+                                <th class="pf-table__actions-cell">Acciones</th>
                             {% endif %}
                         </tr>
                     </thead>
+
                     <tbody>
                         {% for supplier in page.items %}
                             <tr>
-                                <td><code>{{ supplier.code }}</code></td>
                                 <td>
-                                    <strong>{{ supplier.businessName }}</strong>
+                                    <code class="pf-table__code">{{ supplier.code }}</code>
+                                </td>
+
+                                <td>
+                                    <strong class="pf-table__primary">{{ supplier.businessName }}</strong>
+
                                     {% if supplier.legalName and supplier.legalName != supplier.businessName %}
                                         <div class="small text-body-secondary">{{ supplier.legalName }}</div>
                                     {% endif %}
                                 </td>
+
                                 <td>{{ supplier.taxId ?: '—' }}</td>
+
                                 <td>
                                     {% if supplier.email %}<div>{{ supplier.email }}</div>{% endif %}
                                     {% if supplier.phone %}<div>{{ supplier.phone }}</div>{% endif %}
                                     {% if not supplier.email and not supplier.phone %}—{% endif %}
                                 </td>
+
                                 <td>
-                                    <span class="pf-status-badge {{ supplier.isActive ? 'pf-status-badge--success' : 'pf-status-badge--neutral' }}">
+                                    <span class="pf-status-badge {{ supplier.isActive ? 'pf-status-badge--success' : 'pf-status-badge--warning' }}">
                                         {{ supplier.isActive ? 'Activo' : 'Inactivo' }}
                                     </span>
                                 </td>
 
                                 {% if canManage %}
-                                    <td>
-                                        <div class="pf-table__actions justify-content-end">
+                                    <td class="pf-table__actions-cell">
+                                        <div class="pf-table__actions">
                                             {% if is_granted('suppliers.update') %}
                                                 <a
                                                     href="{{ path('admin_suppliers_edit', { id: supplier.id }) }}"
@@ -150,7 +170,10 @@
                             </tr>
                         {% else %}
                             <tr>
-                                <td colspan="{{ canManage ? 6 : 5 }}" class="text-center py-4">
+                                <td
+                                    colspan="{{ canManage ? 6 : 5 }}"
+                                    class="pf-table__empty"
+                                >
                                     No se encontraron proveedores con los filtros seleccionados.
                                 </td>
                             </tr>
@@ -160,11 +183,14 @@
             </div>
 
             {% if page.pageCount > 1 %}
-                <nav class="mt-4" aria-label="Paginación de proveedores">
-                    <ul class="pagination mb-0">
-                        <li class="page-item {{ page.currentPage == 1 ? 'disabled' : '' }}">
+                <nav
+                    class="pf-table-footer"
+                    aria-label="Paginación de proveedores"
+                >
+                    <ul class="pf-table-footer__pagination">
+                        <li class="pf-table-footer__pagination-item {{ page.currentPage == 1 ? 'disabled' : '' }}">
                             <a
-                                class="page-link"
+                                class="btn pf-button pf-button--secondary pf-button--sm {{ page.currentPage == 1 ? 'disabled' : '' }}"
                                 href="{{ path('admin_suppliers_index', {
                                     q: search,
                                     status: status,
@@ -175,13 +201,15 @@
                             </a>
                         </li>
 
-                        <li class="page-item disabled">
-                            <span class="page-link">Página {{ page.currentPage }} de {{ page.pageCount }}</span>
+                        <li class="pf-table-footer__pagination-item">
+                            <span class="pf-table-footer__summary">
+                                Página {{ page.currentPage }} de {{ page.pageCount }}
+                            </span>
                         </li>
 
-                        <li class="page-item {{ page.currentPage == page.pageCount ? 'disabled' : '' }}">
+                        <li class="pf-table-footer__pagination-item {{ page.currentPage == page.pageCount ? 'disabled' : '' }}">
                             <a
-                                class="page-link"
+                                class="btn pf-button pf-button--secondary pf-button--sm {{ page.currentPage == page.pageCount ? 'disabled' : '' }}"
                                 href="{{ path('admin_suppliers_index', {
                                     q: search,
                                     status: status,

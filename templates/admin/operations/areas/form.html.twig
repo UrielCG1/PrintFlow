@@ -5,11 +5,11 @@
 {% block app_breadcrumb %}Operación / Áreas operativas / {{ pageTitle }}{% endblock %}
 
 {% block app_content %}
-    <div class="pf-page">
+    <div class="pf-page__content">
         <div class="pf-page-header">
-            <div>
+            <div class="pf-page-header__content">
                 <h1 class="pf-page-header__title">{{ pageTitle }}</h1>
-                <p class="pf-page-header__subtitle">
+                <p class="pf-page-header__description">
                     Define un área reutilizable para agrupar las operaciones reales del taller.
                 </p>
             </div>
@@ -18,24 +18,33 @@
         <div class="pf-card">
             {% form_theme form 'form/printflow_theme.html.twig' %}
 
-            {{ form_start(form, {attr: {class: 'pf-form', novalidate: 'novalidate'}}) }}
-                <section class="mb-4">
-                    <h2 class="h6 mb-1">Identificación</h2>
-                    <p class="small text-body-secondary mb-3">
+            {{ form_start(form, {attr: {class: 'pf-form pf-card__body', novalidate: 'novalidate'}}) }}
+                <section class="pf-form-section">
+                    <h2 class="pf-form-section__title">Identificación</h2>
+                    <p class="pf-form-section__description">
                         El código y el nombre identifican al área dentro de PrintFlow; ambos son únicos y se pueden editar con control.
                     </p>
 
                     <div class="row g-3">
-                        <div class="col-md-4">{{ form_row(form.code) }}</div>
-                        <div class="col-md-8">{{ form_row(form.name) }}</div>
-                        <div class="col-12">{{ form_row(form.description) }}</div>
-                        <div class="col-md-4">{{ form_row(form.displayOrder) }}</div>
+                        <div class="col-md-4 pf-form-field">{{ form_row(form.code) }}</div>
+                        <div class="col-md-8 pf-form-field">{{ form_row(form.name) }}</div>
+                        <div class="col-12 pf-form-field">{{ form_row(form.description) }}</div>
+                        <div class="col-md-4 pf-form-field">{{ form_row(form.displayOrder) }}</div>
                     </div>
                 </section>
 
                 <div class="pf-form-actions">
-                    <a href="{{ path('admin_operation_areas_index') }}" class="btn pf-button pf-button--secondary">Cancelar</a>
-                    <button type="submit" class="btn pf-button pf-button--primary">
+                    <a
+                        href="{{ path('admin_operation_areas_index') }}"
+                        class="btn pf-button pf-button--secondary"
+                    >
+                        Cancelar
+                    </a>
+
+                    <button
+                        type="submit"
+                        class="btn pf-button pf-button--primary"
+                    >
                         <i class="bi bi-check-lg" aria-hidden="true"></i>
                         <span>{{ operationArea ? 'Guardar cambios' : 'Crear área' }}</span>
                     </button>

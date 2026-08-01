@@ -27,9 +27,9 @@
         'CANCELLED': 'pf-status-badge--neutral'
     } %}
 
-    <section class="pf-page">
+    <section class="pf-page__content">
         <header class="pf-page-header">
-            <div>
+            <div class="pf-page-header__content">
                 <p class="pf-page-header__eyebrow">Comercial</p>
                 <h1 class="pf-page-header__title">Cotizaciones</h1>
                 <p class="pf-page-header__description">
@@ -48,8 +48,8 @@
             {% endif %}
         </header>
 
-        <section class="pf-card">
-            <div class="pf-table-responsive">
+        <section class="pf-card pf-card--padding-none">
+            <div class="pf-table-responsive pf-table-responsive--flat">
                 <table class="pf-table">
                     <thead>
                         <tr>
@@ -57,9 +57,9 @@
                             <th>Cliente</th>
                             <th>Estado</th>
                             <th>Vigencia</th>
-                            <th class="text-end">Total</th>
+                            <th class="pf-table__cell--right">Total</th>
                             <th>Última actualización</th>
-                            <th class="pf-table__actions">Acciones</th>
+                            <th class="pf-table__actions-cell">Acciones</th>
                         </tr>
                     </thead>
 
@@ -69,7 +69,7 @@
 
                             <tr>
                                 <td>
-                                    <strong>{{ quotation.folio ?? 'Borrador' }}</strong>
+                                    <strong class="pf-table__primary">{{ quotation.folio ?? 'Borrador' }}</strong>
 
                                     {% if quotation.folio is null %}
                                         <span class="d-block text-muted small">
@@ -79,7 +79,7 @@
                                 </td>
 
                                 <td>
-                                    <strong class="d-block">
+                                    <strong class="d-block pf-table__primary">
                                         {{ quotation.clientSnapshot.business_name ?? 'Cliente no disponible' }}
                                     </strong>
 
@@ -102,7 +102,7 @@
                                     </time>
                                 </td>
 
-                                <td class="text-end fw-semibold">
+                                <td class="pf-table__cell--right pf-table__cell--nowrap fw-semibold">
                                     ${{ quotation.total|number_format(2, '.', ',') }}
                                 </td>
 
@@ -115,7 +115,7 @@
                                     </time>
                                 </td>
 
-                                <td>
+                                <td class="pf-table__actions-cell">
                                     {% set can_edit = quotation.editable and is_granted('quotations.update') %}
                                     {% set can_download = quotation.hasBeenIssued and is_granted('quotations.download_pdf') %}
 
@@ -133,7 +133,7 @@
                                         {% if can_download %}
                                             <a
                                                 href="{{ path('admin_quotations_pdf', {id: quotation.id}) }}"
-                                                class="btn pf-button pf-button--secondary pf-button--sm"
+                                                class="btn pf-button pf-button--subtle pf-button--sm"
                                             >
                                                 <i class="bi bi-filetype-pdf" aria-hidden="true"></i>
                                                 PDF
@@ -148,11 +148,11 @@
                             </tr>
                         {% else %}
                             <tr>
-                                <td colspan="7">
-                                    <div class="py-5 text-center">
-                                        <i class="bi bi-file-earmark-text d-block mb-3 fs-2 text-muted" aria-hidden="true"></i>
-                                        <strong class="d-block mb-1">Aún no hay cotizaciones registradas.</strong>
-                                        <span class="d-block text-muted mb-3">
+                                <td colspan="7" class="pf-table__empty">
+                                    <div class="pf-table__empty-content">
+                                        <i class="bi bi-file-earmark-text pf-table__empty-icon" aria-hidden="true"></i>
+                                        <strong class="pf-table__empty-title">Aún no hay cotizaciones registradas.</strong>
+                                        <span class="pf-table__empty-description">
                                             Crea el primer borrador para comenzar a cotizar.
                                         </span>
 

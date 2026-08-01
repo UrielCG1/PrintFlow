@@ -5,11 +5,11 @@
 {% block app_breadcrumb %}Operación / Materiales / {{ pageTitle }}{% endblock %}
 
 {% block app_content %}
-    <div class="pf-page">
+    <div class="pf-page__content">
         <div class="pf-page-header">
-            <div>
+            <div class="pf-page-header__content">
                 <h1 class="pf-page-header__title">{{ pageTitle }}</h1>
-                <p class="pf-page-header__subtitle">
+                <p class="pf-page-header__description">
                     Define el material operativo sin registrar existencias, movimientos ni compras.
                 </p>
             </div>
@@ -18,87 +18,93 @@
         <div class="pf-card">
             {% form_theme form 'form/printflow_theme.html.twig' %}
 
-            {{ form_start(form, { attr: { class: 'pf-form', novalidate: 'novalidate' } }) }}
+            {{ form_start(form, { attr: { class: 'pf-form pf-card__body', novalidate: 'novalidate' } }) }}
                 {{ form_errors(form) }}
 
-                <section class="mb-4">
-                    <h2 class="h6 mb-1">Identificación</h2>
-                    <p class="small text-body-secondary mb-3">
+                <section class="pf-form-section">
+                    <h2 class="pf-form-section__title">Identificación</h2>
+                    <p class="pf-form-section__description">
                         El código identifica al material dentro de PrintFlow y no se reutiliza.
                     </p>
 
                     <div class="row g-3">
-                        <div class="col-md-4">
+                        <div class="col-md-4 pf-form-field">
                             {{ form_row(form.code) }}
                         </div>
 
-                        <div class="col-md-8">
+                        <div class="col-md-8 pf-form-field">
                             {{ form_row(form.name) }}
                         </div>
 
-                        <div class="col-12">
+                        <div class="col-12 pf-form-field">
                             {{ form_row(form.description) }}
                         </div>
                     </div>
                 </section>
 
-                <section class="mb-4">
-                    <h2 class="h6 mb-1">Clasificación y unidad</h2>
-                    <p class="small text-body-secondary mb-3">
+                <section class="pf-form-section">
+                    <h2 class="pf-form-section__title">Clasificación y unidad</h2>
+                    <p class="pf-form-section__description">
                         Solo se pueden guardar relaciones activas para mantener el catálogo operativo consistente.
                     </p>
 
                     <div class="row g-3">
-                        <div class="col-md-6">
+                        <div class="col-md-6 pf-form-field">
                             {{ form_row(form.category) }}
                         </div>
 
-                        <div class="col-md-6">
+                        <div class="col-md-6 pf-form-field">
                             {{ form_row(form.measurementUnit) }}
                         </div>
                     </div>
                 </section>
 
-                <section class="mb-4">
-                    <h2 class="h6 mb-1">Parámetros operativos</h2>
-                    <p class="small text-body-secondary mb-3">
+                <section class="pf-form-section">
+                    <h2 class="pf-form-section__title">Parámetros operativos</h2>
+                    <p class="pf-form-section__description">
                         El costo es de referencia y el stock mínimo es únicamente un umbral para alertas futuras.
                     </p>
 
                     <div class="row g-3">
-                        <div class="col-md-6">
+                        <div class="col-md-6 pf-form-field">
                             {{ form_row(form.referenceCost) }}
                         </div>
 
-                        <div class="col-md-6">
+                        <div class="col-md-6 pf-form-field">
                             {{ form_row(form.minimumStock) }}
                         </div>
                     </div>
                 </section>
 
-                <section class="mb-4">
-                    <h2 class="h6 mb-1">Abastecimiento</h2>
-                    <p class="small text-body-secondary mb-3">
+                <section class="pf-form-section">
+                    <h2 class="pf-form-section__title">Abastecimiento</h2>
+                    <p class="pf-form-section__description">
                         El proveedor principal es opcional y no crea órdenes de compra ni condiciones comerciales.
                     </p>
 
                     <div class="row g-3">
-                        <div class="col-md-6">
+                        <div class="col-md-6 pf-form-field">
                             {{ form_row(form.primarySupplier) }}
                         </div>
 
-                        <div class="col-12">
+                        <div class="col-12 pf-form-field">
                             {{ form_row(form.notes) }}
                         </div>
                     </div>
                 </section>
 
                 <div class="pf-form-actions">
-                    <a href="{{ path('admin_materials_index') }}" class="btn pf-button pf-button--secondary">
+                    <a
+                        href="{{ path('admin_materials_index') }}"
+                        class="btn pf-button pf-button--secondary"
+                    >
                         Cancelar
                     </a>
 
-                    <button type="submit" class="btn pf-button pf-button--primary">
+                    <button
+                        type="submit"
+                        class="btn pf-button pf-button--primary"
+                    >
                         <i class="bi bi-check-lg" aria-hidden="true"></i>
                         <span>{{ material ? 'Guardar cambios' : 'Registrar material' }}</span>
                     </button>
