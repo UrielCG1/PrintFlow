@@ -1,45 +1,46 @@
-/* assets/styles/modules/public-quote.css */
+/* assets/styles/pages/public-quote.css */
 
 /* =========================================================
-   CONTENEDOR GENERAL
+   PÁGINA
    ========================================================= */
 
 .pf-public-quote {
     min-height: 100vh;
+    overflow: hidden;
 
     color: var(--pf-on-surface);
 
     background:
         radial-gradient(
-            circle at top left,
-            rgba(var(--pf-primary-container-rgb), 0.05),
-            transparent 32rem
+            circle at 10% 35%,
+            rgba(var(--pf-primary-container-rgb), 0.08),
+            transparent 25rem
         ),
         radial-gradient(
-            circle at bottom right,
+            circle at 95% 75%,
             rgba(var(--pf-secondary-rgb), 0.08),
-            transparent 38rem
+            transparent 30rem
         ),
-        var(--pf-background);
+        #f4f7fb;
 }
 
 
 /* =========================================================
-   HERO
+   HERO COMERCIAL
    ========================================================= */
 
 .pf-public-quote__hero {
     position: relative;
 
-    min-height: 24rem;
-    overflow: hidden;
+    min-height: 31rem;
 
     background-image:
         linear-gradient(
             90deg,
-            rgba(255, 255, 255, 0.98) 0%,
-            rgba(255, 255, 255, 0.9) 48%,
-            rgba(255, 255, 255, 0.18) 100%
+            rgba(7, 24, 41, 0.98) 0%,
+            rgba(7, 24, 41, 0.92) 35%,
+            rgba(7, 24, 41, 0.58) 67%,
+            rgba(7, 24, 41, 0.18) 100%
         ),
         var(--pf-quote-hero-image);
 
@@ -48,20 +49,73 @@
     background-size: cover;
 }
 
+.pf-public-quote__hero::before {
+    position: absolute;
+    inset: 0;
+
+    background:
+        radial-gradient(
+            circle at 25% 30%,
+            rgba(var(--pf-primary-container-rgb), 0.17),
+            transparent 24rem
+        ),
+        linear-gradient(
+            180deg,
+            transparent 60%,
+            rgba(7, 24, 41, 0.35)
+        );
+
+    content: "";
+    pointer-events: none;
+}
+
+.pf-public-quote__hero::after {
+    position: absolute;
+    right: 8%;
+    bottom: -8rem;
+
+    width: 22rem;
+    height: 22rem;
+
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 50%;
+
+    box-shadow:
+        0 0 0 4rem rgba(255, 255, 255, 0.025),
+        0 0 0 8rem rgba(255, 255, 255, 0.018);
+
+    content: "";
+    pointer-events: none;
+}
+
+.pf-public-quote__hero > .container-xxl {
+    position: relative;
+    z-index: 1;
+
+    padding-top: var(--pf-space-2xl);
+    padding-bottom: 6rem;
+}
+
 .pf-public-quote__hero-card {
-    width: min(39rem, 100%);
+    width: min(43rem, 100%);
 
-    padding: var(--pf-space-xl);
+    padding: 2.75rem;
 
-    border: 1px solid rgba(255, 255, 255, 0.72);
-    border-radius: var(--pf-radius-xl);
+    border: 1px solid rgba(255, 255, 255, 0.17);
+    border-radius: 1.5rem;
 
-    background-color: rgba(255, 255, 255, 0.78);
+    background:
+        linear-gradient(
+            145deg,
+            rgba(14, 35, 55, 0.84),
+            rgba(11, 28, 48, 0.62)
+        );
 
-    box-shadow: var(--pf-shadow-md);
+    box-shadow:
+        0 2rem 5rem -2rem rgba(0, 0, 0, 0.65);
 
-    backdrop-filter: blur(0.875rem);
-    -webkit-backdrop-filter: blur(0.875rem);
+    backdrop-filter: blur(1rem);
+    -webkit-backdrop-filter: blur(1rem);
 }
 
 .pf-public-quote__badge {
@@ -70,68 +124,118 @@
     gap: var(--pf-space-sm);
 
     margin-bottom: var(--pf-space-lg);
-    padding: 0.375rem 0.75rem;
+    padding: 0.5rem 0.875rem;
 
-    color: var(--pf-on-primary-container);
+    color: #b9ffb3;
 
+    border: 1px solid
+        rgba(var(--pf-primary-container-rgb), 0.3);
     border-radius: var(--pf-radius-pill);
 
     background-color:
-        rgba(var(--pf-primary-container-rgb), 0.1);
+        rgba(var(--pf-primary-container-rgb), 0.12);
 
     font-size: 0.625rem;
     font-weight: var(--pf-font-weight-bold);
-    line-height: var(--pf-line-height-label-sm);
+    line-height: 1;
 
-    letter-spacing: 0.1em;
+    letter-spacing: 0.11em;
     text-transform: uppercase;
 }
 
 .pf-public-quote__badge-dot {
-    width: 0.4375rem;
-    height: 0.4375rem;
+    width: 0.45rem;
+    height: 0.45rem;
 
-    border-radius: var(--pf-radius-pill);
+    border-radius: 50%;
 
     background-color: var(--pf-primary-container);
 
     box-shadow:
-        0 0 0 0.25rem
-        rgba(var(--pf-primary-container-rgb), 0.12);
+        0 0 0 0.28rem
+        rgba(var(--pf-primary-container-rgb), 0.16);
 }
 
 .pf-public-quote__hero-title {
-    max-width: 35rem;
+    max-width: 38rem;
 
-    margin-bottom: var(--pf-space-md);
+    margin-bottom: var(--pf-space-lg);
 
-    color: var(--pf-on-surface);
+    color: var(--pf-on-primary);
 
-    font-size: clamp(
-        var(--pf-font-size-heading-xl),
-        5vw,
-        3.75rem
-    );
-
+    font-size: clamp(2.75rem, 5vw, 4.75rem);
     font-weight: var(--pf-font-weight-black);
-    line-height: 1.02;
-    letter-spacing: -0.045em;
+    line-height: 0.97;
+    letter-spacing: -0.055em;
 }
 
 .pf-public-quote__hero-title span {
     display: block;
+
     color: var(--pf-primary-container);
 }
 
 .pf-public-quote__hero-description {
-    max-width: 32rem;
+    max-width: 34rem;
 
-    margin-bottom: var(--pf-space-lg);
+    margin-bottom: var(--pf-space-xl);
 
-    color: var(--pf-text-muted);
+    color: rgba(255, 255, 255, 0.72);
 
-    font-size: var(--pf-font-size-body-md);
-    line-height: 1.7;
+    font-size: 0.9375rem;
+    line-height: 1.75;
+}
+
+.pf-public-quote__hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--pf-space-lg);
+}
+
+.pf-public-quote__hero-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--pf-space-sm);
+
+    min-height: 3rem;
+    padding: 0.75rem 1.25rem;
+
+    color: var(--pf-on-primary);
+
+    border: 0;
+    border-radius: var(--pf-radius-lg);
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--pf-primary-container),
+            var(--pf-primary)
+        );
+
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-bold);
+
+    text-decoration: none;
+
+    box-shadow:
+        0 1rem 2rem -1rem
+        rgba(var(--pf-primary-container-rgb), 0.8);
+
+    transition:
+        transform var(--pf-transition-fast),
+        box-shadow var(--pf-transition-fast);
+}
+
+.pf-public-quote__hero-button:hover {
+    color: var(--pf-on-primary);
+
+    transform: translateY(-0.125rem);
+
+    box-shadow:
+        0 1.25rem 2.5rem -1rem
+        rgba(var(--pf-primary-container-rgb), 0.9);
 }
 
 .pf-public-quote__trust {
@@ -139,29 +243,32 @@
     align-items: center;
     gap: var(--pf-space-md);
 
-    color: var(--pf-text-muted);
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.pf-public-quote__trust small {
+    font-size: var(--pf-font-size-label-md);
 }
 
 .pf-public-quote__avatars {
     display: flex;
-    flex-shrink: 0;
 }
 
 .pf-public-quote__avatars span {
     display: grid;
 
-    width: 2.25rem;
-    height: 2.25rem;
-    margin-left: -0.5rem;
+    width: 2.125rem;
+    height: 2.125rem;
+    margin-left: -0.45rem;
 
     place-items: center;
 
-    border: 2px solid var(--pf-surface-container-lowest);
-    border-radius: var(--pf-radius-pill);
+    color: var(--pf-on-surface);
+
+    border: 2px solid rgba(11, 28, 48, 0.9);
+    border-radius: 50%;
 
     background-color: var(--pf-surface-container);
-
-    color: var(--pf-on-surface);
 
     font-size: 0.5625rem;
     font-weight: var(--pf-font-weight-bold);
@@ -173,12 +280,44 @@
 
 
 /* =========================================================
+   CONTENIDO SUPERPUESTO
+   ========================================================= */
+
+.pf-public-quote__content {
+    position: relative;
+    z-index: 3;
+
+    margin-top: -4.25rem;
+    padding-bottom: 5rem;
+}
+
+.pf-quote-content {
+    width: 100%;
+    max-width: 62rem;
+    margin-inline: auto;
+}
+
+
+/* =========================================================
    SIDEBAR
    ========================================================= */
 
 .pf-quote-sidebar {
     position: sticky;
     top: calc(var(--pf-header-height) + var(--pf-space-lg));
+
+    padding: var(--pf-space-lg);
+
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 1.25rem;
+
+    background-color: rgba(255, 255, 255, 0.94);
+
+    box-shadow:
+        0 1.5rem 4rem -2.25rem rgba(11, 28, 48, 0.5);
+
+    backdrop-filter: blur(0.75rem);
+    -webkit-backdrop-filter: blur(0.75rem);
 }
 
 .pf-quote-process {
@@ -186,7 +325,7 @@
 
     display: flex;
     flex-direction: column;
-    gap: var(--pf-space-lg);
+    gap: 1.25rem;
 
     margin-bottom: var(--pf-space-xl);
 }
@@ -211,13 +350,10 @@
     align-items: center;
     gap: var(--pf-space-md);
 
-    color: var(--pf-text-muted);
-
     opacity: 0.48;
 }
 
 .pf-quote-process__item.is-active {
-    color: var(--pf-on-surface);
     opacity: 1;
 }
 
@@ -233,8 +369,10 @@
 
     place-items: center;
 
-    border: 1px solid var(--pf-border-color-strong);
-    border-radius: var(--pf-radius-pill);
+    color: var(--pf-text-muted);
+
+    border: 1px solid var(--pf-border-color);
+    border-radius: 50%;
 
     background-color: var(--pf-surface-container-lowest);
 
@@ -248,7 +386,16 @@
 
     border-color: var(--pf-primary-container);
 
-    background-color: var(--pf-primary-container);
+    background:
+        linear-gradient(
+            135deg,
+            var(--pf-primary-container),
+            var(--pf-primary)
+        );
+
+    box-shadow:
+        0 0.5rem 1rem -0.5rem
+        rgba(var(--pf-primary-container-rgb), 0.75);
 }
 
 .pf-quote-process__item strong,
@@ -259,15 +406,15 @@
 .pf-quote-process__item strong {
     margin-bottom: 0.125rem;
 
+    color: var(--pf-on-surface);
+
     font-size: var(--pf-font-size-body-sm);
-    line-height: var(--pf-line-height-body-sm);
 }
 
 .pf-quote-process__item small {
     color: var(--pf-text-muted);
 
     font-size: var(--pf-font-size-label-sm);
-    line-height: var(--pf-line-height-label-sm);
 }
 
 .pf-quote-promotion {
@@ -275,40 +422,67 @@
 
     overflow: hidden;
 
-    padding: var(--pf-space-lg);
+    padding: 1.5rem;
 
     color: var(--pf-on-primary);
 
-    border-radius: var(--pf-radius-xl);
+    border-radius: 1rem;
 
     background:
-        radial-gradient(
-            circle at bottom right,
-            rgba(255, 255, 255, 0.14),
-            transparent 7rem
-        ),
-        var(--pf-primary);
+        linear-gradient(
+            145deg,
+            var(--pf-primary),
+            #004604
+        );
+
+    box-shadow:
+        0 1.25rem 2.5rem -1.5rem
+        rgba(var(--pf-primary-rgb), 0.85);
+}
+
+.pf-quote-promotion::after {
+    position: absolute;
+    right: -2.5rem;
+    bottom: -3rem;
+
+    width: 8rem;
+    height: 8rem;
+
+    border-radius: 50%;
+
+    background-color: rgba(255, 255, 255, 0.1);
+
+    content: "";
 }
 
 .pf-quote-promotion h2 {
+    position: relative;
+    z-index: 1;
+
     margin-bottom: var(--pf-space-sm);
 
     color: var(--pf-on-primary);
 
     font-size: var(--pf-font-size-title-md);
-    line-height: var(--pf-line-height-title-md);
+    font-weight: var(--pf-font-weight-bold);
 }
 
 .pf-quote-promotion p {
+    position: relative;
+    z-index: 1;
+
     margin-bottom: var(--pf-space-md);
 
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(255, 255, 255, 0.76);
 
     font-size: var(--pf-font-size-body-sm);
     line-height: 1.55;
 }
 
 .pf-quote-promotion span {
+    position: relative;
+    z-index: 1;
+
     font-size: 0.625rem;
     font-weight: var(--pf-font-weight-bold);
 
@@ -318,20 +492,25 @@
 
 
 /* =========================================================
-   CONTENIDO Y STEPPER
+   STEPPER
    ========================================================= */
-
-.pf-quote-content {
-    width: 100%;
-    max-width: 54rem;
-    margin-inline: auto;
-}
 
 .pf-quote-stepper {
     display: flex;
     align-items: center;
 
-    margin-bottom: var(--pf-space-xl);
+    margin-bottom: var(--pf-space-lg);
+    padding: 1rem 1.25rem;
+
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 1rem;
+
+    background-color: rgba(255, 255, 255, 0.95);
+
+    box-shadow:
+        0 1.25rem 3rem -2rem rgba(11, 28, 48, 0.45);
+
+    backdrop-filter: blur(0.75rem);
 }
 
 .pf-quote-stepper__item {
@@ -352,13 +531,13 @@
 .pf-quote-stepper__item span {
     display: grid;
 
-    width: 1.375rem;
-    height: 1.375rem;
+    width: 1.5rem;
+    height: 1.5rem;
 
     place-items: center;
 
     border: 2px solid currentColor;
-    border-radius: var(--pf-radius-pill);
+    border-radius: 50%;
 
     font-size: 0.5625rem;
     font-weight: var(--pf-font-weight-bold);
@@ -384,7 +563,7 @@
 
 
 /* =========================================================
-   FORMULARIO Y TARJETAS
+   FORMULARIO
    ========================================================= */
 
 .pf-quote-form {
@@ -393,37 +572,56 @@
     gap: var(--pf-space-lg);
 }
 
-.pf-quote-form__errors:empty {
-    display: none;
-}
-
-.pf-quote-form__errors ul {
-    margin: 0;
-    padding: var(--pf-space-md) var(--pf-space-lg);
-
-    color: var(--pf-on-error-container);
-
-    border: 1px solid
-        rgba(var(--pf-error-rgb), 0.25);
-
-    border-radius: var(--pf-radius-lg);
-
-    background-color: var(--pf-error-container);
-}
-
 .pf-quote-card {
     position: relative;
 
     overflow: hidden;
 
-    padding: var(--pf-space-xl);
+    padding: 2rem;
 
-    border: 1px solid var(--pf-border-color);
-    border-radius: var(--pf-radius-xl);
+    border: 1px solid rgba(109, 123, 102, 0.18);
+    border-radius: 1.5rem;
 
-    background-color: var(--pf-surface-container-lowest);
+    background-color: rgba(255, 255, 255, 0.98);
 
-    box-shadow: var(--pf-shadow-sm);
+    box-shadow:
+        0 0.25rem 0.75rem rgba(11, 28, 48, 0.035),
+        0 2rem 4rem -2.75rem rgba(11, 28, 48, 0.5);
+
+    transition:
+        transform var(--pf-transition-normal),
+        box-shadow var(--pf-transition-normal);
+}
+
+.pf-quote-card:hover {
+    transform: translateY(-0.125rem);
+
+    box-shadow:
+        0 0.35rem 1rem rgba(11, 28, 48, 0.045),
+        0 2.25rem 4.5rem -2.75rem rgba(11, 28, 48, 0.58);
+}
+
+.pf-quote-card::before {
+    position: absolute;
+    top: 0;
+    right: 2rem;
+    left: 2rem;
+
+    height: 3px;
+
+    border-radius: 0 0 999px 999px;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            var(--pf-primary-container),
+            transparent
+        );
+
+    opacity: 0.75;
+
+    content: "";
 }
 
 .pf-quote-card__header {
@@ -436,31 +634,39 @@
 
 .pf-quote-card__icon {
     display: grid;
-    flex: 0 0 2.75rem;
+    flex: 0 0 3rem;
 
-    width: 2.75rem;
-    height: 2.75rem;
+    width: 3rem;
+    height: 3rem;
 
     place-items: center;
 
-    color: var(--pf-primary);
+    color: var(--pf-on-primary);
 
-    border-radius: var(--pf-radius-lg);
+    border-radius: 0.9rem;
 
-    background-color:
-        rgba(var(--pf-primary-container-rgb), 0.1);
+    background:
+        linear-gradient(
+            145deg,
+            var(--pf-primary-container),
+            var(--pf-primary)
+        );
+
+    box-shadow:
+        0 0.75rem 1.5rem -0.75rem
+        rgba(var(--pf-primary-container-rgb), 0.75);
 
     font-size: 1.25rem;
 }
 
 .pf-quote-card__header h2 {
-    margin-bottom: 0.125rem;
+    margin-bottom: 0.15rem;
 
     color: var(--pf-on-surface);
 
-    font-size: var(--pf-font-size-title-md);
+    font-size: 1.25rem;
     font-weight: var(--pf-font-weight-bold);
-    line-height: var(--pf-line-height-title-md);
+    line-height: 1.35;
 }
 
 .pf-quote-card__header p {
@@ -469,17 +675,16 @@
     color: var(--pf-text-muted);
 
     font-size: var(--pf-font-size-body-sm);
-    line-height: var(--pf-line-height-body-sm);
 }
 
 .pf-quote-card__decoration {
     position: absolute;
-    top: 0.75rem;
+    top: 1rem;
     right: 1.5rem;
 
-    color: var(--pf-on-surface);
+    color: var(--pf-primary);
 
-    font-size: 7.5rem;
+    font-size: 7rem;
 
     opacity: 0.025;
 
@@ -488,40 +693,34 @@
 
 
 /* =========================================================
-   CAMPOS
+   CAMPOS MODERNOS
    ========================================================= */
 
 .pf-quote-field {
-    position: relative;
-
     margin-bottom: 0;
 }
 
 .pf-quote-field .form-label {
-    margin-bottom: var(--pf-space-xs);
+    margin-bottom: 0.45rem;
 
-    color: var(--pf-text-muted);
+    color: var(--pf-on-surface);
 
-    font-size: var(--pf-font-size-label-sm);
+    font-size: var(--pf-font-size-label-md);
     font-weight: var(--pf-font-weight-semibold);
-    line-height: var(--pf-line-height-label-sm);
 }
 
 .pf-quote-field .form-control,
 .pf-quote-field .form-select {
-    min-height: 2.75rem;
+    min-height: 3rem;
 
-    padding:
-        0.625rem
-        0;
+    padding: 0.7rem 0.875rem;
 
     color: var(--pf-on-surface);
 
-    border: 0;
-    border-bottom: 1px solid var(--pf-border-color-strong);
-    border-radius: 0;
+    border: 1px solid var(--pf-border-color);
+    border-radius: 0.75rem;
 
-    background-color: transparent;
+    background-color: var(--pf-surface-container-low);
 
     font-size: var(--pf-font-size-body-sm);
 
@@ -529,22 +728,26 @@
 
     transition:
         border-color var(--pf-transition-fast),
+        background-color var(--pf-transition-fast),
         box-shadow var(--pf-transition-fast);
 }
 
-.pf-quote-field .form-select {
-    padding-right: 2rem;
+.pf-quote-field .form-control:hover,
+.pf-quote-field .form-select:hover {
+    border-color: var(--pf-border-color-strong);
 
-    background-position: right 0.25rem center;
+    background-color: var(--pf-surface-container-lowest);
 }
 
 .pf-quote-field .form-control:focus,
 .pf-quote-field .form-select:focus {
     border-color: var(--pf-primary-container);
 
+    background-color: var(--pf-surface-container-lowest);
+
     box-shadow:
-        0 2px 0 -1px
-        var(--pf-primary-container);
+        0 0 0 0.2rem
+        rgba(var(--pf-primary-container-rgb), 0.12);
 }
 
 .pf-quote-field .form-control::placeholder {
@@ -554,24 +757,11 @@
 }
 
 .pf-quote-field--textarea .form-control {
-    min-height: 7rem;
+    min-height: 8rem;
 
     padding: var(--pf-space-md);
 
-    border: 1px solid var(--pf-border-color);
-    border-radius: var(--pf-radius-lg);
-
-    background-color: var(--pf-surface-container-low);
-
     resize: vertical;
-}
-
-.pf-quote-field--textarea .form-control:focus {
-    border-color: var(--pf-primary-container);
-
-    box-shadow:
-        0 0 0 0.1875rem
-        rgba(var(--pf-primary-container-rgb), 0.12);
 }
 
 .pf-quote-field .invalid-feedback,
@@ -584,11 +774,22 @@
     color: var(--pf-error);
 
     font-size: var(--pf-font-size-label-sm);
-    line-height: var(--pf-line-height-label-sm);
 }
 
-.pf-quote-field__errors:empty {
-    display: none;
+
+/* Evita el fondo azul fuerte del autocompletado */
+
+.pf-quote-field input:-webkit-autofill,
+.pf-quote-field input:-webkit-autofill:hover,
+.pf-quote-field input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--pf-on-surface);
+
+    box-shadow:
+        0 0 0 1000px
+        var(--pf-surface-container-low)
+        inset;
+
+    transition: background-color 9999s ease-in-out;
 }
 
 
@@ -617,14 +818,12 @@
     height: 1px;
 
     opacity: 0;
-
-    pointer-events: none;
 }
 
 .pf-product-option__content {
     display: flex;
 
-    min-height: 9rem;
+    min-height: 10rem;
 
     flex-direction: column;
     align-items: center;
@@ -633,125 +832,86 @@
 
     padding: var(--pf-space-md);
 
-    color: var(--pf-on-surface);
+    border: 1px solid var(--pf-border-color);
+    border-radius: 1.1rem;
 
-    border: 2px solid transparent;
-    border-radius: var(--pf-radius-xl);
-
-    background-color: var(--pf-surface-container-low);
+    background:
+        linear-gradient(
+            145deg,
+            var(--pf-surface-container-lowest),
+            var(--pf-surface-container-low)
+        );
 
     transition:
         transform var(--pf-transition-fast),
         border-color var(--pf-transition-fast),
-        background-color var(--pf-transition-fast),
         box-shadow var(--pf-transition-fast);
 }
 
 .pf-product-option:hover
 .pf-product-option__content {
-    transform: translateY(-0.1875rem);
-}
+    border-color:
+        rgba(var(--pf-primary-container-rgb), 0.45);
 
-.pf-product-option__input:focus-visible
-+ .pf-product-option__content {
-    outline:
-        3px solid
-        rgba(var(--pf-primary-rgb), 0.22);
+    transform: translateY(-0.25rem);
 
-    outline-offset: 2px;
+    box-shadow:
+        0 1.25rem 2.5rem -1.75rem
+        rgba(11, 28, 48, 0.5);
 }
 
 .pf-product-option__input:checked
 + .pf-product-option__content {
     border-color: var(--pf-primary-container);
 
-    background-color: var(--pf-surface-container-lowest);
+    background:
+        linear-gradient(
+            145deg,
+            rgba(var(--pf-primary-container-rgb), 0.08),
+            var(--pf-surface-container-lowest)
+        );
 
-    box-shadow: var(--pf-shadow-sm);
+    box-shadow:
+        0 0 0 0.15rem
+        rgba(var(--pf-primary-container-rgb), 0.1),
+        0 1.25rem 2.5rem -1.75rem
+        rgba(var(--pf-primary-rgb), 0.7);
 }
 
 .pf-product-option__icon {
     display: grid;
 
-    width: 4.25rem;
-    height: 4.25rem;
+    width: 4.5rem;
+    height: 4.5rem;
 
     place-items: center;
 
     color: var(--pf-primary);
 
-    border-radius: var(--pf-radius-xl);
+    border-radius: 1.1rem;
 
     background:
         linear-gradient(
             145deg,
-            rgba(var(--pf-primary-container-rgb), 0.1),
+            rgba(var(--pf-primary-container-rgb), 0.14),
             var(--pf-surface-container)
         );
 
-    font-size: 1.75rem;
+    font-size: 1.9rem;
 }
 
 .pf-product-option strong {
+    color: var(--pf-on-surface);
+
     font-size: var(--pf-font-size-body-sm);
-    font-weight: var(--pf-font-weight-semibold);
+    font-weight: var(--pf-font-weight-bold);
 
     text-align: center;
 }
 
 
 /* =========================================================
-   CHECKBOXES DE ACABADOS
-   ========================================================= */
-
-.pf-quote-choice-group__options {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--pf-space-sm);
-}
-
-.pf-quote-choice-group .form-check {
-    display: flex;
-    align-items: center;
-    gap: var(--pf-space-sm);
-
-    min-height: 2.75rem;
-    margin: 0;
-    padding:
-        0.75rem
-        var(--pf-space-md)
-        0.75rem
-        2.5rem;
-
-    border: 1px solid var(--pf-border-color);
-    border-radius: var(--pf-radius-lg);
-
-    background-color: var(--pf-surface-container-lowest);
-
-    transition:
-        border-color var(--pf-transition-fast),
-        background-color var(--pf-transition-fast);
-}
-
-.pf-quote-choice-group .form-check:hover {
-    border-color:
-        rgba(var(--pf-primary-container-rgb), 0.55);
-
-    background-color:
-        rgba(var(--pf-primary-container-rgb), 0.025);
-}
-
-.pf-quote-choice-group .form-check-input {
-    margin-left: -1.5rem;
-}
-
-.pf-quote-choice-group .form-check-label {
-    font-size: var(--pf-font-size-body-sm);
-}
-
-
-/* =========================================================
-   ESTADO DEL DISEÑO
+   OPCIONES DE DISEÑO
    ========================================================= */
 
 .pf-design-options {
@@ -775,8 +935,6 @@
     height: 1px;
 
     opacity: 0;
-
-    pointer-events: none;
 }
 
 .pf-design-option__content {
@@ -784,10 +942,8 @@
     align-items: center;
     gap: var(--pf-space-md);
 
-    min-height: 3rem;
-    padding:
-        0.75rem
-        var(--pf-space-md);
+    min-height: 3.25rem;
+    padding: 0.75rem var(--pf-space-md);
 
     border: 1px solid var(--pf-border-color);
     border-radius: var(--pf-radius-lg);
@@ -796,7 +952,16 @@
 
     transition:
         border-color var(--pf-transition-fast),
-        background-color var(--pf-transition-fast);
+        background-color var(--pf-transition-fast),
+        transform var(--pf-transition-fast);
+}
+
+.pf-design-option:hover
+.pf-design-option__content {
+    border-color:
+        rgba(var(--pf-primary-container-rgb), 0.45);
+
+    transform: translateX(0.125rem);
 }
 
 .pf-design-option__input:checked
@@ -804,29 +969,20 @@
     border-color: var(--pf-primary-container);
 
     background-color:
-        rgba(var(--pf-primary-container-rgb), 0.06);
-}
-
-.pf-design-option__input:focus-visible
-+ .pf-design-option__content {
-    outline:
-        3px solid
-        rgba(var(--pf-primary-rgb), 0.22);
-
-    outline-offset: 2px;
+        rgba(var(--pf-primary-container-rgb), 0.07);
 }
 
 .pf-design-option__indicator {
-    width: 0.875rem;
-    height: 0.875rem;
+    width: 0.9rem;
+    height: 0.9rem;
 
     border: 1px solid var(--pf-border-color-strong);
-    border-radius: var(--pf-radius-pill);
+    border-radius: 50%;
 
     background-color: var(--pf-surface-container-lowest);
 
     box-shadow:
-        inset 0 0 0 0.1875rem
+        inset 0 0 0 0.2rem
         var(--pf-surface-container-lowest);
 }
 
@@ -834,13 +990,7 @@
 + .pf-design-option__content
 .pf-design-option__indicator {
     border-color: var(--pf-primary-container);
-
     background-color: var(--pf-primary-container);
-}
-
-.pf-design-option strong {
-    font-size: var(--pf-font-size-body-sm);
-    font-weight: var(--pf-font-weight-semibold);
 }
 
 .pf-design-information {
@@ -856,28 +1006,43 @@
 
     text-align: center;
 
-    border: 1px dashed var(--pf-border-color-strong);
-    border-radius: var(--pf-radius-xl);
+    border: 1px dashed
+        rgba(var(--pf-primary-container-rgb), 0.45);
 
-    background-color: var(--pf-surface-container-low);
+    border-radius: 1rem;
+
+    background:
+        radial-gradient(
+            circle at center,
+            rgba(var(--pf-primary-container-rgb), 0.08),
+            transparent 75%
+        ),
+        var(--pf-surface-container-low);
 }
 
 .pf-design-information__icon {
     display: grid;
 
-    width: 3.5rem;
-    height: 3.5rem;
+    width: 3.75rem;
+    height: 3.75rem;
     margin-bottom: var(--pf-space-md);
 
     place-items: center;
 
-    color: var(--pf-primary-container);
+    color: var(--pf-on-primary);
 
-    border-radius: var(--pf-radius-lg);
+    border-radius: 1rem;
 
-    background-color: var(--pf-surface-container-lowest);
+    background:
+        linear-gradient(
+            145deg,
+            var(--pf-primary-container),
+            var(--pf-primary)
+        );
 
-    box-shadow: var(--pf-shadow-sm);
+    box-shadow:
+        0 1rem 2rem -1rem
+        rgba(var(--pf-primary-container-rgb), 0.8);
 
     font-size: 1.5rem;
 }
@@ -890,7 +1055,7 @@
 }
 
 .pf-design-information p {
-    max-width: 20rem;
+    max-width: 21rem;
 
     margin: 0;
 
@@ -913,36 +1078,41 @@
 
     padding: var(--pf-space-lg);
 
-    border: 1px solid var(--pf-border-color);
-    border-radius: var(--pf-radius-xl);
+    border: 1px solid rgba(126, 155, 212, 0.2);
+    border-radius: 1rem;
 
-    background-color: var(--pf-surface-container);
+    background:
+        linear-gradient(
+            135deg,
+            var(--pf-surface-container),
+            var(--pf-surface-container-low)
+        );
 }
 
 .pf-invoice-option__icon {
     display: grid;
-    flex: 0 0 2.75rem;
+    flex: 0 0 3rem;
 
-    width: 2.75rem;
-    height: 2.75rem;
+    width: 3rem;
+    height: 3rem;
 
     place-items: center;
 
     color: var(--pf-primary);
 
-    border-radius: var(--pf-radius-lg);
+    border-radius: 0.875rem;
 
     background-color: var(--pf-surface-container-lowest);
 
-    box-shadow: var(--pf-shadow-xs);
+    box-shadow: var(--pf-shadow-sm);
 
-    font-size: 1.125rem;
+    font-size: 1.25rem;
 }
 
 .pf-invoice-option strong {
     display: block;
 
-    margin-bottom: 0.125rem;
+    margin-bottom: 0.2rem;
 
     font-size: var(--pf-font-size-body-md);
     font-weight: var(--pf-font-weight-bold);
@@ -954,28 +1124,14 @@
     color: var(--pf-text-muted);
 
     font-size: var(--pf-font-size-label-sm);
-    line-height: var(--pf-line-height-label-sm);
 }
 
 .pf-invoice-option .form-check-input {
-    width: 3rem;
-    height: 1.5rem;
+    width: 3.25rem;
+    height: 1.65rem;
     margin: 0;
 
     cursor: pointer;
-}
-
-.form-check-input:checked {
-    border-color: var(--pf-primary-container);
-    background-color: var(--pf-primary-container);
-}
-
-.form-check-input:focus {
-    border-color: var(--pf-primary-container);
-
-    box-shadow:
-        0 0 0 0.1875rem
-        rgba(var(--pf-primary-container-rgb), 0.14);
 }
 
 
@@ -985,28 +1141,29 @@
 
 .pf-quote-guarantee {
     display: flex;
+    align-items: flex-start;
     gap: var(--pf-space-md);
 
-    padding: var(--pf-space-md) var(--pf-space-lg);
+    padding: var(--pf-space-lg);
 
     color: var(--pf-on-tertiary-container);
 
-    border-left:
-        3px solid
-        var(--pf-tertiary);
+    border: 1px solid rgba(var(--pf-tertiary-rgb), 0.14);
+    border-left: 4px solid var(--pf-tertiary);
+    border-radius: var(--pf-radius-xl);
 
-    border-radius: var(--pf-radius-lg);
-
-    background-color:
-        rgba(var(--pf-tertiary-rgb), 0.07);
+    background:
+        linear-gradient(
+            90deg,
+            rgba(var(--pf-tertiary-rgb), 0.09),
+            rgba(var(--pf-tertiary-rgb), 0.025)
+        );
 }
 
 .pf-quote-guarantee > i {
-    margin-top: 0.125rem;
-
     color: var(--pf-tertiary);
 
-    font-size: 1.375rem;
+    font-size: 1.5rem;
 }
 
 .pf-quote-guarantee strong {
@@ -1021,13 +1178,13 @@
 .pf-quote-guarantee p {
     margin: 0;
 
-    font-size: var(--pf-font-size-label-sm);
+    font-size: var(--pf-font-size-label-md);
     line-height: 1.55;
 }
 
 
 /* =========================================================
-   BOTÓN Y SELLOS
+   CTA FINAL
    ========================================================= */
 
 .pf-quote-submit {
@@ -1036,63 +1193,90 @@
     align-items: center;
     gap: var(--pf-space-lg);
 
-    padding-top: var(--pf-space-sm);
+    padding-top: var(--pf-space-md);
 }
 
 .pf-quote-submit__button {
+    position: relative;
+
     display: inline-flex;
 
-    min-width: 22rem;
-    min-height: 3.5rem;
+    min-width: 24rem;
+    min-height: 3.75rem;
+
+    overflow: hidden;
 
     align-items: center;
     justify-content: center;
     gap: var(--pf-space-md);
 
-    padding:
-        0.875rem
-        var(--pf-space-xl);
+    padding: 1rem 2.25rem;
 
     color: var(--pf-on-primary);
 
     border: 0;
-    border-radius: var(--pf-radius-lg);
+    border-radius: 1rem;
 
-    background-color: var(--pf-primary);
+    background:
+        linear-gradient(
+            135deg,
+            var(--pf-primary-container),
+            var(--pf-primary)
+        );
 
     font-size: var(--pf-font-size-body-md);
     font-weight: var(--pf-font-weight-bold);
 
     box-shadow:
-        0 1rem 2rem -1rem
-        rgba(var(--pf-primary-rgb), 0.65);
+        0 1.25rem 2.75rem -1.25rem
+        rgba(var(--pf-primary-container-rgb), 0.85);
 
     transition:
-        color var(--pf-transition-fast),
         transform var(--pf-transition-fast),
-        background-color var(--pf-transition-fast),
         box-shadow var(--pf-transition-fast);
 }
 
-.pf-quote-submit__button:hover,
-.pf-quote-submit__button:focus-visible {
+.pf-quote-submit__button::before {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -60%;
+
+    width: 45%;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.25),
+            transparent
+        );
+
+    content: "";
+
+    transform: skewX(-20deg);
+
+    transition: left 500ms ease;
+}
+
+.pf-quote-submit__button:hover {
     color: var(--pf-on-primary);
 
-    background-color: var(--pf-on-primary-fixed-variant);
+    transform: translateY(-0.2rem);
 
     box-shadow:
-        0 1.25rem 2.25rem -1rem
-        rgba(var(--pf-primary-rgb), 0.75);
-
-    transform: translateY(-0.125rem);
+        0 1.5rem 3.25rem -1.25rem
+        rgba(var(--pf-primary-container-rgb), 0.95);
 }
 
-.pf-quote-submit__button i {
-    transition: transform var(--pf-transition-fast);
+.pf-quote-submit__button:hover::before {
+    left: 120%;
 }
 
-.pf-quote-submit__button:hover i {
-    transform: translateX(0.25rem);
+.pf-quote-submit__button i,
+.pf-quote-submit__button span {
+    position: relative;
+    z-index: 1;
 }
 
 .pf-quote-trust-signals {
@@ -1127,19 +1311,25 @@
    RESPONSIVE
    ========================================================= */
 
+@media (max-width: 1199.98px) {
+    .pf-public-quote__content {
+        margin-top: -3rem;
+    }
+}
+
 @media (max-width: 991.98px) {
     .pf-public-quote__hero {
-        min-height: auto;
+        min-height: 29rem;
 
-        background-position: 62% center;
+        background-position: 64% center;
     }
 
     .pf-public-quote__hero-card {
-        padding: var(--pf-space-lg);
+        padding: 2rem;
     }
 
-    .pf-quote-card {
-        padding: var(--pf-space-lg);
+    .pf-public-quote__content {
+        margin-top: -2rem;
     }
 
     .pf-product-grid {
@@ -1149,16 +1339,34 @@
 
 @media (max-width: 767.98px) {
     .pf-public-quote__hero {
+        min-height: auto;
+
         background-image:
             linear-gradient(
-                rgba(255, 255, 255, 0.86),
-                rgba(255, 255, 255, 0.92)
+                145deg,
+                rgba(7, 24, 41, 0.97),
+                rgba(7, 24, 41, 0.82)
             ),
             var(--pf-quote-hero-image);
     }
 
+    .pf-public-quote__hero > .container-xxl {
+        padding-top: 2rem;
+        padding-bottom: 5rem;
+    }
+
+    .pf-public-quote__hero-card {
+        padding: 1.5rem;
+
+        border-radius: 1.25rem;
+    }
+
     .pf-public-quote__hero-title {
-        font-size: 2.5rem;
+        font-size: 2.65rem;
+    }
+
+    .pf-public-quote__content {
+        margin-top: -2.5rem;
     }
 
     .pf-quote-stepper__item strong {
@@ -1169,15 +1377,13 @@
         margin-inline: var(--pf-space-sm);
     }
 
+    .pf-quote-card {
+        padding: 1.5rem;
+
+        border-radius: 1.25rem;
+    }
+
     .pf-quote-card__header {
-        align-items: flex-start;
-    }
-
-    .pf-quote-choice-group__options {
-        grid-template-columns: 1fr;
-    }
-
-    .pf-invoice-option {
         align-items: flex-start;
     }
 
@@ -1185,32 +1391,29 @@
         width: 100%;
         min-width: 0;
     }
-
-    .pf-quote-trust-signals {
-        gap: var(--pf-space-md);
-    }
 }
 
 @media (max-width: 479.98px) {
     .pf-public-quote__hero-card {
-        padding: var(--pf-space-md);
+        padding: 1.25rem;
     }
 
     .pf-public-quote__hero-title {
-        font-size: 2.125rem;
+        font-size: 2.2rem;
     }
 
+    .pf-public-quote__hero-actions,
     .pf-public-quote__trust {
         align-items: flex-start;
         flex-direction: column;
     }
 
-    .pf-quote-card {
-        padding: var(--pf-space-md);
+    .pf-public-quote__hero-button {
+        width: 100%;
     }
 
-    .pf-quote-card__header {
-        gap: var(--pf-space-sm);
+    .pf-quote-card {
+        padding: var(--pf-space-md);
     }
 
     .pf-product-grid {
@@ -1222,20 +1425,19 @@
 
         flex-direction: row;
         justify-content: flex-start;
-
-        text-align: left;
     }
 
     .pf-product-option__icon {
-        flex: 0 0 3.25rem;
+        flex: 0 0 3.5rem;
 
-        width: 3.25rem;
-        height: 3.25rem;
+        width: 3.5rem;
+        height: 3.5rem;
 
-        font-size: 1.375rem;
+        font-size: 1.4rem;
     }
 
     .pf-invoice-option {
+        align-items: flex-start;
         flex-direction: column;
     }
 

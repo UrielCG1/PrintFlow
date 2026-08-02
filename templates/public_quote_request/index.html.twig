@@ -14,10 +14,10 @@
             class="pf-public-quote__hero"
             style="
                 --pf-quote-hero-image:
-                    url('{{ asset('images/quote/hero-printing.jpg') }}');
+                    url('{{ asset('images/quote/hero-printing.webp') }}');
             "
         >
-            <div class="container-xxl py-5">
+            <div class="container-xxl h-100 d-flex align-items-center">
                 <div class="pf-public-quote__hero-card">
                     <div class="pf-public-quote__badge">
                         <span class="pf-public-quote__badge-dot"></span>
@@ -30,24 +30,30 @@
                     </h1>
 
                     <p class="pf-public-quote__hero-description">
-                        Expertos en impresión de alta gama y soluciones
-                        personalizadas para empresas que buscan resultados
-                        profesionales.
+                        Soluciones de impresión profesional diseñadas para marcas
+                        que buscan destacar, crecer y comunicar con mayor impacto.
                     </p>
 
-                    <div class="pf-public-quote__trust">
-                        <div
-                            class="pf-public-quote__avatars"
-                            aria-hidden="true"
-                        >
-                            <span>JD</span>
-                            <span>AM</span>
-                            <span>LS</span>
-                        </div>
+                    <div class="pf-public-quote__hero-actions">
+                        <a href="#quote-form" class="btn pf-public-quote__hero-button">
+                            Solicitar cotización
+                            <i class="bi bi-arrow-down"></i>
+                        </a>
 
-                        <small>
-                            Más de 500 empresas confían en nosotros
-                        </small>
+                        <div class="pf-public-quote__trust">
+                            <div
+                                class="pf-public-quote__avatars"
+                                aria-hidden="true"
+                            >
+                                <span>JD</span>
+                                <span>AM</span>
+                                <span>LS</span>
+                            </div>
+
+                            <small>
+                                Más de 500 empresas atendidas
+                            </small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -56,7 +62,7 @@
         {# =====================================================
            CONTENIDO
            ===================================================== #}
-        <div class="container-xxl py-4 py-lg-5">
+        <div class="container-xxl pf-public-quote__content">
             <div class="row g-4 g-xl-5 justify-content-center">
 
                 {# =================================================
@@ -166,7 +172,8 @@
 
                         {{ form_start(form, {
                             attr: {
-                                class: 'pf-quote-form'
+                                class: 'pf-quote-form',
+                                id: 'quote-form'
                             }
                         }) }}
 
