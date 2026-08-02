@@ -488,7 +488,7 @@ body.pf-public-body--auth {
 }
 
 .pf-auth__password-toggle:hover {
-    color: var(--pf-on-primary);
+    color: v rgb(194, 250, 168);
 
     background:
         linear-gradient(
@@ -537,7 +537,7 @@ body.pf-public-body--auth {
 }
 
 .pf-auth__submit:hover {
-    color: var(--pf-on-primary);
+    color: rgb(194, 250, 168);
     background-color: var(--pf-primary);
     border-color: var(--pf-primary);
 }
@@ -566,7 +566,7 @@ body.pf-public-body--auth {
 }
 
 .pf-auth__recovery-link:hover {
-    color: var(--pf-primary);
+    color:  rgb(194, 250, 168);
     text-decoration: underline;
     text-underline-offset: 0.2em;
 }
