@@ -99,6 +99,18 @@ class QuoteRequest
     #[ORM\Column]
     private ?\DateTimeImmutable $updatedAt = null;
 
+
+    public function __construct()
+    {
+        $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+
+        $this->publicToken = bin2hex(random_bytes(24));
+        $this->status = 'new';
+        $this->requiresInvoice = false;
+        $this->createdAt = $now;
+        $this->updatedAt = $now;
+    }
+
     public function getId(): ?int
     {
         return $this->id;

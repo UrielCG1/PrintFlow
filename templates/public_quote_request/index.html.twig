@@ -1,0 +1,111 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Solicitar cotización{% endblock %}
+
+{% block body %}
+    <main class="container py-5">
+        <div class="mx-auto" style="max-width: 900px;">
+            <h1>Solicita una cotización</h1>
+
+            <p class="text-muted">
+                Completa los datos y nuestro equipo revisará tu solicitud.
+            </p>
+
+            {% for message in app.flashes('success') %}
+                <div class="alert alert-success">
+                    {{ message }}
+                </div>
+            {% endfor %}
+
+            {{ form_start(form) }}
+
+                <h2 class="h4 mt-4">Datos de contacto</h2>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form_row(form.fullName) }}
+                    </div>
+
+                    <div class="col-md-6">
+                        {{ form_row(form.customerNumber) }}
+                    </div>
+
+                    <div class="col-md-6">
+                        {{ form_row(form.email) }}
+                    </div>
+
+                    <div class="col-md-6">
+                        {{ form_row(form.phone) }}
+                    </div>
+
+                    <div class="col-md-6">
+                        {{ form_row(form.companyName) }}
+                    </div>
+
+                    <div class="col-md-6">
+                        {{ form_row(form.contactPreference) }}
+                    </div>
+                </div>
+
+                <h2 class="h4 mt-4">Información del producto</h2>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form_row(form.productType) }}
+                    </div>
+
+                    <div class="col-md-6">
+                        {{ form_row(form.quantity) }}
+                    </div>
+
+                    <div class="col-md-4">
+                        {{ form_row(form.width) }}
+                    </div>
+
+                    <div class="col-md-4">
+                        {{ form_row(form.height) }}
+                    </div>
+
+                    <div class="col-md-4">
+                        {{ form_row(form.measurementUnit) }}
+                    </div>
+
+                    <div class="col-md-6">
+                        {{ form_row(form.material) }}
+                    </div>
+
+                    <div class="col-md-6">
+                        {{ form_row(form.printSides) }}
+                    </div>
+                </div>
+
+                {{ form_row(form.finishes) }}
+                {{ form_row(form.designStatus) }}
+
+                <h2 class="h4 mt-4">Entrega</h2>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form_row(form.neededAt) }}
+                    </div>
+
+                    <div class="col-md-6">
+                        {{ form_row(form.deliveryMethod) }}
+                    </div>
+
+                    <div class="col-md-6">
+                        {{ form_row(form.postalCode) }}
+                    </div>
+                </div>
+
+                {{ form_row(form.requiresInvoice) }}
+                {{ form_row(form.notes) }}
+
+                <button class="btn btn-primary" type="submit">
+                    Enviar solicitud
+                </button>
+
+            {{ form_end(form) }}
+        </div>
+    </main>
+{% endblock %}
