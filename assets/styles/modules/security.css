@@ -252,7 +252,7 @@ body.pf-public-body--auth {
     max-width: 27rem;
     margin: var(--pf-space-md) 0 0;
 
-    color: rgba(11, 28, 48, 0.78);
+    color: rgba(237, 251, 241, 0.78);
 
     font-size: var(--pf-font-size-body-md);
     font-weight: var(--pf-font-weight-medium);
@@ -553,7 +553,7 @@ body.pf-public-body--auth {
 
     margin-top: var(--pf-space-md);
 
-    color: rgba(11, 28, 48, 0.76);
+    color: #ffffff;
 
     font-size: var(--pf-font-size-body-sm);
     font-weight: var(--pf-font-weight-semibold);
@@ -572,7 +572,7 @@ body.pf-public-body--auth {
 }
 
 .pf-auth__recovery-link[aria-disabled="true"] {
-    color: rgba(11, 28, 48, 0.58);
+    color: rgb(194, 250, 168);
     opacity: 1;
 }
 /* =========================================================
