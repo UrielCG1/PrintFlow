@@ -32,20 +32,23 @@
 .pf-public-quote__hero {
     position: relative;
 
-    min-height: 31rem;
+    min-height: 34rem;
+    overflow: hidden;
+
+    background-color: var(--pf-surface-container-lowest);
 
     background-image:
         linear-gradient(
             90deg,
-            rgba(7, 24, 41, 0.98) 0%,
-            rgba(7, 24, 41, 0.92) 35%,
-            rgba(7, 24, 41, 0.58) 67%,
-            rgba(7, 24, 41, 0.18) 100%
+            rgba(255, 255, 255, 0.99) 0%,
+            rgba(255, 255, 255, 0.97) 36%,
+            rgba(255, 255, 255, 0.78) 54%,
+            rgba(255, 255, 255, 0.12) 82%
         ),
         var(--pf-quote-hero-image);
 
     background-repeat: no-repeat;
-    background-position: center;
+    background-position: center right;
     background-size: cover;
 }
 
@@ -54,68 +57,33 @@
     inset: 0;
 
     background:
-        radial-gradient(
-            circle at 25% 30%,
-            rgba(var(--pf-primary-container-rgb), 0.17),
-            transparent 24rem
-        ),
         linear-gradient(
             180deg,
-            transparent 60%,
-            rgba(7, 24, 41, 0.35)
+            rgba(255, 255, 255, 0) 70%,
+            rgba(11, 28, 48, 0.04) 100%
         );
 
     content: "";
     pointer-events: none;
 }
 
-.pf-public-quote__hero::after {
-    position: absolute;
-    right: 8%;
-    bottom: -8rem;
-
-    width: 22rem;
-    height: 22rem;
-
-    border: 1px solid rgba(255, 255, 255, 0.13);
-    border-radius: 50%;
-
-    box-shadow:
-        0 0 0 4rem rgba(255, 255, 255, 0.025),
-        0 0 0 8rem rgba(255, 255, 255, 0.018);
-
-    content: "";
-    pointer-events: none;
-}
-
-.pf-public-quote__hero > .container-xxl {
+.pf-public-quote__hero-container {
     position: relative;
     z-index: 1;
+
+    display: flex;
+    min-height: 34rem;
+
+    align-items: center;
 
     padding-top: var(--pf-space-2xl);
     padding-bottom: 6rem;
 }
 
-.pf-public-quote__hero-card {
-    width: min(43rem, 100%);
+.pf-public-quote__hero-content {
+    width: min(42rem, 58%);
 
-    padding: 2.75rem;
-
-    border: 1px solid rgba(255, 255, 255, 0.17);
-    border-radius: 1.5rem;
-
-    background:
-        linear-gradient(
-            145deg,
-            rgba(14, 35, 55, 0.84),
-            rgba(11, 28, 48, 0.62)
-        );
-
-    box-shadow:
-        0 2rem 5rem -2rem rgba(0, 0, 0, 0.65);
-
-    backdrop-filter: blur(1rem);
-    -webkit-backdrop-filter: blur(1rem);
+    padding: 0;
 }
 
 .pf-public-quote__badge {
@@ -124,22 +92,22 @@
     gap: var(--pf-space-sm);
 
     margin-bottom: var(--pf-space-lg);
-    padding: 0.5rem 0.875rem;
+    padding: 0.45rem 0.8rem;
 
-    color: #b9ffb3;
+    color: var(--pf-on-primary-container);
 
     border: 1px solid
-        rgba(var(--pf-primary-container-rgb), 0.3);
+        rgba(var(--pf-primary-container-rgb), 0.22);
     border-radius: var(--pf-radius-pill);
 
     background-color:
-        rgba(var(--pf-primary-container-rgb), 0.12);
+        rgba(var(--pf-primary-container-rgb), 0.09);
 
     font-size: 0.625rem;
     font-weight: var(--pf-font-weight-bold);
     line-height: 1;
 
-    letter-spacing: 0.11em;
+    letter-spacing: 0.09em;
     text-transform: uppercase;
 }
 
@@ -152,25 +120,27 @@
     background-color: var(--pf-primary-container);
 
     box-shadow:
-        0 0 0 0.28rem
-        rgba(var(--pf-primary-container-rgb), 0.16);
+        0 0 0 0.25rem
+        rgba(var(--pf-primary-container-rgb), 0.13);
 }
 
 .pf-public-quote__hero-title {
-    max-width: 38rem;
+    max-width: 40rem;
 
     margin-bottom: var(--pf-space-lg);
 
-    color: var(--pf-on-primary);
+    color: var(--pf-on-surface);
 
-    font-size: clamp(2.75rem, 5vw, 4.75rem);
+    font-size: clamp(3rem, 5vw, 5rem);
     font-weight: var(--pf-font-weight-black);
-    line-height: 0.97;
+    line-height: 0.98;
     letter-spacing: -0.055em;
 }
 
 .pf-public-quote__hero-title span {
     display: block;
+
+    margin-top: 0.15em;
 
     color: var(--pf-primary-container);
 }
@@ -180,9 +150,9 @@
 
     margin-bottom: var(--pf-space-xl);
 
-    color: rgba(255, 255, 255, 0.72);
+    color: var(--pf-text-muted);
 
-    font-size: 0.9375rem;
+    font-size: 1rem;
     line-height: 1.75;
 }
 
@@ -191,28 +161,26 @@
     flex-wrap: wrap;
     align-items: center;
     gap: var(--pf-space-lg);
+
+    margin-bottom: var(--pf-space-xl);
 }
 
 .pf-public-quote__hero-button {
     display: inline-flex;
+    min-height: 3.25rem;
+
     align-items: center;
     justify-content: center;
     gap: var(--pf-space-sm);
 
-    min-height: 3rem;
-    padding: 0.75rem 1.25rem;
+    padding: 0.85rem 1.4rem;
 
     color: var(--pf-on-primary);
 
     border: 0;
     border-radius: var(--pf-radius-lg);
 
-    background:
-        linear-gradient(
-            135deg,
-            var(--pf-primary-container),
-            var(--pf-primary)
-        );
+    background-color: var(--pf-primary);
 
     font-size: var(--pf-font-size-body-sm);
     font-weight: var(--pf-font-weight-bold);
@@ -221,61 +189,68 @@
 
     box-shadow:
         0 1rem 2rem -1rem
-        rgba(var(--pf-primary-container-rgb), 0.8);
+        rgba(var(--pf-primary-rgb), 0.72);
 
     transition:
         transform var(--pf-transition-fast),
+        background-color var(--pf-transition-fast),
         box-shadow var(--pf-transition-fast);
 }
 
 .pf-public-quote__hero-button:hover {
     color: var(--pf-on-primary);
 
+    background-color: var(--pf-on-primary-fixed-variant);
+
     transform: translateY(-0.125rem);
 
     box-shadow:
-        0 1.25rem 2.5rem -1rem
-        rgba(var(--pf-primary-container-rgb), 0.9);
+        0 1.25rem 2.25rem -1rem
+        rgba(var(--pf-primary-rgb), 0.8);
 }
 
-.pf-public-quote__trust {
+.pf-public-quote__benefit {
     display: flex;
+    max-width: 16rem;
+
     align-items: center;
-    gap: var(--pf-space-md);
+    gap: var(--pf-space-sm);
 
-    color: rgba(255, 255, 255, 0.65);
-}
+    color: var(--pf-text-muted);
 
-.pf-public-quote__trust small {
     font-size: var(--pf-font-size-label-md);
+    line-height: 1.45;
 }
 
-.pf-public-quote__avatars {
+.pf-public-quote__benefit i {
+    flex: 0 0 auto;
+
+    color: var(--pf-primary);
+
+    font-size: 1.15rem;
+}
+
+.pf-public-quote__features {
     display: flex;
+    flex-wrap: wrap;
+    gap: var(--pf-space-md) var(--pf-space-lg);
+
+    color: var(--pf-on-surface-variant);
 }
 
-.pf-public-quote__avatars span {
-    display: grid;
+.pf-public-quote__features span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--pf-space-sm);
 
-    width: 2.125rem;
-    height: 2.125rem;
-    margin-left: -0.45rem;
-
-    place-items: center;
-
-    color: var(--pf-on-surface);
-
-    border: 2px solid rgba(11, 28, 48, 0.9);
-    border-radius: 50%;
-
-    background-color: var(--pf-surface-container);
-
-    font-size: 0.5625rem;
-    font-weight: var(--pf-font-weight-bold);
+    font-size: var(--pf-font-size-label-md);
+    font-weight: var(--pf-font-weight-medium);
 }
 
-.pf-public-quote__avatars span:first-child {
-    margin-left: 0;
+.pf-public-quote__features i {
+    color: var(--pf-primary-container);
+
+    font-size: 0.875rem;
 }
 
 
@@ -285,9 +260,9 @@
 
 .pf-public-quote__content {
     position: relative;
-    z-index: 3;
+    z-index: 2;
 
-    margin-top: -4.25rem;
+    margin-top: -2rem;
     padding-bottom: 5rem;
 }
 
@@ -1311,25 +1286,55 @@
    RESPONSIVE
    ========================================================= */
 
+/* ---------------------------------------------------------
+   Pantallas medianas y laptops pequeñas
+   --------------------------------------------------------- */
+
 @media (max-width: 1199.98px) {
     .pf-public-quote__content {
-        margin-top: -3rem;
+        margin-top: -2rem;
     }
 }
 
+
+/* ---------------------------------------------------------
+   Tablets horizontales y pantallas menores a 992px
+   --------------------------------------------------------- */
+
 @media (max-width: 991.98px) {
     .pf-public-quote__hero {
-        min-height: 29rem;
+        min-height: 32rem;
 
-        background-position: 64% center;
+        background-position: 65% center;
+
+        background-image:
+            linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0.98) 0%,
+                rgba(255, 255, 255, 0.94) 48%,
+                rgba(255, 255, 255, 0.68) 70%,
+                rgba(255, 255, 255, 0.22) 100%
+            ),
+            var(--pf-quote-hero-image);
     }
 
-    .pf-public-quote__hero-card {
-        padding: 2rem;
+    .pf-public-quote__hero-container {
+        min-height: 32rem;
+
+        padding-top: var(--pf-space-xl);
+        padding-bottom: 5rem;
+    }
+
+    .pf-public-quote__hero-content {
+        width: min(38rem, 72%);
+    }
+
+    .pf-public-quote__hero-title {
+        font-size: clamp(2.75rem, 7vw, 4rem);
     }
 
     .pf-public-quote__content {
-        margin-top: -2rem;
+        margin-top: -1.5rem;
     }
 
     .pf-product-grid {
@@ -1337,36 +1342,75 @@
     }
 }
 
+
+/* ---------------------------------------------------------
+   Tablets verticales y móviles grandes
+   --------------------------------------------------------- */
+
 @media (max-width: 767.98px) {
     .pf-public-quote__hero {
         min-height: auto;
 
+        background-position: center;
+
         background-image:
             linear-gradient(
-                145deg,
-                rgba(7, 24, 41, 0.97),
-                rgba(7, 24, 41, 0.82)
+                180deg,
+                rgba(255, 255, 255, 0.88) 0%,
+                rgba(255, 255, 255, 0.94) 58%,
+                rgba(255, 255, 255, 0.98) 100%
             ),
             var(--pf-quote-hero-image);
     }
 
-    .pf-public-quote__hero > .container-xxl {
-        padding-top: 2rem;
-        padding-bottom: 5rem;
+    .pf-public-quote__hero-container {
+        min-height: auto;
+
+        padding-top: 3.5rem;
+        padding-bottom: 4.5rem;
     }
 
-    .pf-public-quote__hero-card {
-        padding: 1.5rem;
-
-        border-radius: 1.25rem;
+    .pf-public-quote__hero-content {
+        width: 100%;
+        max-width: 36rem;
     }
 
     .pf-public-quote__hero-title {
-        font-size: 2.65rem;
+        font-size: 2.75rem;
+        line-height: 1;
+    }
+
+    .pf-public-quote__hero-description {
+        max-width: 32rem;
+
+        font-size: var(--pf-font-size-body-md);
+    }
+
+    .pf-public-quote__hero-actions {
+        align-items: flex-start;
+        flex-direction: column;
+
+        gap: var(--pf-space-md);
+    }
+
+    .pf-public-quote__benefit {
+        max-width: 22rem;
+    }
+
+    .pf-public-quote__features {
+        align-items: flex-start;
+        flex-direction: column;
+
+        gap: var(--pf-space-sm);
     }
 
     .pf-public-quote__content {
-        margin-top: -2.5rem;
+        margin-top: -1.25rem;
+        padding-bottom: 4rem;
+    }
+
+    .pf-quote-stepper {
+        padding: var(--pf-space-md);
     }
 
     .pf-quote-stepper__item strong {
@@ -1378,7 +1422,7 @@
     }
 
     .pf-quote-card {
-        padding: 1.5rem;
+        padding: var(--pf-space-lg);
 
         border-radius: 1.25rem;
     }
@@ -1387,33 +1431,100 @@
         align-items: flex-start;
     }
 
+    .pf-quote-card__decoration {
+        right: 0.75rem;
+
+        font-size: 5rem;
+    }
+
+    .pf-quote-choice-group__options {
+        grid-template-columns: 1fr;
+    }
+
     .pf-quote-submit__button {
         width: 100%;
         min-width: 0;
     }
 }
 
+
+/* ---------------------------------------------------------
+   Móviles
+   --------------------------------------------------------- */
+
 @media (max-width: 479.98px) {
-    .pf-public-quote__hero-card {
-        padding: 1.25rem;
+    .pf-public-quote__hero-container {
+        padding-top: 2.5rem;
+        padding-bottom: 4rem;
+    }
+
+    .pf-public-quote__badge {
+        margin-bottom: var(--pf-space-md);
+
+        font-size: 0.5625rem;
+        letter-spacing: 0.07em;
     }
 
     .pf-public-quote__hero-title {
-        font-size: 2.2rem;
+        margin-bottom: var(--pf-space-md);
+
+        font-size: 2.25rem;
+        letter-spacing: -0.045em;
     }
 
-    .pf-public-quote__hero-actions,
-    .pf-public-quote__trust {
-        align-items: flex-start;
-        flex-direction: column;
+    .pf-public-quote__hero-description {
+        margin-bottom: var(--pf-space-lg);
+
+        font-size: var(--pf-font-size-body-sm);
+        line-height: 1.65;
     }
 
     .pf-public-quote__hero-button {
         width: 100%;
     }
 
+    .pf-public-quote__benefit {
+        max-width: none;
+    }
+
+    .pf-public-quote__content {
+        margin-top: -1rem;
+    }
+
+    .pf-quote-stepper {
+        padding: 0.875rem;
+    }
+
+    .pf-quote-stepper__item span {
+        width: 1.375rem;
+        height: 1.375rem;
+    }
+
+    .pf-quote-stepper__line {
+        margin-inline: 0.375rem;
+    }
+
     .pf-quote-card {
         padding: var(--pf-space-md);
+
+        border-radius: var(--pf-radius-xl);
+    }
+
+    .pf-quote-card__header {
+        gap: var(--pf-space-sm);
+
+        margin-bottom: var(--pf-space-lg);
+    }
+
+    .pf-quote-card__icon {
+        flex-basis: 2.75rem;
+
+        width: 2.75rem;
+        height: 2.75rem;
+    }
+
+    .pf-quote-card__header h2 {
+        font-size: var(--pf-font-size-title-md);
     }
 
     .pf-product-grid {
@@ -1425,6 +1536,10 @@
 
         flex-direction: row;
         justify-content: flex-start;
+
+        padding: var(--pf-space-md);
+
+        text-align: left;
     }
 
     .pf-product-option__icon {
@@ -1436,13 +1551,33 @@
         font-size: 1.4rem;
     }
 
+    .pf-product-option strong {
+        text-align: left;
+    }
+
+    .pf-design-information {
+        min-height: 13rem;
+
+        padding: var(--pf-space-lg);
+    }
+
     .pf-invoice-option {
         align-items: flex-start;
         flex-direction: column;
     }
 
+    .pf-invoice-option .form-check {
+        align-self: flex-end;
+    }
+
+    .pf-quote-guarantee {
+        padding: var(--pf-space-md);
+    }
+
     .pf-quote-trust-signals {
         align-items: flex-start;
         flex-direction: column;
+
+        width: 100%;
     }
 }
