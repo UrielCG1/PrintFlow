@@ -1,111 +1,810 @@
+{# templates/public/quote_request/index.html.twig #}
+
 {% extends 'base.html.twig' %}
 
 {% block title %}Solicitar cotización{% endblock %}
 
 {% block body %}
-    <main class="container py-5">
-        <div class="mx-auto" style="max-width: 900px;">
-            <h1>Solicita una cotización</h1>
+    <div class="pf-public-quote">
 
-            <p class="text-muted">
-                Completa los datos y nuestro equipo revisará tu solicitud.
-            </p>
-
-            {% for message in app.flashes('success') %}
-                <div class="alert alert-success">
-                    {{ message }}
-                </div>
-            {% endfor %}
-
-            {{ form_start(form) }}
-
-                <h2 class="h4 mt-4">Datos de contacto</h2>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        {{ form_row(form.fullName) }}
+        {# =====================================================
+           HERO
+           ===================================================== #}
+        <section
+            class="pf-public-quote__hero"
+            style="
+                --pf-quote-hero-image:
+                    url('{{ asset('images/quote/hero-printing.jpg') }}');
+            "
+        >
+            <div class="container-xxl py-5">
+                <div class="pf-public-quote__hero-card">
+                    <div class="pf-public-quote__badge">
+                        <span class="pf-public-quote__badge-dot"></span>
+                        Servicio industrial premium
                     </div>
 
-                    <div class="col-md-6">
-                        {{ form_row(form.customerNumber) }}
-                    </div>
+                    <h1 class="pf-public-quote__hero-title">
+                        <span>Impulsa tu marca</span>
+                        con precisión.
+                    </h1>
 
-                    <div class="col-md-6">
-                        {{ form_row(form.email) }}
-                    </div>
+                    <p class="pf-public-quote__hero-description">
+                        Expertos en impresión de alta gama y soluciones
+                        personalizadas para empresas que buscan resultados
+                        profesionales.
+                    </p>
 
-                    <div class="col-md-6">
-                        {{ form_row(form.phone) }}
-                    </div>
+                    <div class="pf-public-quote__trust">
+                        <div
+                            class="pf-public-quote__avatars"
+                            aria-hidden="true"
+                        >
+                            <span>JD</span>
+                            <span>AM</span>
+                            <span>LS</span>
+                        </div>
 
-                    <div class="col-md-6">
-                        {{ form_row(form.companyName) }}
-                    </div>
-
-                    <div class="col-md-6">
-                        {{ form_row(form.contactPreference) }}
-                    </div>
-                </div>
-
-                <h2 class="h4 mt-4">Información del producto</h2>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        {{ form_row(form.productType) }}
-                    </div>
-
-                    <div class="col-md-6">
-                        {{ form_row(form.quantity) }}
-                    </div>
-
-                    <div class="col-md-4">
-                        {{ form_row(form.width) }}
-                    </div>
-
-                    <div class="col-md-4">
-                        {{ form_row(form.height) }}
-                    </div>
-
-                    <div class="col-md-4">
-                        {{ form_row(form.measurementUnit) }}
-                    </div>
-
-                    <div class="col-md-6">
-                        {{ form_row(form.material) }}
-                    </div>
-
-                    <div class="col-md-6">
-                        {{ form_row(form.printSides) }}
+                        <small>
+                            Más de 500 empresas confían en nosotros
+                        </small>
                     </div>
                 </div>
+            </div>
+        </section>
 
-                {{ form_row(form.finishes) }}
-                {{ form_row(form.designStatus) }}
+        {# =====================================================
+           CONTENIDO
+           ===================================================== #}
+        <div class="container-xxl py-4 py-lg-5">
+            <div class="row g-4 g-xl-5 justify-content-center">
 
-                <h2 class="h4 mt-4">Entrega</h2>
+                {# =================================================
+                   SIDEBAR
+                   ================================================= #}
+                <aside class="col-xl-3 d-none d-xl-block">
+                    <div class="pf-quote-sidebar">
+                        <div class="pf-section-label">
+                            Nuestro proceso
+                        </div>
 
-                <div class="row">
-                    <div class="col-md-6">
-                        {{ form_row(form.neededAt) }}
+                        <div class="pf-quote-process">
+                            <div class="pf-quote-process__item is-active">
+                                <span class="pf-quote-process__number">
+                                    1
+                                </span>
+
+                                <div>
+                                    <strong>Configuración</strong>
+                                    <small>Define tus necesidades</small>
+                                </div>
+                            </div>
+
+                            <div class="pf-quote-process__item">
+                                <span class="pf-quote-process__number">
+                                    2
+                                </span>
+
+                                <div>
+                                    <strong>Validación</strong>
+                                    <small>Revisión técnica</small>
+                                </div>
+                            </div>
+
+                            <div class="pf-quote-process__item">
+                                <span class="pf-quote-process__number">
+                                    3
+                                </span>
+
+                                <div>
+                                    <strong>Producción</strong>
+                                    <small>Impresión profesional</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pf-quote-promotion">
+                            <h2>Descuento corporativo</h2>
+
+                            <p>
+                                Accede a condiciones especiales para pedidos
+                                recurrentes o volúmenes elevados.
+                            </p>
+
+                            <span>
+                                Solicita información
+                            </span>
+                        </div>
                     </div>
+                </aside>
 
-                    <div class="col-md-6">
-                        {{ form_row(form.deliveryMethod) }}
+                {# =================================================
+                   FORMULARIO
+                   ================================================= #}
+                <main class="col-12 col-xl-9">
+                    <div class="pf-quote-content">
+
+                        {# Indicador de pasos #}
+                        <div
+                            class="pf-quote-stepper"
+                            aria-label="Progreso de la solicitud"
+                        >
+                            <div class="pf-quote-stepper__item is-active">
+                                <span>1</span>
+                                <strong>Cotización</strong>
+                            </div>
+
+                            <div class="pf-quote-stepper__line"></div>
+
+                            <div class="pf-quote-stepper__item">
+                                <span>2</span>
+                                <strong>Producción</strong>
+                            </div>
+
+                            <div class="pf-quote-stepper__line"></div>
+
+                            <div class="pf-quote-stepper__item">
+                                <span>3</span>
+                                <strong>Entrega</strong>
+                            </div>
+                        </div>
+
+                        {# Mensajes exitosos #}
+                        {% for message in app.flashes('success') %}
+                            <div
+                                class="alert alert-success d-flex align-items-center gap-2 border-0 mb-4"
+                                role="alert"
+                            >
+                                <i
+                                    class="bi bi-check-circle-fill"
+                                    aria-hidden="true"
+                                ></i>
+
+                                <span>{{ message }}</span>
+                            </div>
+                        {% endfor %}
+
+                        {{ form_start(form, {
+                            attr: {
+                                class: 'pf-quote-form'
+                            }
+                        }) }}
+
+                            <div class="pf-quote-form__errors">
+                                {{ form_errors(form) }}
+                            </div>
+
+                            {# =========================================
+                               CONTACTO
+                               ========================================= #}
+                            <section class="pf-quote-card">
+                                <div class="pf-quote-card__header">
+                                    <div
+                                        class="pf-quote-card__icon"
+                                        aria-hidden="true"
+                                    >
+                                        <i class="bi bi-person"></i>
+                                    </div>
+
+                                    <div>
+                                        <h2>Detalles de contacto</h2>
+
+                                        <p>
+                                            Información necesaria para procesar
+                                            tu presupuesto.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="row g-4">
+                                    {{ form_row(form.fullName, {
+                                        row_attr: {
+                                            class: 'col-md-6 pf-quote-field'
+                                        },
+                                        attr: {
+                                            class: 'form-control'
+                                        },
+                                        label: 'Nombre completo'
+                                    }) }}
+
+                                    {{ form_row(form.email, {
+                                        row_attr: {
+                                            class: 'col-md-6 pf-quote-field'
+                                        },
+                                        attr: {
+                                            class: 'form-control'
+                                        },
+                                        label: 'Correo electrónico'
+                                    }) }}
+
+                                    {{ form_row(form.phone, {
+                                        row_attr: {
+                                            class: 'col-md-6 pf-quote-field'
+                                        },
+                                        attr: {
+                                            class: 'form-control'
+                                        },
+                                        label: 'WhatsApp / Teléfono'
+                                    }) }}
+
+                                    {{ form_row(form.contactPreference, {
+                                        row_attr: {
+                                            class: 'col-md-6 pf-quote-field'
+                                        },
+                                        attr: {
+                                            class: 'form-select'
+                                        },
+                                        label: 'Método de contacto preferido'
+                                    }) }}
+
+                                    {{ form_row(form.companyName, {
+                                        row_attr: {
+                                            class: 'col-md-6 pf-quote-field'
+                                        },
+                                        attr: {
+                                            class: 'form-control'
+                                        },
+                                        label: 'Nombre de la empresa'
+                                    }) }}
+
+                                    {{ form_row(form.customerNumber, {
+                                        row_attr: {
+                                            class: 'col-md-6 pf-quote-field'
+                                        },
+                                        attr: {
+                                            class: 'form-control'
+                                        },
+                                        label: 'Número de cliente'
+                                    }) }}
+                                </div>
+                            </section>
+
+                            {# =========================================
+                               PRODUCTO
+                               ========================================= #}
+                            <section class="pf-quote-card">
+                                <i
+                                    class="bi bi-layers pf-quote-card__decoration"
+                                    aria-hidden="true"
+                                ></i>
+
+                                <div class="pf-quote-card__header">
+                                    <div
+                                        class="pf-quote-card__icon"
+                                        aria-hidden="true"
+                                    >
+                                        <i class="bi bi-grid"></i>
+                                    </div>
+
+                                    <div>
+                                        <h2>Detalles del trabajo</h2>
+
+                                        <p>
+                                            Selecciona el producto y sus
+                                            especificaciones.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4 mb-lg-5">
+                                    <div class="pf-section-label">
+                                        Selecciona el producto
+                                    </div>
+
+                                    {% if form.productType.vars.expanded %}
+                                        <div class="pf-product-grid">
+                                            {% for product in form.productType %}
+                                                {% set productLabel =
+                                                    product.vars.label|lower
+                                                %}
+
+                                                {% set productIcon =
+                                                    'bi-box-seam'
+                                                %}
+
+                                                {% if 'flyer' in productLabel %}
+                                                    {% set productIcon =
+                                                        'bi-file-earmark-richtext'
+                                                    %}
+                                                {% elseif
+                                                    'banner' in productLabel
+                                                %}
+                                                    {% set productIcon =
+                                                        'bi-aspect-ratio'
+                                                    %}
+                                                {% elseif
+                                                    'tarjeta' in productLabel
+                                                    or
+                                                    'card' in productLabel
+                                                %}
+                                                    {% set productIcon =
+                                                        'bi-credit-card-2-front'
+                                                    %}
+                                                {% elseif
+                                                    'packaging' in productLabel
+                                                    or
+                                                    'empaque' in productLabel
+                                                %}
+                                                    {% set productIcon =
+                                                        'bi-box-seam'
+                                                    %}
+                                                {% endif %}
+
+                                                <label
+                                                    class="pf-product-option"
+                                                >
+                                                    {{ form_widget(product, {
+                                                        attr: {
+                                                            class:
+                                                                'pf-product-option__input'
+                                                        }
+                                                    }) }}
+
+                                                    <span
+                                                        class="pf-product-option__content"
+                                                    >
+                                                        <span
+                                                            class="pf-product-option__icon"
+                                                            aria-hidden="true"
+                                                        >
+                                                            <i
+                                                                class="bi {{ productIcon }}"
+                                                            ></i>
+                                                        </span>
+
+                                                        <strong>
+                                                            {{
+                                                                product.vars.label
+                                                            }}
+                                                        </strong>
+                                                    </span>
+                                                </label>
+                                            {% endfor %}
+                                        </div>
+
+                                        <div class="pf-quote-field__errors">
+                                            {{ form_errors(form.productType) }}
+                                        </div>
+                                    {% else %}
+                                        <div class="pf-quote-field">
+                                            {{ form_label(
+                                                form.productType,
+                                                'Tipo de producto'
+                                            ) }}
+
+                                            {{ form_widget(form.productType, {
+                                                attr: {
+                                                    class: 'form-select'
+                                                }
+                                            }) }}
+
+                                            {{ form_errors(form.productType) }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="row g-4">
+                                    {{ form_row(form.quantity, {
+                                        row_attr: {
+                                            class:
+                                                'col-sm-6 col-lg-3 pf-quote-field'
+                                        },
+                                        attr: {
+                                            class: 'form-control'
+                                        },
+                                        label: 'Cantidad'
+                                    }) }}
+
+                                    {{ form_row(form.width, {
+                                        row_attr: {
+                                            class:
+                                                'col-sm-6 col-lg-3 pf-quote-field'
+                                        },
+                                        attr: {
+                                            class: 'form-control'
+                                        },
+                                        label: 'Ancho'
+                                    }) }}
+
+                                    {{ form_row(form.height, {
+                                        row_attr: {
+                                            class:
+                                                'col-sm-6 col-lg-3 pf-quote-field'
+                                        },
+                                        attr: {
+                                            class: 'form-control'
+                                        },
+                                        label: 'Alto'
+                                    }) }}
+
+                                    {{ form_row(form.measurementUnit, {
+                                        row_attr: {
+                                            class:
+                                                'col-sm-6 col-lg-3 pf-quote-field'
+                                        },
+                                        attr: {
+                                            class: 'form-select'
+                                        },
+                                        label: 'Unidad de medida'
+                                    }) }}
+
+                                    {{ form_row(form.material, {
+                                        row_attr: {
+                                            class:
+                                                'col-md-6 pf-quote-field'
+                                        },
+                                        attr: {
+                                            class: 'form-control'
+                                        },
+                                        label: 'Material'
+                                    }) }}
+
+                                    {{ form_row(form.printSides, {
+                                        row_attr: {
+                                            class:
+                                                'col-md-6 pf-quote-field'
+                                        },
+                                        attr: {
+                                            class: 'form-select'
+                                        },
+                                        label: 'Caras de impresión'
+                                    }) }}
+                                </div>
+
+                                <div class="mt-4">
+                                    {% if form.finishes.vars.expanded %}
+                                        <div
+                                            class="pf-quote-choice-group pf-quote-field"
+                                        >
+                                            {{ form_label(
+                                                form.finishes,
+                                                'Acabados especiales'
+                                            ) }}
+
+                                            <div
+                                                class="pf-quote-choice-group__options"
+                                            >
+                                                {{ form_widget(form.finishes) }}
+                                            </div>
+
+                                            {{ form_errors(form.finishes) }}
+                                        </div>
+                                    {% else %}
+                                        {{ form_row(form.finishes, {
+                                            row_attr: {
+                                                class: 'pf-quote-field'
+                                            },
+                                            attr: {
+                                                class: 'form-control'
+                                            },
+                                            label: 'Acabados especiales'
+                                        }) }}
+                                    {% endif %}
+                                </div>
+
+                                <div class="mt-4">
+                                    {{ form_row(form.notes, {
+                                        row_attr: {
+                                            class:
+                                                'pf-quote-field pf-quote-field--textarea'
+                                        },
+                                        attr: {
+                                            class: 'form-control',
+                                            rows: 5,
+                                            placeholder:
+                                                'Instrucciones adicionales o requerimientos especiales...'
+                                        },
+                                        label: 'Indicaciones adicionales'
+                                    }) }}
+                                </div>
+                            </section>
+
+                            {# =========================================
+                               DISEÑO
+                               ========================================= #}
+                            <section class="pf-quote-card">
+                                <div class="pf-quote-card__header">
+                                    <div
+                                        class="pf-quote-card__icon"
+                                        aria-hidden="true"
+                                    >
+                                        <i
+                                            class="bi bi-file-earmark-arrow-up"
+                                        ></i>
+                                    </div>
+
+                                    <div>
+                                        <h2>Archivos y diseño</h2>
+
+                                        <p>
+                                            Indica el estado actual de tus
+                                            archivos.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="row g-4 align-items-stretch">
+                                    <div class="col-lg-5">
+                                        <div class="pf-section-label">
+                                            Estado del diseño
+                                        </div>
+
+                                        {% if
+                                            form.designStatus.vars.expanded
+                                        %}
+                                            <div
+                                                class="pf-design-options"
+                                            >
+                                                {% for designOption
+                                                    in form.designStatus
+                                                %}
+                                                    <label
+                                                        class="pf-design-option"
+                                                    >
+                                                        {{
+                                                            form_widget(
+                                                                designOption,
+                                                                {
+                                                                    attr: {
+                                                                        class:
+                                                                            'pf-design-option__input'
+                                                                    }
+                                                                }
+                                                            )
+                                                        }}
+
+                                                        <span
+                                                            class="pf-design-option__content"
+                                                        >
+                                                            <span
+                                                                class="pf-design-option__indicator"
+                                                                aria-hidden="true"
+                                                            ></span>
+
+                                                            <strong>
+                                                                {{
+                                                                    designOption
+                                                                        .vars
+                                                                        .label
+                                                                }}
+                                                            </strong>
+                                                        </span>
+                                                    </label>
+                                                {% endfor %}
+                                            </div>
+
+                                            <div
+                                                class="pf-quote-field__errors"
+                                            >
+                                                {{
+                                                    form_errors(
+                                                        form.designStatus
+                                                    )
+                                                }}
+                                            </div>
+                                        {% else %}
+                                            <div class="pf-quote-field">
+                                                {{
+                                                    form_widget(
+                                                        form.designStatus,
+                                                        {
+                                                            attr: {
+                                                                class:
+                                                                    'form-select'
+                                                            }
+                                                        }
+                                                    )
+                                                }}
+
+                                                {{
+                                                    form_errors(
+                                                        form.designStatus
+                                                    )
+                                                }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="col-lg-7">
+                                        <div class="pf-design-information">
+                                            <div
+                                                class="pf-design-information__icon"
+                                                aria-hidden="true"
+                                            >
+                                                <i class="bi bi-images"></i>
+                                            </div>
+
+                                            <strong>
+                                                Prepara tus archivos
+                                            </strong>
+
+                                            <p>
+                                                Recomendamos enviar archivos en
+                                                PDF de alta calidad, con
+                                                sangrías y tipografías
+                                                convertidas a curvas.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {# =========================================
+                               ENTREGA
+                               ========================================= #}
+                            <section class="pf-quote-card">
+                                <div class="pf-quote-card__header">
+                                    <div
+                                        class="pf-quote-card__icon"
+                                        aria-hidden="true"
+                                    >
+                                        <i class="bi bi-truck"></i>
+                                    </div>
+
+                                    <div>
+                                        <h2>Entrega y facturación</h2>
+
+                                        <p>
+                                            Información logística y detalles
+                                            fiscales.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="row g-4">
+                                    {{ form_row(form.deliveryMethod, {
+                                        row_attr: {
+                                            class:
+                                                'col-md-6 pf-quote-field'
+                                        },
+                                        attr: {
+                                            class: 'form-select'
+                                        },
+                                        label: 'Método de entrega'
+                                    }) }}
+
+                                    {{ form_row(form.postalCode, {
+                                        row_attr: {
+                                            class:
+                                                'col-md-6 pf-quote-field'
+                                        },
+                                        attr: {
+                                            class: 'form-control'
+                                        },
+                                        label: 'Código postal'
+                                    }) }}
+
+                                    {{ form_row(form.neededAt, {
+                                        row_attr: {
+                                            class:
+                                                'col-md-6 pf-quote-field'
+                                        },
+                                        attr: {
+                                            class: 'form-control'
+                                        },
+                                        label: 'Fecha requerida'
+                                    }) }}
+                                </div>
+
+                                <div class="pf-invoice-option mt-4">
+                                    <div
+                                        class="d-flex align-items-center gap-3"
+                                    >
+                                        <div
+                                            class="pf-invoice-option__icon"
+                                            aria-hidden="true"
+                                        >
+                                            <i class="bi bi-receipt"></i>
+                                        </div>
+
+                                        <div>
+                                            <strong>
+                                                ¿Necesitas factura?
+                                            </strong>
+
+                                            <p>
+                                                Los datos fiscales podrán
+                                                solicitarse posteriormente.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-check form-switch m-0">
+                                        {{ form_widget(
+                                            form.requiresInvoice,
+                                            {
+                                                attr: {
+                                                    class:
+                                                        'form-check-input'
+                                                }
+                                            }
+                                        ) }}
+                                    </div>
+                                </div>
+
+                                <div class="pf-quote-field__errors">
+                                    {{
+                                        form_errors(
+                                            form.requiresInvoice
+                                        )
+                                    }}
+                                </div>
+                            </section>
+
+                            {# =========================================
+                               GARANTÍA
+                               ========================================= #}
+                            <div class="pf-quote-guarantee">
+                                <i
+                                    class="bi bi-patch-check"
+                                    aria-hidden="true"
+                                ></i>
+
+                                <div>
+                                    <strong>
+                                        Garantía de satisfacción
+                                    </strong>
+
+                                    <p>
+                                        Revisaremos tu solicitud y enviaremos
+                                        una propuesta personalizada con
+                                        materiales, tiempos y costos.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {# =========================================
+                               ENVÍO
+                               ========================================= #}
+                            <div class="pf-quote-submit">
+                                <button
+                                    class="btn pf-quote-submit__button"
+                                    type="submit"
+                                >
+                                    <span>
+                                        Enviar solicitud
+                                    </span>
+
+                                    <i
+                                        class="bi bi-arrow-right"
+                                        aria-hidden="true"
+                                    ></i>
+                                </button>
+
+                                <div class="pf-quote-trust-signals">
+                                    <span>
+                                        <i
+                                            class="bi bi-shield-check"
+                                            aria-hidden="true"
+                                        ></i>
+
+                                        Cifrado de datos
+                                    </span>
+
+                                    <span>
+                                        <i
+                                            class="bi bi-building-check"
+                                            aria-hidden="true"
+                                        ></i>
+
+                                        Empresa certificada
+                                    </span>
+
+                                    <span>
+                                        <i
+                                            class="bi bi-award"
+                                            aria-hidden="true"
+                                        ></i>
+
+                                        Calidad profesional
+                                    </span>
+                                </div>
+                            </div>
+
+                        {{ form_end(form) }}
                     </div>
-
-                    <div class="col-md-6">
-                        {{ form_row(form.postalCode) }}
-                    </div>
-                </div>
-
-                {{ form_row(form.requiresInvoice) }}
-                {{ form_row(form.notes) }}
-
-                <button class="btn btn-primary" type="submit">
-                    Enviar solicitud
-                </button>
-
-            {{ form_end(form) }}
+                </main>
+            </div>
         </div>
-    </main>
+    </div>
 {% endblock %}
