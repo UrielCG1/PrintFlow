@@ -1,0 +1,139 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}{{ serviceOrder.folio }} | PrintFlow{% endblock %}
+
+{% block app_navigation_active %}service_orders{% endblock %}
+
+{% block app_breadcrumb %}Comercial / Órdenes de servicio / Detalle{% endblock %}
+
+{% block app_content %}
+    <section class="pf-page__content">
+        <header class="pf-page-header">
+            <div class="pf-page-header__content">
+                <p class="pf-page-header__eyebrow">Comercial / Órdenes de servicio</p>
+                <h1 class="pf-page-header__title">{{ serviceOrder.folio }}</h1>
+                <p class="pf-page-header__description">
+                    Creada desde la cotización <a href="{{ path('admin_quotations_show', {id: serviceOrder.sourceQuotation.id}) }}">{{ serviceOrder.sourceQuotationFolio }}</a>.
+                    Las partidas e importes de origen están congelados.
+                </p>
+            </div>
+            <div class="pf-page-header__actions">
+                <span class="pf-status-badge pf-status-badge--warning">{{ serviceOrder.status.label }}</span>
+                <a href="{{ path('admin_service_orders_index') }}" class="btn pf-button pf-button--secondary">
+                    <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                    Volver
+                </a>
+            </div>
+        </header>
+
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-md-4">
+                <section class="pf-card h-100">
+                    <div class="pf-card__body">
+                        <span class="text-muted small d-block mb-1">Total contratado</span>
+                        <strong class="fs-3">${{ serviceOrder.total|number_format(2, '.', ',') }} {{ serviceOrder.currency }}</strong>
+                        <span class="d-block text-muted small mt-2">IVA: ${{ serviceOrder.taxAmount|number_format(2, '.', ',') }}</span>
+                    </div>
+                </section>
+            </div>
+            <div class="col-12 col-md-4">
+                <section class="pf-card h-100">
+                    <div class="pf-card__body">
+                        <span class="text-muted small d-block mb-1">Cliente</span>
+                        <strong>{{ serviceOrder.clientSnapshot.legal_name ?? serviceOrder.clientSnapshot.business_name ?? 'No especificado' }}</strong>
+                        {% if serviceOrder.clientSnapshot.tax_id ?? false %}
+                            <span class="d-block text-muted small mt-2">RFC: {{ serviceOrder.clientSnapshot.tax_id }}</span>
+                        {% endif %}
+                    </div>
+                </section>
+            </div>
+            <div class="col-12 col-md-4">
+                <section class="pf-card h-100">
+                    <div class="pf-card__body">
+                        <span class="text-muted small d-block mb-1">Fecha compromiso</span>
+                        {% if serviceOrder.commitmentDate %}
+                            <strong>{{ serviceOrder.commitmentDate|date('d/m/Y') }}</strong>
+                        {% else %}
+                            <strong>Por asignar</strong>
+                            <span class="d-block text-muted small mt-2">Se definirá durante la planificación.</span>
+                        {% endif %}
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <section class="pf-card mb-4">
+            <header class="pf-card__header">
+                <h2 class="pf-card__title">Origen comercial</h2>
+                <p class="pf-card__description">Evidencia copiada al momento de crear la orden.</p>
+            </header>
+            <div class="pf-card__body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-3">Cotización</dt>
+                    <dd class="col-sm-9"><a href="{{ path('admin_quotations_show', {id: serviceOrder.sourceQuotation.id}) }}">{{ serviceOrder.sourceQuotationFolio }}</a></dd>
+                    <dt class="col-sm-3">Aceptada</dt>
+                    <dd class="col-sm-9">{{ serviceOrder.quotationSnapshot.accepted_at ? serviceOrder.quotationSnapshot.accepted_at|date('d/m/Y H:i', 'America/Mexico_City') : 'Sin fecha registrada' }}</dd>
+                    {% if serviceOrder.quotationSnapshot.acceptance_channel ?? false %}
+                        <dt class="col-sm-3">Canal</dt>
+                        <dd class="col-sm-9">{{ serviceOrder.quotationSnapshot.acceptance_channel }}</dd>
+                    {% endif %}
+                    {% if serviceOrder.quotationSnapshot.acceptance_contact ?? false %}
+                        <dt class="col-sm-3">Contacto</dt>
+                        <dd class="col-sm-9">{{ serviceOrder.quotationSnapshot.acceptance_contact }}</dd>
+                    {% endif %}
+                    {% if serviceOrder.quotationSnapshot.acceptance_notes ?? false %}
+                        <dt class="col-sm-3">Observación</dt>
+                        <dd class="col-sm-9" style="white-space: pre-line;">{{ serviceOrder.quotationSnapshot.acceptance_notes }}</dd>
+                    {% endif %}
+                    {% if serviceOrder.quotationSnapshot.acceptance_evidence_reference ?? false %}
+                        <dt class="col-sm-3">Evidencia</dt>
+                        <dd class="col-sm-9" style="white-space: pre-line;">{{ serviceOrder.quotationSnapshot.acceptance_evidence_reference }}</dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </section>
+
+        <section class="pf-card mb-4">
+            <header class="pf-card__header">
+                <h2 class="pf-card__title">Partidas e importes contratados</h2>
+                <p class="pf-card__description">Estas partidas no se editan desde la orden; provienen de la cotización aceptada.</p>
+            </header>
+            <div class="pf-card__body p-0">
+                <div class="pf-table-responsive">
+                    <table class="pf-table">
+                        <thead><tr><th>#</th><th>Concepto</th><th class="pf-table__cell--right">Cantidad</th><th class="pf-table__cell--right">P. unitario</th><th class="pf-table__cell--right">Importe</th></tr></thead>
+                        <tbody>
+                            {% for item in serviceOrder.items %}
+                                <tr>
+                                    <td>{{ item.lineNumber }}</td>
+                                    <td>
+                                        <strong>{{ item.commercialItemSnapshot.name ?? item.commercialItem.name }}</strong>
+                                        <span class="d-block text-muted small">{{ item.commercialItemSnapshot.code ?? '' }}</span>
+                                    </td>
+                                    <td class="pf-table__cell--right">{{ item.quantity }}</td>
+                                    <td class="pf-table__cell--right">${{ item.unitPrice|number_format(2, '.', ',') }}</td>
+                                    <td class="pf-table__cell--right">${{ item.lineSubtotal|number_format(2, '.', ',') }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="pf-card__body border-top">
+                <dl class="row justify-content-end mb-0">
+                    <dt class="col-sm-3 text-sm-end">Subtotal</dt><dd class="col-sm-2 text-sm-end">${{ serviceOrder.subtotal|number_format(2, '.', ',') }}</dd>
+                    <dt class="col-sm-3 text-sm-end">Descuento</dt><dd class="col-sm-2 text-sm-end">${{ serviceOrder.discountAmount|number_format(2, '.', ',') }}</dd>
+                    <dt class="col-sm-3 text-sm-end">IVA</dt><dd class="col-sm-2 text-sm-end">${{ serviceOrder.taxAmount|number_format(2, '.', ',') }}</dd>
+                    <dt class="col-sm-3 text-sm-end">Total</dt><dd class="col-sm-2 text-sm-end fw-semibold">${{ serviceOrder.total|number_format(2, '.', ',') }} {{ serviceOrder.currency }}</dd>
+                </dl>
+            </div>
+        </section>
+
+        {% if serviceOrder.notes %}
+            <section class="pf-card">
+                <header class="pf-card__header"><h2 class="pf-card__title">Notas comerciales</h2></header>
+                <div class="pf-card__body" style="white-space: pre-line;">{{ serviceOrder.notes }}</div>
+            </section>
+        {% endif %}
+    </section>
+{% endblock %}

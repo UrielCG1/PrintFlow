@@ -11,6 +11,7 @@ enum QuotationStatus: string
     case REJECTED = 'REJECTED';
     case EXPIRED = 'EXPIRED';
     case CANCELLED = 'CANCELLED';
+    case SUPERSEDED = 'SUPERSEDED';
 
     public function label(): string
     {
@@ -22,12 +23,32 @@ enum QuotationStatus: string
             self::REJECTED => 'Rechazada',
             self::EXPIRED => 'Expirada',
             self::CANCELLED => 'Cancelada',
+            self::SUPERSEDED => 'Reemplazada por una revisión',
         };
     }
 
     public function isEditable(): bool
     {
         return $this === self::DRAFT;
+    }
+
+    public function canBeSent(): bool
+    {
+        return $this === self::ISSUED || $this === self::SENT;
+    }
+
+    public function canReceiveDecision(): bool
+    {
+        return $this === self::ISSUED || $this === self::SENT;
+    }
+
+    public function canBeRevised(): bool
+    {
+        return $this === self::ISSUED
+            || $this === self::SENT
+            || $this === self::REJECTED
+            || $this === self::EXPIRED
+            || $this === self::CANCELLED;
     }
 
     /*

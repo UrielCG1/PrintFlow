@@ -14,7 +14,8 @@
         'ACCEPTED': 'Aceptada',
         'REJECTED': 'Rechazada',
         'EXPIRED': 'Vencida',
-        'CANCELLED': 'Cancelada'
+        'CANCELLED': 'Cancelada',
+        'SUPERSEDED': 'Reemplazada'
     } %}
 
     {% set status_tones = {
@@ -24,7 +25,8 @@
         'ACCEPTED': 'pf-status-badge--success',
         'REJECTED': 'pf-status-badge--danger',
         'EXPIRED': 'pf-status-badge--warning',
-        'CANCELLED': 'pf-status-badge--neutral'
+        'CANCELLED': 'pf-status-badge--neutral',
+        'SUPERSEDED': 'pf-status-badge--neutral'
     } %}
 
     <section class="pf-page__content">
@@ -130,6 +132,14 @@
                                             </a>
                                         {% endif %}
 
+                                        <a
+                                            href="{{ path('admin_quotations_show', {id: quotation.id}) }}"
+                                            class="btn pf-button pf-button--secondary pf-button--sm"
+                                        >
+                                            <i class="bi bi-eye" aria-hidden="true"></i>
+                                            Ver
+                                        </a>
+
                                         {% if can_download %}
                                             <a
                                                 href="{{ path('admin_quotations_pdf', {id: quotation.id}) }}"
@@ -140,7 +150,7 @@
                                             </a>
                                         {% endif %}
 
-                                        {% if not can_edit and not can_download %}
+                                        {% if not can_edit and not can_download and not is_granted('quotations.view') %}
                                             <span class="text-muted small">Sin acciones disponibles</span>
                                         {% endif %}
                                     </div>

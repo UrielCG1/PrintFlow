@@ -6,11 +6,15 @@ use App\Application\Catalog\CommercialItemPriceResolver;
 use App\Entity\Catalog\CommercialItem;
 use App\Entity\Catalog\ItemPriceRule;
 use App\Entity\Quotations\Quotation;
+use App\Entity\Quotations\QuotationEmailDispatch;
 use App\Entity\Quotations\QuotationItem;
 use App\Entity\Users\User;
+use App\Enum\Quotations\QuotationStatus;
+use App\Repository\Quotations\QuotationRepository;
 use App\Service\Audit\AuditLogger;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Service\Quotations\QuotationFolioGenerator;
+use App\Service\Quotations\QuotationMailer;
 use Doctrine\DBAL\LockMode;
 
 final class QuotationManager
@@ -21,6 +25,8 @@ final class QuotationManager
         private readonly QuotationTotalsCalculator $totalsCalculator,
         private readonly AuditLogger $auditLogger,
         private readonly QuotationFolioGenerator $quotationFolioGenerator,
+        private readonly QuotationMailer $quotationMailer,
+        private readonly QuotationRepository $quotationRepository,
     ) {
     }
 
@@ -29,7 +35,7 @@ final class QuotationManager
         return $this->entityManager->wrapInTransaction(
             function () use ($data, $actor): Quotation {
                 $quotation = new Quotation();
-
+                $quotation->setCreatedBy($actor);
                 $this->applyData($quotation, $data);
 
                 $this->entityManager->persist($quotation);
@@ -137,6 +143,289 @@ final class QuotationManager
                 $this->entityManager->flush();
             },
         );
+    }
+
+    public function send(Quotation $quotation, QuotationEmailData $data, User $actor): void
+    {
+        if ($quotation->getId() === null) {
+            throw new \LogicException('No es posible enviar una cotización sin identificar.');
+        }
+
+        $this->entityManager->wrapInTransaction(
+            function () use ($quotation, $data, $actor): void {
+                $this->entityManager->refresh($quotation, LockMode::PESSIMISTIC_WRITE);
+                $this->assertCanProcessCommercialResponse($quotation);
+
+                if (!$quotation->getStatus()->canBeSent()) {
+                    throw new \DomainException('Esta cotización no está disponible para enviarse por correo.');
+                }
+
+                $oldValues = $this->auditSnapshot($quotation);
+                $messageId = $this->quotationMailer->send($quotation, $data);
+
+                $dispatch = (new QuotationEmailDispatch($quotation, $actor))
+                    ->setRecipientEmail((string) $data->recipientEmail)
+                    ->setRecipientName($data->recipientName)
+                    ->setCopyEmail($data->copyEmail)
+                    ->setSubject(sprintf('Cotización %s | PrintFlow', $quotation->getFolio()))
+                    ->setMessageNote($data->message)
+                    ->setMessageId($messageId);
+
+                $quotation->markSent();
+                $this->entityManager->persist($dispatch);
+
+                $this->auditLogger->record(
+                    actor: $actor,
+                    action: 'quotation.sent',
+                    entityType: 'quotation',
+                    entityId: $quotation->getId(),
+                    oldValues: $oldValues,
+                    newValues: [
+                        ...$this->auditSnapshot($quotation),
+                        'email_dispatch' => [
+                            'recipient_email' => $dispatch->getRecipientEmail(),
+                            'recipient_name' => $dispatch->getRecipientName(),
+                            'copy_email' => $dispatch->getCopyEmail(),
+                            'subject' => $dispatch->getSubject(),
+                            'message_id' => $dispatch->getMessageId(),
+                            'sent_at' => $dispatch->getSentAt()->format(\DATE_ATOM),
+                        ],
+                    ],
+                );
+
+                $this->entityManager->flush();
+            },
+        );
+    }
+
+    public function accept(Quotation $quotation, QuotationDecisionData $data, User $actor): void
+    {
+        $this->recordDecision($quotation, QuotationStatus::ACCEPTED, $data, $actor);
+    }
+
+    public function reject(Quotation $quotation, QuotationDecisionData $data, User $actor): void
+    {
+        $this->recordDecision($quotation, QuotationStatus::REJECTED, $data, $actor);
+    }
+
+    public function cancel(Quotation $quotation, QuotationCancellationData $data, User $actor): void
+    {
+        if ($quotation->getId() === null) {
+            throw new \LogicException('No es posible cancelar una cotización sin identificar.');
+        }
+
+        $this->entityManager->wrapInTransaction(
+            function () use ($quotation, $data, $actor): void {
+                $this->entityManager->refresh($quotation, LockMode::PESSIMISTIC_WRITE);
+                $this->assertCanProcessCommercialResponse($quotation);
+
+                $oldValues = $this->auditSnapshot($quotation);
+                $quotation->cancel(
+                    (string) $data->reason,
+                    $this->now(),
+                );
+
+                $this->auditLogger->record(
+                    actor: $actor,
+                    action: 'quotation.cancelled',
+                    entityType: 'quotation',
+                    entityId: $quotation->getId(),
+                    oldValues: $oldValues,
+                    newValues: $this->auditSnapshot($quotation),
+                );
+                $this->entityManager->flush();
+            },
+        );
+    }
+
+    public function createRevision(
+        Quotation $quotation,
+        QuotationRevisionData $data,
+        User $actor,
+    ): Quotation {
+        if ($quotation->getId() === null) {
+            throw new \LogicException('No es posible revisar una cotización sin identificar.');
+        }
+
+        return $this->entityManager->wrapInTransaction(
+            function () use ($quotation, $data, $actor): Quotation {
+                $this->entityManager->refresh($quotation, LockMode::PESSIMISTIC_WRITE);
+
+                if (!$quotation->getStatus()->canBeRevised()) {
+                    throw new \DomainException('Esta cotización no puede reemplazarse por una nueva revisión.');
+                }
+
+                if (!$quotation->getRevisions()->isEmpty()) {
+                    throw new \DomainException('Esta cotización ya cuenta con una revisión posterior.');
+                }
+
+                $oldValues = $this->auditSnapshot($quotation);
+                $revisionData = QuotationData::fromQuotation($quotation);
+                $revisionData->expiresAt = new \DateTimeImmutable(
+                    '+7 days',
+                    new \DateTimeZone('America/Mexico_City'),
+                );
+
+                $revision = new Quotation();
+                $revision
+                    ->setPreviousRevision($quotation)
+                    ->setRevisionNumber($quotation->getRevisionNumber() + 1);
+                $this->applyData($revision, $revisionData);
+                $revision->setCreatedBy($actor);
+
+                $quotation->supersede((string) $data->reason, $this->now());
+                $this->entityManager->persist($revision);
+                $this->entityManager->flush();
+
+                $this->auditLogger->record(
+                    actor: $actor,
+                    action: 'quotation.superseded',
+                    entityType: 'quotation',
+                    entityId: $quotation->getId(),
+                    oldValues: $oldValues,
+                    newValues: [
+                        ...$this->auditSnapshot($quotation),
+                        'new_revision_id' => $revision->getId(),
+                    ],
+                );
+                $this->auditLogger->record(
+                    actor: $actor,
+                    action: 'quotation.revision_created',
+                    entityType: 'quotation',
+                    entityId: $revision->getId(),
+                    newValues: [
+                        ...$this->auditSnapshot($revision),
+                        'previous_revision_id' => $quotation->getId(),
+                        'revision_reason' => $data->reason,
+                    ],
+                );
+                $this->entityManager->flush();
+
+                return $revision;
+            },
+        );
+    }
+
+    public function expireOverdue(): int
+    {
+        $today = new \DateTimeImmutable('today', new \DateTimeZone('America/Mexico_City'));
+        $expiredCount = 0;
+
+        foreach ($this->quotationRepository->findExpirableBefore($today) as $quotation) {
+            if ($this->expire($quotation)) {
+                ++$expiredCount;
+            }
+        }
+
+        return $expiredCount;
+    }
+
+    private function expire(Quotation $quotation): bool
+    {
+        if ($quotation->getId() === null) {
+            return false;
+        }
+
+        return $this->entityManager->wrapInTransaction(
+            function () use ($quotation): bool {
+                $this->entityManager->refresh($quotation, LockMode::PESSIMISTIC_WRITE);
+
+                if (!$quotation->getStatus()->canReceiveDecision() || !$this->isOverdue($quotation)) {
+                    return false;
+                }
+
+                $oldValues = $this->auditSnapshot($quotation);
+                $quotation->expire($this->now());
+
+                $this->auditLogger->record(
+                    actor: null,
+                    action: 'quotation.expired',
+                    entityType: 'quotation',
+                    entityId: $quotation->getId(),
+                    oldValues: $oldValues,
+                    newValues: $this->auditSnapshot($quotation),
+                );
+                $this->entityManager->flush();
+
+                return true;
+            },
+        );
+    }
+
+    private function recordDecision(
+        Quotation $quotation,
+        QuotationStatus $targetStatus,
+        QuotationDecisionData $data,
+        User $actor,
+    ): void {
+        if ($quotation->getId() === null) {
+            throw new \LogicException('No es posible registrar una respuesta para una cotización sin identificar.');
+        }
+
+        $this->entityManager->wrapInTransaction(
+            function () use ($quotation, $targetStatus, $data, $actor): void {
+                $this->entityManager->refresh($quotation, LockMode::PESSIMISTIC_WRITE);
+                $this->assertCanProcessCommercialResponse($quotation);
+
+                if ($data->channel === null || $data->respondedAt === null) {
+                    throw new \LogicException('Los datos de la respuesta comercial están incompletos.');
+                }
+
+                $oldValues = $this->auditSnapshot($quotation);
+                if ($targetStatus === QuotationStatus::ACCEPTED) {
+                    $quotation->accept(
+                        $data->channel,
+                        (string) $data->contact,
+                        $data->respondedAt,
+                        $data->notes,
+                        $data->evidenceReference,
+                    );
+                } else {
+                    $quotation->reject(
+                        $data->channel,
+                        (string) $data->contact,
+                        $data->respondedAt,
+                        $data->notes,
+                        $data->evidenceReference,
+                    );
+                }
+
+                $this->auditLogger->record(
+                    actor: $actor,
+                    action: $targetStatus === QuotationStatus::ACCEPTED
+                        ? 'quotation.accepted'
+                        : 'quotation.rejected',
+                    entityType: 'quotation',
+                    entityId: $quotation->getId(),
+                    oldValues: $oldValues,
+                    newValues: $this->auditSnapshot($quotation),
+                );
+                $this->entityManager->flush();
+            },
+        );
+    }
+
+    private function assertCanProcessCommercialResponse(Quotation $quotation): void
+    {
+        if (!$quotation->getStatus()->canReceiveDecision()) {
+            throw new \DomainException('Esta cotización ya no admite acciones comerciales.');
+        }
+
+        if ($this->isOverdue($quotation)) {
+            throw new \DomainException('La cotización venció. Ejecuta el proceso de expiración antes de continuar.');
+        }
+    }
+
+    private function isOverdue(Quotation $quotation): bool
+    {
+        $today = new \DateTimeImmutable('today', new \DateTimeZone('America/Mexico_City'));
+
+        return $quotation->getExpiresAt()->format('Y-m-d') < $today->format('Y-m-d');
+    }
+
+    private function now(): \DateTimeImmutable
+    {
+        return new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
     }
 
     private function applyData(Quotation $quotation, QuotationData $data): void
@@ -366,6 +655,13 @@ final class QuotationManager
             'folio' => $quotation->getFolio(),
             'status' => $quotation->getStatus()->value,
             'issued_at' => $quotation->getIssuedAt()?->format(\DATE_ATOM),
+            'revision_number' => $quotation->getRevisionNumber(),
+            'previous_revision_id' => $quotation->getPreviousRevision()?->getId(),
+            'decision_channel' => $quotation->getDecisionChannel()?->value,
+            'decision_contact' => $quotation->getDecisionContact(),
+            'decision_at' => $quotation->getDecisionAt()?->format(\DATE_ATOM),
+            'decision_notes' => $quotation->getDecisionNotes(),
+            'decision_evidence_reference' => $quotation->getDecisionEvidenceReference(),
             'client_id' => $quotation->getClient()->getId(),
             'client_name' => $quotation->getClientSnapshot()['business_name'] ?? null,
             'expires_at' => $quotation->getExpiresAt()->format('Y-m-d'),

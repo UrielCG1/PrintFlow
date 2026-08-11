@@ -4,6 +4,7 @@ namespace App\Entity\Quotations;
 
 use App\Entity\Clients\Client;
 use App\Entity\Users\User;
+use App\Enum\Quotations\QuotationResponseChannel;
 use App\Enum\Quotations\QuotationStatus;
 use App\Repository\Quotations\QuotationRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -14,6 +15,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: QuotationRepository::class)]
 #[ORM\Table(name: 'quotations')]
 #[ORM\UniqueConstraint(name: 'uniq_quotations_folio', columns: ['folio'])]
+#[ORM\UniqueConstraint(name: 'uniq_quotations_previous_revision', columns: ['previous_revision_id'])]
 #[ORM\Index(name: 'idx_quotations_status_expires_at', columns: ['status', 'expires_at'])]
 #[ORM\Index(name: 'idx_quotations_client_created_at', columns: ['client_id', 'created_at'])]
 #[ORM\Index(name: 'idx_quotations_created_by_user', columns: ['created_by_user_id'])]
@@ -36,6 +38,13 @@ class Quotation
     #[ORM\Column(length: 20, enumType: QuotationStatus::class)]
     private QuotationStatus $status = QuotationStatus::DRAFT;
 
+    #[ORM\ManyToOne(targetEntity: self::class, inversedBy: 'revisions')]
+    #[ORM\JoinColumn(name: 'previous_revision_id', nullable: true, onDelete: 'RESTRICT')]
+    private ?self $previousRevision = null;
+
+    #[ORM\Column(name: 'revision_number', options: ['unsigned' => true, 'default' => 1])]
+    private int $revisionNumber = 1;
+
     #[ORM\Column(length: 40, nullable: true)]
     private ?string $folio = null;
 
@@ -44,6 +53,21 @@ class Quotation
 
     #[ORM\Column(name: 'issued_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $issuedAt = null;
+
+    #[ORM\Column(name: 'decision_channel', length: 20, enumType: QuotationResponseChannel::class, nullable: true)]
+    private ?QuotationResponseChannel $decisionChannel = null;
+
+    #[ORM\Column(name: 'decision_contact', length: 160, nullable: true)]
+    private ?string $decisionContact = null;
+
+    #[ORM\Column(name: 'decision_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $decisionAt = null;
+
+    #[ORM\Column(name: 'decision_notes', type: Types::TEXT, nullable: true)]
+    private ?string $decisionNotes = null;
+
+    #[ORM\Column(name: 'decision_evidence_reference', length: 500, nullable: true)]
+    private ?string $decisionEvidenceReference = null;
 
     #[ORM\Column(length: 3, options: ['default' => 'MXN'])]
     private string $currency = 'MXN';
@@ -99,9 +123,21 @@ class Quotation
     #[ORM\OrderBy(['lineNumber' => 'ASC'])]
     private Collection $items;
 
+    /** @var Collection<int, QuotationEmailDispatch> */
+    #[ORM\OneToMany(mappedBy: 'quotation', targetEntity: QuotationEmailDispatch::class)]
+    #[ORM\OrderBy(['sentAt' => 'DESC', 'id' => 'DESC'])]
+    private Collection $emailDispatches;
+
+    /** @var Collection<int, Quotation> */
+    #[ORM\OneToMany(mappedBy: 'previousRevision', targetEntity: self::class)]
+    #[ORM\OrderBy(['revisionNumber' => 'ASC'])]
+    private Collection $revisions;
+
     public function __construct()
     {
         $this->items = new ArrayCollection();
+        $this->emailDispatches = new ArrayCollection();
+        $this->revisions = new ArrayCollection();
 
         $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
         $this->createdAt = $now;
@@ -141,6 +177,44 @@ class Quotation
     {
         return $this->status;
     }
+
+    public function getPreviousRevision(): ?self
+    {
+        return $this->previousRevision;
+    }
+
+    public function setPreviousRevision(?self $previousRevision): self
+    {
+        if ($previousRevision === $this) {
+            throw new \InvalidArgumentException('Una cotización no puede ser revisión de sí misma.');
+        }
+
+        $this->previousRevision = $previousRevision;
+
+        return $this;
+    }
+
+    public function getRevisionNumber(): int
+    {
+        return $this->revisionNumber;
+    }
+
+    public function setRevisionNumber(int $revisionNumber): self
+    {
+        if ($revisionNumber < 1) {
+            throw new \InvalidArgumentException('El número de revisión debe ser mayor que cero.');
+        }
+
+        $this->revisionNumber = $revisionNumber;
+
+        return $this;
+    }
+
+    /** @return Collection<int, Quotation> */
+    public function getRevisions(): Collection
+    {
+        return $this->revisions;
+    }
         
     public function getFolio(): ?string
     {
@@ -165,6 +239,101 @@ class Quotation
             new \DateTimeZone('UTC'),
         );
         $this->status = QuotationStatus::ISSUED;
+    }
+
+    public function markSent(): void
+    {
+        if (!$this->status->canBeSent()) {
+            throw new \DomainException('Solo una cotización emitida o enviada puede enviarse por correo.');
+        }
+
+        $this->status = QuotationStatus::SENT;
+    }
+
+    public function accept(
+        QuotationResponseChannel $channel,
+        string $contact,
+        \DateTimeImmutable $respondedAt,
+        ?string $notes,
+        ?string $evidenceReference,
+    ): void {
+        $this->recordDecision(
+            QuotationStatus::ACCEPTED,
+            $channel,
+            $contact,
+            $respondedAt,
+            $notes,
+            $evidenceReference,
+        );
+    }
+
+    public function reject(
+        QuotationResponseChannel $channel,
+        string $contact,
+        \DateTimeImmutable $respondedAt,
+        ?string $notes,
+        ?string $evidenceReference,
+    ): void {
+        $this->recordDecision(
+            QuotationStatus::REJECTED,
+            $channel,
+            $contact,
+            $respondedAt,
+            $notes,
+            $evidenceReference,
+        );
+    }
+
+    public function cancel(string $reason, \DateTimeImmutable $cancelledAt): void
+    {
+        if (!$this->status->canReceiveDecision()) {
+            throw new \DomainException('Solo una cotización emitida o enviada puede cancelarse.');
+        }
+
+        $reason = self::normalizeOptionalText($reason);
+        if ($reason === null) {
+            throw new \InvalidArgumentException('El motivo de cancelación es obligatorio.');
+        }
+
+        $this->status = QuotationStatus::CANCELLED;
+        $this->decisionChannel = null;
+        $this->decisionContact = null;
+        $this->decisionAt = $cancelledAt->setTimezone(new \DateTimeZone('UTC'));
+        $this->decisionNotes = $reason;
+        $this->decisionEvidenceReference = null;
+    }
+
+    public function expire(\DateTimeImmutable $expiredAt): void
+    {
+        if (!$this->status->canReceiveDecision()) {
+            throw new \DomainException('Solo una cotización emitida o enviada puede expirar.');
+        }
+
+        $this->status = QuotationStatus::EXPIRED;
+        $this->decisionChannel = null;
+        $this->decisionContact = null;
+        $this->decisionAt = $expiredAt->setTimezone(new \DateTimeZone('UTC'));
+        $this->decisionNotes = 'Vigencia concluida automáticamente.';
+        $this->decisionEvidenceReference = null;
+    }
+
+    public function supersede(string $reason, \DateTimeImmutable $supersededAt): void
+    {
+        if (!$this->status->canBeRevised()) {
+            throw new \DomainException('Esta cotización no puede reemplazarse por una nueva revisión.');
+        }
+
+        $reason = self::normalizeOptionalText($reason);
+        if ($reason === null) {
+            throw new \InvalidArgumentException('El motivo de la nueva revisión es obligatorio.');
+        }
+
+        $this->status = QuotationStatus::SUPERSEDED;
+        $this->decisionChannel = null;
+        $this->decisionContact = null;
+        $this->decisionAt = $supersededAt->setTimezone(new \DateTimeZone('UTC'));
+        $this->decisionNotes = $reason;
+        $this->decisionEvidenceReference = null;
     }
 
     private static function normalizeIssuedFolio(string $folio): string
@@ -202,6 +371,31 @@ class Quotation
         $this->issuedAt = $issuedAt;
 
         return $this;
+    }
+
+    public function getDecisionChannel(): ?QuotationResponseChannel
+    {
+        return $this->decisionChannel;
+    }
+
+    public function getDecisionContact(): ?string
+    {
+        return $this->decisionContact;
+    }
+
+    public function getDecisionAt(): ?\DateTimeImmutable
+    {
+        return $this->decisionAt;
+    }
+
+    public function getDecisionNotes(): ?string
+    {
+        return $this->decisionNotes;
+    }
+
+    public function getDecisionEvidenceReference(): ?string
+    {
+        return $this->decisionEvidenceReference;
     }
 
     public function getCurrency(): string
@@ -385,6 +579,12 @@ class Quotation
         return $this;
     }
 
+    /** @return Collection<int, QuotationEmailDispatch> */
+    public function getEmailDispatches(): Collection
+    {
+        return $this->emailDispatches;
+    }
+
     public function isEditable(): bool
     {
         return $this->status->isEditable();
@@ -412,6 +612,48 @@ class Quotation
         $integer = ltrim($integer, '0') ?: '0';
 
         return $integer.'.'.str_pad($decimal, 2, '0');
+    }
+
+    private function recordDecision(
+        QuotationStatus $targetStatus,
+        QuotationResponseChannel $channel,
+        string $contact,
+        \DateTimeImmutable $respondedAt,
+        ?string $notes,
+        ?string $evidenceReference,
+    ): void {
+        if (!$this->status->canReceiveDecision()) {
+            throw new \DomainException('Solo una cotización emitida o enviada puede recibir una respuesta comercial.');
+        }
+
+        if (!in_array($targetStatus, [QuotationStatus::ACCEPTED, QuotationStatus::REJECTED], true)) {
+            throw new \InvalidArgumentException('El estado de respuesta comercial no es válido.');
+        }
+
+        $contact = trim($contact);
+        if ($contact === '') {
+            throw new \InvalidArgumentException('El contacto que respondió es obligatorio.');
+        }
+
+        $notes = self::normalizeOptionalText($notes);
+        $evidenceReference = self::normalizeOptionalText($evidenceReference);
+        if ($notes === null && $evidenceReference === null) {
+            throw new \InvalidArgumentException('Registra una observación o una referencia de evidencia de la respuesta.');
+        }
+
+        $this->status = $targetStatus;
+        $this->decisionChannel = $channel;
+        $this->decisionContact = $contact;
+        $this->decisionAt = $respondedAt->setTimezone(new \DateTimeZone('UTC'));
+        $this->decisionNotes = $notes;
+        $this->decisionEvidenceReference = $evidenceReference;
+    }
+
+    private static function normalizeOptionalText(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value !== '' ? $value : null;
     }
 
     #[ORM\PreUpdate]

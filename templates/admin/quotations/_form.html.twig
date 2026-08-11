@@ -1,19 +1,31 @@
 {{ form_start(form, {
     attr: {
         class: 'pf-form',
-        'data-controller': 'ui--quotation-form',
-        'data-ui--quotation-form-prototype-value': form_widget(form.items.vars.prototype)|e('html_attr')
+        'data-controller': 'ui--quotation-form'
     }
 }) }}
     {{ form_errors(form) }}
+
+    <template data-ui--quotation-form-target="prototype">
+        <div class="row g-3">
+            <div class="col-12 col-lg-8 pf-form-field">
+                {{ form_row(form.items.vars.prototype.commercialItem) }}
+            </div>
+
+            <div class="col-12 col-lg-4 pf-form-field">
+                {{ form_row(form.items.vars.prototype.quantity) }}
+            </div>
+        </div>
+    </template>
 
     <div class="row g-4">
         <div class="col-12 col-xl-8">
             <section class="pf-card h-100">
                 <header class="pf-card__header">
+                    <p class="pf-page-header__eyebrow mb-1">Paso 1</p>
                     <h2 class="pf-card__title">Información general</h2>
                     <p class="pf-card__description">
-                        Define el cliente, vigencia y condiciones del borrador.
+                        Selecciona el cliente, define la vigencia y registra las condiciones comerciales del borrador.
                     </p>
                 </header>
 
@@ -47,12 +59,12 @@
 
                         <div>
                             <h2 class="pf-card__title">Cálculo protegido</h2>
-                            <p class="pf-card__description">
-                                Al guardar, PrintFlow resuelve el precio vigente por rango,
-                                descuentos, IVA y total final.
+                            <p class="pf-card__description mb-2">
+                                Al guardar, PrintFlow determina el precio vigente por rango,
+                                el descuento, IVA y total final.
                             </p>
                             <small class="text-muted">
-                                Los importes se determinan exclusivamente en el servidor.
+                                Los importes se calculan exclusivamente en el servidor.
                             </small>
                         </div>
                     </div>
@@ -64,9 +76,15 @@
             <section class="pf-card">
                 <header class="pf-card__header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
                     <div>
-                        <h2 class="pf-card__title">Partidas</h2>
-                        <p class="pf-card__description">
-                            Agrega los conceptos comerciales y la cantidad correspondiente.
+                        <p class="pf-page-header__eyebrow mb-1">Paso 2</p>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <h2 class="pf-card__title mb-0">Partidas</h2>
+                            <span class="badge text-bg-light border" data-ui--quotation-form-target="itemCount">
+                                Sin partidas
+                            </span>
+                        </div>
+                        <p class="pf-card__description mb-0">
+                            Elige cada producto o servicio y captura la cantidad solicitada.
                         </p>
                     </div>
 
@@ -83,15 +101,9 @@
                 <div class="pf-card__body">
                     {{ form_errors(form.items) }}
 
-                    <div
-                        class="d-grid gap-3"
-                        data-ui--quotation-form-target="items"
-                    >
+                    <div class="d-grid gap-3" data-ui--quotation-form-target="items">
                         {% for itemForm in form.items %}
-                            <article
-                                class="pf-card p-4"
-                                data-ui--quotation-form-item
-                            >
+                            <article class="pf-card p-4" data-ui--quotation-form-item>
                                 <header class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4 pb-3 border-bottom">
                                     <div>
                                         <span class="text-muted small">Partida</span>
@@ -104,6 +116,7 @@
                                         type="button"
                                         class="btn pf-button pf-button--danger pf-button--sm"
                                         data-action="ui--quotation-form#removeItem"
+                                        aria-label="Eliminar partida {{ loop.index }}"
                                     >
                                         <i class="bi bi-trash3" aria-hidden="true"></i>
                                         Eliminar
@@ -123,12 +136,10 @@
                         {% endfor %}
                     </div>
 
-                    <div
-                        class="d-none pf-table__empty-content"
-                        data-ui--quotation-form-target="emptyState"
-                    >
+                    <div class="d-none pf-table__empty-content" data-ui--quotation-form-target="emptyState">
                         <i class="bi bi-list-check pf-table__empty-icon" aria-hidden="true"></i>
-                        No hay partidas. Agrega al menos una para continuar.
+                        <p class="mb-1 fw-semibold">Aún no hay partidas</p>
+                        <p class="mb-0 text-muted">Agrega al menos un concepto para guardar el borrador.</p>
                     </div>
                 </div>
             </section>
@@ -138,10 +149,7 @@
     {{ form_rest(form) }}
 
     <footer class="pf-form-actions">
-        <a
-            href="{{ path('admin_quotations_index') }}"
-            class="btn pf-button pf-button--secondary"
-        >
+        <a href="{{ path('admin_quotations_index') }}" class="btn pf-button pf-button--secondary">
             Cancelar
         </a>
 

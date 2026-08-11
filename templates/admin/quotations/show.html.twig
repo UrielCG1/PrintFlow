@@ -1,0 +1,334 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Cotización {{ quotation.folio ?? '#' ~ quotation.id }} | PrintFlow{% endblock %}
+
+{% block app_navigation_active %}quotations{% endblock %}
+
+{% block app_breadcrumb %}Comercial / Cotizaciones / Detalle{% endblock %}
+
+{% block app_content %}
+    {% set status = quotation.status.value %}
+    {% set status_tones = {
+        'DRAFT': 'pf-status-badge--warning',
+        'ISSUED': 'pf-status-badge--info',
+        'SENT': 'pf-status-badge--info',
+        'ACCEPTED': 'pf-status-badge--success',
+        'REJECTED': 'pf-status-badge--danger',
+        'EXPIRED': 'pf-status-badge--warning',
+        'CANCELLED': 'pf-status-badge--neutral',
+        'SUPERSEDED': 'pf-status-badge--neutral'
+    } %}
+    {% set is_current_commercial = status in ['ISSUED', 'SENT'] %}
+    {% set can_revise = status in ['ISSUED', 'SENT', 'REJECTED', 'EXPIRED', 'CANCELLED'] %}
+
+    <section class="pf-page__content">
+        <header class="pf-page-header">
+            <div class="pf-page-header__content">
+                <p class="pf-page-header__eyebrow">Comercial / Cotizaciones</p>
+                <h1 class="pf-page-header__title">
+                    {{ quotation.folio ?? 'Borrador #' ~ quotation.id }}
+                    {% if quotation.revisionNumber > 1 %}
+                        <span class="text-muted">· Revisión {{ quotation.revisionNumber }}</span>
+                    {% endif %}
+                </h1>
+                <p class="pf-page-header__description">
+                    {{ quotation.clientSnapshot.business_name ?? 'Cliente no disponible' }} · Vigencia hasta {{ quotation.expiresAt|date('d/m/Y') }}.
+                </p>
+            </div>
+
+            <div class="pf-page-header__actions">
+                <span class="pf-status-badge {{ status_tones[status]|default('pf-status-badge--neutral') }}">
+                    {{ quotation.status.label }}
+                </span>
+
+                {% if quotation.hasBeenIssued and is_granted('quotations.download_pdf') %}
+                    <a href="{{ path('admin_quotations_pdf', {id: quotation.id}) }}" class="btn pf-button pf-button--subtle">
+                        <i class="bi bi-filetype-pdf" aria-hidden="true"></i>
+                        PDF
+                    </a>
+                {% endif %}
+
+                {% if quotation.editable and is_granted('quotations.update') %}
+                    <a href="{{ path('admin_quotations_edit', {id: quotation.id}) }}" class="btn pf-button pf-button--secondary">
+                        <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                        Editar borrador
+                    </a>
+                {% endif %}
+
+                {% if serviceOrder and is_granted('service_orders.view') %}
+                    <a href="{{ path('admin_service_orders_show', {id: serviceOrder.id}) }}" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-clipboard-check" aria-hidden="true"></i>
+                        Ver orden {{ serviceOrder.folio }}
+                    </a>
+                {% endif %}
+
+                <a href="{{ path('admin_quotations_index') }}" class="btn pf-button pf-button--secondary">
+                    <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                    Volver
+                </a>
+            </div>
+        </header>
+
+        {% if quotation.previousRevision %}
+            <div class="alert alert-secondary" role="status">
+                Esta es la revisión {{ quotation.revisionNumber }} de la cotización
+                <a href="{{ path('admin_quotations_show', {id: quotation.previousRevision.id}) }}">{{ quotation.previousRevision.folio ?? '#' ~ quotation.previousRevision.id }}</a>.
+                Los importes y datos de la revisión anterior se conservaron sin modificaciones.
+            </div>
+        {% endif %}
+
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-md-4">
+                <section class="pf-card h-100">
+                    <div class="pf-card__body">
+                        <span class="text-muted small d-block mb-1">Total</span>
+                        <strong class="fs-3">${{ quotation.total|number_format(2, '.', ',') }} {{ quotation.currency }}</strong>
+                        <span class="d-block text-muted small mt-2">IVA: ${{ quotation.taxAmount|number_format(2, '.', ',') }}</span>
+                    </div>
+                </section>
+            </div>
+            <div class="col-12 col-md-4">
+                <section class="pf-card h-100">
+                    <div class="pf-card__body">
+                        <span class="text-muted small d-block mb-1">Cliente</span>
+                        <strong>{{ quotation.clientSnapshot.legal_name ?? quotation.clientSnapshot.business_name ?? 'No especificado' }}</strong>
+                        {% if quotation.clientSnapshot.tax_id ?? false %}
+                            <span class="d-block text-muted small mt-2">RFC: {{ quotation.clientSnapshot.tax_id }}</span>
+                        {% endif %}
+                    </div>
+                </section>
+            </div>
+            <div class="col-12 col-md-4">
+                <section class="pf-card h-100">
+                    <div class="pf-card__body">
+                        <span class="text-muted small d-block mb-1">Emisión</span>
+                        {% if quotation.issuedAt %}
+                            <strong>{{ quotation.issuedAt|date('d/m/Y H:i', 'America/Mexico_City') }}</strong>
+                            <span class="d-block text-muted small mt-2">Creada por {{ quotation.createdBy.fullName }}</span>
+                        {% else %}
+                            <strong>Pendiente de emisión</strong>
+                        {% endif %}
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        {% if quotation.decisionAt %}
+            <section class="pf-card mb-4">
+                <header class="pf-card__header">
+                    <h2 class="pf-card__title">Registro comercial</h2>
+                    <p class="pf-card__description">Evidencia asociada al estado actual de la cotización.</p>
+                </header>
+                <div class="pf-card__body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-3">Fecha y hora</dt>
+                        <dd class="col-sm-9">{{ quotation.decisionAt|date('d/m/Y H:i', 'America/Mexico_City') }}</dd>
+                        {% if quotation.decisionChannel %}
+                            <dt class="col-sm-3">Canal</dt>
+                            <dd class="col-sm-9">{{ quotation.decisionChannel.label }}</dd>
+                        {% endif %}
+                        {% if quotation.decisionContact %}
+                            <dt class="col-sm-3">Contacto</dt>
+                            <dd class="col-sm-9">{{ quotation.decisionContact }}</dd>
+                        {% endif %}
+                        {% if quotation.decisionNotes %}
+                            <dt class="col-sm-3">Observación</dt>
+                            <dd class="col-sm-9" style="white-space: pre-line;">{{ quotation.decisionNotes }}</dd>
+                        {% endif %}
+                        {% if quotation.decisionEvidenceReference %}
+                            <dt class="col-sm-3">Evidencia</dt>
+                            <dd class="col-sm-9" style="white-space: pre-line;">{{ quotation.decisionEvidenceReference }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </section>
+        {% endif %}
+
+        {% if quotation.editable and is_granted('quotations.issue') %}
+            <section class="pf-card mb-4">
+                <div class="pf-card__body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                    <div>
+                        <h2 class="pf-card__title">Emitir cotización</h2>
+                        <p class="pf-card__description">Asignará el folio definitivo y bloqueará el contenido del borrador.</p>
+                    </div>
+                    <form method="post" action="{{ path('admin_quotations_issue', {id: quotation.id}) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('quotation-issue-' ~ quotation.id) }}">
+                        <button type="submit" class="btn pf-button pf-button--primary">
+                            <i class="bi bi-file-earmark-check" aria-hidden="true"></i>
+                            Emitir cotización
+                        </button>
+                    </form>
+                </div>
+            </section>
+        {% endif %}
+
+        {% if status == 'ACCEPTED' and serviceOrder is null and is_granted('service_orders.create_from_quotation') %}
+            <section class="pf-card mb-4">
+                <div class="pf-card__body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                    <div>
+                        <h2 class="pf-card__title">Crear orden de servicio</h2>
+                        <p class="pf-card__description">
+                            Generará una única orden con todas las partidas, precios e impuestos de esta cotización aceptada.
+                            La fecha compromiso se definirá después, durante la planificación.
+                        </p>
+                    </div>
+                    <form method="post" action="{{ path('admin_service_orders_create_from_quotation', {id: quotation.id}) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('service-order-create-from-quotation-' ~ quotation.id) }}">
+                        <button type="submit" class="btn pf-button pf-button--primary">
+                            <i class="bi bi-clipboard-plus" aria-hidden="true"></i>
+                            Crear orden de servicio
+                        </button>
+                    </form>
+                </div>
+            </section>
+        {% endif %}
+
+        {% if is_current_commercial %}
+            <section class="pf-card mb-4">
+                <header class="pf-card__header">
+                    <h2 class="pf-card__title">Acciones comerciales</h2>
+                    <p class="pf-card__description">Cada acción requiere confirmación explícita y queda registrada en la bitácora.</p>
+                </header>
+                <div class="pf-card__body d-grid gap-3">
+                    {% if is_granted('quotations.send') %}
+                        <details class="border rounded p-3">
+                            <summary class="fw-semibold">Enviar por correo con PDF adjunto</summary>
+                            <div class="pt-3">
+                                {{ form_start(emailForm, {action: path('admin_quotations_send', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form'}}) }}
+                                    {{ form_errors(emailForm) }}
+                                    <div class="row g-3">
+                                        <div class="col-md-6">{{ form_row(emailForm.recipientEmail) }}</div>
+                                        <div class="col-md-6">{{ form_row(emailForm.recipientName) }}</div>
+                                        <div class="col-12">{{ form_row(emailForm.copyEmail) }}</div>
+                                        <div class="col-12">{{ form_row(emailForm.message) }}</div>
+                                    </div>
+                                    <button type="submit" class="btn pf-button pf-button--primary mt-3">Enviar cotización</button>
+                                {{ form_end(emailForm) }}
+                            </div>
+                        </details>
+                    {% endif %}
+
+                    {% if is_granted('quotations.manage_status') %}
+                        <details class="border rounded p-3">
+                            <summary class="fw-semibold text-success">Registrar aceptación</summary>
+                            <div class="pt-3">
+                                {{ form_start(acceptForm, {action: path('admin_quotations_accept', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form'}}) }}
+                                    {{ form_errors(acceptForm) }}
+                                    <div class="row g-3">
+                                        <div class="col-md-6">{{ form_row(acceptForm.channel) }}</div>
+                                        <div class="col-md-6">{{ form_row(acceptForm.contact) }}</div>
+                                        <div class="col-md-6">{{ form_row(acceptForm.respondedAt) }}</div>
+                                        <div class="col-12">{{ form_row(acceptForm.notes) }}</div>
+                                        <div class="col-12">{{ form_row(acceptForm.evidenceReference) }}</div>
+                                    </div>
+                                    <button type="submit" class="btn pf-button pf-button--primary mt-3">Confirmar aceptación</button>
+                                {{ form_end(acceptForm) }}
+                            </div>
+                        </details>
+
+                        <details class="border rounded p-3">
+                            <summary class="fw-semibold text-danger">Registrar rechazo</summary>
+                            <div class="pt-3">
+                                {{ form_start(rejectForm, {action: path('admin_quotations_reject', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form'}}) }}
+                                    {{ form_errors(rejectForm) }}
+                                    <div class="row g-3">
+                                        <div class="col-md-6">{{ form_row(rejectForm.channel) }}</div>
+                                        <div class="col-md-6">{{ form_row(rejectForm.contact) }}</div>
+                                        <div class="col-md-6">{{ form_row(rejectForm.respondedAt) }}</div>
+                                        <div class="col-12">{{ form_row(rejectForm.notes) }}</div>
+                                        <div class="col-12">{{ form_row(rejectForm.evidenceReference) }}</div>
+                                    </div>
+                                    <button type="submit" class="btn pf-button pf-button--danger mt-3">Confirmar rechazo</button>
+                                {{ form_end(rejectForm) }}
+                            </div>
+                        </details>
+
+                        <details class="border rounded p-3">
+                            <summary class="fw-semibold">Cancelar cotización</summary>
+                            <div class="pt-3">
+                                {{ form_start(cancellationForm, {action: path('admin_quotations_cancel', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form'}}) }}
+                                    {{ form_errors(cancellationForm) }}
+                                    {{ form_row(cancellationForm.reason) }}
+                                    <button type="submit" class="btn pf-button pf-button--secondary mt-3">Cancelar cotización</button>
+                                {{ form_end(cancellationForm) }}
+                            </div>
+                        </details>
+                    {% endif %}
+                </div>
+            </section>
+        {% endif %}
+
+        {% if can_revise and quotation.revisions is empty and is_granted('quotations.create_revision') %}
+            <section class="pf-card mb-4">
+                <header class="pf-card__header">
+                    <h2 class="pf-card__title">Generar nueva revisión</h2>
+                    <p class="pf-card__description">La cotización actual se marcará como reemplazada; su información continuará disponible como historial.</p>
+                </header>
+                <div class="pf-card__body">
+                    {{ form_start(revisionForm, {action: path('admin_quotations_create_revision', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form'}}) }}
+                        {{ form_errors(revisionForm) }}
+                        {{ form_row(revisionForm.reason) }}
+                        <button type="submit" class="btn pf-button pf-button--secondary mt-2">Crear nueva revisión</button>
+                    {{ form_end(revisionForm) }}
+                </div>
+            </section>
+        {% endif %}
+
+        {% if quotation.revisions is not empty %}
+            <section class="pf-card mb-4">
+                <header class="pf-card__header">
+                    <h2 class="pf-card__title">Revisión posterior</h2>
+                </header>
+                <div class="pf-card__body">
+                    {% for revision in quotation.revisions %}
+                        <a href="{{ path('admin_quotations_show', {id: revision.id}) }}">Abrir revisión {{ revision.revisionNumber }}{% if revision.folio %} · {{ revision.folio }}{% endif %}</a>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+
+        <section class="pf-card mb-4">
+            <header class="pf-card__header">
+                <h2 class="pf-card__title">Partidas e importes congelados</h2>
+                <p class="pf-card__description">Los valores corresponden a esta versión de la cotización.</p>
+            </header>
+            <div class="pf-card__body p-0">
+                <div class="pf-table-responsive">
+                    <table class="pf-table">
+                        <thead><tr><th>#</th><th>Concepto</th><th class="pf-table__cell--right">Cantidad</th><th class="pf-table__cell--right">P. unitario</th><th class="pf-table__cell--right">Importe</th></tr></thead>
+                        <tbody>
+                            {% for item in quotation.items %}
+                                <tr>
+                                    <td>{{ item.lineNumber }}</td>
+                                    <td><strong>{{ item.commercialItemSnapshot.name ?? item.commercialItem.name }}</strong><span class="d-block text-muted small">{{ item.commercialItemSnapshot.code ?? '' }}</span></td>
+                                    <td class="pf-table__cell--right">{{ item.quantity }}</td>
+                                    <td class="pf-table__cell--right">${{ item.unitPrice|number_format(2, '.', ',') }}</td>
+                                    <td class="pf-table__cell--right">${{ item.lineSubtotal|number_format(2, '.', ',') }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section class="pf-card">
+            <header class="pf-card__header">
+                <h2 class="pf-card__title">Historial de envíos por correo</h2>
+                <p class="pf-card__description">Solo aparecen correos aceptados por el transporte SMTP.</p>
+            </header>
+            <div class="pf-card__body">
+                {% for dispatch in quotation.emailDispatches %}
+                    <article class="border-bottom pb-3 mb-3">
+                        <strong>{{ dispatch.recipientEmail }}</strong>{% if dispatch.recipientName %} · {{ dispatch.recipientName }}{% endif %}
+                        <span class="d-block text-muted small">{{ dispatch.sentAt|date('d/m/Y H:i', 'America/Mexico_City') }} · {{ dispatch.sentBy.fullName }}</span>
+                        {% if dispatch.copyEmail %}<span class="d-block text-muted small">Copia: {{ dispatch.copyEmail }}</span>{% endif %}
+                        {% if dispatch.messageNote %}<span class="d-block mt-2" style="white-space: pre-line;">{{ dispatch.messageNote }}</span>{% endif %}
+                    </article>
+                {% else %}
+                    <p class="mb-0 text-muted">Aún no hay envíos de correo registrados.</p>
+                {% endfor %}
+            </div>
+        </section>
+    </section>
+{% endblock %}
