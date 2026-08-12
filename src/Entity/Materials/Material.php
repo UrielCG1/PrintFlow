@@ -16,7 +16,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_materials_unit_active', columns: ['measurement_unit_id', 'is_active'])]
 #[ORM\Index(name: 'idx_materials_supplier_active', columns: ['primary_supplier_id', 'is_active'])]
 #[ORM\HasLifecycleCallbacks]
-final class Material
+class Material
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

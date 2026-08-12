@@ -18,7 +18,7 @@ use Doctrine\ORM\Mapping as ORM;
     columns: ['commercial_item_id', 'is_active', 'min_quantity'],
 )]
 #[ORM\HasLifecycleCallbacks]
-final class ItemPriceRule
+class ItemPriceRule
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
