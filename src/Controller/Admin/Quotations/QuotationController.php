@@ -17,11 +17,13 @@ use App\Form\Admin\Quotations\QuotationEmailType;
 use App\Form\Admin\Quotations\QuotationRevisionType;
 use App\Form\Admin\Quotations\QuotationType;
 use App\Repository\Orders\ServiceOrderRepository;
+use App\Repository\Clients\ClientRepository;
 use App\Repository\Quotations\QuotationRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Service\Quotations\QuotationPdfRenderer;
 use Symfony\Component\Form\FormInterface;
@@ -33,6 +35,7 @@ final class QuotationController extends AbstractController
 {
     public function __construct(
         private readonly ServiceOrderRepository $serviceOrderRepository,
+        private readonly ClientRepository $clientRepository,
     ) {
     }
 
@@ -43,6 +46,29 @@ final class QuotationController extends AbstractController
 
         return $this->render('admin/quotations/index.html.twig', [
             'quotations' => $quotationRepository->findRecentForAdministration(),
+        ]);
+    }
+
+    #[Route('/contexto-cliente/{id}', name: 'admin_quotations_client_context', requirements: ['id' => '\\d+'], methods: ['GET'])]
+    public function clientContext(int $id): JsonResponse
+    {
+        if (!$this->isGranted('quotations.create') && !$this->isGranted('quotations.update')) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $client = $this->clientRepository->findActiveForQuotation($id);
+
+        if ($client === null) {
+            throw $this->createNotFoundException('El cliente activo solicitado no existe.');
+        }
+
+        return $this->json([
+            'id' => $client->getId(),
+            'businessName' => $client->getBusinessName(),
+            'legalName' => $client->getLegalName(),
+            'email' => $client->getEmail(),
+            'phone' => $client->getPhone(),
+            'defaultDiscountPercent' => $client->getDefaultDiscountPercent(),
         ]);
     }
 

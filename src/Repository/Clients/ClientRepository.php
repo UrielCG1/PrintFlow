@@ -17,6 +17,22 @@ final class ClientRepository extends ServiceEntityRepository
         parent::__construct($registry, Client::class);
     }
 
+    /**
+     * Recupera el cliente real que puede utilizarse en un borrador de
+     * cotización. El manager debe usar esta consulta en lugar de confiar en la
+     * entidad que Symfony resolvió a partir del request.
+     */
+    public function findActiveForQuotation(int $id): ?Client
+    {
+        return $this->createQueryBuilder('client')
+            ->andWhere('client.id = :id')
+            ->andWhere('client.isActive = :isActive')
+            ->setParameter('id', $id)
+            ->setParameter('isActive', true)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
     public function paginateForAdministration(
         string $search,
         ?bool $isActive,

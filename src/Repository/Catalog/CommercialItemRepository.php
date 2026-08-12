@@ -18,6 +18,22 @@ final class CommercialItemRepository extends ServiceEntityRepository
     }
 
     /**
+     * Recupera el concepto real habilitado para una nueva cotización. Así el
+     * manager no usa como fuente de verdad la entidad enviada por el
+     * formulario.
+     */
+    public function findActiveForQuotation(int $id): ?CommercialItem
+    {
+        return $this->createQueryBuilder('item')
+            ->andWhere('item.id = :id')
+            ->andWhere('item.isActive = :isActive')
+            ->setParameter('id', $id)
+            ->setParameter('isActive', true)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
      * @return array{
      *     items: list<CommercialItem>,
      *     currentPage: int,

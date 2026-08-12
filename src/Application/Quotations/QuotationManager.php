@@ -10,8 +10,12 @@ use App\Entity\Quotations\QuotationEmailDispatch;
 use App\Entity\Quotations\QuotationItem;
 use App\Entity\Users\User;
 use App\Enum\Quotations\QuotationStatus;
+use App\Repository\Catalog\CommercialItemRepository;
+use App\Repository\Clients\ClientRepository;
 use App\Repository\Quotations\QuotationRepository;
 use App\Service\Audit\AuditLogger;
+use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Service\Quotations\QuotationFolioGenerator;
 use App\Service\Quotations\QuotationMailer;
@@ -27,6 +31,8 @@ final class QuotationManager
         private readonly QuotationFolioGenerator $quotationFolioGenerator,
         private readonly QuotationMailer $quotationMailer,
         private readonly QuotationRepository $quotationRepository,
+        private readonly ClientRepository $clientRepository,
+        private readonly CommercialItemRepository $commercialItemRepository,
     ) {
     }
 
@@ -434,9 +440,7 @@ final class QuotationManager
             throw new \LogicException('Los datos de la cotización están incompletos.');
         }
 
-        if (!$data->client->isActive()) {
-            throw new \DomainException('No es posible cotizar para un cliente inactivo.');
-        }
+        $client = $this->resolveActiveClient($data->client);
 
         $today = new \DateTimeImmutable(
             'today',
@@ -449,20 +453,14 @@ final class QuotationManager
             );
         }
 
-        $discountPercent = $data->discountPercent;
-
-        if ($discountPercent === null || trim($discountPercent) === '') {
-            $discountPercent = number_format(
-                $data->client->getDefaultDiscountPercent(),
-                2,
-                '.',
-                '',
-            );
-        }
+        $discountPercent = $this->resolveDiscountPercent(
+            $data->discountPercent,
+            $client,
+        );
 
         $quotation
-            ->setClient($data->client)
-            ->setClientSnapshot($this->clientSnapshot($data->client))
+            ->setClient($client)
+            ->setClientSnapshot($this->clientSnapshot($client))
             ->setExpiresAt($data->expiresAt)
             ->setNotes($data->notes)
             ->setDiscountPercent($discountPercent);
@@ -485,16 +483,9 @@ final class QuotationManager
                 );
             }
 
-            $commercialItem = $itemData->commercialItem;
-
-            if (!$commercialItem->isActive()) {
-                throw new \DomainException(
-                    sprintf(
-                        'El concepto "%s" está inactivo y no puede cotizarse.',
-                        $commercialItem->getName(),
-                    ),
-                );
-            }
+            $commercialItem = $this->resolveActiveCommercialItem(
+                $itemData->commercialItem,
+            );
 
             $quantity = ItemPriceRule::normalizeMinimumQuantity($itemData->quantity);
 
@@ -567,6 +558,76 @@ final class QuotationManager
             taxAmount: $totals->taxAmount,
             total: $totals->total,
         );
+    }
+
+    private function resolveActiveClient(?\App\Entity\Clients\Client $selectedClient): \App\Entity\Clients\Client
+    {
+        $clientId = $selectedClient?->getId();
+
+        if ($clientId === null) {
+            throw new \LogicException('Los datos de la cotización están incompletos.');
+        }
+
+        $client = $this->clientRepository->findActiveForQuotation($clientId);
+
+        if ($client === null) {
+            throw new \DomainException('No es posible cotizar para un cliente inactivo o inexistente.');
+        }
+
+        return $client;
+    }
+
+    private function resolveActiveCommercialItem(?CommercialItem $selectedItem): CommercialItem
+    {
+        $itemId = $selectedItem?->getId();
+
+        if ($itemId === null) {
+            throw new \LogicException('Los datos de una partida están incompletos.');
+        }
+
+        $item = $this->commercialItemRepository->findActiveForQuotation($itemId);
+
+        if ($item === null) {
+            throw new \DomainException('El concepto seleccionado está inactivo o ya no existe.');
+        }
+
+        return $item;
+    }
+
+    private function resolveDiscountPercent(
+        ?string $submittedDiscountPercent,
+        \App\Entity\Clients\Client $client,
+    ): string {
+        $usesClientDefault = $submittedDiscountPercent === null
+            || trim($submittedDiscountPercent) === '';
+
+        $rawPercent = $usesClientDefault
+            ? (string) $client->getDefaultDiscountPercent()
+            : trim($submittedDiscountPercent);
+
+        $rawPercent = str_replace(',', '.', $rawPercent);
+
+        $pattern = $usesClientDefault
+            ? '/^\d{1,3}(?:\.\d+)?$/'
+            : '/^\d{1,3}(?:\.\d{1,2})?$/';
+
+        if (!preg_match($pattern, $rawPercent)) {
+            throw new \InvalidArgumentException(
+                'El descuento global debe ser un porcentaje entre 0 y 100 con máximo dos decimales.',
+            );
+        }
+
+        $discountPercent = BigDecimal::of($rawPercent);
+
+        if ($discountPercent->compareTo('0') < 0 || $discountPercent->compareTo('100') > 0) {
+            throw new \InvalidArgumentException(
+                'El descuento global debe estar entre 0 y 100.',
+            );
+        }
+
+        return $discountPercent
+            ->toScale(2, RoundingMode::HalfUp)
+            ->__toString();
     }
 
     /**

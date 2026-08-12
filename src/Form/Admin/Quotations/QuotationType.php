@@ -34,6 +34,10 @@ final class QuotationType extends AbstractType
                         ->orderBy('client.businessName', 'ASC');
                 },
                 'choice_label' => static fn (Client $client): string => $client->getBusinessName(),
+                'attr' => [
+                    'data-ui--quotation-form-target' => 'client',
+                    'data-action' => 'change->ui--quotation-form#changeClient',
+                ],
             ])
             ->add('expiresAt', DateType::class, [
                 'label' => 'Vigencia',
@@ -47,6 +51,8 @@ final class QuotationType extends AbstractType
                 'attr' => [
                     'inputmode' => 'decimal',
                     'placeholder' => '0.00',
+                    'data-ui--quotation-form-target' => 'discountPercent',
+                    'data-action' => 'input->ui--quotation-form#markDiscountAsManual',
                 ],
             ])
             ->add('notes', TextareaType::class, [
