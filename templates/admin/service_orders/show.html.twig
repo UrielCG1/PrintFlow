@@ -18,7 +18,7 @@
                 </p>
             </div>
             <div class="pf-page-header__actions">
-                <span class="pf-status-badge pf-status-badge--warning">{{ serviceOrder.status.label }}</span>
+                <span class="pf-status-badge pf-status-badge--{{ serviceOrder.status.badgeTone }}">{{ serviceOrder.status.label }}</span>
                 <a href="{{ path('admin_service_orders_index') }}" class="btn pf-button pf-button--secondary">
                     <i class="bi bi-arrow-left" aria-hidden="true"></i>
                     Volver
@@ -55,7 +55,10 @@
                             <strong>{{ serviceOrder.commitmentDate|date('d/m/Y') }}</strong>
                         {% else %}
                             <strong>Por asignar</strong>
-                            <span class="d-block text-muted small mt-2">Se definirá durante la planificación.</span>
+                            <span class="d-block text-muted small mt-2">Se define durante la planificación.</span>
+                        {% endif %}
+                        {% if serviceOrder.plannedAt %}
+                            <span class="d-block text-muted small mt-2">Planificada {{ serviceOrder.plannedAt|date('d/m/Y H:i', 'America/Mexico_City') }}{% if serviceOrder.plannedBy %} por {{ serviceOrder.plannedBy.fullName }}{% endif %}</span>
                         {% endif %}
                     </div>
                 </section>
@@ -91,6 +94,158 @@
                     {% endif %}
                 </dl>
             </div>
+        </section>
+
+        <section class="pf-card mb-4">
+            <header class="pf-card__header">
+                <h2 class="pf-card__title">Planificación operativa</h2>
+                <p class="pf-card__description">La ruta se define manualmente por partida. Las operaciones y equipos se validan contra los catálogos activos; no hay cálculos de capacidad ni consumo de materiales en esta fase.</p>
+            </header>
+
+            {% if canPlan %}
+                <div class="pf-card__body border-bottom">
+                    {{ form_start(planningForm, {action: path('admin_service_orders_update_planning', {id: serviceOrder.id}), method: 'POST', attr: {class: 'pf-form'}}) }}
+                        {{ form_errors(planningForm) }}
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-6 col-lg-4">{{ form_row(planningForm.commitmentDate) }}</div>
+                            <div class="col-md-6 col-lg-8">
+                                <button type="submit" class="btn pf-button pf-button--secondary">Guardar fecha compromiso</button>
+                            </div>
+                        </div>
+                    {{ form_end(planningForm) }}
+                </div>
+            {% elseif serviceOrder.isPlanned %}
+                <div class="pf-card__body border-bottom small text-muted">
+                    La ruta quedó bloqueada al marcar la orden como planificada. La ejecución de etapas se habilitará en la siguiente subfase.
+                </div>
+            {% endif %}
+
+            <div class="pf-card__body d-flex flex-column gap-4">
+                {% for item in serviceOrder.items %}
+                    {% set plans = operationPlansByItem[item.id]|default([]) %}
+                    <article class="border rounded p-3">
+                        <header class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
+                            <div>
+                                <span class="text-muted small">Partida {{ item.lineNumber }}</span>
+                                <h3 class="h6 mb-1">{{ item.commercialItemSnapshot.name ?? item.commercialItem.name }}</h3>
+                                <span class="text-muted small">Cantidad contratada: {{ item.quantity }}</span>
+                            </div>
+                            <span class="text-muted small">{{ plans|length }} {{ plans|length == 1 ? 'operación' : 'operaciones' }} activas</span>
+                        </header>
+
+                        <div class="pf-table-responsive mb-3">
+                            <table class="pf-table">
+                                <thead>
+                                    <tr>
+                                        {% if canPlan and plans|length > 1 %}<th class="pf-table__cell--center" aria-label="Reordenar"></th>{% endif %}
+                                        <th>Secuencia</th>
+                                        <th>Operación</th>
+                                        <th>Área</th>
+                                        <th>Equipo</th>
+                                        {% if canPlan %}<th class="pf-table__actions-cell">Acciones</th>{% endif %}
+                                    </tr>
+                                </thead>
+                                <tbody
+                                    {% if canPlan and plans|length > 1 %}
+                                        data-controller="ui--sortable"
+                                        data-ui--sortable-url-value="{{ path('admin_service_orders_reorder_item_operations', {id: serviceOrder.id, item: item.id}) }}"
+                                        data-ui--sortable-token-value="{{ csrf_token('service-order-operation-reorder-' ~ item.id) }}"
+                                    {% endif %}
+                                >
+                                    {% for plan in plans %}
+                                        <tr data-id="{{ plan.id }}" data-sortable-id="{{ plan.id }}">
+                                            {% if canPlan and plans|length > 1 %}
+                                                <td class="pf-table__cell--center">
+                                                    <button type="button" class="pf-sortable__handle" title="Arrastrar para reordenar" aria-label="Reordenar {{ plan.operationSnapshot.name ?? plan.operation.name }}">
+                                                        <i class="bi bi-grip-vertical" aria-hidden="true"></i>
+                                                    </button>
+                                                </td>
+                                            {% endif %}
+                                            <td>{{ plan.sequenceNumber }}</td>
+                                            <td>
+                                                <strong>{{ plan.operationSnapshot.name ?? plan.operation.name }}</strong>
+                                                <span class="d-block text-muted small">{{ plan.operationSnapshot.code ?? plan.operation.code }}</span>
+                                            </td>
+                                            <td>{{ plan.operationSnapshot.area_name ?? plan.operation.operationArea.name }}</td>
+                                            <td>
+                                                {% if canPlan %}
+                                                    {{ form_start(equipmentForms[plan.id], {action: path('admin_service_orders_assign_item_operation_equipment', {id: serviceOrder.id, plan: plan.id}), method: 'POST', attr: {class: 'pf-form'}}) }}
+                                                        {{ form_errors(equipmentForms[plan.id]) }}
+                                                        {{ form_widget(equipmentForms[plan.id].equipment, {attr: {class: 'form-select form-select-sm mb-2'}}) }}
+                                                        <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Guardar equipo</button>
+                                                    {{ form_end(equipmentForms[plan.id]) }}
+                                                {% elseif plan.equipment %}
+                                                    <strong>{{ plan.equipmentSnapshot.name ?? plan.equipment.name }}</strong>
+                                                    <span class="d-block text-muted small">{{ plan.equipmentSnapshot.code ?? plan.equipment.code }}</span>
+                                                {% else %}
+                                                    <span class="text-muted">Sin equipo asignado</span>
+                                                {% endif %}
+                                            </td>
+                                            {% if canPlan %}
+                                                <td class="pf-table__actions-cell">
+                                                    <form
+                                                        method="post"
+                                                        action="{{ path('admin_service_orders_remove_item_operation', {id: serviceOrder.id, plan: plan.id}) }}"
+                                                        data-controller="ui--confirm-action"
+                                                        data-action="submit->ui--confirm-action#submit"
+                                                        data-ui--confirm-action-title-value="¿Retirar operación?"
+                                                        data-ui--confirm-action-text-value="La operación dejará de formar parte de esta ruta; se conservará el evento en la bitácora."
+                                                        data-ui--confirm-action-confirm-button-text-value="Sí, retirar"
+                                                        data-ui--confirm-action-cancel-button-text-value="Cancelar"
+                                                        data-ui--confirm-action-icon-value="warning"
+                                                    >
+                                                        <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-remove-' ~ plan.id) }}">
+                                                        <button type="submit" class="btn pf-button pf-button--danger pf-button--sm">Retirar</button>
+                                                    </form>
+                                                </td>
+                                            {% endif %}
+                                        </tr>
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="{{ canPlan ? (plans|length > 1 ? 6 : 5) : 4 }}" class="pf-table__empty">Aún no hay operaciones planificadas para esta partida.</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {% if canPlan %}
+                            <details>
+                                <summary class="fw-semibold">Agregar operación a esta partida</summary>
+                                <div class="pt-3">
+                                    {{ form_start(itemOperationForms[item.id], {action: path('admin_service_orders_add_item_operation', {id: serviceOrder.id, item: item.id}), method: 'POST', attr: {class: 'pf-form'}}) }}
+                                        {{ form_errors(itemOperationForms[item.id]) }}
+                                        <div class="row g-3 align-items-end">
+                                            <div class="col-lg-8">{{ form_row(itemOperationForms[item.id].operation) }}</div>
+                                            <div class="col-lg-4"><button type="submit" class="btn pf-button pf-button--primary">Agregar a ruta</button></div>
+                                        </div>
+                                    {{ form_end(itemOperationForms[item.id]) }}
+                                </div>
+                            </details>
+                        {% endif %}
+                    </article>
+                {% endfor %}
+            </div>
+
+            {% if canPlan %}
+                <footer class="pf-card__body border-top d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <p class="mb-0 text-muted small">Para planificar se requiere fecha compromiso y al menos una operación activa en cada partida. El equipo sigue siendo opcional.</p>
+                    <form
+                        method="post"
+                        action="{{ path('admin_service_orders_mark_planned', {id: serviceOrder.id}) }}"
+                        data-controller="ui--confirm-action"
+                        data-action="submit->ui--confirm-action#submit"
+                        data-ui--confirm-action-title-value="¿Marcar orden como planificada?"
+                        data-ui--confirm-action-text-value="La ruta, fecha y equipos quedarán bloqueados para preservar la trazabilidad antes de iniciar ejecución."
+                        data-ui--confirm-action-confirm-button-text-value="Sí, marcar planificada"
+                        data-ui--confirm-action-cancel-button-text-value="Cancelar"
+                        data-ui--confirm-action-icon-value="question"
+                    >
+                        <input type="hidden" name="_token" value="{{ csrf_token('service-order-mark-planned-' ~ serviceOrder.id) }}">
+                        <button type="submit" class="btn pf-button pf-button--primary">Marcar como planificada</button>
+                    </form>
+                </footer>
+            {% endif %}
         </section>
 
         <section class="pf-card mb-4">

@@ -46,7 +46,7 @@
                                 <td>
                                     <a href="{{ path('admin_quotations_show', {id: serviceOrder.sourceQuotation.id}) }}">{{ serviceOrder.sourceQuotationFolio }}</a>
                                 </td>
-                                <td><span class="pf-status-badge pf-status-badge--warning">{{ serviceOrder.status.label }}</span></td>
+                                <td><span class="pf-status-badge pf-status-badge--{{ serviceOrder.status.badgeTone }}">{{ serviceOrder.status.label }}</span></td>
                                 <td class="pf-table__cell--right pf-table__cell--nowrap fw-semibold">${{ serviceOrder.total|number_format(2, '.', ',') }} {{ serviceOrder.currency }}</td>
                                 <td>
                                     {% if serviceOrder.commitmentDate %}

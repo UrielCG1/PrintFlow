@@ -6,6 +6,8 @@ namespace App\Entity\Orders;
 
 use App\Entity\Catalog\CommercialItem;
 use App\Entity\Quotations\QuotationItem;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -56,9 +58,15 @@ class ServiceOrderItem
     #[ORM\Column(name: 'created_at', type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
+    /** @var Collection<int, ServiceOrderOperationPlan> */
+    #[ORM\OneToMany(mappedBy: 'serviceOrderItem', targetEntity: ServiceOrderOperationPlan::class, cascade: ['persist'])]
+    #[ORM\OrderBy(['sequenceNumber' => 'ASC', 'id' => 'ASC'])]
+    private Collection $operationPlans;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+        $this->operationPlans = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -199,6 +207,31 @@ class ServiceOrderItem
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    /** @return Collection<int, ServiceOrderOperationPlan> */
+    public function getOperationPlans(): Collection
+    {
+        return $this->operationPlans;
+    }
+
+    /** @return list<ServiceOrderOperationPlan> */
+    public function getActiveOperationPlans(): array
+    {
+        return array_values(array_filter(
+            $this->operationPlans->toArray(),
+            static fn (ServiceOrderOperationPlan $plan): bool => $plan->isActive(),
+        ));
+    }
+
+    public function addOperationPlan(ServiceOrderOperationPlan $plan): self
+    {
+        if (!$this->operationPlans->contains($plan)) {
+            $this->operationPlans->add($plan);
+            $plan->setServiceOrderItem($this);
+        }
+
+        return $this;
     }
 
     private function normalizeMoney(string $value, string $field): string

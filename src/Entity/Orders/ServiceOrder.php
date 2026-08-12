@@ -90,6 +90,13 @@ class ServiceOrder
     #[ORM\Column(name: 'commitment_date', type: Types::DATE_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $commitmentDate = null;
 
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(name: 'planned_by_user_id', nullable: true, onDelete: 'RESTRICT')]
+    private ?User $plannedBy = null;
+
+    #[ORM\Column(name: 'planned_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $plannedAt = null;
+
     #[ORM\Column(name: 'created_at', type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
@@ -362,6 +369,47 @@ class ServiceOrder
     public function setCommitmentDate(?\DateTimeImmutable $commitmentDate): self
     {
         $this->commitmentDate = $commitmentDate;
+
+        return $this;
+    }
+
+    public function isPendingPlanning(): bool
+    {
+        return $this->status === ServiceOrderStatus::PENDING_PLANNING;
+    }
+
+    public function isPlanned(): bool
+    {
+        return $this->status === ServiceOrderStatus::PLANNED;
+    }
+
+    public function getPlannedBy(): ?User
+    {
+        return $this->plannedBy;
+    }
+
+    public function getPlannedAt(): ?\DateTimeImmutable
+    {
+        return $this->plannedAt;
+    }
+
+    /**
+     * El estado de planificación solo se confirma después de que el manager
+     * valide fecha compromiso y la ruta de todas las partidas.
+     */
+    public function markPlanned(User $actor): self
+    {
+        if (!$this->isPendingPlanning()) {
+            throw new \DomainException('La orden ya fue planificada.');
+        }
+
+        if ($this->commitmentDate === null) {
+            throw new \DomainException('Asigna la fecha compromiso antes de marcar la orden como planificada.');
+        }
+
+        $this->status = ServiceOrderStatus::PLANNED;
+        $this->plannedBy = $actor;
+        $this->plannedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
 
         return $this;
     }

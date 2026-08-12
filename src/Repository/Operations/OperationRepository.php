@@ -182,4 +182,28 @@ final class OperationRepository extends ServiceEntityRepository
 
         return $operations;
     }
+
+    /**
+     * @return list<Operation>
+     *
+     * Esta consulta es para rutas nuevas: no incluye operaciones o áreas
+     * inactivas, aunque una orden histórica pueda conservarlas en snapshot.
+     */
+    public function findActiveForServiceOrderPlanning(): array
+    {
+        /** @var list<Operation> $operations */
+        $operations = $this->createQueryBuilder('operation')
+            ->innerJoin('operation.operationArea', 'area')
+            ->addSelect('area')
+            ->andWhere('operation.isActive = :active')
+            ->andWhere('area.isActive = :active')
+            ->setParameter('active', true)
+            ->orderBy('area.displayOrder', 'ASC')
+            ->addOrderBy('operation.displayOrder', 'ASC')
+            ->addOrderBy('operation.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $operations;
+    }
 }
