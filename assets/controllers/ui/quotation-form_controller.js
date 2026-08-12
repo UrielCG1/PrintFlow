@@ -1,35 +1,20 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['items', 'emptyState', 'prototype', 'itemCount'];
-
-    static values = {
-        index: Number,
-    };
+    static targets = ['prototype', 'items', 'emptyState', 'itemCount'];
 
     connect() {
-        this.indexValue = this.nextItemIndex;
+        this.nextIndex = this.getNextIndex();
         this.refreshState();
     }
 
-    addItem() {
-        if (!this.hasPrototypeTarget) {
-            return;
-        }
-
-        const prototype = this.prototypeTarget.innerHTML.trim();
-
-        if (!prototype) {
-            return;
-        }
+    addItem(event) {
+        event.preventDefault();
 
         const item = document.createElement('article');
 
         item.className = 'pf-card p-4';
-
-        // Debe conservar los DOS guiones para coincidir con el selector Stimulus.
         item.setAttribute('data-ui--quotation-form-item', '');
-
         item.innerHTML = `
             <header class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4 pb-3 border-bottom">
                 <div>
@@ -48,21 +33,23 @@ export default class extends Controller {
                 </button>
             </header>
 
-            ${prototype.replace(/__name__/g, String(this.indexValue))}
+            ${this.prototypeTarget.innerHTML.replace(/__name__/g, String(this.nextIndex))}
         `;
 
         this.itemsTarget.append(item);
-        this.indexValue += 1;
+        this.nextIndex += 1;
 
         this.refreshState();
+
         item.querySelector('select, input, textarea')?.focus();
     }
 
     removeItem(event) {
         event.preventDefault();
 
-        const button = event.currentTarget;
-        const item = button.closest('[data-ui--quotation-form-item]');
+        const item = event.currentTarget.closest(
+            '[data-ui--quotation-form-item]',
+        );
 
         if (!item) {
             return;
@@ -73,56 +60,54 @@ export default class extends Controller {
     }
 
     refreshState() {
-        const items = this.itemElements;
-
-        items.forEach((item, index) => {
+        this.itemElements.forEach((item, index) => {
+            const lineNumberValue = index + 1;
             const lineNumber = item.querySelector(
                 '[data-ui--quotation-form-line-number]',
             );
-
             const removeButton = item.querySelector(
                 '[data-action="ui--quotation-form#removeItem"]',
             );
 
             if (lineNumber) {
-                lineNumber.textContent = String(index + 1);
+                lineNumber.textContent = String(lineNumberValue);
             }
 
             if (removeButton) {
                 removeButton.setAttribute(
                     'aria-label',
-                    `Eliminar partida ${index + 1}`,
+                    `Eliminar partida ${lineNumberValue}`,
                 );
             }
         });
 
-        if (this.hasEmptyStateTarget) {
-            this.emptyStateTarget.classList.toggle('d-none', items.length > 0);
-        }
+        const totalItems = this.itemElements.length;
 
-        if (this.hasItemCountTarget) {
-            this.itemCountTarget.textContent = items.length === 0
-                ? 'Sin partidas'
-                : `${items.length} ${items.length === 1 ? 'partida' : 'partidas'}`;
-        }
+        this.emptyStateTarget.classList.toggle(
+            'd-none',
+            totalItems > 0,
+        );
+
+        this.itemCountTarget.textContent = totalItems === 0
+            ? 'Sin partidas'
+            : `${totalItems} ${totalItems === 1 ? 'partida' : 'partidas'}`;
+    }
+
+    getNextIndex() {
+        const indexes = Array.from(
+            this.itemsTarget.querySelectorAll('[name*="[items]"]'),
+        ).map((field) => {
+            const match = field.name.match(/\[items\]\[(\d+)\]/);
+
+            return match ? Number(match[1]) : -1;
+        });
+
+        return Math.max(-1, ...indexes) + 1;
     }
 
     get itemElements() {
         return Array.from(
-            this.itemsTarget.querySelectorAll(
-                '[data-ui--quotation-form-item]',
-            ),
+            this.itemsTarget.querySelectorAll('[data-ui--quotation-form-item]'),
         );
-    }
-
-    get nextItemIndex() {
-        return this.itemElements.reduce((nextIndex, item) => {
-            const field = item.querySelector('[name*="[items]"]');
-            const match = field?.name.match(/\[items\]\[(\d+)]/);
-
-            return match
-                ? Math.max(nextIndex, Number(match[1]) + 1)
-                : nextIndex;
-        }, 0);
     }
 }

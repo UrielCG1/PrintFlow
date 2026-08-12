@@ -6,6 +6,11 @@
 }) }}
     {{ form_errors(form) }}
 
+    {#
+        El prototipo no es una partida real. El controlador Stimulus lo clona
+        únicamente al pulsar "Agregar partida" y reemplaza __name__ por un
+        índice único antes de insertarlo en la colección.
+    #}
     <template data-ui--quotation-form-target="prototype">
         <div class="row g-3">
             <div class="col-12 col-lg-8 pf-form-field">
@@ -79,7 +84,11 @@
                         <p class="pf-page-header__eyebrow mb-1">Paso 2</p>
                         <div class="d-flex flex-wrap align-items-center gap-2">
                             <h2 class="pf-card__title mb-0">Partidas</h2>
-                            <span class="badge text-bg-light border" data-ui--quotation-form-target="itemCount">
+                            <span
+                                class="badge text-bg-light border"
+                                data-ui--quotation-form-target="itemCount"
+                                aria-live="polite"
+                            >
                                 Sin partidas
                             </span>
                         </div>
