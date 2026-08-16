@@ -44,7 +44,7 @@ final class SupplierData
     public ?string $taxId = null;
 
     #[Assert\Length(max: 160)] public ?string $businessActivity = null;
-    #[Assert\Url(message: 'Captura una URL válida.')] #[Assert\Length(max: 255)] public ?string $website = null;
+    #[Assert\Url(requireTld: true, message: 'Captura una URL válida.')] #[Assert\Length(max: 255)] public ?string $website = null;
 
     #[Assert\Email(message: 'Captura un correo electrónico válido.')]
     #[Assert\Length(max: 180)]

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Entity\Common;
 
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 /** Persona de contacto reutilizable por clientes y proveedores. */
@@ -21,7 +23,8 @@ class Contact
     /** Horario laboral habitual, por ejemplo 09:00 a 18:00. */ #[ORM\Column(name:'work_hours',length:160,nullable:true)] private ?string $workHours=null;
     /** Observaciones generales. */ #[ORM\Column(type:'text',nullable:true)] private ?string $notes=null;
     /** Indica si puede asociarse a nuevos registros. */ #[ORM\Column(name:'is_active',options:['default'=>true])] private bool $isActive=true;
-    public function __construct(string $firstName){$this->firstName=trim($firstName);$this->initializeTimestamps();}
+    /** Teléfonos normalizados de la persona. @var Collection<int, ContactPhone> */ #[ORM\OneToMany(mappedBy:'contact',targetEntity:ContactPhone::class,cascade:['persist'])] private Collection $phones;
+    public function __construct(string $firstName){$this->firstName=trim($firstName);$this->phones=new ArrayCollection();$this->initializeTimestamps();}
     public function getId():?int{return $this->id;} public function getFirstName():string{return $this->firstName;} public function setFirstName(string $v):self{$this->firstName=trim($v);return $this;}
     public function getLastName():?string{return $this->lastName;} public function setLastName(?string $v):self{$v=trim((string)$v);$this->lastName=$v?:null;return $this;}
     public function getFullName():string{return trim($this->firstName.' '.($this->lastName??''));} public function getPersonalEmail():?string{return $this->personalEmail;}
@@ -29,6 +32,8 @@ class Contact
     public function getBirthDate():?\DateTimeImmutable{return $this->birthDate;} public function setBirthDate(?\DateTimeImmutable $v):self{$this->birthDate=$v;return $this;}
     public function getWorkDays():?string{return $this->workDays;} public function setWorkDays(?string $v):self{$v=trim((string)$v);$this->workDays=$v?:null;return $this;}
     public function getWorkHours():?string{return $this->workHours;} public function setWorkHours(?string $v):self{$v=trim((string)$v);$this->workHours=$v?:null;return $this;}
+    public function getPrimaryPhone():?string{foreach($this->phones as $item){if($item->isActive()&&$item->isPrimary()){return $item->getPhone()->getNumber();}}return null;}
+    public function setPrimaryPhone(?string $v):self{$v=trim((string)$v);foreach($this->phones as $item){if(!$item->isPrimary()){continue;}if($v===''){$item->setIsActive(false);}else{$item->getPhone()->setNumber($v);$item->setIsActive(true);}return $this;}if($v!==''){$this->phones->add((new ContactPhone($this,new Phone('LANDLINE',$v)))->setLabel('Principal')->setIsPrimary(true));}return $this;}
     public function getNotes():?string{return $this->notes;} public function setNotes(?string $v):self{$v=trim((string)$v);$this->notes=$v?:null;return $this;}
     public function isActive():bool{return $this->isActive;} public function setIsActive(bool $v):self{$this->isActive=$v;return $this;}
 }

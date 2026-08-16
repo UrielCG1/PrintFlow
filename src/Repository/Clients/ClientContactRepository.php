@@ -23,11 +23,12 @@ final class ClientContactRepository extends ServiceEntityRepository
     public function findForClient(Client $client): array
     {
         return $this->createQueryBuilder('contact')
+            ->innerJoin('contact.contact', 'person')
             ->andWhere('contact.client = :client')
             ->setParameter('client', $client)
             ->orderBy('contact.isActive', 'DESC')
             ->addOrderBy('contact.isPrimary', 'DESC')
-            ->addOrderBy('contact.fullName', 'ASC')
+            ->addOrderBy('person.firstName', 'ASC')
             ->getQuery()
             ->getResult();
     }

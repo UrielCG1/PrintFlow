@@ -22,12 +22,14 @@ final class DatabaseManagedSchemaListener
     private const GENERATED_COLUMNS = [
         'material_variants' => ['default_material_key'],
         'supplier_material_variants' => ['preferred_variant_key'],
+        'client_addresses' => ['default_client_type_key'],
     ];
 
     /** @var array<string,list<string>> */
     private const DATABASE_MANAGED_INDEXES = [
         'material_variants' => ['uniq_material_variants_default'],
         'supplier_material_variants' => ['uniq_preferred_supplier_variant'],
+        'client_addresses' => ['uniq_client_address_default_type'],
     ];
 
     public function postGenerateSchema(GenerateSchemaEventArgs $event): void

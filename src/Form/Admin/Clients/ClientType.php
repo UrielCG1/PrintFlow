@@ -105,15 +105,6 @@ final class ClientType extends AbstractType
                     'pattern' => '\d{3}',
                 ],
             ])
-            ->add('fiscalPostalCode', TextType::class, [
-                'label' => 'Código postal fiscal',
-                'required' => false,
-                'attr' => [
-                    'inputmode' => 'numeric',
-                    'maxlength' => 5,
-                    'pattern' => '\d{5}',
-                ],
-            ])
             ->add('billingEmail', EmailType::class, [
                 'label' => 'Correo de facturación',
                 'required' => false,

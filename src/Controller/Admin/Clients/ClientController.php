@@ -80,7 +80,6 @@ final class ClientController extends AbstractController
         $data->website = $client->getWebsite();
         $data->birthDate = $client->getBirthDate();
         $data->taxRegimeCode = $client->getTaxRegimeCode();
-        $data->fiscalPostalCode = $client->getFiscalPostalCode();
         $data->billingEmail = $client->getBillingEmail();
         $data->defaultCfdiUseCode = $client->getDefaultCfdiUseCode();
         $data->category = $client->getCategory();

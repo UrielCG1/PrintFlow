@@ -37,16 +37,14 @@ final class ClientAddressManager
                 // Evita una colisión temporal con los índices únicos de MySQL.
                 $this->entityManager->flush();
 
-                $address = new ClientAddress($client);
-                $this->applyData($address, $data);
-
                 $sharedAddress = new Address(
                     (string) $data->street,
                     (string) $data->exteriorNumber,
                     (string) $data->postalCode,
                     (string) $data->municipality,
                 );
-                $address->setAddress($sharedAddress);
+                $address = new ClientAddress($client, $sharedAddress);
+                $this->applyData($address, $data);
                 $this->syncSharedAddress($sharedAddress, $data);
 
                 $this->entityManager->persist($sharedAddress);

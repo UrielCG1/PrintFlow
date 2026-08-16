@@ -33,15 +33,13 @@ final class ClientContactManager
                     $this->entityManager->flush();
                 }
 
-                $contact = new ClientContact($client);
-                $this->applyData($contact, $data);
-
                 [$firstName, $lastName] = $this->splitName((string) $data->fullName);
                 $person = (new Contact($firstName))
                     ->setLastName($lastName)
                     ->setWorkDays($data->workDays)
                     ->setWorkHours($data->workHours);
-                $contact->setContact($person);
+                $contact = new ClientContact($client, $person);
+                $this->applyData($contact, $data);
 
                 $this->entityManager->persist($person);
                 $this->entityManager->persist($contact);

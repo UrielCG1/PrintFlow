@@ -21,7 +21,7 @@ final class ClientData
     public ?string $legalName = null;
 
     #[Assert\Length(max: 160)] public ?string $businessActivity = null;
-    #[Assert\Url(message: 'Captura una URL válida.')] #[Assert\Length(max: 255)] public ?string $website = null;
+    #[Assert\Url(requireTld: true, message: 'Captura una URL válida.')] #[Assert\Length(max: 255)] public ?string $website = null;
     public ?\DateTimeImmutable $birthDate = null;
 
     #[Assert\Regex(
@@ -29,12 +29,6 @@ final class ClientData
         message: 'El régimen fiscal debe contener exactamente 3 dígitos.'
     )]
     public ?string $taxRegimeCode = null;
-
-    #[Assert\Regex(
-        pattern: '/^\d{5}$/',
-        message: 'El código postal fiscal debe contener exactamente 5 dígitos.'
-    )]
-    public ?string $fiscalPostalCode = null;
 
     #[Assert\Email(message: 'Captura un correo de facturación válido.')]
     #[Assert\Length(max: 180)]

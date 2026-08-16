@@ -26,8 +26,7 @@ final class ClientAddressRepository extends ServiceEntityRepository
             ->andWhere('address.client = :client')
             ->setParameter('client', $client)
             ->orderBy('address.isActive', 'DESC')
-            ->addOrderBy('address.isDefaultFiscal', 'DESC')
-            ->addOrderBy('address.isDefaultDelivery', 'DESC')
+            ->addOrderBy('address.isDefault', 'DESC')
             ->addOrderBy('address.label', 'ASC')
             ->getQuery()
             ->getResult();
@@ -42,7 +41,7 @@ final class ClientAddressRepository extends ServiceEntityRepository
     ): array {
         return $this->findOtherActiveDefaultAddresses(
             client: $client,
-            defaultField: 'isDefaultFiscal',
+            addressType: 'FISCAL',
             except: $except,
         );
     }
@@ -56,7 +55,7 @@ final class ClientAddressRepository extends ServiceEntityRepository
     ): array {
         return $this->findOtherActiveDefaultAddresses(
             client: $client,
-            defaultField: 'isDefaultDelivery',
+            addressType: 'DELIVERY',
             except: $except,
         );
     }
@@ -66,15 +65,17 @@ final class ClientAddressRepository extends ServiceEntityRepository
      */
     private function findOtherActiveDefaultAddresses(
         Client $client,
-        string $defaultField,
+        string $addressType,
         ?ClientAddress $except,
     ): array {
         $queryBuilder = $this->createQueryBuilder('address')
             ->andWhere('address.client = :client')
             ->andWhere('address.isActive = :isActive')
-            ->andWhere(sprintf('address.%s = :isDefault', $defaultField))
+            ->andWhere('address.addressType = :addressType')
+            ->andWhere('address.isDefault = :isDefault')
             ->setParameter('client', $client)
             ->setParameter('isActive', true)
+            ->setParameter('addressType', $addressType)
             ->setParameter('isDefault', true);
 
         if ($except?->getId() !== null) {

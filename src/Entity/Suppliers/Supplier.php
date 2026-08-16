@@ -2,7 +2,10 @@
 
 namespace App\Entity\Suppliers;
 
+use App\Entity\Common\Phone;
 use App\Repository\Suppliers\SupplierRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: SupplierRepository::class)]
@@ -42,8 +45,9 @@ class Supplier
     #[ORM\Column(length: 180, nullable: true)]
     private ?string $email = null;
 
-    #[ORM\Column(length: 40, nullable: true)]
-    private ?string $phone = null;
+    /** Teléfonos normalizados asignados al proveedor. @var Collection<int, SupplierPhone> */
+    #[ORM\OneToMany(mappedBy: 'supplier', targetEntity: SupplierPhone::class, cascade: ['persist'])]
+    private Collection $phones;
 
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $notes = null;
@@ -79,6 +83,7 @@ class Supplier
 
         $this->createdAt = $now;
         $this->updatedAt = $now;
+        $this->phones = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -156,13 +161,26 @@ class Supplier
 
     public function getPhone(): ?string
     {
-        return $this->phone;
+        foreach ($this->phones as $assignment) {
+            if ($assignment->isActive() && $assignment->isPrimary()) {
+                return $assignment->getPhone()->getNumber();
+            }
+        }
+        return null;
     }
 
     public function setPhone(?string $phone): self
     {
-        $phone = trim((string) $phone);
-        $this->phone = $phone !== '' ? $phone : null;
+        $value = trim((string) $phone);
+        foreach ($this->phones as $assignment) {
+            if (!$assignment->isPrimary()) { continue; }
+            if ($value === '') { $assignment->setIsActive(false); }
+            else { $assignment->getPhone()->setNumber($value); $assignment->setIsActive(true); }
+            return $this;
+        }
+        if ($value !== '') {
+            $this->phones->add((new SupplierPhone($this, new Phone('LANDLINE', $value)))->setLabel('General')->setIsPrimary(true));
+        }
 
         return $this;
     }

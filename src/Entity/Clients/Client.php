@@ -2,7 +2,11 @@
 
 namespace App\Entity\Clients;
 
+use App\Entity\Common\Phone;
+use App\Entity\Common\TaxData;
 use App\Repository\Clients\ClientRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ClientRepository::class)]
@@ -44,17 +48,9 @@ class Client
     #[ORM\Column(name: 'legal_name', length: 160, nullable: true)]
     private ?string $legalName = null;
 
-    #[ORM\Column(name: 'tax_regime_code', length: 3, nullable: true)]
-    private ?string $taxRegimeCode = null;
-
-    #[ORM\Column(name: 'fiscal_postal_code', length: 5, nullable: true)]
-    private ?string $fiscalPostalCode = null;
-
-    #[ORM\Column(name: 'billing_email', length: 180, nullable: true)]
-    private ?string $billingEmail = null;
-
-    #[ORM\Column(name: 'default_cfdi_use_code', length: 10, nullable: true)]
-    private ?string $defaultCfdiUseCode = null;
+    /** Configuraciones fiscales normalizadas. @var Collection<int, TaxData> */
+    #[ORM\OneToMany(mappedBy:'client',targetEntity:TaxData::class,cascade:['persist'])]
+    private Collection $taxData;
 
     #[ORM\ManyToOne(targetEntity: ClientCategory::class)]
     #[ORM\JoinColumn(name: 'client_category_id', nullable: true, onDelete: 'RESTRICT')]
@@ -66,8 +62,9 @@ class Client
     #[ORM\Column(length: 180, nullable: true)]
     private ?string $email = null;
 
-    #[ORM\Column(length: 40, nullable: true)]
-    private ?string $phone = null;
+    /** Teléfonos normalizados asignados al cliente. @var Collection<int, ClientPhone> */
+    #[ORM\OneToMany(mappedBy: 'client', targetEntity: ClientPhone::class, cascade: ['persist'])]
+    private Collection $phones;
 
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $notes = null;
@@ -104,6 +101,8 @@ class Client
 
         $this->createdAt = $now;
         $this->updatedAt = $now;
+        $this->phones = new ArrayCollection();
+        $this->taxData = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -161,54 +160,64 @@ class Client
 
     public function getTaxRegimeCode(): ?string
     {
-        return $this->taxRegimeCode;
+        return $this->getDefaultTaxData()?->getTaxRegimeCode();
     }
 
     public function setTaxRegimeCode(?string $taxRegimeCode): self
     {
-        $taxRegimeCode = trim((string) $taxRegimeCode);
-        $this->taxRegimeCode = $taxRegimeCode !== '' ? $taxRegimeCode : null;
+        $this->taxDataForWrite()->setTaxRegimeCode($taxRegimeCode);
 
         return $this;
     }
 
     public function getFiscalPostalCode(): ?string
     {
-        return $this->fiscalPostalCode;
+        return $this->getDefaultTaxData()?->getFiscalAddress()?->getPostalCode();
     }
 
     public function setFiscalPostalCode(?string $fiscalPostalCode): self
     {
-        $fiscalPostalCode = trim((string) $fiscalPostalCode);
-        $this->fiscalPostalCode = $fiscalPostalCode !== '' ? $fiscalPostalCode : null;
+        // El CP pertenece al domicilio fiscal; se conserva este método por compatibilidad del formulario.
 
         return $this;
     }
 
     public function getBillingEmail(): ?string
     {
-        return $this->billingEmail;
+        return $this->getDefaultTaxData()?->getBillingEmail();
     }
 
     public function setBillingEmail(?string $billingEmail): self
     {
-        $billingEmail = trim((string) $billingEmail);
-        $this->billingEmail = $billingEmail !== '' ? strtolower($billingEmail) : null;
+        $this->taxDataForWrite()->setBillingEmail($billingEmail);
 
         return $this;
     }
 
     public function getDefaultCfdiUseCode(): ?string
     {
-        return $this->defaultCfdiUseCode;
+        return $this->getDefaultTaxData()?->getCfdiUseCode();
     }
 
     public function setDefaultCfdiUseCode(?string $defaultCfdiUseCode): self
     {
-        $defaultCfdiUseCode = trim((string) $defaultCfdiUseCode);
-        $this->defaultCfdiUseCode = $defaultCfdiUseCode !== '' ? strtoupper($defaultCfdiUseCode) : null;
+        $this->taxDataForWrite()->setCfdiUseCode($defaultCfdiUseCode);
 
         return $this;
+    }
+
+    private function getDefaultTaxData(): ?TaxData
+    {
+        foreach ($this->taxData as $item) { if ($item->isActive() && $item->isDefault()) { return $item; } }
+        foreach ($this->taxData as $item) { if ($item->isActive()) { return $item; } }
+        return null;
+    }
+
+    private function taxDataForWrite(): TaxData
+    {
+        $item=$this->getDefaultTaxData();
+        if($item===null){$item=TaxData::draftForClient($this)->setIsDefault(true);$this->taxData->add($item);}
+        return $item;
     }
 
     public function getCategory(): ?ClientCategory
@@ -251,14 +260,27 @@ class Client
 
     public function getPhone(): ?string
     {
-        return $this->phone;
+        foreach ($this->phones as $assignment) {
+            if ($assignment->isActive() && $assignment->isPrimary()) {
+                return $assignment->getPhone()->getNumber();
+            }
+        }
+
+        return null;
     }
 
     public function setPhone(?string $phone): self
     {
-        $phone = trim((string) $phone);
-
-        $this->phone = $phone !== '' ? $phone : null;
+        $value = trim((string) $phone);
+        foreach ($this->phones as $assignment) {
+            if (!$assignment->isPrimary()) { continue; }
+            if ($value === '') { $assignment->setIsActive(false); }
+            else { $assignment->getPhone()->setNumber($value); $assignment->setIsActive(true); }
+            return $this;
+        }
+        if ($value !== '') {
+            $this->phones->add((new ClientPhone($this, new Phone('LANDLINE', $value)))->setLabel('General')->setIsPrimary(true));
+        }
 
         return $this;
     }

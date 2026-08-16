@@ -110,7 +110,6 @@ final class ClientManager
             ->setWebsite($data->website)
             ->setBirthDate($data->birthDate)
             ->setTaxRegimeCode($data->taxRegimeCode)
-            ->setFiscalPostalCode($data->fiscalPostalCode)
             ->setBillingEmail($data->billingEmail)
             ->setDefaultCfdiUseCode($data->defaultCfdiUseCode)
             ->setCategory($data->category)
@@ -133,7 +132,6 @@ final class ClientManager
             'website' => $client->getWebsite(),
             'birth_date' => $client->getBirthDate()?->format('Y-m-d'),
             'tax_regime_code' => $client->getTaxRegimeCode(),
-            'fiscal_postal_code' => $client->getFiscalPostalCode(),
             'billing_email' => $client->getBillingEmail(),
             'default_cfdi_use_code' => $client->getDefaultCfdiUseCode(),
             'client_category_id' => $client->getCategory()?->getId(),
