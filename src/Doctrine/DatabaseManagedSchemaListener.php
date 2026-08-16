@@ -73,8 +73,30 @@ final class DatabaseManagedSchemaListener
             }
 
             $actualColumn = $actual->getColumn($columnName);
-            $options = $actualColumn->toArray();
-            unset($options['name'], $options['type']);
+            $rawOptions = $actualColumn->toArray();
+            $options = array_intersect_key($rawOptions, array_flip([
+                'default',
+                'notnull',
+                'length',
+                'precision',
+                'scale',
+                'fixed',
+                'unsigned',
+                'autoincrement',
+                'columnDefinition',
+                'comment',
+                'values',
+            ]));
+
+            $platformOptions = array_intersect_key($rawOptions, array_flip([
+                'default_constraint_name',
+                'enumType',
+                'jsonb',
+                'version',
+            ]));
+            if ($platformOptions !== []) {
+                $options['platformOptions'] = $platformOptions;
+            }
             $generated->addColumn(
                 $columnName,
                 Type::lookupName($actualColumn->getType()),
