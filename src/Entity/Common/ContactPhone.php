@@ -6,7 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity,ORM\Table(name:'contact_phones'),ORM\UniqueConstraint(name:'uniq_contact_phone',columns:['contact_id','phone_id']),ORM\HasLifecycleCallbacks]
 class ContactPhone { use Timestampable;
     /** Identificador interno. */ #[ORM\Id,ORM\GeneratedValue,ORM\Column] private ?int $id=null;
-    /** Persona que utiliza el teléfono. */ #[ORM\ManyToOne(targetEntity:Contact::class),ORM\JoinColumn(name:'contact_id',nullable:false,onDelete:'CASCADE')] private Contact $contact;
+    /** Persona que utiliza el teléfono. */ #[ORM\ManyToOne(targetEntity:Contact::class,inversedBy:'phones'),ORM\JoinColumn(name:'contact_id',nullable:false,onDelete:'CASCADE')] private Contact $contact;
     /** Número telefónico compartido. */ #[ORM\ManyToOne(targetEntity:Phone::class,cascade:['persist']),ORM\JoinColumn(name:'phone_id',nullable:false,onDelete:'RESTRICT')] private Phone $phone;
     /** Etiqueta visible, por ejemplo Oficina o Personal. */ #[ORM\Column(length:80,nullable:true)] private ?string $label=null;
     /** Número preferido para contactar a la persona. */ #[ORM\Column(name:'is_primary',options:['default'=>false])] private bool $isPrimary=false;

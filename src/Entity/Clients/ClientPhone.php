@@ -6,7 +6,7 @@ use App\Entity\Common\Phone; use App\Entity\Common\Timestampable; use Doctrine\O
 #[ORM\Entity,ORM\Table(name:'client_phones'),ORM\UniqueConstraint(name:'uniq_client_phone',columns:['client_id','phone_id']),ORM\HasLifecycleCallbacks]
 class ClientPhone { use Timestampable;
     /** Identificador interno. */ #[ORM\Id,ORM\GeneratedValue,ORM\Column] private ?int $id=null;
-    /** Cliente que utiliza el teléfono. */ #[ORM\ManyToOne(targetEntity:Client::class),ORM\JoinColumn(name:'client_id',nullable:false,onDelete:'CASCADE')] private Client $client;
+    /** Cliente que utiliza el teléfono. */ #[ORM\ManyToOne(targetEntity:Client::class,inversedBy:'phones'),ORM\JoinColumn(name:'client_id',nullable:false,onDelete:'CASCADE')] private Client $client;
     /** Número telefónico reutilizable. */ #[ORM\ManyToOne(targetEntity:Phone::class,cascade:['persist']),ORM\JoinColumn(name:'phone_id',nullable:false,onDelete:'RESTRICT')] private Phone $phone;
     /** Etiqueta visible. */ #[ORM\Column(length:80,nullable:true)] private ?string $label=null;
     /** Número principal. */ #[ORM\Column(name:'is_primary',options:['default'=>false])] private bool $isPrimary=false;
