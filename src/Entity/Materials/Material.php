@@ -16,12 +16,33 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_materials_unit_active', columns: ['measurement_unit_id', 'is_active'])]
 #[ORM\Index(name: 'idx_materials_supplier_active', columns: ['primary_supplier_id', 'is_active'])]
 #[ORM\HasLifecycleCallbacks]
+/**
+ * Concepto técnico general del insumo; las presentaciones físicas viven en MaterialVariant.
+ *
+ * Campos legados mantenidos durante la transición: measurementUnit,
+ * primarySupplier, referenceCost y minimumStock. Los equivalentes normalizados
+ * corresponden a unidades predeterminadas, variantes y ofertas de proveedor.
+ * category clasifica; code/name/description identifican; materialType y los
+ * indicadores describen comportamiento; storageConditions, technicalNotes y
+ * notes documentan; isActive controla la baja lógica; createdAt y
+ * updatedAt registran auditoría UTC.
+ */
 class Material
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
+
+    /** Unidad predeterminada para expresar el saldo de futuras variantes. */
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(name: 'default_inventory_unit_id', nullable: true, onDelete: 'RESTRICT')]
+    private ?MeasurementUnit $defaultInventoryUnit = null;
+
+    /** Unidad predeterminada para las recetas que consumen este material. */
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(name: 'default_consumption_unit_id', nullable: true, onDelete: 'RESTRICT')]
+    private ?MeasurementUnit $defaultConsumptionUnit = null;
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(name: 'category_id', nullable: false, onDelete: 'RESTRICT')]
@@ -43,6 +64,46 @@ class Material
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $description = null;
+
+    /** Clasificación técnica general del insumo, independiente de su presentación. */
+    #[ORM\Column(name: 'material_type', length: 30)]
+    private string $materialType = 'CONSUMABLE';
+
+    /** Indica si sus variantes mantienen saldo físico. */
+    #[ORM\Column(name: 'is_stock_item')]
+    private bool $isStockItem = true;
+
+    /** Indica si puede abastecerse mediante compras. */
+    #[ORM\Column(name: 'is_purchasable')]
+    private bool $isPurchasable = true;
+
+    /** Indica si puede formar parte de una BOM y consumirse en producción. */
+    #[ORM\Column(name: 'is_consumable')]
+    private bool $isConsumable = true;
+
+    /** Señala que requiere manejo o almacenamiento de riesgo. */
+    #[ORM\Column(name: 'is_hazardous')]
+    private bool $isHazardous = false;
+
+    /** Valor predeterminado de trazabilidad por lote para sus variantes. */
+    #[ORM\Column(name: 'requires_lot_control')]
+    private bool $requiresLotControl = false;
+
+    /** Valor predeterminado que obliga a controlar caducidad. */
+    #[ORM\Column(name: 'requires_expiration_control')]
+    private bool $requiresExpirationControl = false;
+
+    /** Desperdicio porcentual sugerido cuando una receta no define uno más específico. */
+    #[ORM\Column(name: 'default_waste_percentage', type: Types::DECIMAL, precision: 7, scale: 4)]
+    private string $defaultWastePercentage = '0.0000';
+
+    /** Condiciones generales de almacenamiento y seguridad. */
+    #[ORM\Column(name: 'storage_conditions', type: Types::TEXT, nullable: true)]
+    private ?string $storageConditions = null;
+
+    /** Observaciones técnicas que no sustituyen atributos estructurados de variante. */
+    #[ORM\Column(name: 'technical_notes', type: Types::TEXT, nullable: true)]
+    private ?string $technicalNotes = null;
 
     #[ORM\Column(name: 'reference_cost', type: Types::DECIMAL, precision: 12, scale: 2)]
     private string $referenceCost = '0.00';
