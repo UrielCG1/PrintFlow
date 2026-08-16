@@ -11,6 +11,11 @@ use Doctrine\Migrations\AbstractMigration;
 /** Documenta físicamente el modelo en MySQL mediante TABLE_COMMENT y COLUMN_COMMENT. */
 final class Version20260815181000 extends AbstractMigration
 {
+    public function isTransactional(): bool
+    {
+        return false;
+    }
+
     public function getDescription(): string
     {
         return 'Agrega comentarios SQL en español a tablas y columnas del modelo de inventario, costos y producción.';
