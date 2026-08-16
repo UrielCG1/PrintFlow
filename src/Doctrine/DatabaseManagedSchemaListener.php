@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Doctrine;
 
 use Doctrine\DBAL\Schema\Index;
+use Doctrine\DBAL\Schema\Index\IndexType;
 use Doctrine\DBAL\Schema\Table;
+use Doctrine\DBAL\Types\Type;
 use Doctrine\ORM\Tools\Event\GenerateSchemaEventArgs;
 
 /**
@@ -34,7 +36,7 @@ final class DatabaseManagedSchemaListener
         $schemaManager = $event->getEntityManager()->getConnection()->createSchemaManager();
 
         foreach ($generatedSchema->getTables() as $generatedTable) {
-            $tableName = $generatedTable->getName();
+            $tableName = $generatedTable->getObjectName()->toString();
 
             if (!$schemaManager->tablesExist([$tableName])) {
                 continue;
@@ -52,11 +54,12 @@ final class DatabaseManagedSchemaListener
         $generated->setComment($actual->getComment() ?? '');
 
         foreach ($generated->getColumns() as $column) {
-            if (!$actual->hasColumn($column->getName())) {
+            $columnName = $column->getObjectName()->toString();
+            if (!$actual->hasColumn($columnName)) {
                 continue;
             }
 
-            $actualColumn = $actual->getColumn($column->getName());
+            $actualColumn = $actual->getColumn($columnName);
             $column->setComment($actualColumn->getComment());
             $column->setDefault($actualColumn->getDefault());
         }
@@ -72,20 +75,26 @@ final class DatabaseManagedSchemaListener
             $actualColumn = $actual->getColumn($columnName);
             $options = $actualColumn->toArray();
             unset($options['name'], $options['type']);
-            $generated->addColumn($columnName, $actualColumn->getType(), $options);
+            $generated->addColumn(
+                $columnName,
+                Type::lookupName($actualColumn->getType()),
+                $options,
+            );
         }
     }
 
     private function normalizeIndexes(string $tableName, Table $generated, Table $actual): void
     {
         foreach ($generated->getIndexes() as $generatedIndex) {
-            if ($generatedIndex->isPrimary()) {
+            if ($this->isPrimary($generatedIndex)) {
                 continue;
             }
 
             $actualIndex = $this->equivalentIndex($generatedIndex, $actual);
-            if ($actualIndex !== null && $actualIndex->getName() !== $generatedIndex->getName()) {
-                $generated->renameIndex($generatedIndex->getName(), $actualIndex->getName());
+            $actualName = $actualIndex?->getObjectName()->toString();
+            $generatedName = $generatedIndex->getObjectName()->toString();
+            if ($actualName !== null && $actualName !== $generatedName) {
+                $generated->renameIndex($generatedName, $actualName);
             }
         }
 
@@ -95,10 +104,10 @@ final class DatabaseManagedSchemaListener
             }
 
             $index = $actual->getIndex($indexName);
-            if ($index->isUnique()) {
-                $generated->addUniqueIndex($index->getColumns(), $indexName);
+            if ($index->getType() === IndexType::UNIQUE) {
+                $generated->addUniqueIndex($this->columnNames($index), $indexName);
             } else {
-                $generated->addIndex($index->getColumns(), $indexName);
+                $generated->addIndex($this->columnNames($index), $indexName);
             }
         }
     }
@@ -106,17 +115,31 @@ final class DatabaseManagedSchemaListener
     private function equivalentIndex(Index $expected, Table $actual): ?Index
     {
         foreach ($actual->getIndexes() as $candidate) {
-            if ($candidate->isPrimary()) {
+            if ($this->isPrimary($candidate)) {
                 continue;
             }
 
-            if ($candidate->isUnique() === $expected->isUnique()
-                && array_map('strtolower', $candidate->getColumns()) === array_map('strtolower', $expected->getColumns())
+            if ($candidate->getType() === $expected->getType()
+                && array_map('strtolower', $this->columnNames($candidate)) === array_map('strtolower', $this->columnNames($expected))
             ) {
                 return $candidate;
             }
         }
 
         return null;
+    }
+
+    /** @return list<string> */
+    private function columnNames(Index $index): array
+    {
+        return array_map(
+            static fn ($column): string => $column->getColumnName()->toString(),
+            $index->getIndexedColumns(),
+        );
+    }
+
+    private function isPrimary(Index $index): bool
+    {
+        return strtolower($index->getObjectName()->toString()) === 'primary';
     }
 }
