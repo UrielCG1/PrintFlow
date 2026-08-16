@@ -1,0 +1,122 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Doctrine;
+
+use Doctrine\DBAL\Schema\Index;
+use Doctrine\DBAL\Schema\Table;
+use Doctrine\ORM\Tools\Event\GenerateSchemaEventArgs;
+
+/**
+ * Conserva metadatos físicos administrados por migraciones que no forman parte
+ * del estado de una entidad: comentarios SQL, defaults, columnas generadas y
+ * nombres de índices. Las columnas y restricciones de negocio siguen siendo
+ * comparadas normalmente; este listener solo normaliza activos conocidos.
+ */
+final class DatabaseManagedSchemaListener
+{
+    /** @var array<string,list<string>> */
+    private const GENERATED_COLUMNS = [
+        'material_variants' => ['default_material_key'],
+        'supplier_material_variants' => ['preferred_variant_key'],
+    ];
+
+    /** @var array<string,list<string>> */
+    private const DATABASE_MANAGED_INDEXES = [
+        'material_variants' => ['uniq_material_variants_default'],
+        'supplier_material_variants' => ['uniq_preferred_supplier_variant'],
+    ];
+
+    public function postGenerateSchema(GenerateSchemaEventArgs $event): void
+    {
+        $generatedSchema = $event->getSchema();
+        $schemaManager = $event->getEntityManager()->getConnection()->createSchemaManager();
+
+        foreach ($generatedSchema->getTables() as $generatedTable) {
+            $tableName = $generatedTable->getName();
+
+            if (!$schemaManager->tablesExist([$tableName])) {
+                continue;
+            }
+
+            $actualTable = $schemaManager->introspectTable($tableName);
+            $this->preserveCommentsAndDefaults($generatedTable, $actualTable);
+            $this->preserveGeneratedColumns($tableName, $generatedTable, $actualTable);
+            $this->normalizeIndexes($tableName, $generatedTable, $actualTable);
+        }
+    }
+
+    private function preserveCommentsAndDefaults(Table $generated, Table $actual): void
+    {
+        $generated->setComment($actual->getComment() ?? '');
+
+        foreach ($generated->getColumns() as $column) {
+            if (!$actual->hasColumn($column->getName())) {
+                continue;
+            }
+
+            $actualColumn = $actual->getColumn($column->getName());
+            $column->setComment($actualColumn->getComment());
+            $column->setDefault($actualColumn->getDefault());
+        }
+    }
+
+    private function preserveGeneratedColumns(string $tableName, Table $generated, Table $actual): void
+    {
+        foreach (self::GENERATED_COLUMNS[$tableName] ?? [] as $columnName) {
+            if ($generated->hasColumn($columnName) || !$actual->hasColumn($columnName)) {
+                continue;
+            }
+
+            $actualColumn = $actual->getColumn($columnName);
+            $options = $actualColumn->toArray();
+            unset($options['name'], $options['type']);
+            $generated->addColumn($columnName, $actualColumn->getType(), $options);
+        }
+    }
+
+    private function normalizeIndexes(string $tableName, Table $generated, Table $actual): void
+    {
+        foreach ($generated->getIndexes() as $generatedIndex) {
+            if ($generatedIndex->isPrimary()) {
+                continue;
+            }
+
+            $actualIndex = $this->equivalentIndex($generatedIndex, $actual);
+            if ($actualIndex !== null && $actualIndex->getName() !== $generatedIndex->getName()) {
+                $generated->renameIndex($generatedIndex->getName(), $actualIndex->getName());
+            }
+        }
+
+        foreach (self::DATABASE_MANAGED_INDEXES[$tableName] ?? [] as $indexName) {
+            if (!$actual->hasIndex($indexName) || $generated->hasIndex($indexName)) {
+                continue;
+            }
+
+            $index = $actual->getIndex($indexName);
+            if ($index->isUnique()) {
+                $generated->addUniqueIndex($index->getColumns(), $indexName);
+            } else {
+                $generated->addIndex($index->getColumns(), $indexName);
+            }
+        }
+    }
+
+    private function equivalentIndex(Index $expected, Table $actual): ?Index
+    {
+        foreach ($actual->getIndexes() as $candidate) {
+            if ($candidate->isPrimary()) {
+                continue;
+            }
+
+            if ($candidate->isUnique() === $expected->isUnique()
+                && array_map('strtolower', $candidate->getColumns()) === array_map('strtolower', $expected->getColumns())
+            ) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+}

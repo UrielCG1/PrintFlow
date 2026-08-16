@@ -4,6 +4,7 @@ namespace App\Entity\Suppliers;
 use App\Entity\Catalog\MeasurementUnit; use App\Entity\Common\Timestampable; use App\Entity\Materials\MaterialVariant; use Doctrine\DBAL\Types\Types; use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity,ORM\Table(name:'supplier_material_variants'),ORM\HasLifecycleCallbacks]
 #[ORM\UniqueConstraint(name:'uniq_supplier_material_variant',columns:['supplier_id','material_variant_id'])]
+#[ORM\UniqueConstraint(name:'uniq_supplier_sku',columns:['supplier_id','supplier_sku'])]
 /** Oferta comercial de un proveedor para una presentación específica de material. */
 class SupplierMaterialVariant
 {

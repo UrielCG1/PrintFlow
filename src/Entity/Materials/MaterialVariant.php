@@ -8,6 +8,8 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity,ORM\Table(name:'material_variants'),ORM\HasLifecycleCallbacks]
 #[ORM\UniqueConstraint(name:'uniq_material_variants_code',columns:['code'])]
+#[ORM\UniqueConstraint(name:'uniq_material_variants_barcode',columns:['barcode'])]
+#[ORM\Index(name:'idx_variants_material_active',columns:['material_id','is_active'])]
 /** Presentación concreta que se compra, almacena, consume y costea. */
 class MaterialVariant
 {

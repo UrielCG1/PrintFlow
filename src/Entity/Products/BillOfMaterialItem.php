@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace App\Entity\Products;
 use App\Entity\Catalog\MeasurementUnit; use App\Entity\Common\Timestampable; use App\Entity\Materials\Material; use App\Entity\Materials\MaterialVariant; use App\Enum\Production\CalculationMethod; use Doctrine\DBAL\Types\Types; use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity,ORM\Table(name:'bill_of_material_items'),ORM\HasLifecycleCallbacks]
+#[ORM\UniqueConstraint(name:'uniq_bom_product_sequence',columns:['product_id','sequence'])]
 /** Renglón de la receta de un producto y regla para calcular su consumo planeado. */
 class BillOfMaterialItem
 {

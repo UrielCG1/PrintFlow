@@ -3,6 +3,8 @@ declare(strict_types=1);
 namespace App\Entity\Inventory;
 use App\Entity\Catalog\MeasurementUnit; use App\Entity\Materials\MaterialVariant; use App\Entity\Users\User; use App\Enum\Inventory\MovementType; use Doctrine\DBAL\Types\Types; use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity,ORM\Table(name:'inventory_movements')]
+#[ORM\Index(name:'idx_inventory_stock',columns:['material_variant_id','occurred_at'])]
+#[ORM\Index(name:'idx_inventory_lot',columns:['lot_id','occurred_at'])]
 /** Hecho inmutable del libro de inventario; los saldos se derivan de estos movimientos. */
 class InventoryMovement
 {

@@ -1,6 +1,6 @@
 {% extends 'layouts/app.html.twig' %}
 
-{% block title %}Cotización {{ quotation.folio ?? '#' ~ quotation.id }} | PrintFlow{% endblock %}
+{% block title %}Cotización {{ quotation.folio ?? ('#' ~ quotation.id) }} | PrintFlow{% endblock %}
 
 {% block app_navigation_active %}quotations{% endblock %}
 
@@ -26,7 +26,7 @@
             <div class="pf-page-header__content">
                 <p class="pf-page-header__eyebrow">Comercial / Cotizaciones</p>
                 <h1 class="pf-page-header__title">
-                    {{ quotation.folio ?? 'Borrador #' ~ quotation.id }}
+                    {{ quotation.folio ?? ('Borrador #' ~ quotation.id) }}
                     {% if quotation.revisionNumber > 1 %}
                         <span class="text-muted">· Revisión {{ quotation.revisionNumber }}</span>
                     {% endif %}
@@ -72,7 +72,7 @@
         {% if quotation.previousRevision %}
             <div class="alert alert-secondary" role="status">
                 Esta es la revisión {{ quotation.revisionNumber }} de la cotización
-                <a href="{{ path('admin_quotations_show', {id: quotation.previousRevision.id}) }}">{{ quotation.previousRevision.folio ?? '#' ~ quotation.previousRevision.id }}</a>.
+                <a href="{{ path('admin_quotations_show', {id: quotation.previousRevision.id}) }}">{{ quotation.previousRevision.folio ?? ('#' ~ quotation.previousRevision.id) }}</a>.
                 Los importes y datos de la revisión anterior se conservaron sin modificaciones.
             </div>
         {% endif %}
