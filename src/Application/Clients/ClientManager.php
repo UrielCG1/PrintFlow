@@ -113,7 +113,6 @@ final class ClientManager
             ->setBillingEmail($data->billingEmail)
             ->setDefaultCfdiUseCode($data->defaultCfdiUseCode)
             ->setCategory($data->category)
-            ->setDefaultDiscountPercent(round($data->defaultDiscountPercent, 2))
             ->setEmail($data->email)
             ->setPhone($data->phone)
             ->setNotes($data->notes);
@@ -135,7 +134,7 @@ final class ClientManager
             'billing_email' => $client->getBillingEmail(),
             'default_cfdi_use_code' => $client->getDefaultCfdiUseCode(),
             'client_category_id' => $client->getCategory()?->getId(),
-            'default_discount_percent' => $client->getDefaultDiscountPercent(),
+            'category_discount_percentage' => $client->getDefaultDiscountPercent(),
             'email' => $client->getEmail(),
             'phone' => $client->getPhone(),
             'notes' => $client->getNotes(),

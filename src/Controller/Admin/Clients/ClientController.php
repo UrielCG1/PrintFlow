@@ -83,7 +83,6 @@ final class ClientController extends AbstractController
         $data->billingEmail = $client->getBillingEmail();
         $data->defaultCfdiUseCode = $client->getDefaultCfdiUseCode();
         $data->category = $client->getCategory();
-        $data->defaultDiscountPercent = $client->getDefaultDiscountPercent();
         $data->email = $client->getEmail();
         $data->phone = $client->getPhone();
         $data->notes = $client->getNotes();

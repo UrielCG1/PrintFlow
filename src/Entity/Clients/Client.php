@@ -56,9 +56,6 @@ class Client
     #[ORM\JoinColumn(name: 'client_category_id', nullable: true, onDelete: 'RESTRICT')]
     private ?ClientCategory $category = null;
 
-    #[ORM\Column(name: 'default_discount_percent', type: 'float', options: ['default' => '0'])]
-    private float $defaultDiscountPercent = 0.0;
-
     #[ORM\Column(length: 180, nullable: true)]
     private ?string $email = null;
 
@@ -234,14 +231,7 @@ class Client
 
     public function getDefaultDiscountPercent(): float
     {
-        return $this->defaultDiscountPercent;
-    }
-
-    public function setDefaultDiscountPercent(float $defaultDiscountPercent): self
-    {
-        $this->defaultDiscountPercent = $defaultDiscountPercent;
-
-        return $this;
+        return (float) ($this->category?->getDiscountPercentage() ?? '0.00');
     }
 
     public function getEmail(): ?string

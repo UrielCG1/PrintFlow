@@ -10,7 +10,6 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
-use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -119,18 +118,6 @@ final class ClientType extends AbstractType
                 'attr' => [
                     'maxlength' => 10,
                     'style' => 'text-transform: uppercase',
-                ],
-            ])
-            ->add('defaultDiscountPercent', NumberType::class, [
-                'label' => 'Descuento predeterminado',
-                'help' => 'Se propondrá en futuras cotizaciones; podrá ajustarse por documento.',
-                'scale' => 2,
-                'input' => 'number',
-                'attr' => [
-                    'min' => 0,
-                    'max' => 100,
-                    'step' => 0.01,
-                    'inputmode' => 'decimal',
                 ],
             ])
             ->add('notes', TextareaType::class, [

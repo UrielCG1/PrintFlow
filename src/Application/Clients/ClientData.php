@@ -43,13 +43,6 @@ final class ClientData
 
     public ?ClientCategory $category = null;
 
-    #[Assert\Range(
-        min: 0,
-        max: 100,
-        notInRangeMessage: 'El descuento debe estar entre {{ min }} y {{ max }} %.'
-    )]
-    public float $defaultDiscountPercent = 0.0;
-
     #[Assert\Email(message: 'Captura un correo electrónico válido.')]
     #[Assert\Length(max: 180)]
     public ?string $email = null;
