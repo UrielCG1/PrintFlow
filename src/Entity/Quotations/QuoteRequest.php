@@ -2,7 +2,12 @@
 
 namespace App\Entity\Quotations;
 
+use App\Entity\Clients\ClientAddress;
+use App\Entity\Clients\ClientBranch;
+use App\Entity\Clients\ClientContact;
 use App\Repository\Quotations\QuoteRequestRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -23,6 +28,28 @@ class QuoteRequest
         onDelete: 'SET NULL',
     )]
     private ?Quotation $quotation = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(name: 'client_contact_id', nullable: true, onDelete: 'SET NULL')]
+    private ?ClientContact $clientContact = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(name: 'client_branch_id', nullable: true, onDelete: 'SET NULL')]
+    private ?ClientBranch $clientBranch = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(name: 'delivery_address_id', nullable: true, onDelete: 'SET NULL')]
+    private ?ClientAddress $deliveryAddress = null;
+
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $customerSnapshot = null;
+
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $deliveryAddressSnapshot = null;
+
+    /** @var Collection<int, QuoteRequestItem> */
+    #[ORM\OneToMany(mappedBy: 'quoteRequest', targetEntity: QuoteRequestItem::class, cascade: ['persist'], orphanRemoval: true)]
+    private Collection $items;
 
     #[ORM\Column(length: 30)]
     private ?string $folio = null;
@@ -106,10 +133,25 @@ class QuoteRequest
 
         $this->publicToken = bin2hex(random_bytes(24));
         $this->status = 'new';
+        $this->items = new ArrayCollection();
         $this->requiresInvoice = false;
         $this->createdAt = $now;
         $this->updatedAt = $now;
     }
+
+    public function getClientContact(): ?ClientContact { return $this->clientContact; }
+    public function setClientContact(?ClientContact $value): static { $this->clientContact=$value; return $this; }
+    public function getClientBranch(): ?ClientBranch { return $this->clientBranch; }
+    public function setClientBranch(?ClientBranch $value): static { $this->clientBranch=$value; return $this; }
+    public function getDeliveryAddress(): ?ClientAddress { return $this->deliveryAddress; }
+    public function setDeliveryAddress(?ClientAddress $value): static { $this->deliveryAddress=$value; return $this; }
+    public function getCustomerSnapshot(): ?array { return $this->customerSnapshot; }
+    public function setCustomerSnapshot(?array $value): static { $this->customerSnapshot=$value; return $this; }
+    public function getDeliveryAddressSnapshot(): ?array { return $this->deliveryAddressSnapshot; }
+    public function setDeliveryAddressSnapshot(?array $value): static { $this->deliveryAddressSnapshot=$value; return $this; }
+    /** @return Collection<int, QuoteRequestItem> */ public function getItems(): Collection { return $this->items; }
+    public function addItem(QuoteRequestItem $item): static { if(!$this->items->contains($item)){$this->items->add($item);$item->setQuoteRequest($this);} return $this; }
+    public function removeItem(QuoteRequestItem $item): static { if($this->items->removeElement($item)){$item->setQuoteRequest(null);} return $this; }
 
     public function getId(): ?int
     {

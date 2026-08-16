@@ -1,51 +1,32 @@
 <?php
-
 namespace App\Controller;
-
-use App\Entity\Quotations\QuoteRequest;
-use App\Form\PublicQuoteRequestType;
-use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Attribute\Route;
-
-final class PublicQuoteRequestController extends AbstractController
-{
-    #[Route('/cotizar', name: 'public_quote_request', methods: ['GET', 'POST'])]
-    public function index(
-        Request $request,
-        EntityManagerInterface $entityManager,
-    ): Response {
-        $quoteRequest = new QuoteRequest();
-
-        $form = $this->createForm(
-            PublicQuoteRequestType::class,
-            $quoteRequest,
-        );
-
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $quoteRequest->setFolio(sprintf(
-                'SOL-%s-%s',
-                (new \DateTimeImmutable())->format('Ymd'),
-                strtoupper(bin2hex(random_bytes(3))),
-            ));
-
-            $entityManager->persist($quoteRequest);
-            $entityManager->flush();
-
-            $this->addFlash(
-                'success',
-                'Tu solicitud de cotización fue enviada correctamente.',
-            );
-
-            return $this->redirectToRoute('public_quote_request');
-        }
-
-        return $this->render('public_quote_request/index.html.twig', [
-            'form' => $form,
-        ]);
-    }
+use App\Entity\Clients\ClientAddress; use App\Entity\Clients\ClientBranchAddress; use App\Entity\Clients\ClientContact; use App\Entity\Common\Address; use App\Entity\Quotations\QuoteRequest; use App\Form\PublicQuoteRequestType; use Doctrine\ORM\EntityManagerInterface; use Symfony\Bundle\FrameworkBundle\Controller\AbstractController; use Symfony\Component\Form\FormError; use Symfony\Component\HttpFoundation\JsonResponse; use Symfony\Component\HttpFoundation\Request; use Symfony\Component\HttpFoundation\Response; use Symfony\Component\Routing\Attribute\Route; use Symfony\Component\String\Slugger\SluggerInterface;
+final class PublicQuoteRequestController extends AbstractController {
+ #[Route('/cotizar',name:'public_quote_request',methods:['GET','POST'])]
+ public function index(Request $request,EntityManagerInterface $em,SluggerInterface $slugger):Response {
+  $quote=new QuoteRequest(); if(!$request->isMethod('POST')){$quote->addItem(new \App\Entity\Quotations\QuoteRequestItem());} $form=$this->createForm(PublicQuoteRequestType::class,$quote); $form->handleRequest($request);
+  if($form->isSubmitted()){
+   $existing=(bool)$form->get('existingCustomer')->getData(); $contact=null;
+   if($existing){$number=trim((string)$quote->getCustomerNumber()); $contact=ctype_digit($number)?$em->getRepository(ClientContact::class)->find((int)$number):null; if(!$contact||!$contact->isActive()||!$contact->canRequestProducts()){$form->get('customerNumber')->addError(new FormError('No encontramos un contacto activo con este número.'));} else {$this->loadCustomer($quote,$contact);}}
+   if($quote->getItems()->isEmpty()){$form->get('items')->addError(new FormError('Agrega al menos una partida.'));}
+   foreach($quote->getItems() as $i=>$item){$raw=$form->get('items')->get($i)->get('characteristicsJson')->getData(); if($raw){try{$item->setCharacteristics(json_decode($raw,true,32,JSON_THROW_ON_ERROR));}catch(\JsonException){$form->get('items')->get($i)->addError(new FormError('Las características de la partida no son válidas.'));}} if($item->getProduct() && $item->getCategory() !== $item->getProduct()->getCategory()){$form->get('items')->get($i)->get('product')->addError(new FormError('El producto no pertenece a la categoría seleccionada.'));}}
+   if($form->isValid()){
+    if($contact && $quote->getDeliveryMethod()==='shipping'){$addressId=(int)$form->get('deliveryAddressId')->getData(); $address=$addressId?$em->getRepository(ClientAddress::class)->findOneBy(['id'=>$addressId,'client'=>$contact->getClient(),'isActive'=>true]):null; if($address){$quote->setDeliveryAddress($address)->setDeliveryAddressSnapshot($this->addressData($address->getAddress()));}}
+    $first=$quote->getItems()->first(); $quote->setProductType($first->getProduct()?->getName()??'Producto')->setQuantity($first->getQuantity())->setWidth($first->getWidth())->setHeight($first->getHeight())->setMeasurementUnit($first->getMeasurementUnit()?->getCode())->setMaterial($first->getMaterial())->setPrintSides($first->getPrintSides())->setFinishes($first->getFinishes())->setDesignStatus($first->getAttachmentOriginalName()?'ready':'no_file')->setNotes($first->getNotes());
+    $uploadDirectory=$this->getParameter('kernel.project_dir').'/public/uploads/quote-requests'; if(!is_dir($uploadDirectory)){mkdir($uploadDirectory,0775,true);} foreach($form->get('items') as $index=>$itemForm){$file=$itemForm->get('attachment')->getData(); if(!$file)continue; $safe=$slugger->slug(pathinfo($file->getClientOriginalName(),PATHINFO_FILENAME)); $name=$safe.'-'.bin2hex(random_bytes(6)).'.'.($file->guessExtension()?:'bin'); $file->move($uploadDirectory,$name); $quote->getItems()->get($index)->setAttachmentPath('uploads/quote-requests/'.$name)->setAttachmentOriginalName($file->getClientOriginalName());} $quote->setDesignStatus($first->getAttachmentOriginalName()?'ready':'no_file');
+    $quote->setFolio(sprintf('SOL-%s-%s',(new \DateTimeImmutable())->format('Ymd'),strtoupper(bin2hex(random_bytes(3))))); $em->persist($quote); $em->flush(); $this->addFlash('success','Tu solicitud de cotización fue enviada correctamente.'); return $this->redirectToRoute('public_quote_request');
+   }
+  }
+  return $this->render('public_quote_request/index.html.twig',['form'=>$form]);
+ }
+ #[Route('/cotizar/cliente/{id}',name:'public_quote_customer',requirements:['id'=>'\d+'],methods:['GET'])]
+ public function customer(int $id,EntityManagerInterface $em):JsonResponse {
+  $c=$em->getRepository(ClientContact::class)->find($id); if(!$c||!$c->isActive()||!$c->canRequestProducts())return $this->json(['message'=>'Cliente no encontrado.'],404);
+  $addresses=$em->getRepository(ClientAddress::class)->findForClient($c->getClient()); $delivery=[]; foreach($addresses as $a){if($a->isActive()&&$a->isDeliveryAddress())$delivery[]=['id'=>$a->getId(),'label'=>$a->getLabel(),'address'=>$this->formatAddress($a->getAddress())];}
+  $branchAddress=null; if($c->getBranch()){$assignment=$em->getRepository(ClientBranchAddress::class)->findOneBy(['branch'=>$c->getBranch(),'isActive'=>true],['isDefault'=>'DESC']); if($assignment)$branchAddress=$this->formatAddress($assignment->getAddress());}
+  return $this->json(['contactId'=>$c->getId(),'fullName'=>$c->getFullName(),'email'=>$c->getEmail()?:$c->getContact()->getPersonalEmail(),'phone'=>$c->getPhone(),'businessName'=>$c->getClient()->getBusinessName(),'branch'=>$c->getBranch()?->getName(),'branchAddress'=>$branchAddress,'deliveryAddresses'=>$delivery]);
+ }
+ private function loadCustomer(QuoteRequest $q,ClientContact $c):void{$q->setClientContact($c)->setClientBranch($c->getBranch())->setFullName($c->getFullName())->setEmail($c->getEmail()?:$c->getContact()->getPersonalEmail()?:'sin-correo@example.invalid')->setPhone($c->getPhone()?:'Sin teléfono')->setCompanyName($c->getClient()->getBusinessName())->setCustomerSnapshot(['contactId'=>$c->getId(),'businessName'=>$c->getClient()->getBusinessName(),'branch'=>$c->getBranch()?->getName(),'fullName'=>$c->getFullName(),'email'=>$c->getEmail()?:$c->getContact()->getPersonalEmail(),'phone'=>$c->getPhone()]);}
+ private function addressData(Address $a):array{return ['street'=>$a->getStreet(),'exteriorNumber'=>$a->getExteriorNumber(),'interiorNumber'=>$a->getInteriorNumber(),'neighborhood'=>$a->getNeighborhood(),'postalCode'=>$a->getPostalCode(),'city'=>$a->getCity(),'state'=>$a->getState(),'countryCode'=>$a->getCountryCode(),'notes'=>$a->getNotes()];}
+ private function formatAddress(Address $a):string{$d=$this->addressData($a);return implode(', ',array_filter([$d['street'].' '.$d['exteriorNumber'].($d['interiorNumber']?' Int. '.$d['interiorNumber']:''),$d['neighborhood'],$d['postalCode'].' '.$d['city'],$d['state']]));}
 }

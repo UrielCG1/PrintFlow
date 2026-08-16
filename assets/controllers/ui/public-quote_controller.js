@@ -1,0 +1,39 @@
+import { Controller } from '@hotwired/stimulus';
+
+export default class extends Controller {
+    static targets = ['existingCustomer','customerLookup','customerNumber','customerSummary','prospectFields','prototype','items','item','deliveryMethod','deliveryAddress','deliveryAddressId'];
+    static values = { customerUrl: String };
+
+    connect() { this.nextIndex = this.itemTargets.length; this.deliveryAddresses = []; this.toggleCustomer(); this.itemTargets.forEach((item) => this.initializeItem(item)); }
+    toggleCustomer() {
+        const existing = this.existingCustomerTarget.checked;
+        this.customerLookupTarget.hidden = !existing; this.prospectFieldsTarget.hidden = existing;
+        this.prospectFieldsTarget.querySelectorAll('input,select').forEach((field) => { if (!field.name.endsWith('[companyName]')) field.required = !existing; });
+        if (!existing) { this.customerSummaryTarget.hidden = true; this.deliveryAddresses = []; this.deliveryAddressIdTarget.value = ''; }
+        this.updateDeliveryOptions(existing); this.deliveryChanged();
+    }
+    async loadCustomer() {
+        const id = this.customerNumberTarget.value.trim(); if (!/^\d+$/.test(id)) return this.showCustomerError('Ingresa un ID de contacto válido.');
+        this.customerSummaryTarget.hidden = false; this.customerSummaryTarget.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Consultando…';
+        try { const response = await fetch(this.customerUrlValue.replace('CONTACT_ID', id), { headers: { Accept: 'application/json' } }); const data = await response.json(); if (!response.ok) throw new Error(data.message || 'Cliente no encontrado.');
+            const form = this.element.querySelector('form'); form.querySelector('[name$="[fullName]"]').value = data.fullName || ''; form.querySelector('[name$="[email]"]').value = data.email || ''; form.querySelector('[name$="[phone]"]').value = data.phone || ''; form.querySelector('[name$="[companyName]"]').value = data.businessName || ''; form.querySelector('[name$="[contactPreference]"]').value = data.phone ? 'whatsapp' : 'email';
+            this.deliveryAddresses = data.deliveryAddresses || []; this.customerSummaryTarget.innerHTML = `<strong>${this.escape(data.businessName)}</strong><div>${this.escape(data.branch || 'Sin sucursal asignada')}</div><div>${this.escape(data.branchAddress || 'Sin domicilio de sucursal')}</div><hr><div>${this.escape(data.fullName)} · ${this.escape(data.email || '')} · ${this.escape(data.phone || '')}</div>`; this.deliveryChanged();
+        } catch (error) { this.showCustomerError(error.message); }
+    }
+    showCustomerError(message) { this.customerSummaryTarget.hidden = false; this.customerSummaryTarget.innerHTML = `<div class="alert alert-danger mb-0">${this.escape(message)}</div>`; }
+    updateDeliveryOptions(existing) { const shipping = [...this.deliveryMethodTarget.options].find((option) => option.value === 'shipping'); if (shipping) { shipping.disabled = !existing; if (!existing && shipping.selected) this.deliveryMethodTarget.value = 'undefined'; } }
+    deliveryChanged() { const shipping = this.deliveryMethodTarget.value === 'shipping' && this.existingCustomerTarget.checked; this.deliveryAddressTarget.hidden = !shipping; if (!shipping) return; if (!this.deliveryAddresses.length) { this.deliveryAddressTarget.innerHTML = '<div class="alert alert-warning mb-0">Este cliente no tiene un domicilio de entrega activo.</div>'; this.deliveryAddressIdTarget.value = ''; return; } const selected = this.deliveryAddressIdTarget.value || String(this.deliveryAddresses[0].id); this.deliveryAddressIdTarget.value = selected; this.deliveryAddressTarget.innerHTML = `<label class="form-label">Domicilio de entrega</label><select class="form-select" data-action="change->ui--public-quote#selectAddress">${this.deliveryAddresses.map((a) => `<option value="${a.id}" ${String(a.id)===selected?'selected':''}>${this.escape(a.label)} — ${this.escape(a.address)}</option>`).join('')}</select>`; }
+    selectAddress(event) { this.deliveryAddressIdTarget.value = event.currentTarget.value; }
+    addItem() { const wrapper = document.createElement('div'); wrapper.innerHTML = this.prototypeTarget.innerHTML.replaceAll('__name__', String(this.nextIndex)).replaceAll('__number__', String(this.nextIndex + 1)); const item = wrapper.firstElementChild; this.itemsTarget.append(item); this.nextIndex += 1; this.initializeItem(item); this.renumber(); }
+    removeItem(event) { if (this.itemTargets.length <= 1) return; event.currentTarget.closest('[data-ui--public-quote-target="item"]').remove(); this.renumber(); }
+    renumber() { this.itemTargets.forEach((item, index) => { item.querySelector('[data-item-number]').textContent = index + 1; }); }
+    initializeItem(item) { const category = item.querySelector('[name$="[category]"]'); if (category) this.filterProducts(category); const product = item.querySelector('[name$="[product]"]'); if (product?.value) this.applyProduct(product); }
+    categoryChanged(event) { this.filterProducts(event.currentTarget); }
+    filterProducts(category) { const item = category.closest('.pf-quote-item'); const product = item.querySelector('[name$="[product]"]'); [...product.options].forEach((option) => { if (!option.value) return; option.hidden = option.dataset.category !== category.value; option.disabled = option.hidden; }); if (product.selectedOptions[0]?.disabled) product.value = ''; this.applyProduct(product); }
+    productChanged(event) { this.applyProduct(event.currentTarget); }
+    applyProduct(product) { const item = product.closest('.pf-quote-item'); const option = product.selectedOptions[0]; let schema = {}; try { schema = JSON.parse(option?.dataset.schema || '{}'); } catch (_) {} const dimensions = schema.dimensions ?? schema.requires_dimensions ?? schema.width ?? true; item.querySelectorAll('.pf-dimension').forEach((field) => field.hidden = dimensions === false); const box = item.querySelector('[data-characteristics]'); const hidden = item.querySelector('[data-characteristics-json]'); let current = {}; try { current = JSON.parse(hidden.value || '{}'); } catch (_) {} const entries = Object.entries(schema.fields || schema.characteristics || {}); box.hidden = entries.length === 0; box.innerHTML = entries.map(([key, definition]) => { const config = typeof definition === 'object' ? definition : { label: definition }; const label = config.label || key; const options = config.choices || config.options; if (Array.isArray(options)) return `<div class="pf-quote-field"><label class="form-label">${this.escape(label)}</label><select class="form-select" data-characteristic="${this.escape(key)}" data-action="change->ui--public-quote#syncCharacteristics"><option value="">Selecciona</option>${options.map((value) => `<option ${String(current[key])===String(value)?'selected':''}>${this.escape(value)}</option>`).join('')}</select></div>`; return `<div class="pf-quote-field"><label class="form-label">${this.escape(label)}</label><input class="form-control" value="${this.escape(current[key] || '')}" data-characteristic="${this.escape(key)}" data-action="input->ui--public-quote#syncCharacteristics"></div>`; }).join(''); this.syncItemCharacteristics(item); }
+    syncCharacteristics(event) { this.syncItemCharacteristics(event.currentTarget.closest('.pf-quote-item')); }
+    syncItemCharacteristics(item) { const values = {}; item.querySelectorAll('[data-characteristic]').forEach((field) => { if (field.value !== '') values[field.dataset.characteristic] = field.value; }); item.querySelector('[data-characteristics-json]').value = JSON.stringify(values); }
+    validate(event) { if (!this.itemTargets.length) { event.preventDefault(); this.addItem(); } }
+    escape(value) { const node = document.createElement('div'); node.textContent = value ?? ''; return node.innerHTML; }
+}
