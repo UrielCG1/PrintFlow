@@ -2,6 +2,7 @@
 
 namespace App\Entity\Clients;
 
+use App\Entity\Common\Address;
 use App\Repository\Clients\ClientAddressRepository;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -22,6 +23,15 @@ class ClientAddress
     #[ORM\ManyToOne(targetEntity: Client::class)]
     #[ORM\JoinColumn(name: 'client_id', nullable: false, onDelete: 'RESTRICT')]
     private Client $client;
+
+    /** Domicilio normalizado y reutilizable que respalda este registro del cliente. */
+    #[ORM\ManyToOne(targetEntity: Address::class)]
+    #[ORM\JoinColumn(name: 'address_id', nullable: true, onDelete: 'RESTRICT')]
+    private ?Address $address = null;
+
+    /** Uso principal del domicilio: FISCAL, COMMERCIAL o DELIVERY. */
+    #[ORM\Column(name: 'address_type', length: 20, options: ['default' => 'COMMERCIAL'])]
+    private string $addressType = 'COMMERCIAL';
 
     #[ORM\Column(length: 100)]
     private string $label;
@@ -147,6 +157,11 @@ class ClientAddress
     {
         return $this->client;
     }
+
+    public function getAddress(): ?Address { return $this->address; }
+    public function setAddress(?Address $address): self { $this->address = $address; return $this; }
+    public function getAddressType(): string { return $this->addressType; }
+    public function setAddressType(string $type): self { $this->addressType = strtoupper(trim($type)); return $this; }
 
     public function getLabel(): string
     {

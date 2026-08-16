@@ -31,6 +31,14 @@ class Supplier
     #[ORM\Column(name: 'tax_id', length: 20, nullable: true)]
     private ?string $taxId = null;
 
+    /** Giro o actividad comercial principal del proveedor. */
+    #[ORM\Column(name: 'business_activity', length: 160, nullable: true)]
+    private ?string $businessActivity = null;
+
+    /** Sitio web institucional. */
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $website = null;
+
     #[ORM\Column(length: 180, nullable: true)]
     private ?string $email = null;
 
@@ -132,6 +140,11 @@ class Supplier
     {
         return $this->email;
     }
+
+    public function getBusinessActivity(): ?string { return $this->businessActivity; }
+    public function setBusinessActivity(?string $value): self { $value=trim((string)$value);$this->businessActivity=$value?:null;return $this; }
+    public function getWebsite(): ?string { return $this->website; }
+    public function setWebsite(?string $value): self { $value=trim((string)$value);$this->website=$value?:null;return $this; }
 
     public function setEmail(?string $email): self
     {

@@ -7,6 +7,9 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 final class ClientData
 {
+    #[Assert\Choice(choices: ['COMPANY', 'INDIVIDUAL'])]
+    public string $clientType = 'COMPANY';
+
     #[Assert\NotBlank(message: 'Captura el nombre o razón social.')]
     #[Assert\Length(max: 160)]
     public ?string $businessName = null;
@@ -16,6 +19,10 @@ final class ClientData
 
     #[Assert\Length(max: 160)]
     public ?string $legalName = null;
+
+    #[Assert\Length(max: 160)] public ?string $businessActivity = null;
+    #[Assert\Url(message: 'Captura una URL válida.')] #[Assert\Length(max: 255)] public ?string $website = null;
+    public ?\DateTimeImmutable $birthDate = null;
 
     #[Assert\Regex(
         pattern: '/^\d{3}$/',

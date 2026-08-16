@@ -102,9 +102,13 @@ final class ClientManager
     private function applyData(Client $client, ClientData $data): void
     {
         $client
+            ->setClientType($data->clientType)
             ->setBusinessName((string) $data->businessName)
             ->setTaxId($data->taxId)
             ->setLegalName($data->legalName)
+            ->setBusinessActivity($data->businessActivity)
+            ->setWebsite($data->website)
+            ->setBirthDate($data->birthDate)
             ->setTaxRegimeCode($data->taxRegimeCode)
             ->setFiscalPostalCode($data->fiscalPostalCode)
             ->setBillingEmail($data->billingEmail)
@@ -121,9 +125,13 @@ final class ClientManager
     private function snapshot(Client $client): array
     {
         return [
+            'client_type' => $client->getClientType(),
             'business_name' => $client->getBusinessName(),
             'tax_id' => $client->getTaxId(),
             'legal_name' => $client->getLegalName(),
+            'business_activity' => $client->getBusinessActivity(),
+            'website' => $client->getWebsite(),
+            'birth_date' => $client->getBirthDate()?->format('Y-m-d'),
             'tax_regime_code' => $client->getTaxRegimeCode(),
             'fiscal_postal_code' => $client->getFiscalPostalCode(),
             'billing_email' => $client->getBillingEmail(),

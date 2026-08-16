@@ -42,6 +42,18 @@ final class ClientContactType extends AbstractType
                     'maxlength' => 40,
                 ],
             ])
+            ->add('workDays', TextType::class, [
+                'label' => 'Días laborales',
+                'required' => false,
+                'help' => 'Ejemplo: Lunes a viernes.',
+                'attr' => ['maxlength' => 100],
+            ])
+            ->add('workHours', TextType::class, [
+                'label' => 'Horario laboral',
+                'required' => false,
+                'help' => 'Ejemplo: 09:00 a 18:00.',
+                'attr' => ['maxlength' => 160],
+            ])
             ->add('isPrimary', CheckboxType::class, [
                 'label' => 'Usar como contacto principal',
                 'required' => false,

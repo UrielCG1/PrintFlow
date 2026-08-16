@@ -96,6 +96,8 @@ final class SupplierController extends AbstractController
         $data->businessName = $supplier->getBusinessName();
         $data->legalName = $supplier->getLegalName();
         $data->taxId = $supplier->getTaxId();
+        $data->businessActivity = $supplier->getBusinessActivity();
+        $data->website = $supplier->getWebsite();
         $data->email = $supplier->getEmail();
         $data->phone = $supplier->getPhone();
         $data->notes = $supplier->getNotes();

@@ -4,6 +4,7 @@ namespace App\Application\Clients;
 
 use App\Entity\Clients\Client;
 use App\Entity\Clients\ClientAddress;
+use App\Entity\Common\Address;
 use App\Entity\Users\User;
 use App\Repository\Clients\ClientAddressRepository;
 use App\Service\Audit\AuditLogger;
@@ -39,6 +40,16 @@ final class ClientAddressManager
                 $address = new ClientAddress($client);
                 $this->applyData($address, $data);
 
+                $sharedAddress = new Address(
+                    (string) $data->street,
+                    (string) $data->exteriorNumber,
+                    (string) $data->postalCode,
+                    (string) $data->municipality,
+                );
+                $address->setAddress($sharedAddress);
+                $this->syncSharedAddress($sharedAddress, $data);
+
+                $this->entityManager->persist($sharedAddress);
                 $this->entityManager->persist($address);
                 $this->entityManager->flush();
 
@@ -148,6 +159,26 @@ final class ClientAddressManager
             ->setIsDeliveryAddress($data->isDeliveryAddress)
             ->setIsDefaultFiscal($data->isDefaultFiscal)
             ->setIsDefaultDelivery($data->isDefaultDelivery);
+
+        $address->setAddressType(
+            $data->isDeliveryAddress ? 'DELIVERY' : ($data->isFiscalAddress ? 'FISCAL' : 'COMMERCIAL')
+        );
+
+        if ($address->getAddress() !== null) {
+            $this->syncSharedAddress($address->getAddress(), $data);
+        }
+    }
+
+    private function syncSharedAddress(Address $address, ClientAddressData $data): void
+    {
+        $address->setStreet((string) $data->street)
+            ->setExteriorNumber((string) $data->exteriorNumber)
+            ->setInteriorNumber($data->interiorNumber)
+            ->setNeighborhood($data->neighborhood)
+            ->setPostalCode((string) $data->postalCode)
+            ->setCity((string) $data->municipality)
+            ->setState((string) $data->state)
+            ->setNotes($data->references);
     }
 
     private function clearOtherDefaultAddresses(

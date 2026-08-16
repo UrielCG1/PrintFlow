@@ -47,6 +47,8 @@ final class SupplierType extends AbstractType
                     'style' => 'text-transform: uppercase',
                 ],
             ])
+            ->add('businessActivity', TextType::class, ['label'=>'Giro','required'=>false,'attr'=>['maxlength'=>160]])
+            ->add('website', TextType::class, ['label'=>'Sitio web','required'=>false,'attr'=>['maxlength'=>255]])
             ->add('email', EmailType::class, [
                 'label' => 'Correo general',
                 'required' => false,

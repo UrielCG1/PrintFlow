@@ -96,6 +96,8 @@ final class ClientContactController extends AbstractController
         $data->jobTitle = $contact->getJobTitle();
         $data->email = $contact->getEmail();
         $data->phone = $contact->getPhone();
+        $data->workDays = $contact->getContact()?->getWorkDays();
+        $data->workHours = $contact->getContact()?->getWorkHours();
         $data->isPrimary = $contact->isPrimary();
 
         $form = $this->createForm(ClientContactType::class, $data, [

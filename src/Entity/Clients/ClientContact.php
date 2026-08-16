@@ -2,6 +2,7 @@
 
 namespace App\Entity\Clients;
 
+use App\Entity\Common\Contact;
 use App\Repository\Clients\ClientContactRepository;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -21,6 +22,24 @@ class ClientContact
     #[ORM\ManyToOne(targetEntity: Client::class)]
     #[ORM\JoinColumn(name: 'client_id', nullable: false, onDelete: 'RESTRICT')]
     private Client $client;
+
+    /** Persona normalizada y reutilizable que participa en esta relación laboral. */
+    #[ORM\ManyToOne(targetEntity: Contact::class)]
+    #[ORM\JoinColumn(name: 'contact_id', nullable: true, onDelete: 'RESTRICT')]
+    private ?Contact $contact = null;
+
+    /** Sucursal en la que atiende el contacto, cuando aplica. */
+    #[ORM\ManyToOne(targetEntity: ClientBranch::class)]
+    #[ORM\JoinColumn(name: 'client_branch_id', nullable: true, onDelete: 'RESTRICT')]
+    private ?ClientBranch $branch = null;
+
+    /** Departamento o área de trabajo. */
+    #[ORM\Column(length: 120, nullable: true)]
+    private ?string $department = null;
+
+    /** Indica si puede solicitar productos en nombre del cliente. */
+    #[ORM\Column(name: 'can_request_products', options: ['default' => true])]
+    private bool $canRequestProducts = true;
 
     #[ORM\Column(name: 'full_name', length: 160)]
     private string $fullName;
@@ -96,6 +115,15 @@ class ClientContact
     {
         return $this->client;
     }
+
+    public function getContact(): ?Contact { return $this->contact; }
+    public function setContact(?Contact $contact): self { $this->contact = $contact; return $this; }
+    public function getBranch(): ?ClientBranch { return $this->branch; }
+    public function setBranch(?ClientBranch $branch): self { $this->branch = $branch; return $this; }
+    public function getDepartment(): ?string { return $this->department; }
+    public function setDepartment(?string $value): self { $value=trim((string)$value); $this->department=$value?:null; return $this; }
+    public function canRequestProducts(): bool { return $this->canRequestProducts; }
+    public function setCanRequestProducts(bool $value): self { $this->canRequestProducts=$value; return $this; }
 
     public function getFullName(): string
     {

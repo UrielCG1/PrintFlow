@@ -8,6 +8,8 @@ use App\Repository\Clients\ClientCategoryRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -21,6 +23,7 @@ final class ClientType extends AbstractType
         $currentCategory = $options['current_category'];
 
         $builder
+            ->add('clientType', ChoiceType::class, ['label'=>'Tipo de cliente','choices'=>['Empresa'=>'COMPANY','Persona física'=>'INDIVIDUAL']])
             ->add('businessName', TextType::class, [
                 'label' => 'Nombre comercial',
                 'attr' => [
@@ -81,6 +84,9 @@ final class ClientType extends AbstractType
                 'required' => false,
                 'attr' => ['maxlength' => 160],
             ])
+            ->add('businessActivity', TextType::class, ['label'=>'Giro','required'=>false,'attr'=>['maxlength'=>160]])
+            ->add('website', TextType::class, ['label'=>'Sitio web','required'=>false,'attr'=>['maxlength'=>255]])
+            ->add('birthDate', DateType::class, ['label'=>'Cumpleaños (persona física)','required'=>false,'widget'=>'single_text','input'=>'datetime_immutable'])
             ->add('taxId', TextType::class, [
                 'label' => 'RFC',
                 'required' => false,

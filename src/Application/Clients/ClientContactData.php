@@ -24,5 +24,11 @@ final class ClientContactData
     )]
     public ?string $phone = null;
 
+    #[Assert\Length(max: 100)]
+    public ?string $workDays = null;
+
+    #[Assert\Length(max: 160)]
+    public ?string $workHours = null;
+
     public bool $isPrimary = false;
 }

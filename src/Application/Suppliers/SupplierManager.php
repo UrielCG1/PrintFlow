@@ -106,6 +106,8 @@ final class SupplierManager
             ->setBusinessName((string) $data->businessName)
             ->setLegalName($data->legalName)
             ->setTaxId($data->taxId)
+            ->setBusinessActivity($data->businessActivity)
+            ->setWebsite($data->website)
             ->setEmail($data->email)
             ->setPhone($data->phone)
             ->setNotes($data->notes);
@@ -121,6 +123,8 @@ final class SupplierManager
             'business_name' => $supplier->getBusinessName(),
             'legal_name' => $supplier->getLegalName(),
             'tax_id' => $supplier->getTaxId(),
+            'business_activity' => $supplier->getBusinessActivity(),
+            'website' => $supplier->getWebsite(),
             'email' => $supplier->getEmail(),
             'phone' => $supplier->getPhone(),
             'notes' => $supplier->getNotes(),

@@ -72,9 +72,13 @@ final class ClientController extends AbstractController
         $this->denyAccessUnlessGranted('clients.update');
 
         $data = new ClientData();
+        $data->clientType = $client->getClientType();
         $data->businessName = $client->getBusinessName();
         $data->taxId = $client->getTaxId();
         $data->legalName = $client->getLegalName();
+        $data->businessActivity = $client->getBusinessActivity();
+        $data->website = $client->getWebsite();
+        $data->birthDate = $client->getBirthDate();
         $data->taxRegimeCode = $client->getTaxRegimeCode();
         $data->fiscalPostalCode = $client->getFiscalPostalCode();
         $data->billingEmail = $client->getBillingEmail();

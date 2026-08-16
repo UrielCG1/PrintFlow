@@ -22,6 +22,22 @@ class Client
     #[ORM\Column(name: 'business_name', length: 160)]
     private string $businessName;
 
+    /** Tipo de cliente: COMPANY para empresa o INDIVIDUAL para persona física. */
+    #[ORM\Column(name: 'client_type', length: 20, options: ['default' => 'COMPANY'])]
+    private string $clientType = 'COMPANY';
+
+    /** Giro o actividad comercial principal. */
+    #[ORM\Column(name: 'business_activity', length: 160, nullable: true)]
+    private ?string $businessActivity = null;
+
+    /** Sitio web institucional. */
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $website = null;
+
+    /** Fecha de cumpleaños cuando el cliente es una persona física. */
+    #[ORM\Column(name: 'birth_date', type: 'date_immutable', nullable: true)]
+    private ?\DateTimeImmutable $birthDate = null;
+
     #[ORM\Column(name: 'tax_id', length: 20, nullable: true)]
     private ?string $taxId = null;
 
@@ -99,6 +115,15 @@ class Client
     {
         return $this->businessName;
     }
+
+    public function getClientType(): string { return $this->clientType; }
+    public function setClientType(string $value): self { $this->clientType=strtoupper(trim($value)); return $this; }
+    public function getBusinessActivity(): ?string { return $this->businessActivity; }
+    public function setBusinessActivity(?string $value): self { $value=trim((string)$value);$this->businessActivity=$value?:null;return $this; }
+    public function getWebsite(): ?string { return $this->website; }
+    public function setWebsite(?string $value): self { $value=trim((string)$value);$this->website=$value?:null;return $this; }
+    public function getBirthDate(): ?\DateTimeImmutable { return $this->birthDate; }
+    public function setBirthDate(?\DateTimeImmutable $value): self { $this->birthDate=$value;return $this; }
 
     public function setBusinessName(string $businessName): self
     {

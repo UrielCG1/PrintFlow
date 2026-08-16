@@ -4,6 +4,7 @@ namespace App\Application\Clients;
 
 use App\Entity\Clients\Client;
 use App\Entity\Clients\ClientContact;
+use App\Entity\Common\Contact;
 use App\Entity\Users\User;
 use App\Repository\Clients\ClientContactRepository;
 use App\Service\Audit\AuditLogger;
@@ -35,6 +36,14 @@ final class ClientContactManager
                 $contact = new ClientContact($client);
                 $this->applyData($contact, $data);
 
+                [$firstName, $lastName] = $this->splitName((string) $data->fullName);
+                $person = (new Contact($firstName))
+                    ->setLastName($lastName)
+                    ->setWorkDays($data->workDays)
+                    ->setWorkHours($data->workHours);
+                $contact->setContact($person);
+
+                $this->entityManager->persist($person);
                 $this->entityManager->persist($contact);
                 $this->entityManager->flush();
 
@@ -134,7 +143,24 @@ final class ClientContactManager
             ->setJobTitle($data->jobTitle)
             ->setEmail($data->email)
             ->setPhone($data->phone)
+            ->setWorkSchedule($data->workHours)
             ->setIsPrimary($data->isPrimary);
+
+        if ($contact->getContact() !== null) {
+            [$firstName, $lastName] = $this->splitName((string) $data->fullName);
+            $contact->getContact()
+                ->setFirstName($firstName)
+                ->setLastName($lastName)
+                ->setWorkDays($data->workDays)
+                ->setWorkHours($data->workHours);
+        }
+    }
+
+    /** @return array{string, ?string} */
+    private function splitName(string $fullName): array
+    {
+        $parts = preg_split('/\s+/', trim($fullName), 2) ?: [];
+        return [$parts[0] ?? '', $parts[1] ?? null];
     }
 
     private function clearOtherPrimaryContacts(
@@ -173,6 +199,8 @@ final class ClientContactManager
             'job_title' => $contact->getJobTitle(),
             'email' => $contact->getEmail(),
             'phone' => $contact->getPhone(),
+            'work_days' => $contact->getContact()?->getWorkDays(),
+            'work_hours' => $contact->getContact()?->getWorkHours(),
             'is_primary' => $contact->isPrimary(),
             'is_active' => $contact->isActive(),
         ];
