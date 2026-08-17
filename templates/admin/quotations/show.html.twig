@@ -13,13 +13,14 @@
         'ISSUED': 'pf-status-badge--info',
         'SENT': 'pf-status-badge--info',
         'ACCEPTED': 'pf-status-badge--success',
+        'ACCEPTED_WITH_CHANGES': 'pf-status-badge--warning',
         'REJECTED': 'pf-status-badge--danger',
         'EXPIRED': 'pf-status-badge--warning',
         'CANCELLED': 'pf-status-badge--neutral',
         'SUPERSEDED': 'pf-status-badge--neutral'
     } %}
     {% set is_current_commercial = status in ['ISSUED', 'SENT'] %}
-    {% set can_revise = status in ['ISSUED', 'SENT', 'REJECTED', 'EXPIRED', 'CANCELLED'] %}
+    {% set can_revise = status in ['ISSUED', 'SENT', 'ACCEPTED_WITH_CHANGES', 'REJECTED', 'EXPIRED', 'CANCELLED'] %}
 
     <section class="pf-page__content">
         <header class="pf-page-header">
@@ -138,6 +139,20 @@
                         {% if quotation.decisionEvidenceReference %}
                             <dt class="col-sm-3">Evidencia</dt>
                             <dd class="col-sm-9" style="white-space: pre-line;">{{ quotation.decisionEvidenceReference }}</dd>
+                        {% endif %}
+                        {% if status == 'ACCEPTED_WITH_CHANGES' %}
+                            <dt class="col-sm-3">Revisión</dt>
+                            <dd class="col-sm-9">
+                                {% if quotation.acceptanceReviewedBy %}
+                                    Revisada por {{ quotation.acceptanceReviewedBy.fullName }} el {{ quotation.acceptanceReviewedAt|date('d/m/Y H:i', 'America/Mexico_City') }}.
+                                {% elseif is_granted('quotations.manage_status') %}
+                                    <strong class="text-warning">Requiere revisión antes de producción.</strong>
+                                    <form method="post" action="{{ path('admin_quotations_review_acceptance', {id: quotation.id}) }}" class="mt-2">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('quotation-review-acceptance-' ~ quotation.id) }}">
+                                        <button class="btn pf-button pf-button--secondary" type="submit">Marcar cambios como revisados</button>
+                                    </form>
+                                {% endif %}
+                            </dd>
                         {% endif %}
                     </dl>
                 </div>

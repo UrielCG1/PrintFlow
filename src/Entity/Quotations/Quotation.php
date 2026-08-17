@@ -48,6 +48,25 @@ class Quotation
     #[ORM\Column(length: 40, nullable: true)]
     private ?string $folio = null;
 
+    #[ORM\Column(name: 'acceptance_token', length: 64, unique: true, nullable: true)]
+    private ?string $acceptanceToken = null;
+
+    #[ORM\Column(name: 'acceptance_ip', length: 45, nullable: true)]
+    private ?string $acceptanceIp = null;
+
+    #[ORM\Column(name: 'accepted_folio_snapshot', length: 40, nullable: true)]
+    private ?string $acceptedFolioSnapshot = null;
+
+    #[ORM\Column(name: 'accepted_amount_snapshot', type: Types::DECIMAL, precision: 14, scale: 2, nullable: true)]
+    private ?string $acceptedAmountSnapshot = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(name: 'acceptance_reviewed_by_user_id', nullable: true, onDelete: 'SET NULL')]
+    private ?User $acceptanceReviewedBy = null;
+
+    #[ORM\Column(name: 'acceptance_reviewed_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $acceptanceReviewedAt = null;
+
     #[ORM\Column(name: 'expires_at', type: Types::DATE_IMMUTABLE)]
     private \DateTimeImmutable $expiresAt;
 
@@ -142,6 +161,7 @@ class Quotation
         $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
         $this->createdAt = $now;
         $this->updatedAt = $now;
+        $this->acceptanceToken = bin2hex(random_bytes(32));
     }
 
     public function getId(): ?int
@@ -221,6 +241,15 @@ class Quotation
         return $this->folio;
     }
 
+    public function getAcceptanceToken(): ?string { return $this->acceptanceToken; }
+    public function ensureAcceptanceToken(): string { return $this->acceptanceToken ??= bin2hex(random_bytes(32)); }
+    public function getAcceptanceIp(): ?string { return $this->acceptanceIp; }
+    public function getAcceptedFolioSnapshot(): ?string { return $this->acceptedFolioSnapshot; }
+    public function getAcceptedAmountSnapshot(): ?string { return $this->acceptedAmountSnapshot; }
+    public function getAcceptanceReviewedBy(): ?User { return $this->acceptanceReviewedBy; }
+    public function getAcceptanceReviewedAt(): ?\DateTimeImmutable { return $this->acceptanceReviewedAt; }
+    public function markAcceptanceReviewedBy(User $user): self { $this->acceptanceReviewedBy = $user; $this->acceptanceReviewedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC')); return $this; }
+
     public function hasBeenIssued(): bool
     {
         return $this->folio !== null && $this->issuedAt !== null;
@@ -265,6 +294,24 @@ class Quotation
             $notes,
             $evidenceReference,
         );
+    }
+
+    public function acceptWithChanges(string $contact, \DateTimeImmutable $respondedAt, string $notes, string $ip): void
+    {
+        $this->recordDecision(QuotationStatus::ACCEPTED_WITH_CHANGES, QuotationResponseChannel::EMAIL, $contact, $respondedAt, $notes, 'Aceptación mediante enlace web; IP: '.$ip);
+        $this->acceptanceIp = $ip;
+        $this->acceptedFolioSnapshot = $this->folio;
+        $this->acceptedAmountSnapshot = $this->total;
+    }
+
+    public function acceptFromPublicLink(string $contact, \DateTimeImmutable $respondedAt, ?string $notes, string $ip): void
+    {
+        $notes = self::normalizeOptionalText($notes);
+        if ($notes !== null) { $this->acceptWithChanges($contact, $respondedAt, $notes, $ip); return; }
+        $this->recordDecision(QuotationStatus::ACCEPTED, QuotationResponseChannel::EMAIL, $contact, $respondedAt, null, 'Aceptación mediante enlace web; IP: '.$ip);
+        $this->acceptanceIp = $ip;
+        $this->acceptedFolioSnapshot = $this->folio;
+        $this->acceptedAmountSnapshot = $this->total;
     }
 
     public function reject(
@@ -626,7 +673,7 @@ class Quotation
             throw new \DomainException('Solo una cotización emitida o enviada puede recibir una respuesta comercial.');
         }
 
-        if (!in_array($targetStatus, [QuotationStatus::ACCEPTED, QuotationStatus::REJECTED], true)) {
+        if (!in_array($targetStatus, [QuotationStatus::ACCEPTED, QuotationStatus::ACCEPTED_WITH_CHANGES, QuotationStatus::REJECTED], true)) {
             throw new \InvalidArgumentException('El estado de respuesta comercial no es válido.');
         }
 

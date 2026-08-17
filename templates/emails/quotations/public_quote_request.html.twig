@@ -7,5 +7,6 @@
 <td width="190" align="right" valign="top"><div style="display:inline-block;padding:10px 12px;border:2px solid #d92d20;border-radius:8px;background:#fff1f0;color:#b42318;font-size:12px;font-weight:700;line-height:1.4;text-align:center;">FECHA DE ENTREGA:<br><span style="font-size:14px;">{{ request.neededAt ? request.neededAt|date('d/m/Y') : 'POR CONFIRMAR' }}</span></div></td>
 </tr></table></td></tr>
 <tr><td style="padding:16px 36px 32px;font-size:16px;line-height:1.6;"><p style="margin:0 0 16px;">Hola {{ request.fullName }}, adjuntamos el PDF demostrativo de la solicitud <strong>{{ request.folio }}</strong>.</p><p style="margin:0;padding:14px;background:#fff4f2;color:#b42318;"><strong>Los precios son ficticios y no tienen validez comercial.</strong> Posteriormente se sustituirán por el cálculo definitivo.</p></td></tr>
+<tr><td align="center" style="padding:0 36px 32px;"><a href="{{ acceptanceUrl }}" style="display:inline-block;padding:14px 30px;border-radius:8px;background:#087c19;color:#ffffff;font-weight:700;text-decoration:none;">Aceptar cotización</a></td></tr>
 <tr><td style="padding:24px 36px;background:#e8f3ec;color:#52625a;font-size:12px;line-height:1.55;text-align:left;">{% include 'emails/quotations/_privacy_notice.html.twig' %}</td></tr>
 </table></td></tr></table></body></html>

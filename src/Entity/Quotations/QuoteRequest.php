@@ -6,6 +6,7 @@ use App\Entity\Clients\ClientAddress;
 use App\Entity\Clients\ClientBranch;
 use App\Entity\Clients\ClientContact;
 use App\Repository\Quotations\QuoteRequestRepository;
+use App\Entity\Users\User;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
@@ -56,6 +57,15 @@ class QuoteRequest
 
     #[ORM\Column(length: 64)]
     private ?string $publicToken = null;
+
+    #[ORM\Column(name: 'accepted_at', nullable: true)] private ?\DateTimeImmutable $acceptedAt = null;
+    #[ORM\Column(name: 'accepted_by_name', length: 160, nullable: true)] private ?string $acceptedByName = null;
+    #[ORM\Column(name: 'acceptance_notes', type: Types::TEXT, nullable: true)] private ?string $acceptanceNotes = null;
+    #[ORM\Column(name: 'acceptance_ip', length: 45, nullable: true)] private ?string $acceptanceIp = null;
+    #[ORM\Column(name: 'accepted_folio_snapshot', length: 30, nullable: true)] private ?string $acceptedFolioSnapshot = null;
+    #[ORM\Column(name: 'accepted_amount_snapshot', type: Types::DECIMAL, precision: 14, scale: 2, nullable: true)] private ?string $acceptedAmountSnapshot = null;
+    #[ORM\ManyToOne, ORM\JoinColumn(name: 'acceptance_reviewed_by_user_id', nullable: true, onDelete: 'SET NULL')] private ?User $acceptanceReviewedBy = null;
+    #[ORM\Column(name: 'acceptance_reviewed_at', nullable: true)] private ?\DateTimeImmutable $acceptanceReviewedAt = null;
 
     #[ORM\Column(length: 30)]
     private ?string $status = null;
@@ -181,6 +191,25 @@ class QuoteRequest
 
         return $this;
     }
+
+    public function acceptFromPublicLink(string $name, ?string $notes, string $ip, string $amount): static
+    {
+        $notes = trim((string) $notes);
+        $this->status = $notes === '' ? 'accepted' : 'accepted_with_changes';
+        $this->acceptedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+        $this->acceptedByName = trim($name);
+        $this->acceptanceNotes = $notes !== '' ? $notes : null;
+        $this->acceptanceIp = $ip;
+        $this->acceptedFolioSnapshot = $this->folio;
+        $this->acceptedAmountSnapshot = $amount;
+        return $this;
+    }
+    public function getAcceptedAt(): ?\DateTimeImmutable { return $this->acceptedAt; }
+    public function getAcceptedByName(): ?string { return $this->acceptedByName; }
+    public function getAcceptanceNotes(): ?string { return $this->acceptanceNotes; }
+    public function getAcceptanceReviewedBy(): ?User { return $this->acceptanceReviewedBy; }
+    public function getAcceptanceReviewedAt(): ?\DateTimeImmutable { return $this->acceptanceReviewedAt; }
+    public function markAcceptanceReviewedBy(User $user): static { $this->acceptanceReviewedBy=$user; $this->acceptanceReviewedAt=new \DateTimeImmutable('now', new \DateTimeZone('UTC')); return $this; }
 
     public function getStatus(): ?string
     {

@@ -53,6 +53,12 @@ services:
             $privacyAddress: '%env(string:PRINTFLOW_QUOTATION_ISSUER_ADDRESS)%'
             $privacyEmail: '%env(string:PRINTFLOW_QUOTATION_ISSUER_EMAIL)%'
 
+    App\Service\Quotations\QuotationAcceptanceNotifier:
+        arguments:
+            $fromAddress: '%env(string:MAILER_FROM_ADDRESS)%'
+            $fromName: '%env(string:MAILER_FROM_NAME)%'
+            $staffEmail: '%env(string:PRINTFLOW_QUOTATION_ISSUER_EMAIL)%'
+
     App\Doctrine\DatabaseManagedSchemaListener:
         tags:
             - { name: doctrine.event_listener, event: postGenerateSchema }

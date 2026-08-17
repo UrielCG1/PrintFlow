@@ -60,7 +60,7 @@ final class PublicQuoteRequestController extends AbstractController
                     $file->move($uploadDirectory, $name);
                     $quote->getItems()->get($index)->setAttachmentPath('uploads/quote-requests/'.$name)->setAttachmentOriginalName($file->getClientOriginalName());
                 }
-                $quote->setDesignStatus($first->getAttachmentOriginalName() ? 'ready' : 'no_file')->setFolio(sprintf('SOL-%s-%s', (new \DateTimeImmutable())->format('Ymd'), strtoupper(bin2hex(random_bytes(3)))));
+                $quote->setDesignStatus($first->getAttachmentOriginalName() ? 'ready' : 'no_file')->setFolio(sprintf('SOL-%s-%s', (new \DateTimeImmutable())->format('Ymd'), strtoupper(bin2hex(random_bytes(3)))))->setStatus('sent');
                 $em->persist($quote); $em->flush(); $mailer->send($quote);
                 $this->addFlash('success', 'Tu solicitud fue confirmada y enviamos el PDF demostrativo a tu correo.');
                 return $this->redirectToRoute('public_quote_request');

@@ -1,0 +1,39 @@
+{% extends 'base.html.twig' %}
+{% block title %}Aceptar cotización {{ folio }} | PrintFlow{% endblock %}
+{% block body_class %}bg-light{% endblock %}
+{% block body %}
+<main style="min-height:100vh;background:#f3f7fb;padding:40px 16px;color:#10233d;">
+    <div style="max-width:820px;margin:0 auto;">
+        <section style="background:#fff;border-radius:18px;padding:32px;box-shadow:0 14px 40px rgba(16,35,61,.10);border-top:4px solid #0abf25;">
+            <p style="margin:0 0 8px;color:#087c19;font-weight:800;letter-spacing:.08em;">PRINTFLOW</p>
+            {% if success %}
+                <h1 style="font-size:30px;margin:0 0 16px;">Cotización recibida y aceptada</h1>
+                <p>Gracias. Hemos registrado tu aceptación correctamente. Si indicaste cambios u observaciones, nuestro equipo los revisará y te notificará cualquier ajuste en costos antes de continuar con los conceptos afectados.</p>
+                {% if withChanges %}<div class="alert alert-warning mb-0"><strong>Aceptada con cambios:</strong> requiere revisión antes de producción.</div>{% endif %}
+            {% else %}
+                <h1 style="font-size:30px;margin:0 0 24px;">Revisar y aceptar cotización</h1>
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-4"><div class="p-3 rounded bg-light"><small class="text-muted d-block">Folio</small><strong>{{ folio }}</strong></div></div>
+                    <div class="col-sm-4"><div class="p-3 rounded bg-light"><small class="text-muted d-block">Fecha</small><strong>{{ date|date('d/m/Y') }}</strong></div></div>
+                    <div class="col-sm-4"><div class="p-3 rounded bg-light"><small class="text-muted d-block">Importe estimado</small><strong>${{ amount|number_format(2, '.', ',') }} {{ currency }}</strong></div></div>
+                </div>
+                <h2 style="font-size:20px;">Conceptos principales</h2>
+                <div class="table-responsive mb-4"><table class="table align-middle"><thead><tr><th>Cantidad</th><th>Concepto</th></tr></thead><tbody>{% for item in items %}<tr><td>{{ item.quantity }}</td><td>{{ item.name }}</td></tr>{% endfor %}</tbody></table></div>
+                {% if alreadyAccepted %}<div class="alert alert-success">Esta cotización ya fue aceptada anteriormente.</div>
+                {% elseif expired %}<div class="alert alert-danger">La vigencia de esta cotización concluyó. Solicita una nueva cotización para continuar.</div>
+                {% else %}
+                    {% for error in errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
+                    <form method="post">
+                        <input type="hidden" name="_token" value="{{ csrf_token('accept_quotation_' ~ token) }}">
+                        <div class="mb-4"><label for="accepted_by" class="form-label fw-bold">Nombre de quien acepta *</label><input id="accepted_by" name="accepted_by" class="form-control form-control-lg" maxlength="160" required value="{{ app.request.request.get('accepted_by') }}"></div>
+                        <div class="mb-2"><label for="observations" class="form-label fw-bold">Observaciones o cambios solicitados</label><textarea id="observations" name="observations" class="form-control" rows="5" maxlength="5000" placeholder="Ej. Eliminar 100 piezas del concepto 2, cambiar el acabado a mate, agregar 50 piezas adicionales, etc.">{{ app.request.request.get('observations') }}</textarea></div>
+                        <p class="text-muted mb-4">Puedes indicar aquí cualquier concepto que desees agregar, eliminar o modificar. Los cambios serán revisados antes de continuar y podrán generar un ajuste en el costo final.</p>
+                        <div class="form-check p-3 mb-4 rounded" style="background:#eef6ff;border:1px solid #c7dcf5;"><input class="form-check-input ms-0 me-3" type="checkbox" value="1" id="confirmed" name="confirmed" required {{ app.request.request.get('confirmed') ? 'checked' }}><label class="form-check-label" for="confirmed">Confirmo que acepto esta cotización y autorizo el inicio del proceso de producción. Entiendo que, si solicito modificaciones, adiciones o eliminaciones en las observaciones, el costo final podrá variar respecto al importe actualmente cotizado, así como la fecha de entrega podría cambiar.</label></div>
+                        <button class="btn btn-success btn-lg w-100 fw-bold" type="submit">Confirmar aceptación</button>
+                    </form>
+                {% endif %}
+            {% endif %}
+        </section>
+    </div>
+</main>
+{% endblock %}

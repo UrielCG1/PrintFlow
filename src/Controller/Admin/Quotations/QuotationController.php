@@ -29,6 +29,7 @@ use App\Service\Quotations\QuotationPdfRenderer;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
+use Doctrine\ORM\EntityManagerInterface;
 
 #[Route('/admin/cotizaciones')]
 final class QuotationController extends AbstractController
@@ -362,6 +363,20 @@ final class QuotationController extends AbstractController
             ),
             'Cache-Control' => 'private, no-store, max-age=0',
         ]);
+    }
+
+    #[Route('/{id}/revisar-aceptacion', name: 'admin_quotations_review_acceptance', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function reviewAcceptance(Quotation $quotation, Request $request, EntityManagerInterface $em): Response
+    {
+        $this->denyAccessUnlessGranted('quotations.manage_status');
+        if (!$this->isCsrfTokenValid('quotation-review-acceptance-'.$quotation->getId(), (string) $request->request->get('_token'))) { throw $this->createAccessDeniedException('Token CSRF inválido.'); }
+        if ($quotation->getStatus() !== \App\Enum\Quotations\QuotationStatus::ACCEPTED_WITH_CHANGES) { throw $this->createNotFoundException('La cotización no tiene cambios pendientes de revisión.'); }
+        $user = $this->getUser();
+        if (!$user instanceof User) { throw $this->createAccessDeniedException(); }
+        $quotation->markAcceptanceReviewedBy($user);
+        $em->flush();
+        $this->addFlash('success', 'La aceptación con cambios quedó marcada como revisada.');
+        return $this->redirectToRoute('admin_quotations_show', ['id' => $quotation->getId()]);
     }
 
     #[Route('/{id}', name: 'admin_quotations_show', requirements: ['id' => '\d+'], methods: ['GET'])]
