@@ -6,6 +6,7 @@ use App\Entity\Clients\ClientContact;
 use App\Entity\Common\Address;
 use App\Entity\Quotations\QuoteRequest;
 use App\Entity\Quotations\QuoteRequestItem;
+use App\Entity\Products\Product;
 use App\Form\PublicQuoteRequestType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -78,6 +79,27 @@ final class PublicQuoteRequestController extends AbstractController
         }
         $email = $contact->getEmail() ?: $contact->getContact()->getPersonalEmail();
         return $this->json(['name' => $this->maskName($contact->getFullName()), 'email' => $this->maskEmail($email), 'phone' => $this->maskPhone($contact->getPhone()), 'company' => $this->maskName($contact->getClient()->getBusinessName()), 'hasDeliveryAddress' => $hasDeliveryAddress]);
+    }
+
+    #[Route('/cotizar/productos/{categoryId}', name: 'public_quote_products', requirements: ['categoryId' => '[0-9A-Z_]+'], methods: ['GET'])]
+    public function products(string $categoryId, EntityManagerInterface $em): JsonResponse
+    {
+        if (!ctype_digit($categoryId)) { return $this->json(['message' => 'Categoría inválida.'], 400); }
+        $products = $em->getRepository(Product::class)->createQueryBuilder('product')
+            ->innerJoin('product.category', 'category')
+            ->andWhere('category.id = :categoryId')
+            ->andWhere('category.isActive = :active')
+            ->andWhere('product.isActive = :active')
+            ->setParameter('categoryId', (int) $categoryId)
+            ->setParameter('active', true)
+            ->orderBy('product.name', 'ASC')
+            ->getQuery()->getResult();
+
+        return $this->json(array_map(static fn(Product $product) => [
+            'id' => $product->getId(),
+            'name' => $product->getName(),
+            'schema' => $product->getConfigurationSchema() ?? [],
+        ], $products));
     }
 
     private function loadCustomer(QuoteRequest $q, ClientContact $c): void

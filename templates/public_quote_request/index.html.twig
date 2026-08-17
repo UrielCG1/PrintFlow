@@ -37,7 +37,7 @@
 
 {% block title %}Solicitar cotización{% endblock %}
 {% block body %}
-<div class="pf-public-quote" data-controller="ui--public-quote" data-ui--public-quote-customer-url-value="{{ path('public_quote_customer',{number:'CONTACT_NUMBER'}) }}">
+<div class="pf-public-quote" data-controller="ui--public-quote" data-ui--public-quote-customer-url-value="{{ path('public_quote_customer',{number:'CONTACT_NUMBER'}) }}" data-ui--public-quote-products-url-value="{{ path('public_quote_products',{categoryId:'CATEGORY_ID'}) }}">
     <section class="pf-public-quote__hero" style="--pf-quote-hero-image:url('{{ asset('images/quote/hero-printing.jpg') }}')">
         <div class="container-xxl pf-public-quote__hero-container"><div class="pf-public-quote__hero-content">
             <div class="pf-public-quote__badge"><span class="pf-public-quote__badge-dot"></span>Soluciones de impresión para empresas</div>
