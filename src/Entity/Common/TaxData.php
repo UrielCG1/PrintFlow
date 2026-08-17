@@ -27,7 +27,7 @@ class TaxData
     private ?Client $client = null;
 
     /** Proveedor propietario; es excluyente con client. */
-    #[ORM\ManyToOne(targetEntity: Supplier::class)]
+    #[ORM\ManyToOne(targetEntity: Supplier::class, inversedBy: 'taxData')]
     #[ORM\JoinColumn(name: 'supplier_id', nullable: true, onDelete: 'CASCADE')]
     private ?Supplier $supplier = null;
 
@@ -89,6 +89,7 @@ class TaxData
         $self->client = $owner;
         return $self;
     }
+    public static function draftForSupplier(Supplier $owner): self { $self=new self(null,null,null,null);$self->supplier=$owner;return $self; }
 
     public function getId(): ?int { return $this->id; }
     public function getFiscalAddress(): ?Address { return $this->fiscalAddress; }

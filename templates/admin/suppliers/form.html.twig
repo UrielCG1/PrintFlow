@@ -16,7 +16,7 @@
         </div>
 
         <div class="pf-card">
-            {% form_theme form 'form/printflow_theme.html.twig' %}
+            {% form_theme form 'form/printflow_theme.html.twig' 'form/client_collections_theme.html.twig' %}
 
             {{ form_start(form, { attr: { class: 'pf-form pf-card__body', novalidate: 'novalidate' } }) }}
                 <section class="pf-form-section">
@@ -41,6 +41,9 @@
                         <div class="col-md-4 pf-form-field">
                             {{ form_row(form.taxId) }}
                         </div>
+                        <div class="col-md-4 pf-form-field">{{ form_row(form.taxRegimeCode) }}</div>
+                        <div class="col-md-4 pf-form-field">{{ form_row(form.defaultCfdiUseCode) }}</div>
+                        <div class="col-md-4 pf-form-field">{{ form_row(form.billingEmail) }}</div>
                         <div class="col-md-6 pf-form-field">{{ form_row(form.businessActivity) }}</div>
                         <div class="col-md-6 pf-form-field">{{ form_row(form.website) }}</div>
                     </div>
@@ -57,10 +60,14 @@
                             {{ form_row(form.email) }}
                         </div>
 
-                        <div class="col-md-6 pf-form-field">
-                            {{ form_row(form.phone) }}
-                        </div>
                     </div>
+                    {{ form_widget(form.phones) }}
+                </section>
+
+                <section class="pf-form-section">
+                    <h2 class="pf-form-section__title">Sucursales, domicilios y contactos</h2>
+                    <p class="pf-form-section__description">Agrega establecimientos, domicilios fiscales, comerciales o de entrega, teléfonos, fax y personas de contacto.</p>
+                    {{ form_widget(form.branches) }}
                 </section>
 
                 <section class="pf-form-section">

@@ -2,7 +2,7 @@
 
 namespace App\Entity\Suppliers;
 
-use App\Entity\Common\Phone;
+use App\Entity\Common\{Address,Phone,TaxData};
 use App\Repository\Suppliers\SupplierRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -48,6 +48,7 @@ class Supplier
     /** Teléfonos normalizados asignados al proveedor. @var Collection<int, SupplierPhone> */
     #[ORM\OneToMany(mappedBy: 'supplier', targetEntity: SupplierPhone::class, cascade: ['persist'])]
     private Collection $phones;
+    #[ORM\OneToMany(mappedBy:'supplier',targetEntity:TaxData::class,cascade:['persist'])] private Collection $taxData;
 
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $notes = null;
@@ -84,6 +85,7 @@ class Supplier
         $this->createdAt = $now;
         $this->updatedAt = $now;
         $this->phones = new ArrayCollection();
+        $this->taxData = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -184,6 +186,10 @@ class Supplier
 
         return $this;
     }
+    /** @return Collection<int,SupplierPhone> */ public function getPhones():Collection{return $this->phones;}
+    private function defaultTaxData():?TaxData{foreach($this->taxData as $d){if($d->isActive()&&$d->isDefault())return $d;}foreach($this->taxData as $d){if($d->isActive())return $d;}return null;}
+    private function taxDataForWrite():TaxData{$d=$this->defaultTaxData();if(!$d){$d=TaxData::draftForSupplier($this)->setIsDefault(true);$this->taxData->add($d);}return $d;}
+    public function getTaxRegimeCode():?string{return $this->defaultTaxData()?->getTaxRegimeCode();} public function setTaxRegimeCode(?string $v):self{$this->taxDataForWrite()->setTaxRegimeCode($v);return $this;} public function getBillingEmail():?string{return $this->defaultTaxData()?->getBillingEmail();} public function setBillingEmail(?string $v):self{$this->taxDataForWrite()->setBillingEmail($v);return $this;} public function getDefaultCfdiUseCode():?string{return $this->defaultTaxData()?->getCfdiUseCode();} public function setDefaultCfdiUseCode(?string $v):self{$this->taxDataForWrite()->setCfdiUseCode($v);return $this;} public function setFiscalAddress(?Address $v):self{$this->taxDataForWrite()->setFiscalAddress($v);return $this;}
 
     public function getNotes(): ?string
     {
