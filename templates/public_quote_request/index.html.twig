@@ -28,7 +28,7 @@
         <div class="pf-quote-choice-group__options">{{ form_widget(item.finishes) }}</div>{{ form_errors(item.finishes) }}
     </div>
     <div class="row g-4 mt-1">
-        <div class="col-md-6 pf-quote-field">{{ form_row(item.attachment,{attr:{class:'form-control','data-action':'change->ui--public-quote#previewFile'},label:'Archivo del trabajo'}) }}<div class="pf-design-information mt-3" data-file-preview hidden></div></div>
+        <div class="col-md-6 pf-quote-field">{{ form_row(item.attachment,{attr:{class:'form-control','data-action':'change->ui--public-quote#previewFile'},label:'Archivo del trabajo'}) }}<div class="pf-design-information pf-file-preview mt-3" data-file-preview hidden></div></div>
         {{ form_row(item.notes,{row_attr:{class:'col-md-6 pf-quote-field pf-quote-field--textarea'},attr:{class:'form-control',rows:5,placeholder:'Instrucciones adicionales o requerimientos especiales...'},label:'Indicaciones adicionales'}) }}
     </div>
 </section>
