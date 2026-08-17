@@ -8,6 +8,7 @@ use App\Entity\Quotations\QuoteRequest;
 use App\Entity\Quotations\QuoteRequestItem;
 use App\Entity\Products\Product;
 use App\Form\PublicQuoteRequestType;
+use App\Service\Quotations\PublicQuoteRequestMailer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
@@ -20,7 +21,7 @@ use Symfony\Component\String\Slugger\SluggerInterface;
 final class PublicQuoteRequestController extends AbstractController
 {
     #[Route('/cotizar', name: 'public_quote_request', methods: ['GET', 'POST'])]
-    public function index(Request $request, EntityManagerInterface $em, SluggerInterface $slugger): Response
+    public function index(Request $request, EntityManagerInterface $em, SluggerInterface $slugger, PublicQuoteRequestMailer $mailer): Response
     {
         $quote = new QuoteRequest();
         if (!$request->isMethod('POST')) { $quote->addItem(new QuoteRequestItem()); }
@@ -60,8 +61,8 @@ final class PublicQuoteRequestController extends AbstractController
                     $quote->getItems()->get($index)->setAttachmentPath('uploads/quote-requests/'.$name)->setAttachmentOriginalName($file->getClientOriginalName());
                 }
                 $quote->setDesignStatus($first->getAttachmentOriginalName() ? 'ready' : 'no_file')->setFolio(sprintf('SOL-%s-%s', (new \DateTimeImmutable())->format('Ymd'), strtoupper(bin2hex(random_bytes(3)))));
-                $em->persist($quote); $em->flush();
-                $this->addFlash('success', 'Tu solicitud de cotización fue enviada correctamente.');
+                $em->persist($quote); $em->flush(); $mailer->send($quote);
+                $this->addFlash('success', 'Tu solicitud fue confirmada y enviamos el PDF demostrativo a tu correo.');
                 return $this->redirectToRoute('public_quote_request');
             }
         }

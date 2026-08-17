@@ -17,6 +17,9 @@ final class QuotationMailer
         private readonly QuotationPdfRenderer $quotationPdfRenderer,
         private readonly string $fromAddress,
         private readonly string $fromName,
+        private readonly string $privacyResponsible,
+        private readonly string $privacyAddress,
+        private readonly string $privacyEmail,
     ) {
     }
 
@@ -40,6 +43,9 @@ final class QuotationMailer
                 'quotation' => $quotation,
                 'recipientName' => $recipientName,
                 'message' => $message !== '' ? $message : null,
+                'privacyResponsible' => $this->privacyResponsible,
+                'privacyAddress' => $this->privacyAddress,
+                'privacyEmail' => $this->privacyEmail,
             ])
             ->attach(
                 $this->quotationPdfRenderer->render($quotation),
