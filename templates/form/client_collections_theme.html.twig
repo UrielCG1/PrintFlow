@@ -1,0 +1,14 @@
+{% block collection_widget %}
+    <div data-controller="ui--form-collection" data-ui--form-collection-index-value="{{ form|length }}" data-ui--form-collection-placeholder-value="{{ prototype is defined ? prototype.vars.name : '__name__' }}">
+        {% if prototype is defined %}<template data-ui--form-collection-target="template">{{ form_widget(prototype) }}</template>{% endif %}
+        <div data-ui--form-collection-target="items">
+            {% for child in form %}
+                <div class="pf-card p-3 mb-3" data-collection-item>
+                    {{ form_widget(child) }}
+                    <button type="button" class="btn btn-outline-danger btn-sm mt-3" data-action="ui--form-collection#remove"><i class="bi bi-trash"></i> Eliminar</button>
+                </div>
+            {% endfor %}
+        </div>
+        {% if allow_add %}<button type="button" class="btn pf-button pf-button--secondary btn-sm" data-action="ui--form-collection#add"><i class="bi bi-plus-lg"></i> Agregar registro</button>{% endif %}
+    </div>
+{% endblock %}

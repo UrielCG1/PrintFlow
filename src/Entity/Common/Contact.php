@@ -33,6 +33,7 @@ class Contact
     public function getWorkDays():?string{return $this->workDays;} public function setWorkDays(?string $v):self{$v=trim((string)$v);$this->workDays=$v?:null;return $this;}
     public function getWorkHours():?string{return $this->workHours;} public function setWorkHours(?string $v):self{$v=trim((string)$v);$this->workHours=$v?:null;return $this;}
     public function getPrimaryPhone():?string{foreach($this->phones as $item){if($item->isActive()&&$item->isPrimary()){return $item->getPhone()->getNumber();}}return null;}
+    /** @return Collection<int, ContactPhone> */ public function getPhones():Collection{return $this->phones;}
     public function setPrimaryPhone(?string $v):self{$v=trim((string)$v);foreach($this->phones as $item){if(!$item->isPrimary()){continue;}if($v===''){$item->setIsActive(false);}else{$item->getPhone()->setNumber($v);$item->setIsActive(true);}return $this;}if($v!==''){$this->phones->add((new ContactPhone($this,new Phone('LANDLINE',$v)))->setLabel('Principal')->setIsPrimary(true));}return $this;}
     public function getNotes():?string{return $this->notes;} public function setNotes(?string $v):self{$v=trim((string)$v);$this->notes=$v?:null;return $this;}
     public function isActive():bool{return $this->isActive;} public function setIsActive(bool $v):self{$this->isActive=$v;return $this;}

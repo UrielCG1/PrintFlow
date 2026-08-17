@@ -42,7 +42,7 @@
         </div>
 
         <div class="pf-card pf-clients-form-card pf-clients-form-card--wide">
-            {% form_theme form 'form/printflow_theme.html.twig' %}
+            {% form_theme form 'form/printflow_theme.html.twig' 'form/client_collections_theme.html.twig' %}
 
             {{ form_start(form, { attr: { class: 'pf-form pf-card__body' } }) }}
                 <div class="pf-clients-form-section">
@@ -59,8 +59,12 @@
 
                     <div class="pf-clients-form-grid">
                         {{ form_row(form.email) }}
-                        {{ form_row(form.phone) }}
                     </div>
+                </div>
+
+                <div class="pf-clients-form-section">
+                    <div class="pf-clients-form-section__heading"><h2>Teléfonos generales y fax</h2><p>Registra tipo, lada, extensión y el número principal.</p></div>
+                    {{ form_widget(form.phones) }}
                 </div>
 
                 <div class="pf-clients-form-section">
@@ -87,6 +91,11 @@
                     </div>
 
                     {{ form_row(form.billingEmail) }}
+                </div>
+
+                <div class="pf-clients-form-section">
+                    <div class="pf-clients-form-section__heading"><h2>Sucursales, domicilios y contactos</h2><p>Cada sucursal incluye sus domicilios, teléfonos, fax y personas de contacto.</p></div>
+                    {{ form_widget(form.branches) }}
                 </div>
 
                 <div class="pf-clients-form-section">

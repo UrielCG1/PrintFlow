@@ -3,6 +3,7 @@
 namespace App\Form\Admin\Clients;
 
 use App\Application\Clients\ClientData;
+use App\Application\Clients\{ClientBranchData, ClientBranchAddressData, ClientInlineContactData, ClientPhoneData};
 use App\Entity\Clients\ClientCategory;
 use App\Repository\Clients\ClientCategoryRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
@@ -12,6 +13,7 @@ use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
@@ -70,14 +72,6 @@ final class ClientType extends AbstractType
                     'maxlength' => 180,
                 ],
             ])
-            ->add('phone', TextType::class, [
-                'label' => 'Teléfono general',
-                'required' => false,
-                'attr' => [
-                    'autocomplete' => 'tel',
-                    'maxlength' => 40,
-                ],
-            ])
             ->add('legalName', TextType::class, [
                 'label' => 'Razón social',
                 'required' => false,
@@ -127,7 +121,9 @@ final class ClientType extends AbstractType
                     'maxlength' => 2000,
                     'rows' => 4,
                 ],
-            ]);
+            ])
+            ->add('phones', CollectionType::class, ['label'=>'Teléfonos generales y fax','entry_type'=>ClientPhoneEntryType::class,'allow_add'=>true,'allow_delete'=>true,'by_reference'=>false,'prototype'=>true,'prototype_name'=>'__client_phone__'])
+            ->add('branches', CollectionType::class, ['label'=>'Sucursales','entry_type'=>ClientBranchEntryType::class,'allow_add'=>true,'allow_delete'=>true,'by_reference'=>false,'prototype'=>true,'prototype_name'=>'__branch__','prototype_data'=>$this->newBranchData()]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
@@ -141,5 +137,10 @@ final class ClientType extends AbstractType
             'null',
             ClientCategory::class,
         ]);
+    }
+
+    private function newBranchData(): ClientBranchData
+    {
+        $branch=new ClientBranchData(); $branch->addresses[] = new ClientBranchAddressData(); $branch->phones[] = new ClientPhoneData(); $contact=new ClientInlineContactData(); $contact->phones[]=new ClientPhoneData(); $branch->contacts[] = $contact; return $branch;
     }
 }
