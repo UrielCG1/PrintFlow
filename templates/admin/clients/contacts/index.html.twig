@@ -47,6 +47,7 @@
                     <thead>
                         <tr>
                             <th>Contacto</th>
+                            <th>Número de cliente</th>
                             <th>Datos</th>
                             <th>Tipo</th>
                             <th>Estado</th>
@@ -57,6 +58,8 @@
                     <tbody>
                         {% for contact in contacts %}
                             <tr>
+                                <td><code>{{ contact.publicNumber }}</code></td>
+
                                 <td>
                                     <strong class="pf-table__primary">{{ contact.fullName }}</strong>
 
@@ -134,7 +137,7 @@
                             </tr>
                         {% else %}
                             <tr>
-                                <td colspan="5" class="pf-table__empty">
+                                <td colspan="6" class="pf-table__empty">
                                     Este cliente todavía no tiene contactos registrados.
                                 </td>
                             </tr>

@@ -4,7 +4,7 @@ use App\Entity\Quotations\QuoteRequest; use Symfony\Component\Form\AbstractType;
 final class PublicQuoteRequestType extends AbstractType {
  public function buildForm(FormBuilderInterface $b,array $o):void{$b
   ->add('existingCustomer',CheckboxType::class,['mapped'=>false,'required'=>false,'label'=>'Ya soy cliente'])
-  ->add('customerNumber',TextType::class,['required'=>false,'label'=>'Número de cliente (ID de contacto)','attr'=>['inputmode'=>'numeric','autocomplete'=>'off']])
+  ->add('customerNumber',TextType::class,['required'=>false,'label'=>'Número de cliente','help'=>'Usa el número público asignado a tu contacto.','attr'=>['autocomplete'=>'off','maxlength'=>27,'placeholder'=>'CL-XXXXXXXXXXXXXXXXXXXXXXXX']])
   ->add('deliveryAddressId',\Symfony\Component\Form\Extension\Core\Type\HiddenType::class,['mapped'=>false,'required'=>false])
   ->add('fullName',TextType::class,['label'=>'Nombre completo'])->add('email',EmailType::class,['label'=>'Correo electrónico'])->add('phone',TelType::class,['label'=>'Teléfono o WhatsApp'])
   ->add('contactPreference',ChoiceType::class,['label'=>'Medio de contacto preferido','choices'=>['WhatsApp'=>'whatsapp','Correo electrónico'=>'email','Llamada telefónica'=>'phone']])

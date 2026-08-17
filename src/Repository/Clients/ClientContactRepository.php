@@ -33,6 +33,19 @@ final class ClientContactRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    public function findActiveRequesterByPublicNumber(string $publicNumber): ?ClientContact
+    {
+        return $this->createQueryBuilder('contact')
+            ->andWhere('contact.publicNumber = :publicNumber')
+            ->andWhere('contact.isActive = :active')
+            ->andWhere('contact.canRequestProducts = :canRequest')
+            ->setParameter('publicNumber', strtoupper(trim($publicNumber)))
+            ->setParameter('active', true)
+            ->setParameter('canRequest', true)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
     /**
      * @return list<ClientContact>
      */
