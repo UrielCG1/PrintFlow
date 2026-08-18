@@ -6,6 +6,7 @@ use App\Application\Catalog\CommercialItemData;
 use App\Entity\Catalog\CommercialCategory;
 use App\Entity\Catalog\MeasurementUnit;
 use App\Enum\Catalog\CommercialItemType as CommercialItemTypeEnum;
+use App\Enum\Quotations\QuotationItemSpecificationProfile;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\EnumType;
@@ -32,6 +33,12 @@ final class CommercialItemType extends AbstractType
                 'class' => CommercialItemTypeEnum::class,
                 'label' => 'Tipo',
                 'choice_label' => static fn (CommercialItemTypeEnum $type): string => $type->label(),
+            ])
+            ->add('quotationSpecificationProfile', EnumType::class, [
+                'class' => QuotationItemSpecificationProfile::class,
+                'label' => 'Especificaciones en cotización interna',
+                'help' => 'Gran formato solicita ancho y alto terminados. Solo afecta /admin/cotizaciones.',
+                'choice_label' => static fn (QuotationItemSpecificationProfile $profile): string => $profile->label(),
             ])
             ->add('name', TextType::class, [
                 'label' => 'Nombre',

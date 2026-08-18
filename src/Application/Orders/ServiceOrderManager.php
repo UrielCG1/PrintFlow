@@ -552,7 +552,9 @@ final class ServiceOrderManager
             ->setUnitPrice($quotationItem->getUnitPrice())
             ->setLineSubtotal($quotationItem->getLineSubtotal())
             ->setCommercialItemSnapshot($quotationItem->getCommercialItemSnapshot())
-            ->setPriceRuleSnapshot($quotationItem->getPriceRuleSnapshot());
+            ->setPriceRuleSnapshot($quotationItem->getPriceRuleSnapshot())
+            ->setSpecificationsSnapshot($quotationItem->getSpecificationsSnapshot())
+            ->setSpecificationSchemaVersion($quotationItem->getSpecificationSchemaVersion());
     }
 
     /** @return array<string, int|string|null> */

@@ -22,6 +22,59 @@
                 {{ form_row(form.items.vars.prototype.quantity) }}
             </div>
         </div>
+
+        {{ form_widget(form.items.vars.prototype.quantityMode) }}
+
+        <section
+            class="mt-4 pt-3 border-top d-none"
+            data-ui--quotation-form-specification-panel
+            aria-live="polite"
+        >
+            <h3 class="h6 mb-1">Especificaciones de gran formato</h3>
+            <p class="small text-muted mb-3">
+                Captura el tamaño terminado. Para conceptos vendidos por m², la cantidad se calculará automáticamente y podrás ajustarla si hace falta.
+            </p>
+
+            <div class="row g-3">
+                <div class="col-12 col-md-6 pf-form-field">
+                    <label class="form-label" for="quotation_items___name___specifications_finished_width_cm">Ancho terminado (cm)</label>
+                    <input
+                        id="quotation_items___name___specifications_finished_width_cm"
+                        class="form-control"
+                        type="text"
+                        name="{{ form.items.vars.prototype.specifications.vars.full_name }}[finished_width_cm]"
+                        inputmode="decimal"
+                        maxlength="15"
+                        autocomplete="off"
+                        data-ui--quotation-form-specification="finished_width_cm"
+                        data-action="input->ui--quotation-form#changeLargeFormatDimension"
+                    >
+                </div>
+
+                <div class="col-12 col-md-6 pf-form-field">
+                    <label class="form-label" for="quotation_items___name___specifications_finished_height_cm">Alto terminado (cm)</label>
+                    <input
+                        id="quotation_items___name___specifications_finished_height_cm"
+                        class="form-control"
+                        type="text"
+                        name="{{ form.items.vars.prototype.specifications.vars.full_name }}[finished_height_cm]"
+                        inputmode="decimal"
+                        maxlength="15"
+                        autocomplete="off"
+                        data-ui--quotation-form-specification="finished_height_cm"
+                        data-action="input->ui--quotation-form#changeLargeFormatDimension"
+                    >
+                </div>
+
+                <div class="col-12">
+                    <div class="rounded-3 bg-light p-3 small">
+                        <strong>Área calculada:</strong>
+                        <span data-ui--quotation-form-calculated-area>Captura ambas medidas.</span>
+                        <span class="d-block text-muted mt-1" data-ui--quotation-form-billing-help></span>
+                    </div>
+                </div>
+            </div>
+        </section>
     </template>
 
     <div class="row g-4">
@@ -172,6 +225,63 @@
                                         {{ form_row(itemForm.quantity) }}
                                     </div>
                                 </div>
+
+                                {{ form_widget(itemForm.quantityMode) }}
+
+                                {% set specifications = itemForm.specifications.vars.data|default({}) %}
+                                <section
+                                    class="mt-4 pt-3 border-top d-none"
+                                    data-ui--quotation-form-specification-panel
+                                    aria-live="polite"
+                                >
+                                    <h3 class="h6 mb-1">Especificaciones de gran formato</h3>
+                                    <p class="small text-muted mb-3">
+                                        Captura el tamaño terminado. Para conceptos vendidos por m², la cantidad se calculará automáticamente y podrás ajustarla si hace falta.
+                                    </p>
+
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-6 pf-form-field">
+                                            <label class="form-label" for="{{ itemForm.specifications.vars.id }}_finished_width_cm">Ancho terminado (cm)</label>
+                                            <input
+                                                id="{{ itemForm.specifications.vars.id }}_finished_width_cm"
+                                                class="form-control"
+                                                type="text"
+                                                name="{{ itemForm.specifications.vars.full_name }}[finished_width_cm]"
+                                                value="{{ specifications.finished_width_cm|default('') }}"
+                                                inputmode="decimal"
+                                                maxlength="15"
+                                                autocomplete="off"
+                                                data-ui--quotation-form-specification="finished_width_cm"
+                                                data-action="input->ui--quotation-form#changeLargeFormatDimension"
+                                            >
+                                        </div>
+
+                                        <div class="col-12 col-md-6 pf-form-field">
+                                            <label class="form-label" for="{{ itemForm.specifications.vars.id }}_finished_height_cm">Alto terminado (cm)</label>
+                                            <input
+                                                id="{{ itemForm.specifications.vars.id }}_finished_height_cm"
+                                                class="form-control"
+                                                type="text"
+                                                name="{{ itemForm.specifications.vars.full_name }}[finished_height_cm]"
+                                                value="{{ specifications.finished_height_cm|default('') }}"
+                                                inputmode="decimal"
+                                                maxlength="15"
+                                                autocomplete="off"
+                                                data-ui--quotation-form-specification="finished_height_cm"
+                                                data-action="input->ui--quotation-form#changeLargeFormatDimension"
+                                            >
+                                        </div>
+
+                                        <div class="col-12">
+                                            <div class="rounded-3 bg-light p-3 small">
+                                                <strong>Área calculada:</strong>
+                                                <span data-ui--quotation-form-calculated-area>Captura ambas medidas.</span>
+                                                <span class="d-block text-muted mt-1" data-ui--quotation-form-billing-help></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+                                {% do itemForm.specifications.setRendered %}
                             </article>
                         {% endfor %}
                     </div>

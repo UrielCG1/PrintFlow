@@ -33,6 +33,7 @@ final class QuotationManager
         private readonly QuotationRepository $quotationRepository,
         private readonly ClientRepository $clientRepository,
         private readonly CommercialItemRepository $commercialItemRepository,
+        private readonly QuotationItemSpecificationResolver $specificationResolver,
     ) {
     }
 
@@ -487,7 +488,13 @@ final class QuotationManager
                 $itemData->commercialItem,
             );
 
-            $quantity = ItemPriceRule::normalizeMinimumQuantity($itemData->quantity);
+            $specification = $this->specificationResolver->resolve(
+                $commercialItem,
+                $itemData->specifications,
+                $itemData->quantity,
+                $itemData->quantityMode,
+            );
+            $quantity = $specification['quantity'];
 
             $resolution = $this->commercialItemPriceResolver->resolve(
                 $commercialItem,
@@ -517,6 +524,7 @@ final class QuotationManager
                     $resolution->appliedRule,
                     $unitPrice,
                 ),
+                'specifications_snapshot' => $specification['snapshot'],
             ];
         }
 
@@ -540,7 +548,9 @@ final class QuotationManager
                 ->setCommercialItemSnapshot(
                     $resolvedItem['commercial_item_snapshot'],
                 )
-                ->setPriceRuleSnapshot($resolvedItem['price_rule_snapshot']);
+                ->setPriceRuleSnapshot($resolvedItem['price_rule_snapshot'])
+                ->setSpecificationsSnapshot($resolvedItem['specifications_snapshot'])
+                ->setSpecificationSchemaVersion(1);
 
             if (!isset($currentItems[$index])) {
                 $quotation->addItem($quotationItem);
@@ -661,6 +671,7 @@ final class QuotationManager
             'name' => $item->getName(),
             'description' => $item->getDescription(),
             'type' => $item->getType()->value,
+            'quotation_specification_profile' => $item->getQuotationSpecificationProfile()->value,
             'category' => [
                 'id' => $item->getCategory()->getId(),
                 'code' => $item->getCategory()->getCode(),
@@ -709,6 +720,7 @@ final class QuotationManager
                 'quantity' => $item->getQuantity(),
                 'unit_price' => $item->getUnitPrice(),
                 'line_subtotal' => $item->getLineSubtotal(),
+                'specifications' => $item->getSpecificationsSnapshot(),
             ];
         }
 

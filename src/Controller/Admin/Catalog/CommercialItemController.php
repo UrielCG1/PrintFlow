@@ -111,6 +111,7 @@ final class CommercialItemController extends AbstractController
         $data->id = $item->getId();
         $data->code = $item->getCode();
         $data->type = $item->getType();
+        $data->quotationSpecificationProfile = $item->getQuotationSpecificationProfile();
         $data->name = $item->getName();
         $data->description = $item->getDescription();
         $data->category = $item->getCategory();

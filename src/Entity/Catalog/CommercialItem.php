@@ -3,6 +3,7 @@
 namespace App\Entity\Catalog;
 
 use App\Enum\Catalog\CommercialItemType;
+use App\Enum\Quotations\QuotationItemSpecificationProfile;
 use App\Repository\Catalog\CommercialItemRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -34,6 +35,9 @@ class CommercialItem
 
     #[ORM\Column(length: 20, enumType: CommercialItemType::class)]
     private CommercialItemType $type;
+
+    #[ORM\Column(name: 'quotation_specification_profile', length: 30, enumType: QuotationItemSpecificationProfile::class, options: ['default' => 'NONE'])]
+    private QuotationItemSpecificationProfile $quotationSpecificationProfile = QuotationItemSpecificationProfile::NONE;
 
     #[ORM\Column(length: 160)]
     private string $name;
@@ -109,6 +113,18 @@ class CommercialItem
     public function setType(CommercialItemType $type): self
     {
         $this->type = $type;
+
+        return $this;
+    }
+
+    public function getQuotationSpecificationProfile(): QuotationItemSpecificationProfile
+    {
+        return $this->quotationSpecificationProfile;
+    }
+
+    public function setQuotationSpecificationProfile(QuotationItemSpecificationProfile $profile): self
+    {
+        $this->quotationSpecificationProfile = $profile;
 
         return $this;
     }

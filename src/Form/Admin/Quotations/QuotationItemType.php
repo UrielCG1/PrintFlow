@@ -9,6 +9,8 @@ use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 final class QuotationItemType extends AbstractType
@@ -39,13 +41,36 @@ final class QuotationItemType extends AbstractType
                     $item->getName(),
                     $item->getMeasurementUnit()->getName(),
                 ),
+                'choice_attr' => static fn (CommercialItem $item): array => [
+                    'data-quotation-profile' => $item->getQuotationSpecificationProfile()->value,
+                    'data-quotation-measurement-unit-code' => $item->getMeasurementUnit()->getCode(),
+                    'data-quotation-measurement-unit-name' => $item->getMeasurementUnit()->getName(),
+                ],
+                'attr' => [
+                    'data-ui--quotation-form-commercial-item' => '',
+                    'data-action' => 'change->ui--quotation-form#changeCommercialItem',
+                ],
             ])
             ->add('quantity', TextType::class, [
                 'label' => 'Cantidad',
                 'attr' => [
                     'inputmode' => 'decimal',
                     'placeholder' => '1.0000',
+                    'data-ui--quotation-form-quantity' => '',
+                    'data-action' => 'input->ui--quotation-form#markQuantityAsManual',
                 ],
+            ])
+            ->add('quantityMode', HiddenType::class, [
+                'attr' => [
+                    'data-ui--quotation-form-quantity-mode' => '',
+                ],
+            ])
+            ->add('specifications', CollectionType::class, [
+                'entry_type' => TextType::class,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'by_reference' => false,
+                'required' => false,
             ]);
     }
 

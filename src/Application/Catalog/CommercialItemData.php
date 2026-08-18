@@ -6,6 +6,7 @@ use App\Entity\Catalog\CommercialCategory;
 use App\Entity\Catalog\CommercialItem;
 use App\Entity\Catalog\MeasurementUnit;
 use App\Enum\Catalog\CommercialItemType;
+use App\Enum\Quotations\QuotationItemSpecificationProfile;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -30,6 +31,9 @@ final class CommercialItemData
 
     #[Assert\NotNull(message: 'Selecciona el tipo de concepto.')]
     public ?CommercialItemType $type = CommercialItemType::SERVICE;
+
+    #[Assert\NotNull(message: 'Selecciona el perfil de especificaciones para cotización.')]
+    public ?QuotationItemSpecificationProfile $quotationSpecificationProfile = QuotationItemSpecificationProfile::NONE;
 
     #[Assert\NotBlank(message: 'El nombre es obligatorio.')]
     #[Assert\Length(max: 160)]

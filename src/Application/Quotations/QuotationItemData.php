@@ -7,6 +7,9 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 final class QuotationItemData
 {
+    public const QUANTITY_MODE_AUTO = 'AUTO';
+    public const QUANTITY_MODE_MANUAL = 'MANUAL';
+
     #[Assert\NotNull(message: 'Selecciona un concepto comercial.')]
     public ?CommercialItem $commercialItem = null;
 
@@ -16,4 +19,13 @@ final class QuotationItemData
         message: 'La cantidad debe usar hasta cuatro decimales.',
     )]
     public ?string $quantity = '1.0000';
+
+    /** @var array<string, string> */
+    public array $specifications = [];
+
+    #[Assert\Choice(
+        choices: [self::QUANTITY_MODE_AUTO, self::QUANTITY_MODE_MANUAL],
+        message: 'El origen de la cantidad no es válido.',
+    )]
+    public string $quantityMode = self::QUANTITY_MODE_AUTO;
 }

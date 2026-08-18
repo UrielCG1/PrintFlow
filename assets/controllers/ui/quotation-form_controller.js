@@ -30,6 +30,7 @@ export default class extends Controller {
         this.currentClientContext = null;
 
         this.refreshState();
+        this.itemElements.forEach((item) => this.configureItemSpecifications(item));
         this.loadSelectedClientContext({ applyClientDefault: true });
     }
 
@@ -109,8 +110,66 @@ export default class extends Controller {
         this.nextIndex += 1;
 
         this.refreshState();
+        this.configureItemSpecifications(item);
 
         item.querySelector('select, input, textarea')?.focus();
+    }
+
+    async changeCommercialItem(event) {
+        const item = event.currentTarget.closest(
+            '[data-ui--quotation-form-item]',
+        );
+
+        if (!item) {
+            return;
+        }
+
+        const previousCommercialItemId = item.dataset.previousCommercialItemId ?? '';
+        const nextCommercialItemId = event.currentTarget.value;
+
+        if (
+            previousCommercialItemId !== ''
+            && previousCommercialItemId !== nextCommercialItemId
+            && this.hasSpecificationValues(item)
+            && !this.confirmSpecificationReplacement()
+        ) {
+            event.currentTarget.value = previousCommercialItemId;
+
+            return;
+        }
+
+        if (previousCommercialItemId !== nextCommercialItemId) {
+            this.clearSpecifications(item);
+        }
+
+        this.configureItemSpecifications(item);
+    }
+
+    changeLargeFormatDimension(event) {
+        const item = event.currentTarget.closest(
+            '[data-ui--quotation-form-item]',
+        );
+
+        if (item) {
+            this.updateCalculatedArea(item);
+        }
+    }
+
+    markQuantityAsManual(event) {
+        const item = event.currentTarget.closest(
+            '[data-ui--quotation-form-item]',
+        );
+
+        if (!item || !this.isLargeFormatAreaItem(item)) {
+            return;
+        }
+
+        const quantityMode = this.quantityModeInput(item);
+        if (quantityMode) {
+            quantityMode.value = 'MANUAL';
+        }
+
+        this.updateBillingHelp(item);
     }
 
     removeItem(event) {
@@ -180,6 +239,170 @@ export default class extends Controller {
                 '[data-ui--quotation-form-item]',
             ),
         );
+    }
+
+    configureItemSpecifications(item) {
+        const select = item.querySelector(
+            '[data-ui--quotation-form-commercial-item]',
+        );
+        const panel = item.querySelector(
+            '[data-ui--quotation-form-specification-panel]',
+        );
+
+        if (!select || !panel) {
+            return;
+        }
+
+        const isLargeFormat = this.selectedProfile(select) === 'LARGE_FORMAT';
+
+        panel.classList.toggle('d-none', !isLargeFormat);
+        panel.querySelectorAll('[data-ui--quotation-form-specification]').forEach(
+            (input) => {
+                input.required = isLargeFormat;
+            },
+        );
+
+        item.dataset.previousCommercialItemId = select.value;
+
+        if (isLargeFormat) {
+            this.updateCalculatedArea(item);
+        }
+    }
+
+    updateCalculatedArea(item) {
+        const areaTarget = item.querySelector(
+            '[data-ui--quotation-form-calculated-area]',
+        );
+        const width = this.specificationInput(item, 'finished_width_cm');
+        const height = this.specificationInput(item, 'finished_height_cm');
+
+        if (!areaTarget || !width || !height) {
+            return;
+        }
+
+        const widthValue = this.parseDecimal(width.value);
+        const heightValue = this.parseDecimal(height.value);
+
+        if (!Number.isFinite(widthValue) || !Number.isFinite(heightValue) || widthValue <= 0 || heightValue <= 0) {
+            areaTarget.textContent = 'Captura ambas medidas.';
+            this.updateBillingHelp(item);
+
+            return;
+        }
+
+        const area = (widthValue * heightValue) / 10000;
+        const formattedArea = area.toFixed(4);
+        areaTarget.textContent = `${formattedArea} m²`;
+
+        const quantityMode = this.quantityModeInput(item);
+        const quantity = item.querySelector('[data-ui--quotation-form-quantity]');
+
+        if (
+            this.isLargeFormatAreaItem(item)
+            && quantityMode
+            && quantity
+            && quantityMode.value !== 'MANUAL'
+        ) {
+            quantity.value = formattedArea;
+            quantityMode.value = 'AUTO';
+        }
+
+        this.updateBillingHelp(item);
+    }
+
+    updateBillingHelp(item) {
+        const help = item.querySelector(
+            '[data-ui--quotation-form-billing-help]',
+        );
+
+        if (!help) {
+            return;
+        }
+
+        if (!this.isLargeFormatAreaItem(item)) {
+            help.textContent = 'La cantidad facturable se captura en piezas; las medidas se conservan como especificación.';
+
+            return;
+        }
+
+        const quantityMode = this.quantityModeInput(item);
+        help.textContent = quantityMode?.value === 'MANUAL'
+            ? 'Cantidad facturable ajustada manualmente. Al modificar las medidas no se reemplazará.'
+            : 'La cantidad facturable se toma del área calculada. Puedes modificarla manualmente si es necesario.';
+    }
+
+    clearSpecifications(item) {
+        item.querySelectorAll('[data-ui--quotation-form-specification]').forEach(
+            (input) => {
+                input.value = '';
+            },
+        );
+
+        const areaTarget = item.querySelector(
+            '[data-ui--quotation-form-calculated-area]',
+        );
+        if (areaTarget) {
+            areaTarget.textContent = 'Captura ambas medidas.';
+        }
+
+        const quantityMode = this.quantityModeInput(item);
+        if (quantityMode) {
+            quantityMode.value = 'AUTO';
+        }
+    }
+
+    hasSpecificationValues(item) {
+        return Array.from(
+            item.querySelectorAll('[data-ui--quotation-form-specification]'),
+        ).some((input) => input.value.trim() !== '');
+    }
+
+    confirmSpecificationReplacement() {
+        return window.confirm(
+            'Al cambiar el concepto se eliminarán las medidas terminadas capturadas. ¿Deseas continuar?',
+        );
+    }
+
+    selectedProfile(select) {
+        return select.selectedOptions[0]?.dataset.quotationProfile ?? 'NONE';
+    }
+
+    selectedMeasurementUnitCode(item) {
+        const select = item.querySelector(
+            '[data-ui--quotation-form-commercial-item]',
+        );
+
+        return select?.selectedOptions[0]?.dataset.quotationMeasurementUnitCode ?? '';
+    }
+
+    isLargeFormatAreaItem(item) {
+        const select = item.querySelector(
+            '[data-ui--quotation-form-commercial-item]',
+        );
+
+        return select
+            && this.selectedProfile(select) === 'LARGE_FORMAT'
+            && this.selectedMeasurementUnitCode(item).toUpperCase() === 'M2';
+    }
+
+    specificationInput(item, name) {
+        return item.querySelector(
+            `[data-ui--quotation-form-specification="${name}"]`,
+        );
+    }
+
+    quantityModeInput(item) {
+        return item.querySelector('[data-ui--quotation-form-quantity-mode]');
+    }
+
+    parseDecimal(value) {
+        const normalized = String(value).trim().replace(',', '.');
+
+        if (!/^(?:0|[1-9]\d*)(?:\.\d+)?$/.test(normalized)) {
+            return Number.NaN;
+        }
+
+        return Number.parseFloat(normalized);
     }
 
     async loadSelectedClientContext({ applyClientDefault }) {

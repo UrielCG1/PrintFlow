@@ -55,6 +55,13 @@ class ServiceOrderItem
     #[ORM\Column(name: 'price_rule_snapshot', type: Types::JSON, nullable: true)]
     private ?array $priceRuleSnapshot = null;
 
+    /** @var array<string, mixed> */
+    #[ORM\Column(name: 'specifications_snapshot', type: Types::JSON)]
+    private array $specificationsSnapshot = [];
+
+    #[ORM\Column(name: 'specification_schema_version', options: ['unsigned' => true, 'default' => 1])]
+    private int $specificationSchemaVersion = 1;
+
     #[ORM\Column(name: 'created_at', type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
@@ -200,6 +207,36 @@ class ServiceOrderItem
     public function setPriceRuleSnapshot(?array $priceRuleSnapshot): self
     {
         $this->priceRuleSnapshot = $priceRuleSnapshot;
+
+        return $this;
+    }
+
+    /** @return array<string, mixed> */
+    public function getSpecificationsSnapshot(): array
+    {
+        return $this->specificationsSnapshot;
+    }
+
+    /** @param array<string, mixed> $specificationsSnapshot */
+    public function setSpecificationsSnapshot(array $specificationsSnapshot): self
+    {
+        $this->specificationsSnapshot = $specificationsSnapshot;
+
+        return $this;
+    }
+
+    public function getSpecificationSchemaVersion(): int
+    {
+        return $this->specificationSchemaVersion;
+    }
+
+    public function setSpecificationSchemaVersion(int $specificationSchemaVersion): self
+    {
+        if ($specificationSchemaVersion < 1) {
+            throw new \InvalidArgumentException('La versión del esquema técnico debe ser positiva.');
+        }
+
+        $this->specificationSchemaVersion = $specificationSchemaVersion;
 
         return $this;
     }

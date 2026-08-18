@@ -106,6 +106,7 @@ final class CommercialItemManager
             $data->category === null
             || $data->measurementUnit === null
             || $data->type === null
+            || $data->quotationSpecificationProfile === null
         ) {
             throw new \LogicException('Los datos del concepto comercial están incompletos.');
         }
@@ -131,6 +132,7 @@ final class CommercialItemManager
             ->setMeasurementUnit($data->measurementUnit)
             ->setCode((string) $data->code)
             ->setType($data->type)
+            ->setQuotationSpecificationProfile($data->quotationSpecificationProfile)
             ->setName((string) $data->name)
             ->setDescription($data->description);
 
@@ -145,6 +147,7 @@ final class CommercialItemManager
         return [
             'code' => $item->getCode(),
             'type' => $item->getType()->label(),
+            'quotation_specification_profile' => $item->getQuotationSpecificationProfile()->label(),
             'name' => $item->getName(),
             'description' => $item->getDescription(),
             'category' => $item->getCategory()->getCode().' — '.$item->getCategory()->getName(),

@@ -304,6 +304,7 @@
                 <tbody>
                     {% for item in quotation.items %}
                         {% set snapshot = item.commercialItemSnapshot %}
+                        {% set specifications = item.specificationsSnapshot %}
 
                         <tr>
                             <td>{{ item.lineNumber }}</td>
@@ -319,6 +320,12 @@
                                 {% if snapshot.description|default(null) %}
                                     <div class="item-description">
                                         {{ snapshot.description }}
+                                    </div>
+                                {% endif %}
+
+                                {% if specifications.summary|default(null) %}
+                                    <div class="item-description">
+                                        {{ specifications.summary }}
                                     </div>
                                 {% endif %}
                             </td>

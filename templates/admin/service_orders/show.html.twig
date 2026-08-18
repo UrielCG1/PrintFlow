@@ -129,6 +129,9 @@
                                 <span class="text-muted small">Partida {{ item.lineNumber }}</span>
                                 <h3 class="h6 mb-1">{{ item.commercialItemSnapshot.name ?? item.commercialItem.name }}</h3>
                                 <span class="text-muted small">Cantidad contratada: {{ item.quantity }}</span>
+                                {% if item.specificationsSnapshot.summary|default(null) %}
+                                    <span class="d-block text-muted small mt-1">{{ item.specificationsSnapshot.summary }}</span>
+                                {% endif %}
                             </div>
                             <span class="text-muted small">{{ plans|length }} {{ plans|length == 1 ? 'operación' : 'operaciones' }} activas</span>
                         </header>
@@ -264,6 +267,9 @@
                                     <td>
                                         <strong>{{ item.commercialItemSnapshot.name ?? item.commercialItem.name }}</strong>
                                         <span class="d-block text-muted small">{{ item.commercialItemSnapshot.code ?? '' }}</span>
+                                        {% if item.specificationsSnapshot.summary|default(null) %}
+                                            <span class="d-block text-muted small mt-1">{{ item.specificationsSnapshot.summary }}</span>
+                                        {% endif %}
                                     </td>
                                     <td class="pf-table__cell--right">{{ item.quantity }}</td>
                                     <td class="pf-table__cell--right">${{ item.unitPrice|number_format(2, '.', ',') }}</td>

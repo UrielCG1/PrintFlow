@@ -300,7 +300,13 @@
                             {% for item in quotation.items %}
                                 <tr>
                                     <td>{{ item.lineNumber }}</td>
-                                    <td><strong>{{ item.commercialItemSnapshot.name ?? item.commercialItem.name }}</strong><span class="d-block text-muted small">{{ item.commercialItemSnapshot.code ?? '' }}</span></td>
+                                    <td>
+                                        <strong>{{ item.commercialItemSnapshot.name ?? item.commercialItem.name }}</strong>
+                                        <span class="d-block text-muted small">{{ item.commercialItemSnapshot.code ?? '' }}</span>
+                                        {% if item.specificationsSnapshot.summary|default(null) %}
+                                            <span class="d-block text-muted small mt-1">{{ item.specificationsSnapshot.summary }}</span>
+                                        {% endif %}
+                                    </td>
                                     <td class="pf-table__cell--right">{{ item.quantity }}</td>
                                     <td class="pf-table__cell--right">${{ item.unitPrice|number_format(2, '.', ',') }}</td>
                                     <td class="pf-table__cell--right">${{ item.lineSubtotal|number_format(2, '.', ',') }}</td>

@@ -71,6 +71,13 @@ final class QuotationData
             $item = new QuotationItemData();
             $item->commercialItem = $quotationItem->getCommercialItem();
             $item->quantity = $quotationItem->getQuantity();
+            $specifications = $quotationItem->getSpecificationsSnapshot();
+            $item->specifications = is_array($specifications['values'] ?? null)
+                ? $specifications['values']
+                : [];
+            $item->quantityMode = ($specifications['billing_quantity']['source'] ?? null) === 'DIMENSIONS'
+                ? QuotationItemData::QUANTITY_MODE_AUTO
+                : QuotationItemData::QUANTITY_MODE_MANUAL;
 
             $data->addItem($item);
         }
