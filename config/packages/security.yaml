@@ -35,6 +35,7 @@ security:
                 invalidate_session: true
 
     access_control:
+        - { path: ^/cotizacion/aceptar/, roles: PUBLIC_ACCESS }
         - { path: ^/cotizar$, roles: PUBLIC_ACCESS }
         - { path: ^/login$, roles: PUBLIC_ACCESS }
         - { path: ^/reset-password, roles: PUBLIC_ACCESS }

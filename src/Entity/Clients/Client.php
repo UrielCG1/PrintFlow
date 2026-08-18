@@ -3,6 +3,7 @@
 namespace App\Entity\Clients;
 
 use App\Entity\Common\Phone;
+use App\Entity\Common\Address;
 use App\Entity\Common\TaxData;
 use App\Repository\Clients\ClientRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -203,6 +204,8 @@ class Client
         return $this;
     }
 
+    public function setFiscalAddress(?Address $address): self { $this->taxDataForWrite()->setFiscalAddress($address); return $this; }
+
     private function getDefaultTaxData(): ?TaxData
     {
         foreach ($this->taxData as $item) { if ($item->isActive() && $item->isDefault()) { return $item; } }
@@ -258,6 +261,8 @@ class Client
 
         return null;
     }
+
+    /** @return Collection<int, ClientPhone> */ public function getPhones(): Collection { return $this->phones; }
 
     public function setPhone(?string $phone): self
     {

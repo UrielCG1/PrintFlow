@@ -9,6 +9,7 @@ use App\Entity\Quotations\Quotation;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Address;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 final class QuotationMailer
 {
@@ -17,6 +18,10 @@ final class QuotationMailer
         private readonly QuotationPdfRenderer $quotationPdfRenderer,
         private readonly string $fromAddress,
         private readonly string $fromName,
+        private readonly string $privacyResponsible,
+        private readonly string $privacyAddress,
+        private readonly string $privacyEmail,
+        private readonly UrlGeneratorInterface $urlGenerator,
     ) {
     }
 
@@ -40,6 +45,10 @@ final class QuotationMailer
                 'quotation' => $quotation,
                 'recipientName' => $recipientName,
                 'message' => $message !== '' ? $message : null,
+                'privacyResponsible' => $this->privacyResponsible,
+                'privacyAddress' => $this->privacyAddress,
+                'privacyEmail' => $this->privacyEmail,
+                'acceptanceUrl' => $this->urlGenerator->generate('quotation_public_accept', ['token' => $quotation->ensureAcceptanceToken()], UrlGeneratorInterface::ABSOLUTE_URL),
             ])
             ->attach(
                 $this->quotationPdfRenderer->render($quotation),

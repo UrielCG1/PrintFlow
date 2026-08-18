@@ -16,6 +16,7 @@ class ClientBranchAddress { use Timestampable;
     public function __construct(ClientBranch $branch,Address $address,string $type){$this->branch=$branch;$this->address=$address;$this->addressType=strtoupper(trim($type));$this->initializeTimestamps();}
     public function getId():?int{return $this->id;} public function getBranch():ClientBranch{return $this->branch;} public function getAddress():Address{return $this->address;}
     public function getAddressType():string{return $this->addressType;} public function setAddressType(string $v):self{$this->addressType=strtoupper(trim($v));return $this;}
+    public function getDeliveryZone():?DeliveryZone{return $this->deliveryZone;} public function getDeliveryCost():?string{return $this->deliveryCost;} public function isDefault():bool{return $this->isDefault;} public function isActive():bool{return $this->isActive;}
     public function setDeliveryZone(?DeliveryZone $v):self{$this->deliveryZone=$v;return $this;} public function setDeliveryCost(?string $v):self{$this->deliveryCost=$v===null?null:number_format((float)$v,2,'.','');return $this;}
     public function setIsDefault(bool $v):self{$this->isDefault=$v;return $this;} public function setIsActive(bool $v):self{$this->isActive=$v;return $this;}
 }

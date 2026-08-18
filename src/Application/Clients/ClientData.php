@@ -4,9 +4,12 @@ namespace App\Application\Clients;
 
 use App\Entity\Clients\ClientCategory;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 final class ClientData
 {
+    /** @var list<ClientPhoneData> */ #[Assert\Valid] public array $phones = [];
+    /** @var list<ClientBranchData> */ #[Assert\Valid] public array $branches = [];
     #[Assert\Choice(choices: ['COMPANY', 'INDIVIDUAL'])]
     public string $clientType = 'COMPANY';
 
@@ -56,4 +59,13 @@ final class ClientData
 
     #[Assert\Length(max: 2000)]
     public ?string $notes = null;
+
+    #[Assert\Callback]
+    public function validateCollections(ExecutionContextInterface $context): void
+    {
+        $mainBranches=0;$primaryContacts=0;$codes=[];
+        foreach($this->branches as $branch){if($branch->isMain)$mainBranches++;$code=strtoupper(trim((string)$branch->code));if($code!==''&&isset($codes[$code])){$context->buildViolation('El código de cada sucursal debe ser único dentro del cliente.')->atPath('branches')->addViolation();} $codes[$code]=true;foreach($branch->contacts as $contact){if($contact->isPrimary)$primaryContacts++;}}
+        if($mainBranches>1){$context->buildViolation('Solo puede existir una sucursal principal.')->atPath('branches')->addViolation();}
+        if($primaryContacts>1){$context->buildViolation('Solo puede existir un contacto principal por cliente.')->atPath('branches')->addViolation();}
+    }
 }

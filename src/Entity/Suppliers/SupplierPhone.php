@@ -26,6 +26,7 @@ class SupplierPhone
     #[ORM\ManyToOne(targetEntity: Supplier::class, inversedBy: 'phones')]
     #[ORM\JoinColumn(name: 'supplier_id', nullable: false, onDelete: 'CASCADE')]
     private Supplier $supplier;
+    #[ORM\ManyToOne(targetEntity:SupplierBranch::class),ORM\JoinColumn(name:'supplier_branch_id',nullable:true,onDelete:'CASCADE')] private ?SupplierBranch $branch=null;
 
     /** Número telefónico reutilizable. */
     #[ORM\ManyToOne(targetEntity: Phone::class, cascade: ['persist'])]
@@ -53,6 +54,7 @@ class SupplierPhone
 
     public function getId(): ?int { return $this->id; }
     public function getSupplier(): Supplier { return $this->supplier; }
+    public function getBranch():?SupplierBranch{return $this->branch;} public function setBranch(?SupplierBranch $v):self{$this->branch=$v;return $this;}
     public function getPhone(): Phone { return $this->phone; }
     public function getLabel(): ?string { return $this->label; }
     public function setLabel(?string $value): self { $value=trim((string)$value); $this->label=$value?:null; return $this; }

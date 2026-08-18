@@ -65,7 +65,7 @@ APP_URL="https://printflow.teramorphosis.com"
 MAILER_DSN="smtps://contacto%40teramorphosis.com:CONTRASENA_CODIFICADA@smtp.hostinger.com:465"
 
 MAILER_FROM_ADDRESS="contacto@teramorphosis.com"
-MAILER_FROM_NAME="PrintLab"
+MAILER_FROM_NAME="OoxCorp"
 ```
 
 ### Codificación de caracteres especiales

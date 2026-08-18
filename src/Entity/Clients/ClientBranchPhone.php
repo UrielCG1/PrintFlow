@@ -12,5 +12,5 @@ class ClientBranchPhone { use Timestampable;
     /** Número principal. */ #[ORM\Column(name:'is_primary',options:['default'=>false])] private bool $isPrimary=false;
     /** Vigencia de la asignación. */ #[ORM\Column(name:'is_active',options:['default'=>true])] private bool $isActive=true;
     public function __construct(ClientBranch $branch,Phone $phone){$this->branch=$branch;$this->phone=$phone;$this->initializeTimestamps();}
-    public function getId():?int{return $this->id;} public function setLabel(?string $v):self{$v=trim((string)$v);$this->label=$v?:null;return $this;} public function setIsPrimary(bool $v):self{$this->isPrimary=$v;return $this;} public function setIsActive(bool $v):self{$this->isActive=$v;return $this;}
+    public function getId():?int{return $this->id;} public function getBranch():ClientBranch{return $this->branch;} public function getPhone():Phone{return $this->phone;} public function getLabel():?string{return $this->label;} public function isPrimary():bool{return $this->isPrimary;} public function isActive():bool{return $this->isActive;} public function setLabel(?string $v):self{$v=trim((string)$v);$this->label=$v?:null;return $this;} public function setIsPrimary(bool $v):self{$this->isPrimary=$v;return $this;} public function setIsActive(bool $v):self{$this->isActive=$v;return $this;}
 }

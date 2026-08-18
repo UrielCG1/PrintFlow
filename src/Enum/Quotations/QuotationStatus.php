@@ -8,6 +8,7 @@ enum QuotationStatus: string
     case ISSUED = 'ISSUED';
     case SENT = 'SENT';
     case ACCEPTED = 'ACCEPTED';
+    case ACCEPTED_WITH_CHANGES = 'ACCEPTED_WITH_CHANGES';
     case REJECTED = 'REJECTED';
     case EXPIRED = 'EXPIRED';
     case CANCELLED = 'CANCELLED';
@@ -20,6 +21,7 @@ enum QuotationStatus: string
             self::ISSUED => 'Emitida',
             self::SENT => 'Enviada',
             self::ACCEPTED => 'Aceptada',
+            self::ACCEPTED_WITH_CHANGES => 'Aceptada con cambios',
             self::REJECTED => 'Rechazada',
             self::EXPIRED => 'Expirada',
             self::CANCELLED => 'Cancelada',
@@ -46,6 +48,7 @@ enum QuotationStatus: string
     {
         return $this === self::ISSUED
             || $this === self::SENT
+            || $this === self::ACCEPTED_WITH_CHANGES
             || $this === self::REJECTED
             || $this === self::EXPIRED
             || $this === self::CANCELLED;
