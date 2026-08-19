@@ -35,6 +35,44 @@ final class ClientAddressRepository extends ServiceEntityRepository
     /**
      * @return list<ClientAddress>
      */
+    public function findActiveForClientByType(
+        Client $client,
+        string $addressType,
+    ): array {
+        return $this->createQueryBuilder('address')
+            ->andWhere('address.client = :client')
+            ->andWhere('address.addressType = :addressType')
+            ->andWhere('address.isActive = :isActive')
+            ->setParameter('client', $client)
+            ->setParameter('addressType', $addressType)
+            ->setParameter('isActive', true)
+            ->orderBy('address.isDefault', 'DESC')
+            ->addOrderBy('address.label', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findActiveForQuotation(
+        int $id,
+        Client $client,
+        string $addressType,
+    ): ?ClientAddress {
+        return $this->createQueryBuilder('address')
+            ->andWhere('address.id = :id')
+            ->andWhere('address.client = :client')
+            ->andWhere('address.addressType = :addressType')
+            ->andWhere('address.isActive = :isActive')
+            ->setParameter('id', $id)
+            ->setParameter('client', $client)
+            ->setParameter('addressType', $addressType)
+            ->setParameter('isActive', true)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * @return list<ClientAddress>
+     */
     public function findOtherActiveDefaultFiscalAddresses(
         Client $client,
         ?ClientAddress $except = null,

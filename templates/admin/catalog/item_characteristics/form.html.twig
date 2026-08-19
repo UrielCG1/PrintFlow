@@ -1,0 +1,18 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}{{ pageTitle }} | PrintFlow{% endblock %}
+{% block app_navigation_active %}catalog_items{% endblock %}
+{% block app_breadcrumb %}Catálogo / Productos y servicios / {{ item.name }} / Características / {{ pageTitle }}{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page__content">
+        <header class="pf-page-header"><div class="pf-page-header__content"><h1 class="pf-page-header__title">{{ pageTitle }}</h1><p class="pf-page-header__description">Producto: {{ item.name }} · Característica: {{ characteristic.name }}{{ characteristic.unitLabel ? ' (' ~ characteristic.unitLabel ~ ')' : '' }}</p></div></header>
+        <div class="pf-card">
+            {{ form_start(form, {attr: {class: 'pf-form pf-card__body', novalidate: 'novalidate'}}) }}
+                <div class="row g-3"><div class="col-md-4">{{ form_row(form.displayOrder) }}</div><div class="col-md-8 d-flex align-items-end">{{ form_row(form.isRequired) }}</div></div>
+                {% if form.allowedOptions is defined %}<div class="mt-4">{{ form_row(form.allowedOptions) }}</div>{% endif %}
+                <div class="pf-form-actions"><a href="{{ path('admin_catalog_item_characteristics_index', {item: item.id}) }}" class="btn pf-button pf-button--secondary">Cancelar</a><button type="submit" class="btn pf-button pf-button--primary"><i class="bi bi-check-lg" aria-hidden="true"></i><span>{{ configuration ? 'Guardar cambios' : 'Configurar característica' }}</span></button></div>
+            {{ form_end(form) }}
+        </div>
+    </div>
+{% endblock %}

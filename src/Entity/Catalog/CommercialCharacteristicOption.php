@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 namespace App\Entity\Catalog;
 
+use App\Repository\Catalog\CommercialCharacteristicOptionRepository;
 use Doctrine\ORM\Mapping as ORM;
 
 /** Opción controlada de una característica SELECT, por ejemplo MATE. */
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: CommercialCharacteristicOptionRepository::class)]
 #[ORM\Table(name: 'commercial_characteristic_options')]
 #[ORM\UniqueConstraint(name: 'uniq_commercial_characteristic_options_code', columns: ['characteristic_id', 'code'])]
 #[ORM\UniqueConstraint(name: 'uniq_commercial_characteristic_options_name', columns: ['characteristic_id', 'name'])]
 #[ORM\Index(name: 'idx_commercial_characteristic_options_active_order', columns: ['characteristic_id', 'is_active', 'display_order', 'name'])]
 #[ORM\HasLifecycleCallbacks]
-final class CommercialCharacteristicOption
+class CommercialCharacteristicOption
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

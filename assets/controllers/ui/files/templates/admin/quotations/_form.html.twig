@@ -1,0 +1,353 @@
+{{ form_start(form, {
+    attr: {
+        class: 'pf-form',
+        'data-controller': 'ui--quotation-form',
+        'data-ui--quotation-form-client-context-url-value': path('admin_quotations_client_context', {id: 0}),
+        'data-ui--quotation-form-product-context-url-value': path('admin_quotations_product_context', {id: 0})
+    }
+}) }}
+    {{ form_errors(form) }}
+
+    {#
+        El prototipo no es una partida real. El controlador Stimulus lo clona
+        únicamente al pulsar "Agregar partida" y reemplaza __name__ por un
+        índice único antes de insertarlo en la colección.
+    #}
+    <template data-ui--quotation-form-target="prototype">
+        <div class="row g-3">
+            <div class="col-12 col-lg-4 pf-form-field">
+                {{ form_row(form.items.vars.prototype.commercialCategory) }}
+            </div>
+
+            <div class="col-12 col-lg-8 pf-form-field">
+                {{ form_row(form.items.vars.prototype.commercialItem) }}
+            </div>
+
+            <div class="col-12 col-lg-4 pf-form-field">
+                {{ form_row(form.items.vars.prototype.quantity) }}
+            </div>
+        </div>
+
+        {{ form_widget(form.items.vars.prototype.quantityMode) }}
+
+        <section
+            class="mt-4 pt-3 border-top d-none"
+            data-ui--quotation-form-characteristics-panel
+            aria-live="polite"
+        >
+            <h3 class="h6 mb-1">Características del Producto</h3>
+            <p class="small text-muted mb-3">
+                Selecciona los valores aplicables para este Producto.
+            </p>
+            <div
+                class="row g-3"
+                data-ui--quotation-form-characteristics-fields
+                data-specifications-name="{{ form.items.vars.prototype.specifications.vars.full_name }}"
+                data-initial-specifications="{}"
+            ></div>
+        </section>
+
+        <section
+            class="mt-4 pt-3 border-top d-none"
+            data-ui--quotation-form-specification-panel
+            aria-live="polite"
+        >
+            <h3 class="h6 mb-1">Especificaciones de gran formato</h3>
+            <p class="small text-muted mb-3">
+                Captura el tamaño terminado. Para conceptos vendidos por m², la cantidad se calculará automáticamente y podrás ajustarla si hace falta.
+            </p>
+
+            <div class="row g-3">
+                <div class="col-12 col-md-6 pf-form-field">
+                    <label class="form-label" for="quotation_items___name___specifications_finished_width_cm">Ancho terminado (cm)</label>
+                    <input
+                        id="quotation_items___name___specifications_finished_width_cm"
+                        class="form-control"
+                        type="text"
+                        name="{{ form.items.vars.prototype.specifications.vars.full_name }}[finished_width_cm]"
+                        inputmode="decimal"
+                        maxlength="15"
+                        autocomplete="off"
+                        data-ui--quotation-form-specification="finished_width_cm"
+                        data-action="input->ui--quotation-form#changeLargeFormatDimension"
+                    >
+                </div>
+
+                <div class="col-12 col-md-6 pf-form-field">
+                    <label class="form-label" for="quotation_items___name___specifications_finished_height_cm">Alto terminado (cm)</label>
+                    <input
+                        id="quotation_items___name___specifications_finished_height_cm"
+                        class="form-control"
+                        type="text"
+                        name="{{ form.items.vars.prototype.specifications.vars.full_name }}[finished_height_cm]"
+                        inputmode="decimal"
+                        maxlength="15"
+                        autocomplete="off"
+                        data-ui--quotation-form-specification="finished_height_cm"
+                        data-action="input->ui--quotation-form#changeLargeFormatDimension"
+                    >
+                </div>
+
+                <div class="col-12">
+                    <div class="rounded-3 bg-light p-3 small">
+                        <strong>Área calculada:</strong>
+                        <span data-ui--quotation-form-calculated-area>Captura ambas medidas.</span>
+                        <span class="d-block text-muted mt-1" data-ui--quotation-form-billing-help></span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <div class="row g-4">
+        <div class="col-12 col-xl-8">
+            <section class="pf-card h-100">
+                <header class="pf-card__header">
+                    <p class="pf-page-header__eyebrow mb-1">Paso 1</p>
+                    <h2 class="pf-card__title">Información general</h2>
+                    <p class="pf-card__description">
+                        Selecciona el cliente, define la vigencia y registra las condiciones comerciales del borrador.
+                    </p>
+                </header>
+
+                <div class="pf-card__body">
+                    <div class="row g-3">
+                        <div class="col-12 pf-form-field">
+                            {{ form_row(form.client) }}
+                        </div>
+
+                        <div
+                            class="col-12 d-none"
+                            data-ui--quotation-form-target="clientContext"
+                            aria-live="polite"
+                        >
+                            <div class="border rounded-3 bg-light p-3">
+                                <div class="d-flex align-items-start gap-3">
+                                    <i class="bi bi-building-check fs-4 text-success" aria-hidden="true"></i>
+
+                                    <div class="flex-grow-1">
+                                        <p class="small text-muted mb-1">Contexto comercial del cliente</p>
+                                        <p class="fw-semibold mb-1" data-ui--quotation-form-target="clientBusinessName"></p>
+                                        <p class="small text-muted mb-2" data-ui--quotation-form-target="clientLegalName"></p>
+
+                                        <div class="d-flex flex-column flex-sm-row flex-wrap gap-2 small">
+                                            <span data-ui--quotation-form-target="clientEmail"></span>
+                                            <span data-ui--quotation-form-target="clientPhone"></span>
+                                        </div>
+
+                                        <div class="mt-3 d-flex flex-wrap align-items-center gap-2">
+                                            <span class="badge text-bg-success">
+                                                Descuento predeterminado: <span data-ui--quotation-form-target="clientDefaultDiscount"></span>
+                                            </span>
+                                            <span class="small text-muted" data-ui--quotation-form-target="discountOrigin"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 pf-form-field">
+                            {{ form_row(form.expiresAt) }}
+                        </div>
+
+                        <div class="col-md-6 pf-form-field">
+                            {{ form_row(form.discountPercent) }}
+                        </div>
+
+                        <div class="col-12 pf-form-field">
+                            {{ form_row(form.notes) }}
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-12 col-xl-4">
+            <aside class="pf-card h-100">
+                <div class="pf-card__body">
+                    <div class="d-flex align-items-start gap-3">
+                        <i class="bi bi-calculator fs-4 text-success" aria-hidden="true"></i>
+
+                        <div>
+                            <h2 class="pf-card__title">Cálculo protegido</h2>
+                            <p class="pf-card__description mb-2">
+                                Al guardar, PrintFlow determina el precio vigente por rango,
+                                el descuento, IVA y total final.
+                            </p>
+                            <small class="text-muted">
+                                Los importes se calculan exclusivamente en el servidor.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <div class="col-12">
+            <section class="pf-card">
+                <header class="pf-card__header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                    <div>
+                        <p class="pf-page-header__eyebrow mb-1">Paso 2</p>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <h2 class="pf-card__title mb-0">Partidas</h2>
+                            <span
+                                class="badge text-bg-light border"
+                                data-ui--quotation-form-target="itemCount"
+                                aria-live="polite"
+                            >
+                                Sin partidas
+                            </span>
+                        </div>
+                        <p class="pf-card__description mb-0">
+                            Selecciona la categoría, el Producto y sus características; después captura la cantidad solicitada.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="btn pf-button pf-button--secondary"
+                        data-action="ui--quotation-form#addItem"
+                    >
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                        Agregar partida
+                    </button>
+                </header>
+
+                <div class="pf-card__body">
+                    {{ form_errors(form.items) }}
+
+                    <div class="d-grid gap-3" data-ui--quotation-form-target="items">
+                        {% for itemForm in form.items %}
+                            <article class="pf-card p-4" data-ui--quotation-form-item>
+                                <header class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4 pb-3 border-bottom">
+                                    <div>
+                                        <span class="text-muted small">Partida</span>
+                                        <strong class="ms-1" data-ui--quotation-form-line-number>
+                                            {{ loop.index }}
+                                        </strong>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        class="btn pf-button pf-button--danger pf-button--sm"
+                                        data-action="ui--quotation-form#removeItem"
+                                        aria-label="Eliminar partida {{ loop.index }}"
+                                    >
+                                        <i class="bi bi-trash3" aria-hidden="true"></i>
+                                        Eliminar
+                                    </button>
+                                </header>
+
+                                <div class="row g-3">
+                                    <div class="col-12 col-lg-4 pf-form-field">
+                                        {{ form_row(itemForm.commercialCategory) }}
+                                    </div>
+
+                                    <div class="col-12 col-lg-8 pf-form-field">
+                                        {{ form_row(itemForm.commercialItem) }}
+                                    </div>
+
+                                    <div class="col-12 col-lg-4 pf-form-field">
+                                        {{ form_row(itemForm.quantity) }}
+                                    </div>
+                                </div>
+
+                                {{ form_widget(itemForm.quantityMode) }}
+
+                                {% set specifications = itemForm.specifications.vars.data|default({}) %}
+                                <section
+                                    class="mt-4 pt-3 border-top d-none"
+                                    data-ui--quotation-form-characteristics-panel
+                                    aria-live="polite"
+                                >
+                                    <h3 class="h6 mb-1">Características del Producto</h3>
+                                    <p class="small text-muted mb-3">
+                                        Selecciona los valores aplicables para este Producto.
+                                    </p>
+                                    <div
+                                        class="row g-3"
+                                        data-ui--quotation-form-characteristics-fields
+                                        data-specifications-name="{{ itemForm.specifications.vars.full_name }}"
+                                        data-initial-specifications="{{ specifications|json_encode|e('html_attr') }}"
+                                    ></div>
+                                </section>
+                                <section
+                                    class="mt-4 pt-3 border-top d-none"
+                                    data-ui--quotation-form-specification-panel
+                                    aria-live="polite"
+                                >
+                                    <h3 class="h6 mb-1">Especificaciones de gran formato</h3>
+                                    <p class="small text-muted mb-3">
+                                        Captura el tamaño terminado. Para conceptos vendidos por m², la cantidad se calculará automáticamente y podrás ajustarla si hace falta.
+                                    </p>
+
+                                    <div class="row g-3">
+                                        <div class="col-12 col-md-6 pf-form-field">
+                                            <label class="form-label" for="{{ itemForm.specifications.vars.id }}_finished_width_cm">Ancho terminado (cm)</label>
+                                            <input
+                                                id="{{ itemForm.specifications.vars.id }}_finished_width_cm"
+                                                class="form-control"
+                                                type="text"
+                                                name="{{ itemForm.specifications.vars.full_name }}[finished_width_cm]"
+                                                value="{{ specifications.finished_width_cm|default('') }}"
+                                                inputmode="decimal"
+                                                maxlength="15"
+                                                autocomplete="off"
+                                                data-ui--quotation-form-specification="finished_width_cm"
+                                                data-action="input->ui--quotation-form#changeLargeFormatDimension"
+                                            >
+                                        </div>
+
+                                        <div class="col-12 col-md-6 pf-form-field">
+                                            <label class="form-label" for="{{ itemForm.specifications.vars.id }}_finished_height_cm">Alto terminado (cm)</label>
+                                            <input
+                                                id="{{ itemForm.specifications.vars.id }}_finished_height_cm"
+                                                class="form-control"
+                                                type="text"
+                                                name="{{ itemForm.specifications.vars.full_name }}[finished_height_cm]"
+                                                value="{{ specifications.finished_height_cm|default('') }}"
+                                                inputmode="decimal"
+                                                maxlength="15"
+                                                autocomplete="off"
+                                                data-ui--quotation-form-specification="finished_height_cm"
+                                                data-action="input->ui--quotation-form#changeLargeFormatDimension"
+                                            >
+                                        </div>
+
+                                        <div class="col-12">
+                                            <div class="rounded-3 bg-light p-3 small">
+                                                <strong>Área calculada:</strong>
+                                                <span data-ui--quotation-form-calculated-area>Captura ambas medidas.</span>
+                                                <span class="d-block text-muted mt-1" data-ui--quotation-form-billing-help></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+                                {% do itemForm.specifications.setRendered %}
+                            </article>
+                        {% endfor %}
+                    </div>
+
+                    <div class="d-none pf-table__empty-content" data-ui--quotation-form-target="emptyState">
+                        <i class="bi bi-list-check pf-table__empty-icon" aria-hidden="true"></i>
+                        <p class="mb-1 fw-semibold">Aún no hay partidas</p>
+                        <p class="mb-0 text-muted">Agrega al menos un Producto para guardar el borrador.</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    {{ form_rest(form) }}
+
+    <footer class="pf-form-actions">
+        <a href="{{ path('admin_quotations_index') }}" class="btn pf-button pf-button--secondary">
+            Cancelar
+        </a>
+
+        <button type="submit" class="btn pf-button pf-button--primary">
+            <i class="bi bi-check-lg" aria-hidden="true"></i>
+            {{ submit_label }}
+        </button>
+    </footer>
+{{ form_end(form, {render_rest: false}) }}

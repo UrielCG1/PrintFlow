@@ -1,0 +1,32 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}{{ pageTitle }} | PrintFlow{% endblock %}
+{% block app_navigation_active %}catalog_characteristics{% endblock %}
+{% block app_breadcrumb %}Catálogo / Características de producto / {{ pageTitle }}{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page__content">
+        <header class="pf-page-header">
+            <div class="pf-page-header__content">
+                <h1 class="pf-page-header__title">{{ pageTitle }}</h1>
+                <p class="pf-page-header__description">Una característica no cambia el precio; solo controla datos que se solicitarán posteriormente en la cotización.</p>
+            </div>
+        </header>
+
+        <div class="pf-card">
+            {{ form_start(form, {attr: {class: 'pf-form pf-card__body', novalidate: 'novalidate'}}) }}
+                <div class="row g-3">
+                    <div class="col-md-4">{{ form_row(form.code) }}</div>
+                    <div class="col-md-4">{{ form_row(form.inputType) }}</div>
+                    <div class="col-md-4">{{ form_row(form.displayOrder) }}</div>
+                    <div class="col-md-8">{{ form_row(form.name) }}</div>
+                    <div class="col-md-4">{{ form_row(form.unitLabel) }}</div>
+                </div>
+                <div class="pf-form-actions">
+                    <a href="{{ path('admin_catalog_characteristics_index') }}" class="btn pf-button pf-button--secondary">Cancelar</a>
+                    <button type="submit" class="btn pf-button pf-button--primary"><i class="bi bi-check-lg" aria-hidden="true"></i><span>{{ characteristic ? 'Guardar cambios' : 'Crear característica' }}</span></button>
+                </div>
+            {{ form_end(form) }}
+        </div>
+    </div>
+{% endblock %}

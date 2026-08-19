@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Entity\Catalog;
 
+use App\Repository\Catalog\CommercialItemCharacteristicRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 /** Configura qué características se solicitan para un producto comercial. */
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: CommercialItemCharacteristicRepository::class)]
 #[ORM\Table(name: 'commercial_item_characteristics')]
 #[ORM\UniqueConstraint(name: 'uniq_commercial_item_characteristics', columns: ['commercial_item_id', 'characteristic_id'])]
 #[ORM\Index(name: 'idx_commercial_item_characteristics_order', columns: ['commercial_item_id', 'display_order'])]
@@ -42,7 +43,7 @@ final class CommercialItemCharacteristic
     private \DateTimeImmutable $updatedAt;
 
     /** @var Collection<int, CommercialItemCharacteristicOption> */
-    #[ORM\OneToMany(mappedBy: 'commercialItemCharacteristic', targetEntity: CommercialItemCharacteristicOption::class, cascade: ['persist'])]
+    #[ORM\OneToMany(mappedBy: 'commercialItemCharacteristic', targetEntity: CommercialItemCharacteristicOption::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
     #[ORM\OrderBy(['displayOrder' => 'ASC', 'id' => 'ASC'])]
     private Collection $allowedOptions;
 
@@ -83,6 +84,15 @@ final class CommercialItemCharacteristic
         if (!$this->allowedOptions->contains($allowedOption)) {
             $this->allowedOptions->add($allowedOption);
             $allowedOption->setCommercialItemCharacteristic($this);
+        }
+
+        return $this;
+    }
+
+    public function removeAllowedOption(CommercialItemCharacteristicOption $allowedOption): self
+    {
+        if ($this->allowedOptions->removeElement($allowedOption)) {
+            // orphanRemoval elimina la relación y su fila hija al sincronizar Doctrine.
         }
 
         return $this;

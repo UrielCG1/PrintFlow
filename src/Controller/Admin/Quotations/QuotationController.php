@@ -2,12 +2,15 @@
 
 namespace App\Controller\Admin\Quotations;
 
+use App\Application\Catalog\CommercialItemPriceResolver;
 use App\Application\Quotations\QuotationData;
 use App\Application\Quotations\QuotationCancellationData;
 use App\Application\Quotations\QuotationDecisionData;
 use App\Application\Quotations\QuotationEmailData;
 use App\Application\Quotations\QuotationItemData;
+use App\Application\Quotations\QuotationItemCharacteristicsSpecificationResolver;
 use App\Application\Quotations\QuotationManager;
+use App\Application\Quotations\QuotationTotalsCalculator;
 use App\Application\Quotations\QuotationRevisionData;
 use App\Entity\Quotations\Quotation;
 use App\Entity\Users\User;
@@ -17,7 +20,11 @@ use App\Form\Admin\Quotations\QuotationEmailType;
 use App\Form\Admin\Quotations\QuotationRevisionType;
 use App\Form\Admin\Quotations\QuotationType;
 use App\Repository\Orders\ServiceOrderRepository;
+use App\Repository\Clients\ClientAddressRepository;
+use App\Repository\Clients\ClientContactRepository;
 use App\Repository\Clients\ClientRepository;
+use App\Repository\Catalog\CommercialItemCharacteristicRepository;
+use App\Repository\Catalog\CommercialItemRepository;
 use App\Repository\Quotations\QuotationRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
@@ -29,7 +36,6 @@ use App\Service\Quotations\QuotationPdfRenderer;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
-use Doctrine\ORM\EntityManagerInterface;
 
 #[Route('/admin/cotizaciones')]
 final class QuotationController extends AbstractController
@@ -37,6 +43,8 @@ final class QuotationController extends AbstractController
     public function __construct(
         private readonly ServiceOrderRepository $serviceOrderRepository,
         private readonly ClientRepository $clientRepository,
+        private readonly ClientContactRepository $clientContactRepository,
+        private readonly ClientAddressRepository $clientAddressRepository,
     ) {
     }
 
@@ -63,6 +71,16 @@ final class QuotationController extends AbstractController
             throw $this->createNotFoundException('El cliente activo solicitado no existe.');
         }
 
+        $commercialContacts = $this->clientContactRepository->findActiveForClient($client);
+        $fiscalAddresses = $this->clientAddressRepository->findActiveForClientByType(
+            $client,
+            'FISCAL',
+        );
+        $deliveryAddresses = $this->clientAddressRepository->findActiveForClientByType(
+            $client,
+            'DELIVERY',
+        );
+
         return $this->json([
             'id' => $client->getId(),
             'businessName' => $client->getBusinessName(),
@@ -70,6 +88,133 @@ final class QuotationController extends AbstractController
             'email' => $client->getEmail(),
             'phone' => $client->getPhone(),
             'defaultDiscountPercent' => $client->getDefaultDiscountPercent(),
+            'commercialContacts' => array_map(
+                fn ($contact): array => $this->commercialContactContext($contact),
+                $commercialContacts,
+            ),
+            'fiscalAddresses' => array_map(
+                fn ($address): array => $this->clientAddressContext($address),
+                $fiscalAddresses,
+            ),
+            'deliveryAddresses' => array_map(
+                fn ($address): array => $this->clientAddressContext($address),
+                $deliveryAddresses,
+            ),
+            'defaults' => [
+                'commercialContactId' => $this->firstPrimaryContactId($commercialContacts),
+                'fiscalAddressId' => $this->firstDefaultAddressId($fiscalAddresses),
+                'deliveryAddressId' => $this->firstDefaultAddressId($deliveryAddresses),
+            ],
+        ]);
+    }
+
+    #[Route('/contexto-producto/{id}', name: 'admin_quotations_product_context', requirements: ['id' => '\\d+'], methods: ['GET'])]
+    public function productContext(
+        int $id,
+        CommercialItemRepository $commercialItemRepository,
+        CommercialItemCharacteristicRepository $configurationRepository,
+    ): JsonResponse {
+        if (!$this->isGranted('quotations.create') && !$this->isGranted('quotations.update')) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $item = $commercialItemRepository->findActiveForQuotation($id);
+
+        if ($item === null) {
+            throw $this->createNotFoundException('El Producto activo solicitado no existe.');
+        }
+
+        $characteristics = [];
+        foreach ($configurationRepository->findForQuotationItem($item) as $configuration) {
+            $characteristic = $configuration->getCharacteristic();
+            $options = [];
+
+            foreach ($configuration->getAllowedOptions() as $allowedOption) {
+                $option = $allowedOption->getCharacteristicOption();
+                $options[] = [
+                    'value' => $option->getCode(),
+                    'label' => $option->getName(),
+                ];
+            }
+
+            $characteristics[] = [
+                'key' => QuotationItemCharacteristicsSpecificationResolver::fieldKey($characteristic),
+                'code' => $characteristic->getCode(),
+                'name' => $characteristic->getName(),
+                'inputType' => $characteristic->getInputType()->value,
+                'unitLabel' => $characteristic->getUnitLabel(),
+                'required' => $configuration->isRequired(),
+                'options' => $options,
+            ];
+        }
+
+        return $this->json([
+            'id' => $item->getId(),
+            'category' => [
+                'id' => $item->getCategory()->getId(),
+                'name' => $item->getCategory()->getName(),
+            ],
+            'characteristics' => $characteristics,
+        ]);
+    }
+
+    #[Route('/preview-precio/{id}', name: 'admin_quotations_price_preview', requirements: ['id' => '\\d+'], methods: ['GET'])]
+    public function pricePreview(
+        Request $request,
+        int $id,
+        CommercialItemRepository $commercialItemRepository,
+        CommercialItemPriceResolver $commercialItemPriceResolver,
+        QuotationTotalsCalculator $totalsCalculator,
+    ): JsonResponse {
+        if (!$this->isGranted('quotations.create') && !$this->isGranted('quotations.update')) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $item = $commercialItemRepository->findActiveForQuotation($id);
+
+        if ($item === null) {
+            throw $this->createNotFoundException('El Producto activo solicitado no existe.');
+        }
+
+        $quantity = (string) $request->query->get('quantity', '');
+
+        try {
+            $resolution = $commercialItemPriceResolver->resolve(
+                $item,
+                $quantity,
+            );
+            $unitPrice = Quotation::normalizeAmount(
+                $resolution->unitPrice,
+                'El precio unitario resuelto',
+            );
+            $lineSubtotal = $totalsCalculator->lineSubtotal(
+                $resolution->quantity,
+                $unitPrice,
+            );
+        } catch (\InvalidArgumentException $exception) {
+            return $this->json(
+                ['message' => $exception->getMessage()],
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+            );
+        }
+
+        $appliedRule = $resolution->appliedRule;
+        $measurementUnit = $item->getMeasurementUnit();
+
+        return $this->json([
+            'itemId' => $item->getId(),
+            'quantity' => $resolution->quantity,
+            'unitPrice' => $unitPrice,
+            'lineSubtotal' => $lineSubtotal,
+            'priceSource' => $appliedRule === null ? 'BASE_PRICE' : 'QUANTITY_TIER',
+            'priceRule' => $appliedRule === null ? null : [
+                'id' => $appliedRule->getId(),
+                'minQuantity' => $appliedRule->getMinQuantity(),
+            ],
+            'measurementUnit' => [
+                'code' => $measurementUnit->getCode(),
+                'name' => $measurementUnit->getName(),
+            ],
         ]);
     }
 
@@ -365,20 +510,6 @@ final class QuotationController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}/revisar-aceptacion', name: 'admin_quotations_review_acceptance', requirements: ['id' => '\d+'], methods: ['POST'])]
-    public function reviewAcceptance(Quotation $quotation, Request $request, EntityManagerInterface $em): Response
-    {
-        $this->denyAccessUnlessGranted('quotations.manage_status');
-        if (!$this->isCsrfTokenValid('quotation-review-acceptance-'.$quotation->getId(), (string) $request->request->get('_token'))) { throw $this->createAccessDeniedException('Token CSRF inválido.'); }
-        if ($quotation->getStatus() !== \App\Enum\Quotations\QuotationStatus::ACCEPTED_WITH_CHANGES) { throw $this->createNotFoundException('La cotización no tiene cambios pendientes de revisión.'); }
-        $user = $this->getUser();
-        if (!$user instanceof User) { throw $this->createAccessDeniedException(); }
-        $quotation->markAcceptanceReviewedBy($user);
-        $em->flush();
-        $this->addFlash('success', 'La aceptación con cambios quedó marcada como revisada.');
-        return $this->redirectToRoute('admin_quotations_show', ['id' => $quotation->getId()]);
-    }
-
     #[Route('/{id}', name: 'admin_quotations_show', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function show(Quotation $quotation): Response
     {
@@ -430,5 +561,74 @@ final class QuotationController extends AbstractController
         }
 
         return $user;
+    }
+
+    /** @param list<\App\Entity\Clients\ClientContact> $contacts */
+    private function firstPrimaryContactId(array $contacts): ?int
+    {
+        foreach ($contacts as $contact) {
+            if ($contact->isPrimary()) {
+                return $contact->getId();
+            }
+        }
+
+        return null;
+    }
+
+    /** @param list<\App\Entity\Clients\ClientAddress> $addresses */
+    private function firstDefaultAddressId(array $addresses): ?int
+    {
+        foreach ($addresses as $address) {
+            if ($address->isDefaultFiscal() || $address->isDefaultDelivery()) {
+                return $address->getId();
+            }
+        }
+
+        return null;
+    }
+
+    /** @return array<string, int|string|bool|null> */
+    private function commercialContactContext(\App\Entity\Clients\ClientContact $contact): array
+    {
+        $label = $contact->getFullName();
+        if ($contact->getJobTitle() !== null) {
+            $label .= ' · '.$contact->getJobTitle();
+        }
+
+        return [
+            'id' => $contact->getId(),
+            'label' => $label,
+            'email' => $contact->getEmail(),
+            'phone' => $contact->getPhone(),
+            'isPrimary' => $contact->isPrimary(),
+        ];
+    }
+
+    /** @return array<string, int|string|bool|null> */
+    private function clientAddressContext(\App\Entity\Clients\ClientAddress $address): array
+    {
+        return [
+            'id' => $address->getId(),
+            'label' => $address->getLabel(),
+            'summary' => $this->formatAddress($address),
+            'recipientName' => $address->getRecipientName(),
+            'isDefault' => $address->isDefaultFiscal() || $address->isDefaultDelivery(),
+        ];
+    }
+
+    private function formatAddress(\App\Entity\Clients\ClientAddress $address): string
+    {
+        $street = trim($address->getStreet().' '.$address->getExteriorNumber());
+        if ($address->getInteriorNumber() !== null) {
+            $street .= ' Int. '.$address->getInteriorNumber();
+        }
+
+        return implode(', ', array_filter([
+            $street,
+            $address->getNeighborhood(),
+            $address->getMunicipality(),
+            $address->getState(),
+            'CP '.$address->getPostalCode(),
+        ]));
     }
 }

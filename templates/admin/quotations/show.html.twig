@@ -13,14 +13,13 @@
         'ISSUED': 'pf-status-badge--info',
         'SENT': 'pf-status-badge--info',
         'ACCEPTED': 'pf-status-badge--success',
-        'ACCEPTED_WITH_CHANGES': 'pf-status-badge--warning',
         'REJECTED': 'pf-status-badge--danger',
         'EXPIRED': 'pf-status-badge--warning',
         'CANCELLED': 'pf-status-badge--neutral',
         'SUPERSEDED': 'pf-status-badge--neutral'
     } %}
     {% set is_current_commercial = status in ['ISSUED', 'SENT'] %}
-    {% set can_revise = status in ['ISSUED', 'SENT', 'ACCEPTED_WITH_CHANGES', 'REJECTED', 'EXPIRED', 'CANCELLED'] %}
+    {% set can_revise = status in ['ISSUED', 'SENT', 'REJECTED', 'EXPIRED', 'CANCELLED'] %}
 
     <section class="pf-page__content">
         <header class="pf-page-header">
@@ -114,6 +113,48 @@
             </div>
         </div>
 
+        {% set commercialContact = quotation.clientSnapshot.commercial_contact|default(null) %}
+        {% set fiscalAddress = quotation.fiscalAddressSnapshot %}
+        {% set deliveryAddress = quotation.deliveryAddressSnapshot %}
+        {% if commercialContact or fiscalAddress or deliveryAddress %}
+            <section class="pf-card mb-4">
+                <header class="pf-card__header">
+                    <h2 class="pf-card__title">Datos comerciales</h2>
+                    <p class="pf-card__description">Información seleccionada y congelada para esta cotización.</p>
+                </header>
+                <div class="pf-card__body">
+                    <dl class="row mb-0">
+                        {% if commercialContact %}
+                            <dt class="col-sm-3">Contacto comercial</dt>
+                            <dd class="col-sm-9">
+                                {{ commercialContact.full_name|default('No especificado') }}
+                                {% if commercialContact.job_title|default(null) %} · {{ commercialContact.job_title }}{% endif %}
+                                {% if commercialContact.email|default(null) or commercialContact.phone|default(null) %}
+                                    <span class="d-block text-muted small">{{ commercialContact.email|default('') }}{% if commercialContact.email|default(null) and commercialContact.phone|default(null) %} · {% endif %}{{ commercialContact.phone|default('') }}</span>
+                                {% endif %}
+                            </dd>
+                        {% endif %}
+                        {% if fiscalAddress %}
+                            <dt class="col-sm-3">Domicilio fiscal</dt>
+                            <dd class="col-sm-9">
+                                {% if fiscalAddress.label|default(null) %}<strong>{{ fiscalAddress.label }}</strong><br>{% endif %}
+                                {% if fiscalAddress.recipient_name|default(null) %}{{ fiscalAddress.recipient_name }}<br>{% endif %}
+                                {{ fiscalAddress.formatted_address|default('No especificado') }}
+                            </dd>
+                        {% endif %}
+                        {% if deliveryAddress %}
+                            <dt class="col-sm-3">Domicilio de entrega</dt>
+                            <dd class="col-sm-9">
+                                {% if deliveryAddress.label|default(null) %}<strong>{{ deliveryAddress.label }}</strong><br>{% endif %}
+                                {% if deliveryAddress.recipient_name|default(null) %}{{ deliveryAddress.recipient_name }}<br>{% endif %}
+                                {{ deliveryAddress.formatted_address|default('No especificado') }}
+                            </dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </section>
+        {% endif %}
+
         {% if quotation.decisionAt %}
             <section class="pf-card mb-4">
                 <header class="pf-card__header">
@@ -139,20 +180,6 @@
                         {% if quotation.decisionEvidenceReference %}
                             <dt class="col-sm-3">Evidencia</dt>
                             <dd class="col-sm-9" style="white-space: pre-line;">{{ quotation.decisionEvidenceReference }}</dd>
-                        {% endif %}
-                        {% if status == 'ACCEPTED_WITH_CHANGES' %}
-                            <dt class="col-sm-3">Revisión</dt>
-                            <dd class="col-sm-9">
-                                {% if quotation.acceptanceReviewedBy %}
-                                    Revisada por {{ quotation.acceptanceReviewedBy.fullName }} el {{ quotation.acceptanceReviewedAt|date('d/m/Y H:i', 'America/Mexico_City') }}.
-                                {% elseif is_granted('quotations.manage_status') %}
-                                    <strong class="text-warning">Requiere revisión antes de producción.</strong>
-                                    <form method="post" action="{{ path('admin_quotations_review_acceptance', {id: quotation.id}) }}" class="mt-2">
-                                        <input type="hidden" name="_token" value="{{ csrf_token('quotation-review-acceptance-' ~ quotation.id) }}">
-                                        <button class="btn pf-button pf-button--secondary" type="submit">Marcar cambios como revisados</button>
-                                    </form>
-                                {% endif %}
-                            </dd>
                         {% endif %}
                     </dl>
                 </div>

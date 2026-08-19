@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity\Catalog;
 
 use App\Enum\Catalog\CommercialCharacteristicInputType;
+use App\Repository\Catalog\CommercialCharacteristicRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -15,7 +16,7 @@ use Doctrine\ORM\Mapping as ORM;
  * Ejemplos: acabado, adhesivo, corte o ancho terminado. La característica
  * no pertenece al inventario y por sí misma no modifica precios.
  */
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: CommercialCharacteristicRepository::class)]
 #[ORM\Table(name: 'commercial_characteristics')]
 #[ORM\UniqueConstraint(name: 'uniq_commercial_characteristics_code', columns: ['code'])]
 #[ORM\UniqueConstraint(name: 'uniq_commercial_characteristics_name', columns: ['name'])]

@@ -1,0 +1,123 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Características de producto | PrintFlow{% endblock %}
+{% block app_navigation_active %}catalog_characteristics{% endblock %}
+{% block app_breadcrumb %}Catálogo / Características de producto{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page__content">
+        <header class="pf-page-header">
+            <div class="pf-page-header__content">
+                <h1 class="pf-page-header__title">Características de producto</h1>
+                <p class="pf-page-header__description">
+                    Define los datos controlados que se podrán solicitar al cotizar un Producto.
+                </p>
+            </div>
+
+            {% if is_granted('catalog.characteristics.manage') %}
+                <div class="pf-page-header__actions">
+                    <a href="{{ path('admin_catalog_characteristics_new') }}" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                        <span>Nueva característica</span>
+                    </a>
+                </div>
+            {% endif %}
+        </header>
+
+        <form method="get" action="{{ path('admin_catalog_characteristics_index') }}" class="pf-card pf-form" aria-label="Filtros de características">
+            <div class="pf-card__body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-lg-6 pf-form-field">
+                        <label for="characteristic-search" class="form-label">Buscar</label>
+                        <input id="characteristic-search" type="search" name="q" value="{{ search }}" class="form-control" placeholder="Código o nombre">
+                    </div>
+                    <div class="col-md-3 pf-form-field">
+                        <label for="characteristic-status" class="form-label">Estado</label>
+                        <select id="characteristic-status" name="status" class="form-select">
+                            <option value="active" {{ status == 'active' ? 'selected' : '' }}>Activas</option>
+                            <option value="inactive" {{ status == 'inactive' ? 'selected' : '' }}>Inactivas</option>
+                            <option value="all" {{ status == 'all' ? 'selected' : '' }}>Todas</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="pf-card__header-actions">
+                            <button type="submit" class="btn pf-button pf-button--primary"><i class="bi bi-search" aria-hidden="true"></i><span>Filtrar</span></button>
+                            <a href="{{ path('admin_catalog_characteristics_index') }}" class="btn pf-button pf-button--secondary"><span>Limpiar</span></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <section class="pf-card pf-card--padding-none" aria-label="Listado de características">
+            <div class="pf-table-responsive pf-table-responsive--flat">
+                <table class="pf-table">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Característica</th>
+                            <th>Tipo de dato</th>
+                            <th>Unidad</th>
+                            <th>Orden</th>
+                            <th>Estado</th>
+                            {% if is_granted('catalog.characteristics.manage') %}<th class="pf-table__actions-cell">Acciones</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for characteristic in page.items %}
+                            <tr>
+                                <td><code class="pf-table__code">{{ characteristic.code }}</code></td>
+                                <td><span class="pf-table__primary">{{ characteristic.name }}</span></td>
+                                <td>{{ characteristic.inputType.label }}</td>
+                                <td>{{ characteristic.unitLabel ?? '—' }}</td>
+                                <td>{{ characteristic.displayOrder }}</td>
+                                <td>
+                                    <span class="pf-status-badge {{ characteristic.isActive ? 'pf-status-badge--success' : 'pf-status-badge--warning' }}">
+                                        <span class="pf-status-badge__dot" aria-hidden="true"></span>
+                                        {{ characteristic.isActive ? 'Activa' : 'Inactiva' }}
+                                    </span>
+                                </td>
+                                {% if is_granted('catalog.characteristics.manage') %}
+                                    <td class="pf-table__actions-cell">
+                                        <div class="pf-table__actions">
+                                            {% if characteristic.inputType.supportsOptions %}
+                                                <a href="{{ path('admin_catalog_characteristics_options', {id: characteristic.id}) }}" class="btn pf-button pf-button--subtle pf-button--sm">
+                                                    <i class="bi bi-list-check" aria-hidden="true"></i><span>Opciones</span>
+                                                </a>
+                                            {% endif %}
+                                            <a href="{{ path('admin_catalog_characteristics_edit', {id: characteristic.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm">
+                                                <i class="bi bi-pencil-square" aria-hidden="true"></i><span>Editar</span>
+                                            </a>
+                                            <form method="post" action="{{ path('admin_catalog_characteristics_status', {id: characteristic.id, q: search, status: status, page: page.currentPage}) }}">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('catalog_characteristic_status_' ~ characteristic.id) }}">
+                                                <button type="submit" class="btn pf-button pf-button--sm {{ characteristic.isActive ? 'pf-button--danger' : 'pf-button--success' }}">
+                                                    <span>{{ characteristic.isActive ? 'Desactivar' : 'Reactivar' }}</span>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="{{ is_granted('catalog.characteristics.manage') ? 7 : 6 }}" class="pf-table__empty">No se encontraron características.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if page.totalPages > 1 %}
+                <footer class="pf-table-footer">
+                    <p class="pf-table-footer__summary">Página {{ page.currentPage }} de {{ page.totalPages }} · {{ page.totalItems }} registros</p>
+                    <nav class="pf-pagination" aria-label="Paginación de características">
+                        {% if page.currentPage > 1 %}
+                            <a class="btn pf-button pf-button--secondary pf-button--sm" href="{{ path('admin_catalog_characteristics_index', {q: search, status: status, page: page.currentPage - 1}) }}">Anterior</a>
+                        {% endif %}
+                        {% if page.currentPage < page.totalPages %}
+                            <a class="btn pf-button pf-button--secondary pf-button--sm" href="{{ path('admin_catalog_characteristics_index', {q: search, status: status, page: page.currentPage + 1}) }}">Siguiente</a>
+                        {% endif %}
+                    </nav>
+                </footer>
+            {% endif %}
+        </section>
+    </div>
+{% endblock %}

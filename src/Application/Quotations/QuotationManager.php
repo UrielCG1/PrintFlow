@@ -5,12 +5,17 @@ namespace App\Application\Quotations;
 use App\Application\Catalog\CommercialItemPriceResolver;
 use App\Entity\Catalog\CommercialItem;
 use App\Entity\Catalog\ItemPriceRule;
+use App\Entity\Clients\Client;
+use App\Entity\Clients\ClientAddress;
+use App\Entity\Clients\ClientContact;
 use App\Entity\Quotations\Quotation;
 use App\Entity\Quotations\QuotationEmailDispatch;
 use App\Entity\Quotations\QuotationItem;
 use App\Entity\Users\User;
 use App\Enum\Quotations\QuotationStatus;
 use App\Repository\Catalog\CommercialItemRepository;
+use App\Repository\Clients\ClientAddressRepository;
+use App\Repository\Clients\ClientContactRepository;
 use App\Repository\Clients\ClientRepository;
 use App\Repository\Quotations\QuotationRepository;
 use App\Service\Audit\AuditLogger;
@@ -32,6 +37,8 @@ final class QuotationManager
         private readonly QuotationMailer $quotationMailer,
         private readonly QuotationRepository $quotationRepository,
         private readonly ClientRepository $clientRepository,
+        private readonly ClientContactRepository $clientContactRepository,
+        private readonly ClientAddressRepository $clientAddressRepository,
         private readonly CommercialItemRepository $commercialItemRepository,
         private readonly QuotationItemSpecificationResolver $specificationResolver,
     ) {
@@ -458,25 +465,38 @@ final class QuotationManager
             $data->discountPercent,
             $client,
         );
+        $commercialContact = $this->resolveCommercialContact(
+            $data->commercialContactId,
+            $client,
+        );
+        $fiscalAddress = $this->resolveClientAddress(
+            $data->fiscalAddressId,
+            $client,
+            'FISCAL',
+            'fiscal',
+        );
+        $deliveryAddress = $this->resolveClientAddress(
+            $data->deliveryAddressId,
+            $client,
+            'DELIVERY',
+            'de entrega',
+        );
 
         $quotation
             ->setClient($client)
-            ->setClientSnapshot($this->clientSnapshot($client))
+            ->setClientSnapshot($this->clientSnapshot($client, $commercialContact))
+            ->setFiscalAddressSnapshot($this->clientAddressSnapshot($fiscalAddress))
+            ->setDeliveryAddressSnapshot($this->clientAddressSnapshot($deliveryAddress))
             ->setExpiresAt($data->expiresAt)
             ->setNotes($data->notes)
             ->setDiscountPercent($discountPercent);
-
-        /*
-         * Los snapshots de dirección ya existen en la entidad y se llenarán
-         * al integrar el selector de domicilio fiscal y de entrega.
-         * No se modifican aquí para preservar la información existente.
-         */
 
         $resolvedItems = [];
 
         foreach (array_values($data->items) as $index => $itemData) {
             if (!$itemData instanceof QuotationItemData
                 || $itemData->commercialItem === null
+                || $itemData->commercialCategory === null
                 || $itemData->quantity === null
             ) {
                 throw new \LogicException(
@@ -487,6 +507,13 @@ final class QuotationManager
             $commercialItem = $this->resolveActiveCommercialItem(
                 $itemData->commercialItem,
             );
+
+            if ($itemData->commercialCategory->getId() === null
+                || $commercialItem->getCategory()->getId() !== $itemData->commercialCategory->getId()) {
+                throw new \DomainException(
+                    'El Producto seleccionado no pertenece a la categoría indicada.',
+                );
+            }
 
             $specification = $this->specificationResolver->resolve(
                 $commercialItem,
@@ -525,6 +552,7 @@ final class QuotationManager
                     $unitPrice,
                 ),
                 'specifications_snapshot' => $specification['snapshot'],
+                'specification_schema_version' => $specification['schema_version'],
             ];
         }
 
@@ -550,7 +578,7 @@ final class QuotationManager
                 )
                 ->setPriceRuleSnapshot($resolvedItem['price_rule_snapshot'])
                 ->setSpecificationsSnapshot($resolvedItem['specifications_snapshot'])
-                ->setSpecificationSchemaVersion(1);
+                ->setSpecificationSchemaVersion($resolvedItem['specification_schema_version']);
 
             if (!isset($currentItems[$index])) {
                 $quotation->addItem($quotationItem);
@@ -604,6 +632,81 @@ final class QuotationManager
         return $item;
     }
 
+    private function resolveCommercialContact(
+        ?string $selectedContactId,
+        Client $client,
+    ): ?ClientContact {
+        $contactId = $this->optionalSelectionId(
+            $selectedContactId,
+            'contacto comercial',
+        );
+
+        if ($contactId === null) {
+            return null;
+        }
+
+        $contact = $this->clientContactRepository->findActiveForQuotation(
+            $contactId,
+            $client,
+        );
+
+        if ($contact === null) {
+            throw new \DomainException(
+                'El contacto comercial seleccionado no está activo o no pertenece al cliente.',
+            );
+        }
+
+        return $contact;
+    }
+
+    private function resolveClientAddress(
+        ?string $selectedAddressId,
+        Client $client,
+        string $addressType,
+        string $label,
+    ): ?ClientAddress {
+        $addressId = $this->optionalSelectionId(
+            $selectedAddressId,
+            'domicilio '.$label,
+        );
+
+        if ($addressId === null) {
+            return null;
+        }
+
+        $address = $this->clientAddressRepository->findActiveForQuotation(
+            $addressId,
+            $client,
+            $addressType,
+        );
+
+        if ($address === null) {
+            throw new \DomainException(sprintf(
+                'El domicilio %s seleccionado no está activo o no pertenece al cliente.',
+                $label,
+            ));
+        }
+
+        return $address;
+    }
+
+    private function optionalSelectionId(?string $rawId, string $label): ?int
+    {
+        $rawId = trim((string) $rawId);
+        if ($rawId === '') {
+            return null;
+        }
+
+        if (preg_match('/^[1-9]\d*$/', $rawId) !== 1) {
+            throw new \InvalidArgumentException(sprintf(
+                'El %s seleccionado no es válido.',
+                $label,
+            ));
+        }
+
+        return (int) $rawId;
+    }
+
     private function resolveDiscountPercent(
         ?string $submittedDiscountPercent,
         \App\Entity\Clients\Client $client,
@@ -640,12 +743,12 @@ final class QuotationManager
             ->__toString();
     }
 
-    /**
-     * @return array<string, int|string|null>
-     */
-    private function clientSnapshot(object $client): array
+    /** @return array<string, mixed> */
+    private function clientSnapshot(
+        Client $client,
+        ?ClientContact $commercialContact,
+    ): array
     {
-        /** @var \App\Entity\Clients\Client $client */
         return [
             'client_id' => $client->getId(),
             'business_name' => $client->getBusinessName(),
@@ -657,6 +760,50 @@ final class QuotationManager
             'default_cfdi_use_code' => $client->getDefaultCfdiUseCode(),
             'email' => $client->getEmail(),
             'phone' => $client->getPhone(),
+            'commercial_contact' => $commercialContact === null ? null : [
+                'client_contact_id' => $commercialContact->getId(),
+                'full_name' => $commercialContact->getFullName(),
+                'department' => $commercialContact->getDepartment(),
+                'job_title' => $commercialContact->getJobTitle(),
+                'email' => $commercialContact->getEmail(),
+                'phone' => $commercialContact->getPhone(),
+            ],
+        ];
+    }
+
+    /** @return array<string, int|string|null>|null */
+    private function clientAddressSnapshot(?ClientAddress $address): ?array
+    {
+        if ($address === null) {
+            return null;
+        }
+
+        $street = trim($address->getStreet().' '.$address->getExteriorNumber());
+        if ($address->getInteriorNumber() !== null) {
+            $street .= ' Int. '.$address->getInteriorNumber();
+        }
+
+        return [
+            'client_address_id' => $address->getId(),
+            'label' => $address->getLabel(),
+            'recipient_name' => $address->getRecipientName(),
+            'address_type' => $address->getAddressType(),
+            'street' => $address->getStreet(),
+            'exterior_number' => $address->getExteriorNumber(),
+            'interior_number' => $address->getInteriorNumber(),
+            'neighborhood' => $address->getNeighborhood(),
+            'postal_code' => $address->getPostalCode(),
+            'city' => $address->getMunicipality(),
+            'state' => $address->getState(),
+            'country_code' => $address->getCountryCode(),
+            'references' => $address->getReferences(),
+            'formatted_address' => implode(', ', array_filter([
+                $street,
+                $address->getNeighborhood(),
+                $address->getMunicipality(),
+                $address->getState(),
+                'CP '.$address->getPostalCode(),
+            ])),
         ];
     }
 
@@ -737,6 +884,9 @@ final class QuotationManager
             'decision_evidence_reference' => $quotation->getDecisionEvidenceReference(),
             'client_id' => $quotation->getClient()->getId(),
             'client_name' => $quotation->getClientSnapshot()['business_name'] ?? null,
+            'commercial_contact' => $quotation->getClientSnapshot()['commercial_contact'] ?? null,
+            'fiscal_address' => $quotation->getFiscalAddressSnapshot(),
+            'delivery_address' => $quotation->getDeliveryAddressSnapshot(),
             'expires_at' => $quotation->getExpiresAt()->format('Y-m-d'),
             'discount_percent' => $quotation->getDiscountPercent(),
             'tax_rate' => $quotation->getTaxRate(),

@@ -8,6 +8,7 @@
     is_granted('catalog.items.update')
     or is_granted('catalog.items.update_price')
     or is_granted('catalog.items.toggle_status')
+    or is_granted('catalog.items.configure_characteristics')
 %}
 
 {% block app_content %}
@@ -255,6 +256,19 @@
                                                     ></i>
 
                                                     <span>Rangos</span>
+                                                </a>
+                                            {% endif %}
+
+                                            {% if item.type.value == 'PRODUCT' and is_granted('catalog.items.configure_characteristics') %}
+                                                <a
+                                                    href="{{ path(
+                                                        'admin_catalog_item_characteristics_index',
+                                                        {item: item.id}
+                                                    ) }}"
+                                                    class="btn pf-button pf-button--subtle pf-button--sm"
+                                                >
+                                                    <i class="bi bi-sliders" aria-hidden="true"></i>
+                                                    <span>Características</span>
                                                 </a>
                                             {% endif %}
 

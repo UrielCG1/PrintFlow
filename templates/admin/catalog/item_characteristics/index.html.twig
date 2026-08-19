@@ -1,0 +1,54 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Características de {{ item.name }} | PrintFlow{% endblock %}
+{% block app_navigation_active %}catalog_items{% endblock %}
+{% block app_breadcrumb %}Catálogo / Productos y servicios / {{ item.name }} / Características{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page__content">
+        <header class="pf-page-header">
+            <div class="pf-page-header__content">
+                <h1 class="pf-page-header__title">Características del Producto</h1>
+                <p class="pf-page-header__description"><strong>{{ item.name }}</strong> · {{ item.category.name }} · {{ item.measurementUnit.name }}</p>
+            </div>
+            <div class="pf-page-header__actions">
+                <a href="{{ path('admin_catalog_items_index') }}" class="btn pf-button pf-button--secondary">Productos y servicios</a>
+                <a href="{{ path('admin_catalog_item_characteristics_select', {item: item.id}) }}" class="btn pf-button pf-button--primary"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Agregar característica</span></a>
+            </div>
+        </header>
+
+        <div class="alert alert-info" role="status">Estas características determinan qué datos se solicitarán al cotizar este Producto. No modifican su precio base ni sus rangos.</div>
+
+        <section class="pf-card pf-card--padding-none" aria-label="Configuración de características">
+            <div class="pf-table-responsive pf-table-responsive--flat">
+                <table class="pf-table">
+                    <thead><tr><th>Característica</th><th>Tipo</th><th>Obligatoria</th><th>Opciones permitidas</th><th>Orden</th><th class="pf-table__actions-cell">Acciones</th></tr></thead>
+                    <tbody>
+                        {% for configuration in configurations %}
+                            <tr>
+                                <td><span class="pf-table__primary">{{ configuration.characteristic.name }}</span>{% if configuration.characteristic.unitLabel %}<span class="pf-table__secondary">{{ configuration.characteristic.unitLabel }}</span>{% endif %}</td>
+                                <td>{{ configuration.characteristic.inputType.label }}</td>
+                                <td>{{ configuration.isRequired ? 'Sí' : 'No' }}</td>
+                                <td>
+                                    {% if configuration.characteristic.inputType.supportsOptions %}
+                                        {% for allowedOption in configuration.allowedOptions %}{{ allowedOption.characteristicOption.name }}{{ not loop.last ? ', ' : '' }}{% else %}—{% endfor %}
+                                    {% else %}No aplica{% endif %}
+                                </td>
+                                <td>{{ configuration.displayOrder }}</td>
+                                <td class="pf-table__actions-cell"><div class="pf-table__actions">
+                                    <a href="{{ path('admin_catalog_item_characteristics_edit', {item: item.id, configuration: configuration.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm"><i class="bi bi-pencil-square" aria-hidden="true"></i><span>Editar</span></a>
+                                    <form method="post" action="{{ path('admin_catalog_item_characteristics_delete', {item: item.id, configuration: configuration.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('catalog_item_characteristic_delete_' ~ configuration.id) }}">
+                                        <button type="submit" class="btn pf-button pf-button--danger pf-button--sm"><i class="bi bi-trash" aria-hidden="true"></i><span>Retirar</span></button>
+                                    </form>
+                                </div></td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="6" class="pf-table__empty">Este Producto aún no tiene características configuradas.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+{% endblock %}

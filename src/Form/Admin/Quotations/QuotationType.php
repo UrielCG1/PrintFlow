@@ -10,6 +10,7 @@ use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -53,6 +54,24 @@ final class QuotationType extends AbstractType
                     'placeholder' => '0.00',
                     'data-ui--quotation-form-target' => 'discountPercent',
                     'data-action' => 'input->ui--quotation-form#markDiscountAsManual',
+                ],
+            ])
+            ->add('commercialContactId', HiddenType::class, [
+                'required' => false,
+                'attr' => [
+                    'data-ui--quotation-form-target' => 'commercialContactId',
+                ],
+            ])
+            ->add('fiscalAddressId', HiddenType::class, [
+                'required' => false,
+                'attr' => [
+                    'data-ui--quotation-form-target' => 'fiscalAddressId',
+                ],
+            ])
+            ->add('deliveryAddressId', HiddenType::class, [
+                'required' => false,
+                'attr' => [
+                    'data-ui--quotation-form-target' => 'deliveryAddressId',
                 ],
             ])
             ->add('notes', TextareaType::class, [

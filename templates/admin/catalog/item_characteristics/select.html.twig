@@ -1,0 +1,17 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Agregar característica | PrintFlow{% endblock %}
+{% block app_navigation_active %}catalog_items{% endblock %}
+{% block app_breadcrumb %}Catálogo / Productos y servicios / {{ item.name }} / Características / Agregar{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page__content">
+        <header class="pf-page-header"><div class="pf-page-header__content"><h1 class="pf-page-header__title">Agregar característica</h1><p class="pf-page-header__description">Producto: {{ item.name }}</p></div></header>
+        <div class="pf-card">
+            {{ form_start(form, {attr: {class: 'pf-form pf-card__body', novalidate: 'novalidate'}}) }}
+                {{ form_row(form.characteristic) }}
+                <div class="pf-form-actions"><a href="{{ path('admin_catalog_item_characteristics_index', {item: item.id}) }}" class="btn pf-button pf-button--secondary">Cancelar</a><button type="submit" class="btn pf-button pf-button--primary"><span>Continuar</span><i class="bi bi-arrow-right" aria-hidden="true"></i></button></div>
+            {{ form_end(form) }}
+        </div>
+    </div>
+{% endblock %}

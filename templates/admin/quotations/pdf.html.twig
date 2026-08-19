@@ -209,6 +209,9 @@
         {% set clientName = client.legal_name|default(client.business_name|default('Cliente')) %}
         {% set clientEmail = client.billing_email|default(client.email|default('No especificado')) %}
         {% set clientPhone = client.phone|default('No especificado') %}
+        {% set commercialContact = client.commercial_contact|default(null) %}
+        {% set fiscalAddress = quotation.fiscalAddressSnapshot %}
+        {% set deliveryAddress = quotation.deliveryAddressSnapshot %}
 
         <div class="document-header"></div>
 
@@ -270,6 +273,51 @@
                 </tr>
             </table>
         </section>
+
+        {% if commercialContact or fiscalAddress or deliveryAddress %}
+            <section class="section">
+                <h2 class="section-title">Datos comerciales</h2>
+
+                <table class="summary-table">
+                    {% if commercialContact %}
+                        <tr>
+                            <td colspan="2">
+                                <span class="summary-label">Contacto comercial</span>
+                                {{ commercialContact.full_name|default('No especificado') }}
+                                {% if commercialContact.job_title|default(null) %}
+                                    · {{ commercialContact.job_title }}
+                                {% endif %}
+                                {% if commercialContact.email|default(null) or commercialContact.phone|default(null) %}
+                                    <br>{{ commercialContact.email|default('') }}{% if commercialContact.email|default(null) and commercialContact.phone|default(null) %} | {% endif %}{{ commercialContact.phone|default('') }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endif %}
+                    {% if fiscalAddress or deliveryAddress %}
+                        <tr>
+                            {% if fiscalAddress %}
+                                <td>
+                                    <span class="summary-label">Domicilio fiscal{% if fiscalAddress.label|default(null) %} · {{ fiscalAddress.label }}{% endif %}</span>
+                                    {% if fiscalAddress.recipient_name|default(null) %}{{ fiscalAddress.recipient_name }}<br>{% endif %}
+                                    {{ fiscalAddress.formatted_address|default('No especificado') }}
+                                </td>
+                            {% else %}
+                                <td></td>
+                            {% endif %}
+                            {% if deliveryAddress %}
+                                <td>
+                                    <span class="summary-label">Domicilio de entrega{% if deliveryAddress.label|default(null) %} · {{ deliveryAddress.label }}{% endif %}</span>
+                                    {% if deliveryAddress.recipient_name|default(null) %}{{ deliveryAddress.recipient_name }}<br>{% endif %}
+                                    {{ deliveryAddress.formatted_address|default('No especificado') }}
+                                </td>
+                            {% else %}
+                                <td></td>
+                            {% endif %}
+                        </tr>
+                    {% endif %}
+                </table>
+            </section>
+        {% endif %}
 
         <section class="section">
             <h2 class="section-title">Información del documento</h2>

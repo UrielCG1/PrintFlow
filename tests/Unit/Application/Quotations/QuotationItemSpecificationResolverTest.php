@@ -54,6 +54,55 @@ final class QuotationItemSpecificationResolverTest extends TestCase
         self::assertSame('0.9600', $result['snapshot']['calculated']['area_m2']);
     }
 
+    public function testRejectsZeroQuantityBeforePricing(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        (new QuotationItemSpecificationResolver())->resolve(
+            $this->largeFormatItem('M2', 'Metro cuadrado'),
+            ['finished_width_cm' => '100', 'finished_height_cm' => '150'],
+            '0',
+            QuotationItemData::QUANTITY_MODE_MANUAL,
+        );
+    }
+
+    public function testRejectsNegativeQuantityBeforePricing(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        (new QuotationItemSpecificationResolver())->resolve(
+            $this->largeFormatItem('M2', 'Metro cuadrado'),
+            ['finished_width_cm' => '100', 'finished_height_cm' => '150'],
+            '-1',
+            QuotationItemData::QUANTITY_MODE_MANUAL,
+        );
+    }
+
+    public function testRejectsQuantityWithMoreThanFourDecimals(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        (new QuotationItemSpecificationResolver())->resolve(
+            $this->largeFormatItem('M2', 'Metro cuadrado'),
+            ['finished_width_cm' => '100', 'finished_height_cm' => '150'],
+            '1.00001',
+            QuotationItemData::QUANTITY_MODE_MANUAL,
+        );
+    }
+
+    public function testRejectsInvalidQuantityModeForLargeFormat(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('El origen de la cantidad de la partida no es válido.');
+
+        (new QuotationItemSpecificationResolver())->resolve(
+            $this->largeFormatItem('M2', 'Metro cuadrado'),
+            ['finished_width_cm' => '100', 'finished_height_cm' => '150'],
+            '1',
+            'FORGED',
+        );
+    }
+
     private function largeFormatItem(string $unitCode, string $unitName): CommercialItem
     {
         $unit = (new MeasurementUnit())

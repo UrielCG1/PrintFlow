@@ -33,15 +33,35 @@ final class ClientContactRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    public function findActiveRequesterByPublicNumber(string $publicNumber): ?ClientContact
+    /**
+     * @return list<ClientContact>
+     */
+    public function findActiveForClient(Client $client): array
     {
         return $this->createQueryBuilder('contact')
-            ->andWhere('contact.publicNumber = :publicNumber')
-            ->andWhere('contact.isActive = :active')
-            ->andWhere('contact.canRequestProducts = :canRequest')
-            ->setParameter('publicNumber', strtoupper(trim($publicNumber)))
-            ->setParameter('active', true)
-            ->setParameter('canRequest', true)
+            ->innerJoin('contact.contact', 'person')
+            ->andWhere('contact.client = :client')
+            ->andWhere('contact.isActive = :isActive')
+            ->setParameter('client', $client)
+            ->setParameter('isActive', true)
+            ->orderBy('contact.isPrimary', 'DESC')
+            ->addOrderBy('person.firstName', 'ASC')
+            ->addOrderBy('person.lastName', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findActiveForQuotation(
+        int $id,
+        Client $client,
+    ): ?ClientContact {
+        return $this->createQueryBuilder('contact')
+            ->andWhere('contact.id = :id')
+            ->andWhere('contact.client = :client')
+            ->andWhere('contact.isActive = :isActive')
+            ->setParameter('id', $id)
+            ->setParameter('client', $client)
+            ->setParameter('isActive', true)
             ->getQuery()
             ->getOneOrNullResult();
     }

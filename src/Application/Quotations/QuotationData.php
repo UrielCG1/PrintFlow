@@ -23,6 +23,24 @@ final class QuotationData
     )]
     public ?string $discountPercent = null;
 
+    #[Assert\Regex(
+        pattern: '/^\d+$/',
+        message: 'El contacto comercial seleccionado no es válido.',
+    )]
+    public ?string $commercialContactId = null;
+
+    #[Assert\Regex(
+        pattern: '/^\d+$/',
+        message: 'El domicilio fiscal seleccionado no es válido.',
+    )]
+    public ?string $fiscalAddressId = null;
+
+    #[Assert\Regex(
+        pattern: '/^\d+$/',
+        message: 'El domicilio de entrega seleccionado no es válido.',
+    )]
+    public ?string $deliveryAddressId = null;
+
     /**
      * @var list<QuotationItemData>
      */
@@ -67,14 +85,44 @@ final class QuotationData
         $data->notes = $quotation->getNotes();
         $data->discountPercent = $quotation->getDiscountPercent();
 
+        $commercialContactId = $quotation->getClientSnapshot()['commercial_contact']['client_contact_id'] ?? null;
+        $fiscalAddressId = $quotation->getFiscalAddressSnapshot()['client_address_id'] ?? null;
+        $deliveryAddressId = $quotation->getDeliveryAddressSnapshot()['client_address_id'] ?? null;
+
+        $data->commercialContactId = $commercialContactId === null ? null : (string) $commercialContactId;
+        $data->fiscalAddressId = $fiscalAddressId === null ? null : (string) $fiscalAddressId;
+        $data->deliveryAddressId = $deliveryAddressId === null ? null : (string) $deliveryAddressId;
+
         foreach ($quotation->getItems() as $quotationItem) {
             $item = new QuotationItemData();
             $item->commercialItem = $quotationItem->getCommercialItem();
+            $item->commercialCategory = $quotationItem->getCommercialItem()->getCategory();
             $item->quantity = $quotationItem->getQuantity();
             $specifications = $quotationItem->getSpecificationsSnapshot();
-            $item->specifications = is_array($specifications['values'] ?? null)
-                ? $specifications['values']
-                : [];
+            $item->specifications = [];
+
+            if (($specifications['profile'] ?? null) === QuotationItemCharacteristicsSpecificationResolver::PROFILE) {
+                foreach ($specifications['values'] ?? [] as $value) {
+                    if (!is_array($value)
+                        || !isset($value['field_key'])
+                        || !array_key_exists('submitted_value', $value)) {
+                        continue;
+                    }
+
+                    $item->specifications[(string) $value['field_key']] = (string) $value['submitted_value'];
+                }
+
+                $largeFormatValues = $specifications['large_format']['values'] ?? null;
+                if (is_array($largeFormatValues)) {
+                    foreach ($largeFormatValues as $field => $value) {
+                        if (in_array($field, ['finished_width_cm', 'finished_height_cm'], true)) {
+                            $item->specifications[$field] = (string) $value;
+                        }
+                    }
+                }
+            } elseif (is_array($specifications['values'] ?? null)) {
+                $item->specifications = $specifications['values'];
+            }
             $item->quantityMode = ($specifications['billing_quantity']['source'] ?? null) === 'DIMENSIONS'
                 ? QuotationItemData::QUANTITY_MODE_AUTO
                 : QuotationItemData::QUANTITY_MODE_MANUAL;
