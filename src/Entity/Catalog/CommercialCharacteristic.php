@@ -22,7 +22,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\UniqueConstraint(name: 'uniq_commercial_characteristics_name', columns: ['name'])]
 #[ORM\Index(name: 'idx_commercial_characteristics_active_order', columns: ['is_active', 'display_order', 'name'])]
 #[ORM\HasLifecycleCallbacks]
-final class CommercialCharacteristic
+class CommercialCharacteristic
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
