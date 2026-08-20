@@ -1,12 +1,87 @@
-<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Cotización {{ quotation.folio }} | PrintFlow</title></head>
-<body style="margin:0;padding:32px 16px;background:#f2f7f4;color:#0b1c30;font-family:Arial,Helvetica,sans-serif;">
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr><td align="center">
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;">
-<tr><td style="padding:32px 36px 12px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"><tr>
-<td valign="top"><p style="margin:0 0 12px;color:#287a4d;font-size:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;">PrintFlow</p><h1 style="margin:0;color:#0b1c30;font-size:26px;line-height:1.25;">Tu cotización está lista</h1></td>
-<td width="190" align="right" valign="top"><div style="display:inline-block;padding:10px 12px;border:2px solid #d92d20;border-radius:8px;background:#fff1f0;color:#b42318;font-size:12px;font-weight:700;line-height:1.4;text-align:center;">FECHA DE ENTREGA:<br><span style="font-size:14px;">{{ deliveryDate is defined and deliveryDate ? deliveryDate|date('d/m/Y') : 'POR CONFIRMAR' }}</span></div></td>
-</tr></table></td></tr>
-<tr><td style="padding:16px 36px 32px;font-size:16px;line-height:1.6;"><p style="margin:0 0 16px;">Hola{% if recipientName %} {{ recipientName }}{% endif %},</p><p style="margin:0 0 16px;">Adjuntamos la cotización <strong>{{ quotation.folio }}</strong> por un total de <strong>${{ quotation.total|number_format(2, '.', ',') }} {{ quotation.currency }}</strong>.</p><p style="margin:0 0 16px;">Su vigencia concluye el <strong>{{ quotation.expiresAt|date('d/m/Y') }}</strong>.</p>{% if message %}<div style="margin:20px 0;padding:16px;border-left:4px solid #287a4d;background:#f3faf5;white-space:pre-line;">{{ message }}</div>{% endif %}<p style="margin:20px 0 0;color:#52625a;font-size:14px;">Si tienes alguna duda o requieres ajustes, responde a este correo.</p></td></tr>
-<tr><td align="center" style="padding:0 36px 32px;"><a href="{{ acceptanceUrl }}" style="display:inline-block;padding:14px 30px;border-radius:8px;background:#087c19;color:#ffffff;font-weight:700;text-decoration:none;">Aceptar cotización</a></td></tr>
-<tr><td style="padding:24px 36px;background:#e8f3ec;color:#52625a;font-size:12px;line-height:1.55;text-align:left;">{% include 'emails/quotations/_privacy_notice.html.twig' %}</td></tr>
-</table></td></tr></table></body></html>
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <title>Cotización {{ quotation.folio }} | PrintFlow</title>
+    </head>
+    <body style="margin:0;padding:32px 16px;background:#f2f7f4;color:#0b1c30;font-family:Arial,Helvetica,sans-serif;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+            <tr>
+                <td align="center">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;">
+                        <tr>
+                            <td style="padding:32px 36px 16px;">
+                                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                    <tr>
+                                        <td valign="top">
+                                            <p style="margin:0 0 12px;color:#287a4d;font-size:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;">PrintFlow</p>
+                                            <h1 style="margin:0;color:#0b1c30;font-size:26px;line-height:1.25;">Tu cotización está lista</h1>
+                                        </td>
+                                        <td width="190" align="right" valign="top">
+                                            <div style="display:inline-block;padding:10px 12px;border:1px solid #b7d8c4;border-radius:8px;background:#f3faf5;color:#287a4d;font-size:12px;font-weight:700;line-height:1.4;text-align:center;">
+                                                VIGENCIA HASTA:<br>
+                                                <span style="font-size:14px;">{{ quotation.expiresAt|date('d/m/Y') }}</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="padding:8px 36px 28px;font-size:16px;line-height:1.6;">
+                                <p style="margin:0 0 16px;">Hola{% if recipientName %} {{ recipientName }}{% endif %},</p>
+                                <p style="margin:0 0 16px;">
+                                    Adjuntamos la cotización <strong>{{ quotation.folio }}</strong> por un total de
+                                    <strong>${{ quotation.total|number_format(2, '.', ',') }} {{ quotation.currency }}</strong>.
+                                </p>
+
+                                {% if presentedItems is not empty %}
+                                    <div style="margin:22px 0;padding:18px;border:1px solid #dce8e1;border-radius:10px;background:#fbfdfc;">
+                                        <p style="margin:0 0 12px;color:#287a4d;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;">Productos cotizados</p>
+                                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="font-size:14px;line-height:1.45;">
+                                            {% for item in presentedItems %}
+                                                <tr>
+                                                    <td valign="top" style="padding:7px 8px 7px 0;{% if not loop.last %}border-bottom:1px solid #edf2ef;{% endif %}">
+                                                        <strong>{{ item.product.name }}</strong>
+                                                        {% if item.product.code %}
+                                                            <span style="display:block;color:#667085;font-size:12px;">{{ item.product.code }}</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td align="right" valign="top" style="padding:7px 0 7px 8px;white-space:nowrap;{% if not loop.last %}border-bottom:1px solid #edf2ef;{% endif %}">
+                                                        {{ item.quantity_display }}
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </table>
+                                    </div>
+                                {% endif %}
+
+                                {% if message %}
+                                    <div style="margin:20px 0;padding:16px;border-left:4px solid #287a4d;background:#f3faf5;white-space:pre-line;">{{ message }}</div>
+                                {% endif %}
+
+                                <p style="margin:20px 0 0;color:#52625a;font-size:14px;">
+                                    El detalle de Productos, especificaciones e importes se encuentra en el PDF adjunto.
+                                    Si tienes alguna duda o requieres ajustes, responde a este correo.
+                                </p>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td align="center" style="padding:0 36px 32px;">
+                                <a href="{{ acceptanceUrl }}" style="display:inline-block;padding:14px 30px;border-radius:8px;background:#087c19;color:#ffffff;font-weight:700;text-decoration:none;">Aceptar cotización</a>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td style="padding:24px 36px;background:#e8f3ec;color:#52625a;font-size:12px;line-height:1.55;text-align:left;">
+                                {% include 'emails/quotations/_privacy_notice.html.twig' %}
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+</html>

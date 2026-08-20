@@ -41,14 +41,15 @@ final class QuotationType extends AbstractType
                 ],
             ])
             ->add('expiresAt', DateType::class, [
-                'label' => 'Vigencia',
+                'label' => 'Vigencia hasta',
                 'widget' => 'single_text',
                 'input' => 'datetime_immutable',
+                'help' => 'Último día en que esta propuesta comercial será válida.',
             ])
             ->add('discountPercent', TextType::class, [
                 'label' => 'Descuento global (%)',
                 'required' => false,
-                'help' => 'Vacío: aplica el descuento predeterminado del cliente.',
+                'help' => 'Se propone el descuento predeterminado del cliente; puedes ajustarlo para este borrador.',
                 'attr' => [
                     'inputmode' => 'decimal',
                     'placeholder' => '0.00',
@@ -75,11 +76,13 @@ final class QuotationType extends AbstractType
                 ],
             ])
             ->add('notes', TextareaType::class, [
-                'label' => 'Notas internas',
+                'label' => 'Observaciones de la cotización',
                 'required' => false,
+                'help' => 'Estas observaciones forman parte de la cotización y pueden mostrarse en el PDF enviado al cliente.',
                 'attr' => [
                     'rows' => 4,
                     'maxlength' => 5000,
+                    'placeholder' => 'Condiciones, alcances o aclaraciones relevantes para esta propuesta.',
                 ],
             ])
             ->add('items', CollectionType::class, [

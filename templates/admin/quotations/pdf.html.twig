@@ -170,6 +170,25 @@
                 font-size: 7.5px;
             }
 
+            .item-specifications {
+                width: 100%;
+                margin-top: 5px;
+                border-collapse: collapse;
+            }
+
+            .item-specifications td {
+                padding: 1px 0;
+                border: 0;
+                font-size: 7.5px;
+                line-height: 1.35;
+            }
+
+            .item-specifications .label {
+                width: 38%;
+                padding-right: 5px;
+                color: #667085;
+            }
+
             .totals-wrapper {
                 width: 44%;
                 margin: 18px 0 0 auto;
@@ -343,50 +362,41 @@
                 <thead>
                     <tr>
                         <th style="width: 7%;">#</th>
-                        <th style="width: 43%;">Concepto</th>
+                        <th style="width: 43%;">Producto</th>
                         <th style="width: 14%;" class="number">Cantidad</th>
                         <th style="width: 16%;" class="number">P. unitario</th>
                         <th style="width: 20%;" class="number">Importe</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for item in quotation.items %}
-                        {% set snapshot = item.commercialItemSnapshot %}
-                        {% set specifications = item.specificationsSnapshot %}
-
+                    {% for item in presentedItems %}
                         <tr>
-                            <td>{{ item.lineNumber }}</td>
+                            <td>{{ item.line_number }}</td>
                             <td>
-                                {% if snapshot.code|default(null) %}
-                                    <span class="item-code">{{ snapshot.code }}</span>
+                                {% if item.product.code %}
+                                    <span class="item-code">{{ item.product.code }}</span>
                                 {% endif %}
 
-                                <span class="item-name">
-                                    {{ snapshot.name|default('Concepto') }}
-                                </span>
+                                <span class="item-name">{{ item.product.name }}</span>
 
-                                {% if snapshot.description|default(null) %}
-                                    <div class="item-description">
-                                        {{ snapshot.description }}
-                                    </div>
+                                {% if item.product.description %}
+                                    <div class="item-description">{{ item.product.description }}</div>
                                 {% endif %}
 
-                                {% if specifications.summary|default(null) %}
-                                    <div class="item-description">
-                                        {{ specifications.summary }}
-                                    </div>
+                                {% if item.specifications is not empty %}
+                                    <table class="item-specifications">
+                                        {% for specification in item.specifications %}
+                                            <tr>
+                                                <td class="label">{{ specification.label }}</td>
+                                                <td>{{ specification.value }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </table>
                                 {% endif %}
                             </td>
-                            <td class="number">
-                                {{ item.quantity|number_format(4, '.', ',') }}
-                                {{ snapshot.measurement_unit.name|default('') }}
-                            </td>
-                            <td class="number">
-                                ${{ item.unitPrice|number_format(2, '.', ',') }}
-                            </td>
-                            <td class="number">
-                                ${{ item.lineSubtotal|number_format(2, '.', ',') }}
-                            </td>
+                            <td class="number">{{ item.quantity_display }}</td>
+                            <td class="number">${{ item.unit_price|number_format(2, '.', ',') }}</td>
+                            <td class="number">${{ item.line_subtotal|number_format(2, '.', ',') }}</td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -396,31 +406,19 @@
                 <table class="totals-table">
                     <tr>
                         <td>Subtotal</td>
-                        <td class="text-end">
-                            ${{ quotation.subtotal|number_format(2, '.', ',') }}
-                        </td>
+                        <td class="text-end">${{ quotation.subtotal|number_format(2, '.', ',') }}</td>
                     </tr>
                     <tr>
-                        <td>
-                            Descuento ({{ quotation.discountPercent|number_format(2, '.', ',') }}%)
-                        </td>
-                        <td class="text-end">
-                            -${{ quotation.discountAmount|number_format(2, '.', ',') }}
-                        </td>
+                        <td>Descuento ({{ quotation.discountPercent|number_format(2, '.', ',') }}%)</td>
+                        <td class="text-end">-${{ quotation.discountAmount|number_format(2, '.', ',') }}</td>
                     </tr>
                     <tr>
-                        <td>
-                            IVA ({{ (quotation.taxRate * 100)|number_format(2, '.', ',') }}%)
-                        </td>
-                        <td class="text-end">
-                            ${{ quotation.taxAmount|number_format(2, '.', ',') }}
-                        </td>
+                        <td>IVA ({{ (quotation.taxRate * 100)|number_format(2, '.', ',') }}%)</td>
+                        <td class="text-end">${{ quotation.taxAmount|number_format(2, '.', ',') }}</td>
                     </tr>
                     <tr class="total">
                         <td>Total {{ quotation.currency|default('MXN') }}</td>
-                        <td class="text-end">
-                            ${{ quotation.total|number_format(2, '.', ',') }}
-                        </td>
+                        <td class="text-end">${{ quotation.total|number_format(2, '.', ',') }}</td>
                     </tr>
                 </table>
             </div>
