@@ -206,6 +206,14 @@
                             <dt class="col-sm-3">Evidencia</dt>
                             <dd class="col-sm-9" style="white-space: pre-line;">{{ quotation.decisionEvidenceReference }}</dd>
                         {% endif %}
+                        {% if quotation.purchaseOrderFile %}
+                            <dt class="col-sm-3">Orden de compra</dt>
+                            <dd class="col-sm-9"><a class="btn btn-sm btn-outline-primary" href="{{ path('admin_quotations_decision_file', {id: quotation.id, type: 'purchase-order'}) }}"><i class="bi bi-file-earmark-pdf"></i> Descargar {{ quotation.purchaseOrderNumber ?: 'orden de compra' }}</a></dd>
+                        {% endif %}
+                        {% if quotation.responseScreenshotFile %}
+                            <dt class="col-sm-3">Captura de respuesta</dt>
+                            <dd class="col-sm-9"><a class="btn btn-sm btn-outline-primary" href="{{ path('admin_quotations_decision_file', {id: quotation.id, type: 'response-screenshot'}) }}"><i class="bi bi-image"></i> Descargar captura</a></dd>
+                        {% endif %}
                     </dl>
                 </div>
             </section>
@@ -286,7 +294,9 @@
                                         <div class="col-md-6">{{ form_row(acceptForm.contact) }}</div>
                                         <div class="col-md-6">{{ form_row(acceptForm.respondedAt) }}</div>
                                         <div class="col-12">{{ form_row(acceptForm.notes) }}</div>
-                                        <div class="col-12">{{ form_row(acceptForm.evidenceReference) }}</div>
+                                        <div class="col-md-6">{{ form_row(acceptForm.purchaseOrderNumber) }}</div>
+                                        <div class="col-md-6">{{ form_row(acceptForm.purchaseOrderFile) }}</div>
+                                        <div class="col-12">{{ form_row(acceptForm.responseScreenshot) }}</div>
                                     </div>
                                     <button type="submit" class="btn pf-button pf-button--primary mt-3">Confirmar aceptación</button>
                                 {{ form_end(acceptForm) }}

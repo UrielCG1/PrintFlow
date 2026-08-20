@@ -118,6 +118,15 @@ class Quotation
     #[ORM\Column(name: 'decision_evidence_reference', length: 500, nullable: true)]
     private ?string $decisionEvidenceReference = null;
 
+    #[ORM\Column(name: 'purchase_order_number', length: 120, nullable: true)]
+    private ?string $purchaseOrderNumber = null;
+
+    #[ORM\Column(name: 'purchase_order_file', type: Types::JSON, nullable: true)]
+    private ?array $purchaseOrderFile = null;
+
+    #[ORM\Column(name: 'response_screenshot_file', type: Types::JSON, nullable: true)]
+    private ?array $responseScreenshotFile = null;
+
     #[ORM\Column(length: 3, options: ['default' => 'MXN'])]
     private string $currency = 'MXN';
 
@@ -365,6 +374,9 @@ class Quotation
         \DateTimeImmutable $respondedAt,
         ?string $notes,
         ?string $evidenceReference,
+        ?string $purchaseOrderNumber = null,
+        ?array $purchaseOrderFile = null,
+        ?array $responseScreenshotFile = null,
     ): void {
         $this->recordDecision(
             QuotationStatus::ACCEPTED,
@@ -374,6 +386,9 @@ class Quotation
             $notes,
             $evidenceReference,
         );
+        $this->purchaseOrderNumber = self::normalizeOptionalText($purchaseOrderNumber);
+        $this->purchaseOrderFile = $purchaseOrderFile;
+        $this->responseScreenshotFile = $responseScreenshotFile;
     }
 
     public function acceptWithChanges(string $contact, \DateTimeImmutable $respondedAt, string $notes, string $ip): void
@@ -524,6 +539,14 @@ class Quotation
     {
         return $this->decisionEvidenceReference;
     }
+
+    public function getPurchaseOrderNumber(): ?string { return $this->purchaseOrderNumber; }
+
+    /** @return array<string, int|string>|null */
+    public function getPurchaseOrderFile(): ?array { return $this->purchaseOrderFile; }
+
+    /** @return array<string, int|string>|null */
+    public function getResponseScreenshotFile(): ?array { return $this->responseScreenshotFile; }
 
     public function getCurrency(): string
     {

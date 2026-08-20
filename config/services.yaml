@@ -59,6 +59,10 @@ services:
             $fromName: '%env(string:MAILER_FROM_NAME)%'
             $staffEmail: '%env(string:PRINTFLOW_QUOTATION_ISSUER_EMAIL)%'
 
+    App\Service\Quotations\QuotationDecisionFileStorage:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+
     App\Controller\PrivacyNoticeController:
         arguments:
             $privacyResponsible: '%env(string:PRINTFLOW_QUOTATION_ISSUER_NAME)%'

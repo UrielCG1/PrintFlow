@@ -12,6 +12,8 @@ final class QuotationStatusTest extends TestCase
     public function testCapabilityMatrixIsExplicitAndConsistent(): void
     {
         $expected = [
+            QuotationStatus::REQUEST->value => [false, false, false, false],
+            QuotationStatus::IN_REVIEW->value => [false, false, false, false],
             QuotationStatus::DRAFT->value => [true, false, false, false],
             QuotationStatus::ISSUED->value => [false, true, true, true],
             QuotationStatus::SENT->value => [false, true, true, true],

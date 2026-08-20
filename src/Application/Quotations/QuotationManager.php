@@ -430,6 +430,9 @@ final class QuotationManager
                         $data->respondedAt,
                         $data->notes,
                         $data->evidenceReference,
+                        $data->purchaseOrderNumber,
+                        $data->purchaseOrderMetadata,
+                        $data->responseScreenshotMetadata,
                     );
                 } else {
                     $quotation->reject(
@@ -919,6 +922,9 @@ final class QuotationManager
             'decision_at' => $quotation->getDecisionAt()?->format(\DATE_ATOM),
             'decision_notes' => $quotation->getDecisionNotes(),
             'decision_evidence_reference' => $quotation->getDecisionEvidenceReference(),
+            'purchase_order_number' => $quotation->getPurchaseOrderNumber(),
+            'purchase_order_file' => $quotation->getPurchaseOrderFile(),
+            'response_screenshot_file' => $quotation->getResponseScreenshotFile(),
             'client_id' => $quotation->getClient()->getId(),
             'client_name' => $quotation->getClientSnapshot()['business_name'] ?? null,
             'commercial_contact' => $quotation->getClientSnapshot()['commercial_contact'] ?? null,

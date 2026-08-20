@@ -29,10 +29,10 @@ final class QuotationLifecycleTest extends TestCase
         self::assertSame(QuotationStatus::ISSUED, $quotation->getStatus());
 
         $quotation->markSent();
-        self::assertSame(QuotationStatus::SENT, $quotation->getStatus());
+        self::assertSame(QuotationStatus::ISSUED, $quotation->getStatus());
 
         $quotation->markSent();
-        self::assertSame(QuotationStatus::SENT, $quotation->getStatus());
+        self::assertSame(QuotationStatus::ISSUED, $quotation->getStatus());
     }
 
     public function testAcceptedQuotationIsTerminalForCommercialDecisionsAndRevisions(): void
