@@ -1,0 +1,72 @@
+{% set itemConfigurationSection = item_configuration_section|default('general') %}
+
+<section class="pf-item-config" aria-label="Configuración de {{ item.name }}">
+    <div class="pf-item-config__summary">
+        <div class="pf-item-config__identity">
+            <div class="pf-item-config__title-row">
+                <h2 class="pf-item-config__title">{{ item.name }}</h2>
+                <span class="pf-status-badge {{ item.isActive ? 'pf-status-badge--success' : 'pf-status-badge--warning' }}">
+                    <span class="pf-status-badge__dot" aria-hidden="true"></span>
+                    {{ item.isActive ? 'Activo' : 'Inactivo' }}
+                </span>
+            </div>
+
+            <div class="pf-item-config__meta" aria-label="Datos principales">
+                <code class="pf-table__code">{{ item.code }}</code>
+                <span>{{ item.type.label }}</span>
+                <span>{{ item.category.name }}</span>
+                <span>{{ item.measurementUnit.name }}</span>
+            </div>
+        </div>
+
+        <a href="{{ path('admin_catalog_items_index') }}" class="btn pf-button pf-button--secondary pf-button--sm">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
+            <span>Volver al catálogo</span>
+        </a>
+    </div>
+
+    <nav class="pf-item-config__nav" aria-label="Secciones de configuración">
+        <a
+            href="{{ path('admin_catalog_items_configure', {id: item.id}) }}"
+            class="pf-item-config__link {{ itemConfigurationSection == 'general' ? 'is-active' : '' }}"
+            {% if itemConfigurationSection == 'general' %}aria-current="page"{% endif %}
+        >
+            <i class="bi bi-card-text" aria-hidden="true"></i>
+            <span>General</span>
+        </a>
+
+        {% if is_granted('catalog.items.update_price') %}
+            <a
+                href="{{ path('admin_catalog_item_price_rules_index', {item: item.id}) }}"
+                class="pf-item-config__link {{ itemConfigurationSection == 'pricing' ? 'is-active' : '' }}"
+                {% if itemConfigurationSection == 'pricing' %}aria-current="page"{% endif %}
+            >
+                <i class="bi bi-cash-stack" aria-hidden="true"></i>
+                <span>Precio y rangos</span>
+            </a>
+        {% else %}
+            <span class="pf-item-config__link is-disabled" aria-disabled="true" title="No cuentas con permiso para administrar precios">
+                <i class="bi bi-cash-stack" aria-hidden="true"></i>
+                <span>Precio y rangos</span>
+            </span>
+        {% endif %}
+
+        {% if item.type.value == 'PRODUCT' %}
+            {% if is_granted('catalog.items.configure_characteristics') %}
+                <a
+                    href="{{ path('admin_catalog_item_characteristics_index', {item: item.id}) }}"
+                    class="pf-item-config__link {{ itemConfigurationSection == 'characteristics' ? 'is-active' : '' }}"
+                    {% if itemConfigurationSection == 'characteristics' %}aria-current="page"{% endif %}
+                >
+                    <i class="bi bi-sliders" aria-hidden="true"></i>
+                    <span>Características</span>
+                </a>
+            {% else %}
+                <span class="pf-item-config__link is-disabled" aria-disabled="true" title="No cuentas con permiso para configurar características">
+                    <i class="bi bi-sliders" aria-hidden="true"></i>
+                    <span>Características</span>
+                </span>
+            {% endif %}
+        {% endif %}
+    </nav>
+</section>

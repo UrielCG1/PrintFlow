@@ -1,48 +1,84 @@
 {% extends 'layouts/app.html.twig' %}
 
 {% block title %}{{ pageTitle }} | PrintFlow{% endblock %}
-{% block app_navigation_active %}catalog{% endblock %}
-{% block app_breadcrumb %}Catálogo / Unidades de medida / {{ pageTitle }}{% endblock %}
+{% block app_navigation_active %}catalog_units{% endblock %}
+{% block app_breadcrumb %}Catálogos / Unidades de medida / {{ pageTitle }}{% endblock %}
 
 {% block app_content %}
     <div class="pf-page__content">
-        <div class="pf-page-header">
+        {% include 'admin/catalog/_workspace_nav.html.twig' with {catalog_section: 'units'} %}
+
+        <div class="pf-page-header pf-catalog-page-header">
             <div class="pf-page-header__content">
                 <h1 class="pf-page-header__title">{{ pageTitle }}</h1>
                 <p class="pf-page-header__description">
-                    La unidad determina cómo se venderá y cotizará cada concepto comercial.
+                    Configura cómo se identifica, convierte y captura esta unidad dentro de PrintFlow.
                 </p>
             </div>
         </div>
 
         <div class="pf-card">
-            {{ form_start(form, {attr: {class: 'pf-form pf-card__body', novalidate: 'novalidate'}}) }}
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        {{ form_row(form.code) }}
+            {{ form_start(form, {
+                attr: {
+                    class: 'pf-form pf-card__body',
+                    novalidate: 'novalidate',
+                    'data-controller': 'ui--measurement-unit-form'
+                }
+            }) }}
+                <section class="pf-form-section">
+                    <div class="pf-form-section__header">
+                        <h2 class="pf-form-section__title">Identidad</h2>
+                        <p class="pf-form-section__description">Nombre visible, código técnico y símbolo que acompañará las cantidades.</p>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-4">{{ form_row(form.code) }}</div>
+                        <div class="col-md-5">{{ form_row(form.name) }}</div>
+                        <div class="col-md-3">{{ form_row(form.symbol) }}</div>
+                    </div>
+                </section>
+
+                <section class="pf-form-section">
+                    <div class="pf-form-section__header">
+                        <h2 class="pf-form-section__title">Dimensión y conversión</h2>
+                        <p class="pf-form-section__description">Relaciona únicamente unidades compatibles. Las presentaciones como caja o paquete normalmente no requieren conversión universal.</p>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-4">{{ form_row(form.dimensionType) }}</div>
+                        <div class="col-md-4">{{ form_row(form.baseUnit) }}</div>
+                        <div class="col-md-4">{{ form_row(form.conversionFactor) }}</div>
                     </div>
 
-                    <div class="col-md-8">
-                        {{ form_row(form.name) }}
+                    <div class="pf-catalog-conversion-example" role="note">
+                        <i class="bi bi-calculator" aria-hidden="true"></i>
+                        <div>
+                            <strong>Cómo se interpreta el factor</strong>
+                            <p>Si la unidad es <em>Centímetro</em>, su base es <em>Metro</em> y 1 cm equivale a 0.01 m, el factor debe ser <strong>0.01</strong>.</p>
+                        </div>
                     </div>
+                </section>
 
-                    <div class="col-md-4">
-                        {{ form_row(form.displayOrder) }}
+                <section class="pf-form-section">
+                    <div class="pf-form-section__header">
+                        <h2 class="pf-form-section__title">Captura de cantidades</h2>
+                        <p class="pf-form-section__description">Define si se admiten fracciones y cuántos decimales deben conservarse al trabajar con esta unidad.</p>
+                    </div>
+                    <div class="row g-3 align-items-start">
+                        <div class="col-md-7">{{ form_row(form.allowsFraction) }}</div>
+                        <div class="col-md-5">{{ form_row(form.decimalScale) }}</div>
+                    </div>
+                </section>
+
+                <div class="pf-catalog-form-note" role="note">
+                    <i class="bi bi-list-ol" aria-hidden="true"></i>
+                    <div>
+                        <strong>El orden se administra aparte.</strong>
+                        <p>Las unidades nuevas se agregan al final de su dimensión. Después puedes acomodarlas desde <em>Ordenar unidades</em>.</p>
                     </div>
                 </div>
 
                 <div class="pf-form-actions">
-                    <a
-                        href="{{ path('admin_catalog_units_index') }}"
-                        class="btn pf-button pf-button--secondary"
-                    >
-                        Cancelar
-                    </a>
-
-                    <button
-                        type="submit"
-                        class="btn pf-button pf-button--primary"
-                    >
+                    <a href="{{ path('admin_catalog_units_index') }}" class="btn pf-button pf-button--secondary">Cancelar</a>
+                    <button type="submit" class="btn pf-button pf-button--primary">
                         <i class="bi bi-check-lg" aria-hidden="true"></i>
                         <span>{{ unit ? 'Guardar cambios' : 'Crear unidad' }}</span>
                     </button>

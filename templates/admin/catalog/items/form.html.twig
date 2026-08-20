@@ -1,72 +1,72 @@
 {% extends 'layouts/app.html.twig' %}
 
 {% block title %}{{ pageTitle }} | PrintFlow{% endblock %}
-{% block app_navigation_active %}catalog{% endblock %}
-{% block app_breadcrumb %}Catálogo / Conceptos comerciales / {{ pageTitle }}{% endblock %}
+{% block app_navigation_active %}catalog_items{% endblock %}
+{% block app_breadcrumb %}Catálogos / Productos y servicios / {{ pageTitle }}{% endblock %}
 
 {% block app_content %}
     <div class="pf-page__content">
-        <div class="pf-page-header">
+        {% include 'admin/catalog/_workspace_nav.html.twig' with {catalog_section: 'items'} %}
+
+        {% if item %}
+            {% include 'admin/catalog/items/_configuration_nav.html.twig' with {
+                item: item,
+                item_configuration_section: 'general'
+            } %}
+        {% endif %}
+
+        <header class="pf-page-header pf-catalog-page-header">
             <div class="pf-page-header__content">
                 <h1 class="pf-page-header__title">{{ pageTitle }}</h1>
                 <p class="pf-page-header__description">
-                    Define la información comercial base que se utilizará en las cotizaciones.
+                    {{ isCreate
+                        ? 'Define la identidad comercial inicial. Después podrás completar precios, rangos y características desde su configuración.'
+                        : 'Actualiza la identidad y clasificación. El precio se administra por separado en Precio y rangos.'
+                    }}
                 </p>
             </div>
-        </div>
+        </header>
 
         <div class="pf-card">
-            {% if item and not canEditPrice %}
-                <div class="alert alert-info mb-4" role="alert">
-                    Puedes actualizar la información general, pero no el precio base.
-                </div>
-            {% endif %}
-
             {{ form_start(form, {attr: {class: 'pf-form pf-card__body', novalidate: 'novalidate'}}) }}
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        {{ form_row(form.code) }}
+                <section class="pf-form-section" aria-labelledby="item-form-identity">
+                    <div class="pf-form-section__header">
+                        <h2 id="item-form-identity" class="pf-form-section__title">Identidad comercial</h2>
+                        <p class="pf-form-section__description">Nombre, tipo e identificador con los que reconocerás este registro.</p>
                     </div>
 
-                    <div class="col-md-4">
-                        {{ form_row(form.type) }}
+                    <div class="row g-3">
+                        <div class="col-md-8">{{ form_row(form.name) }}</div>
+                        <div class="col-md-4">{{ form_row(form.code) }}</div>
+                        <div class="col-md-6">{{ form_row(form.type) }}</div>
+                        <div class="col-md-6">{{ form_row(form.category) }}</div>
+                    </div>
+                </section>
+
+                <section class="pf-form-section" aria-labelledby="item-form-quotation">
+                    <div class="pf-form-section__header">
+                        <h2 id="item-form-quotation" class="pf-form-section__title">Uso en cotización</h2>
+                        <p class="pf-form-section__description">Define la unidad de venta y el perfil técnico que utilizará el cotizador interno.</p>
                     </div>
 
-                    <div class="col-md-4">
-                        {{ form_row(form.basePrice) }}
+                    <div class="row g-3">
+                        <div class="col-md-6">{{ form_row(form.measurementUnit) }}</div>
+                        <div class="col-md-6">{{ form_row(form.quotationSpecificationProfile) }}</div>
+                        {% if form.basePrice is defined %}
+                            <div class="col-md-6">{{ form_row(form.basePrice) }}</div>
+                        {% endif %}
+                        <div class="col-12">{{ form_row(form.description) }}</div>
                     </div>
-
-                    <div class="col-md-6">
-                        {{ form_row(form.name) }}
-                    </div>
-
-                    <div class="col-md-6">
-                        {{ form_row(form.category) }}
-                    </div>
-
-                    <div class="col-md-6">
-                        {{ form_row(form.measurementUnit) }}
-                    </div>
-
-                    <div class="col-12">
-                        {{ form_row(form.description) }}
-                    </div>
-                </div>
+                </section>
 
                 <div class="pf-form-actions">
                     <a
-                        href="{{ path('admin_catalog_items_index') }}"
+                        href="{{ item ? path('admin_catalog_items_configure', {id: item.id}) : path('admin_catalog_items_index') }}"
                         class="btn pf-button pf-button--secondary"
-                    >
-                        Cancelar
-                    </a>
-
-                    <button
-                        type="submit"
-                        class="btn pf-button pf-button--primary"
-                    >
+                    >Cancelar</a>
+                    <button type="submit" class="btn pf-button pf-button--primary">
                         <i class="bi bi-check-lg" aria-hidden="true"></i>
-                        <span>{{ item ? 'Guardar cambios' : 'Crear concepto' }}</span>
+                        <span>{{ item ? 'Guardar cambios' : 'Crear y continuar' }}</span>
                     </button>
                 </div>
             {{ form_end(form) }}

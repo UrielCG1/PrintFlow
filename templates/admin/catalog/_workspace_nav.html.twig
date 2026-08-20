@@ -1,0 +1,63 @@
+{% set catalogSection = catalog_section|default('items') %}
+
+<section class="pf-catalog-workspace" aria-label="Navegación de Catálogos">
+    <div class="pf-catalog-workspace__intro">
+        <span class="pf-catalog-workspace__icon" aria-hidden="true">
+            <i class="bi bi-grid"></i>
+        </span>
+
+        <div class="pf-catalog-workspace__copy">
+            <p class="pf-catalog-workspace__eyebrow">Catálogos</p>
+            <p class="pf-catalog-workspace__description">
+                Configura lo que PrintFlow puede vender y cómo se utiliza al cotizar.
+            </p>
+        </div>
+    </div>
+
+    <nav class="pf-catalog-workspace__nav" aria-label="Secciones del catálogo comercial">
+        <a
+            href="{{ path('admin_catalog_health_index') }}"
+            class="pf-catalog-workspace__link {{ catalogSection == 'health' ? 'is-active' : '' }}"
+            {% if catalogSection == 'health' %}aria-current="page"{% endif %}
+        >
+            <i class="bi bi-activity" aria-hidden="true"></i>
+            <span>Estado del catálogo</span>
+        </a>
+
+        <a
+            href="{{ path('admin_catalog_items_index') }}"
+            class="pf-catalog-workspace__link {{ catalogSection == 'items' ? 'is-active' : '' }}"
+            {% if catalogSection == 'items' %}aria-current="page"{% endif %}
+        >
+            <i class="bi bi-box-seam" aria-hidden="true"></i>
+            <span>Productos y servicios</span>
+        </a>
+
+        <a
+            href="{{ path('admin_catalog_categories_index') }}"
+            class="pf-catalog-workspace__link {{ catalogSection == 'categories' ? 'is-active' : '' }}"
+            {% if catalogSection == 'categories' %}aria-current="page"{% endif %}
+        >
+            <i class="bi bi-tags" aria-hidden="true"></i>
+            <span>Categorías</span>
+        </a>
+
+        <a
+            href="{{ path('admin_catalog_units_index') }}"
+            class="pf-catalog-workspace__link {{ catalogSection == 'units' ? 'is-active' : '' }}"
+            {% if catalogSection == 'units' %}aria-current="page"{% endif %}
+        >
+            <i class="bi bi-rulers" aria-hidden="true"></i>
+            <span>Unidades de medida</span>
+        </a>
+
+        <a
+            href="{{ path('admin_catalog_characteristics_index') }}"
+            class="pf-catalog-workspace__link {{ catalogSection == 'characteristics' ? 'is-active' : '' }}"
+            {% if catalogSection == 'characteristics' %}aria-current="page"{% endif %}
+        >
+            <i class="bi bi-sliders" aria-hidden="true"></i>
+            <span>Características</span>
+        </a>
+    </nav>
+</section>

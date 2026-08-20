@@ -1,167 +1,124 @@
 {% extends 'layouts/app.html.twig' %}
 
 {% block title %}Categorías comerciales | PrintFlow{% endblock %}
-{% block app_navigation_active %}catalog{% endblock %}
-{% block app_breadcrumb %}Catálogo / Categorías comerciales{% endblock %}
-
-{% set canReorder = is_granted('catalog.categories.manage') and status == 'active' and search is empty %}
+{% block app_navigation_active %}catalog_categories{% endblock %}
+{% block app_breadcrumb %}Catálogos / Categorías comerciales{% endblock %}
 
 {% block app_content %}
     <div class="pf-page__content">
-        <div class="pf-page-header">
+        {% include 'admin/catalog/_workspace_nav.html.twig' with {catalog_section: 'categories'} %}
+
+        <div class="pf-page-header pf-catalog-page-header">
             <div class="pf-page-header__content">
                 <h1 class="pf-page-header__title">Categorías comerciales</h1>
                 <p class="pf-page-header__description">
-                    Organiza los servicios y productos que se podrán utilizar en futuras cotizaciones.
+                    Organiza los productos y servicios y consulta rápidamente qué tanto se utiliza cada categoría.
                 </p>
             </div>
 
-            <div class="pf-page-header__actions">
-                <a
-                    href="{{ path('admin_catalog_units_index') }}"
-                    class="btn pf-button pf-button--secondary"
-                >
-                    <i class="bi bi-rulers" aria-hidden="true"></i>
-                    <span>Unidades de medida</span>
-                </a>
-
-                {% if is_granted('catalog.categories.manage') %}
-                    <a
-                        href="{{ path('admin_catalog_categories_new') }}"
-                        class="btn pf-button pf-button--primary"
-                    >
+            {% if is_granted('catalog.categories.manage') %}
+                <div class="pf-page-header__actions">
+                    <a href="{{ path('admin_catalog_categories_order') }}" class="btn pf-button pf-button--secondary">
+                        <i class="bi bi-list-ol" aria-hidden="true"></i>
+                        <span>Ordenar categorías</span>
+                    </a>
+                    <a href="{{ path('admin_catalog_categories_new') }}" class="btn pf-button pf-button--primary">
                         <i class="bi bi-plus-lg" aria-hidden="true"></i>
                         <span>Nueva categoría</span>
                     </a>
-                {% endif %}
-            </div>
+                </div>
+            {% endif %}
         </div>
 
-        <form method="get" class="pf-card pf-form">
+        <form method="get" action="{{ path('admin_catalog_categories_index') }}" class="pf-card pf-form pf-catalog-filters" aria-label="Filtros de categorías comerciales">
             <div class="pf-card__body row g-3 align-items-end">
-                <div class="col-md-6 pf-form-field">
-                    <label
-                        for="catalog-category-search"
-                        class="form-label"
-                    >
-                        Buscar
-                    </label>
-
+                <div class="col-md-8 pf-form-field">
+                    <label for="catalog-category-search" class="form-label">Buscar</label>
                     <input
                         id="catalog-category-search"
                         type="search"
                         name="q"
                         value="{{ search }}"
                         class="form-control"
-                        placeholder="Código o nombre"
+                        placeholder="Código, nombre o descripción"
                     >
                 </div>
 
-                <div class="col-md-3 pf-form-field">
-                    <label
-                        for="catalog-category-status"
-                        class="form-label"
-                    >
-                        Estado
-                    </label>
-
-                    <select
-                        id="catalog-category-status"
-                        name="status"
-                        class="form-select"
-                    >
+                <div class="col-md-2 pf-form-field">
+                    <label for="catalog-category-status" class="form-label">Estado</label>
+                    <select id="catalog-category-status" name="status" class="form-select">
                         <option value="active" {{ status == 'active' ? 'selected' : '' }}>Activas</option>
                         <option value="inactive" {{ status == 'inactive' ? 'selected' : '' }}>Inactivas</option>
                         <option value="all" {{ status == 'all' ? 'selected' : '' }}>Todas</option>
                     </select>
                 </div>
 
-                <div class="col-md-3 pf-card__header-actions">
-                    <button
-                        type="submit"
-                        class="btn pf-button pf-button--primary"
-                    >
+                <div class="col-md-2 pf-catalog-filters__actions">
+                    <button type="submit" class="btn pf-button pf-button--primary">
                         <i class="bi bi-search" aria-hidden="true"></i>
                         <span>Filtrar</span>
                     </button>
-
-                    <a
-                        href="{{ path('admin_catalog_categories_index') }}"
-                        class="btn pf-button pf-button--secondary"
-                    >
-                        Limpiar
+                    <a href="{{ path('admin_catalog_categories_index') }}" class="btn pf-button pf-button--secondary">
+                        <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+                        <span>Limpiar</span>
                     </a>
                 </div>
             </div>
         </form>
 
         <div class="pf-card pf-card--padding-none">
-            {% if canReorder %}
-                <p class="pf-card__body small text-body-secondary mb-0">
-                    Arrastra las categorías para ajustar su orden de visualización.
+            <div class="pf-catalog-list-meta">
+                <p class="pf-catalog-list-meta__summary">
+                    {{ page.totalItems }} {{ page.totalItems == 1 ? 'categoría' : 'categorías' }}
                 </p>
-            {% endif %}
+                <p class="pf-catalog-list-meta__hint">
+                    <i class="bi bi-diagram-3" aria-hidden="true"></i>
+                    El uso muestra cuántos productos y servicios dependen de cada categoría.
+                </p>
+            </div>
 
             <div class="pf-table-responsive pf-table-responsive--flat">
-                <table class="pf-table">
+                <table class="pf-table pf-catalog-category-table">
                     <thead>
                         <tr>
-                            {% if canReorder %}
-                                <th
-                                    class="pf-table__cell--center"
-                                    aria-label="Reordenar"
-                                ></th>
-                            {% endif %}
-
-                            <th>Código</th>
-                            <th>Nombre</th>
+                            <th>Categoría</th>
                             <th>Descripción</th>
-                            <th>Orden</th>
+                            <th>Uso</th>
                             <th>Estado</th>
-
                             {% if is_granted('catalog.categories.manage') %}
                                 <th class="pf-table__actions-cell">Acciones</th>
                             {% endif %}
                         </tr>
                     </thead>
-
-                    <tbody
-                        {% if canReorder %}
-                            data-controller="ui--sortable"
-                            data-ui--sortable-url-value="{{ path('admin_catalog_categories_reorder') }}"
-                            data-ui--sortable-token-value="{{ csrf_token('catalog_category_reorder') }}"
-                        {% endif %}
-                    >
+                    <tbody>
                         {% for category in page.items %}
-                            <tr data-id="{{ category.id }}" data-sortable-id="{{ category.id }}">
-                                {% if canReorder %}
-                                    <td class="pf-table__cell--center">
-                                        <button
-                                            type="button"
-                                            class="pf-sortable__handle"
-                                            title="Arrastrar para reordenar"
-                                            aria-label="Arrastrar {{ category.name }} para reordenar"
+                            {% set usage = usageSummary[category.id]|default({total: 0, active: 0}) %}
+                            <tr>
+                                <td>
+                                    <div class="pf-catalog-item-cell">
+                                        <span class="pf-table__primary">{{ category.name }}</span>
+                                        <code class="pf-table__code">{{ category.code }}</code>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="pf-catalog-description">{{ category.description ?: 'Sin descripción.' }}</span>
+                                </td>
+                                <td>
+                                    <div class="pf-catalog-usage">
+                                        <a
+                                            href="{{ path('admin_catalog_items_index', {category: category.id, status: 'active'}) }}"
+                                            class="pf-catalog-usage__link"
                                         >
-                                            <i class="bi bi-grip-vertical" aria-hidden="true"></i>
-                                        </button>
-                                    </td>
-                                {% endif %}
-
-                                <td>
-                                    <code class="pf-table__code">
-                                        {{ category.code }}
-                                    </code>
+                                            <strong>{{ usage.active }}</strong>
+                                            {{ usage.active == 1 ? 'activo' : 'activos' }}
+                                        </a>
+                                        {% if usage.total > usage.active %}
+                                            <span class="pf-catalog-usage__secondary">{{ usage.total }} en total</span>
+                                        {% elseif usage.total == 0 %}
+                                            <span class="pf-catalog-usage__secondary">Sin productos ni servicios</span>
+                                        {% endif %}
+                                    </div>
                                 </td>
-
-                                <td>
-                                    <span class="pf-table__primary">
-                                        {{ category.name }}
-                                    </span>
-                                </td>
-
-                                <td>{{ category.description ?: '—' }}</td>
-                                <td>{{ category.displayOrder }}</td>
-
                                 <td>
                                     <span class="pf-status-badge {{ category.isActive ? 'pf-status-badge--success' : 'pf-status-badge--warning' }}">
                                         {{ category.isActive ? 'Activa' : 'Inactiva' }}
@@ -170,44 +127,61 @@
 
                                 {% if is_granted('catalog.categories.manage') %}
                                     <td class="pf-table__actions-cell">
-                                        <div class="pf-table__actions">
-                                            <a
-                                                href="{{ path('admin_catalog_categories_edit', {id: category.id}) }}"
-                                                class="btn pf-button pf-button--secondary pf-button--sm"
-                                            >
+                                        <div class="pf-catalog-row-actions">
+                                            <a href="{{ path('admin_catalog_categories_edit', {id: category.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm">
                                                 <i class="bi bi-pencil-square" aria-hidden="true"></i>
                                                 <span>Editar</span>
                                             </a>
 
-                                            <form
-                                                method="post"
-                                                action="{{ path('admin_catalog_categories_status', {id: category.id, q: search, status: status, page: page.currentPage}) }}"
-                                            >
-                                                <input
-                                                    type="hidden"
-                                                    name="_token"
-                                                    value="{{ csrf_token('catalog_category_status_' ~ category.id) }}"
-                                                >
-
-                                                <button
-                                                    type="submit"
-                                                    class="btn pf-button pf-button--sm {{ category.isActive ? 'pf-button--danger' : 'pf-button--success' }}"
-                                                >
-                                                    <i class="bi {{ category.isActive ? 'bi-pause-circle' : 'bi-check-circle' }}" aria-hidden="true"></i>
-                                                    <span>{{ category.isActive ? 'Desactivar' : 'Reactivar' }}</span>
-                                                </button>
-                                            </form>
+                                            <details class="pf-catalog-row-menu">
+                                                <summary class="pf-catalog-row-menu__trigger" aria-label="Más acciones para {{ category.name }}">
+                                                    <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+                                                </summary>
+                                                <div class="pf-catalog-row-menu__panel">
+                                                    {% if category.isActive and usage.active > 0 %}
+                                                        <span
+                                                            class="pf-catalog-row-menu__action is-disabled"
+                                                            title="Primero desactiva o mueve los productos y servicios activos de esta categoría."
+                                                        >
+                                                            <i class="bi bi-lock" aria-hidden="true"></i>
+                                                            En uso por {{ usage.active }}
+                                                        </span>
+                                                    {% else %}
+                                                        <form
+                                                            method="post"
+                                                            action="{{ path('admin_catalog_categories_status', {id: category.id, q: search, status: status, page: page.currentPage}) }}"
+                                                            data-controller="ui--confirm-action"
+                                                            data-action="submit->ui--confirm-action#submit"
+                                                            data-ui--confirm-action-title-value="{{ category.isActive ? '¿Desactivar categoría comercial?' : '¿Reactivar categoría comercial?' }}"
+                                                            data-ui--confirm-action-text-value="{{ category.isActive ? 'Dejará de estar disponible para organizar nuevos productos y servicios.' : 'Volverá a estar disponible para organizar productos y servicios.' }}"
+                                                            data-ui--confirm-action-confirm-button-text-value="{{ category.isActive ? 'Sí, desactivar' : 'Sí, reactivar' }}"
+                                                            data-ui--confirm-action-cancel-button-text-value="Cancelar"
+                                                            data-ui--confirm-action-icon-value="warning"
+                                                        >
+                                                            <input type="hidden" name="_token" value="{{ csrf_token('catalog_category_status_' ~ category.id) }}">
+                                                            <button
+                                                                type="submit"
+                                                                class="pf-catalog-row-menu__action {{ category.isActive ? 'is-danger' : 'is-success' }}"
+                                                            >
+                                                                <i class="bi {{ category.isActive ? 'bi-pause-circle' : 'bi-check-circle' }}" aria-hidden="true"></i>
+                                                                {{ category.isActive ? 'Desactivar' : 'Reactivar' }}
+                                                            </button>
+                                                        </form>
+                                                    {% endif %}
+                                                </div>
+                                            </details>
                                         </div>
                                     </td>
                                 {% endif %}
                             </tr>
                         {% else %}
                             <tr>
-                                <td
-                                    colspan="{{ is_granted('catalog.categories.manage') ? (canReorder ? 7 : 6) : 5 }}"
-                                    class="pf-table__empty"
-                                >
-                                    No se encontraron categorías comerciales.
+                                <td colspan="{{ is_granted('catalog.categories.manage') ? 5 : 4 }}" class="pf-table__empty">
+                                    <div class="pf-table__empty-content">
+                                        <span class="pf-table__empty-icon" aria-hidden="true"><i class="bi bi-tags"></i></span>
+                                        <p class="pf-table__empty-title">No se encontraron categorías comerciales</p>
+                                        <p class="pf-table__empty-description">Ajusta los filtros o crea una nueva categoría para organizar tus productos y servicios.</p>
+                                    </div>
                                 </td>
                             </tr>
                         {% endfor %}
@@ -216,36 +190,26 @@
             </div>
 
             {% if page.totalPages > 1 %}
-                <nav
-                    class="pf-table-footer"
-                    aria-label="Paginación de categorías"
-                >
-                    <ul class="pf-table-footer__pagination">
-                        <li class="pf-table-footer__pagination-item {{ page.currentPage == 1 ? 'disabled' : '' }}">
-                            <a
-                                class="btn pf-button pf-button--secondary pf-button--sm {{ page.currentPage == 1 ? 'disabled' : '' }}"
-                                href="{{ path('admin_catalog_categories_index', {q: search, status: status, page: page.currentPage - 1}) }}"
-                            >
-                                Anterior
+                <footer class="pf-table-footer">
+                    <p class="pf-table-footer__summary">Página <strong>{{ page.currentPage }}</strong> de <strong>{{ page.totalPages }}</strong></p>
+                    <nav class="pf-table-footer__pagination" aria-label="Paginación de categorías">
+                        {% if page.currentPage > 1 %}
+                            <a class="btn pf-button pf-button--secondary pf-button--sm" href="{{ path('admin_catalog_categories_index', {q: search, status: status, page: page.currentPage - 1}) }}">
+                                <i class="bi bi-chevron-left" aria-hidden="true"></i><span>Anterior</span>
                             </a>
-                        </li>
+                        {% else %}
+                            <span class="pf-button pf-button--secondary pf-button--sm disabled" aria-disabled="true"><i class="bi bi-chevron-left" aria-hidden="true"></i><span>Anterior</span></span>
+                        {% endif %}
 
-                        <li class="pf-table-footer__pagination-item">
-                            <span class="pf-table-footer__summary">
-                                Página {{ page.currentPage }} de {{ page.totalPages }}
-                            </span>
-                        </li>
-
-                        <li class="pf-table-footer__pagination-item {{ page.currentPage == page.totalPages ? 'disabled' : '' }}">
-                            <a
-                                class="btn pf-button pf-button--secondary pf-button--sm {{ page.currentPage == page.totalPages ? 'disabled' : '' }}"
-                                href="{{ path('admin_catalog_categories_index', {q: search, status: status, page: page.currentPage + 1}) }}"
-                            >
-                                Siguiente
+                        {% if page.currentPage < page.totalPages %}
+                            <a class="btn pf-button pf-button--secondary pf-button--sm" href="{{ path('admin_catalog_categories_index', {q: search, status: status, page: page.currentPage + 1}) }}">
+                                <span>Siguiente</span><i class="bi bi-chevron-right" aria-hidden="true"></i>
                             </a>
-                        </li>
-                    </ul>
-                </nav>
+                        {% else %}
+                            <span class="pf-button pf-button--secondary pf-button--sm disabled" aria-disabled="true"><span>Siguiente</span><i class="bi bi-chevron-right" aria-hidden="true"></i></span>
+                        {% endif %}
+                    </nav>
+                </footer>
             {% endif %}
         </div>
     </div>

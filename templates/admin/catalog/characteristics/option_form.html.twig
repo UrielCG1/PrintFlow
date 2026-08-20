@@ -2,16 +2,30 @@
 
 {% block title %}{{ pageTitle }} | PrintFlow{% endblock %}
 {% block app_navigation_active %}catalog_characteristics{% endblock %}
-{% block app_breadcrumb %}Catálogo / Características de producto / {{ characteristic.name }} / {{ pageTitle }}{% endblock %}
+{% block app_breadcrumb %}Catálogos / Características de producto / {{ characteristic.name }} / {{ pageTitle }}{% endblock %}
 
 {% block app_content %}
-    <div class="pf-page__content">
-        <header class="pf-page-header"><div class="pf-page-header__content"><h1 class="pf-page-header__title">{{ pageTitle }}</h1><p class="pf-page-header__description">Característica: {{ characteristic.name }}</p></div></header>
-        <div class="pf-card">
-            {{ form_start(form, {attr: {class: 'pf-form pf-card__body', novalidate: 'novalidate'}}) }}
-                <div class="row g-3"><div class="col-md-4">{{ form_row(form.code) }}</div><div class="col-md-4">{{ form_row(form.displayOrder) }}</div><div class="col-md-8">{{ form_row(form.name) }}</div></div>
-                <div class="pf-form-actions"><a href="{{ path('admin_catalog_characteristics_options', {id: characteristic.id}) }}" class="btn pf-button pf-button--secondary">Cancelar</a><button type="submit" class="btn pf-button pf-button--primary"><i class="bi bi-check-lg" aria-hidden="true"></i><span>{{ option ? 'Guardar cambios' : 'Crear opción' }}</span></button></div>
-            {{ form_end(form) }}
+<div class="pf-page__content">
+    {% include 'admin/catalog/_workspace_nav.html.twig' with {catalog_section: 'characteristics'} %}
+    {% include 'admin/catalog/characteristics/_configuration_nav.html.twig' with {characteristic: characteristic, characteristic_configuration_section: 'options'} %}
+
+    <header class="pf-page-header pf-catalog-page-header">
+        <div class="pf-page-header__content"><h1 class="pf-page-header__title">{{ pageTitle }}</h1><p class="pf-page-header__description">Define un valor controlado para {{ characteristic.name }}.</p></div>
+    </header>
+
+    {% if optionCodeLocked %}
+        <div class="pf-catalog-technical-contract" role="note">
+            <i class="bi bi-link-45deg" aria-hidden="true"></i>
+            <div><strong>Código técnico en uso</strong><p>Esta opción ya está permitida en uno o más Productos. Puedes cambiar su nombre visible, pero el código queda protegido para conservar las configuraciones existentes.</p></div>
         </div>
+    {% endif %}
+
+    <div class="pf-card">
+        {{ form_start(form, {attr: {class: 'pf-form pf-card__body', novalidate: 'novalidate'}}) }}
+            <div class="row g-3"><div class="col-lg-7">{{ form_row(form.name) }}</div><div class="col-lg-5">{{ form_row(form.code) }}</div></div>
+            <div class="pf-catalog-form-note" role="note"><i class="bi bi-arrow-down-up" aria-hidden="true"></i><div><strong>Orden administrado desde la lista</strong><p>Las posiciones se ajustan con “Ordenar opciones”; no necesitas capturar números manualmente.</p></div></div>
+            <div class="pf-form-actions"><a href="{{ path('admin_catalog_characteristics_options', {id: characteristic.id}) }}" class="btn pf-button pf-button--secondary">Cancelar</a><button type="submit" class="btn pf-button pf-button--primary"><i class="bi bi-check-lg" aria-hidden="true"></i><span>{{ option ? 'Guardar cambios' : 'Crear opción' }}</span></button></div>
+        {{ form_end(form) }}
     </div>
+</div>
 {% endblock %}

@@ -18,6 +18,7 @@ use App\Repository\Catalog\CommercialCharacteristicOptionRepository;
 use App\Repository\Catalog\CommercialCharacteristicRepository;
 use App\Repository\Catalog\CommercialItemCharacteristicRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -37,6 +38,67 @@ final class CommercialItemCharacteristicController extends AbstractController
             'item' => $item,
             'configurations' => $configurationRepository->findForItem($item),
         ]);
+    }
+
+    #[Route('/ordenar', name: 'order', methods: ['GET'])]
+    public function order(
+        CommercialItem $item,
+        CommercialItemCharacteristicRepository $configurationRepository,
+    ): Response {
+        $this->denyAccessUnlessGranted('catalog.items.configure_characteristics');
+        $this->assertConfigurableProduct($item);
+
+        return $this->render('admin/catalog/item_characteristics/order.html.twig', [
+            'item' => $item,
+            'configurations' => $configurationRepository->findForItem($item),
+        ]);
+    }
+
+    #[Route('/reordenar', name: 'reorder', methods: ['POST'])]
+    public function reorder(
+        Request $request,
+        CommercialItem $item,
+        CommercialItemCharacteristicManager $manager,
+    ): JsonResponse {
+        $this->denyAccessUnlessGranted('catalog.items.configure_characteristics');
+        $this->assertConfigurableProduct($item);
+
+        try {
+            /** @var array<string, mixed> $payload */
+            $payload = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return $this->json(['message' => 'La solicitud no contiene datos válidos.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        if (!$this->isCsrfTokenValid('catalog_item_characteristic_reorder_'.$item->getId(), (string) ($payload['_token'] ?? ''))) {
+            return $this->json(['message' => 'La solicitud no es válida.'], Response::HTTP_FORBIDDEN);
+        }
+
+        $movedId = filter_var($payload['movedId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $beforeId = ($payload['beforeId'] ?? null) === null
+            ? null
+            : filter_var($payload['beforeId'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $afterId = ($payload['afterId'] ?? null) === null
+            ? null
+            : filter_var($payload['afterId'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+
+        if ($movedId === false || $beforeId === false || $afterId === false) {
+            return $this->json(['message' => 'La posición recibida no es válida.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        try {
+            $manager->reorderForItem(
+                $item,
+                (int) $movedId,
+                $beforeId === null ? null : (int) $beforeId,
+                $afterId === null ? null : (int) $afterId,
+                $this->getActor(),
+            );
+        } catch (\DomainException $exception) {
+            return $this->json(['message' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        return $this->json(['message' => 'Orden de captura actualizado correctamente.']);
     }
 
     #[Route('/nueva/seleccionar', name: 'select', methods: ['GET', 'POST'])]
@@ -90,7 +152,6 @@ final class CommercialItemCharacteristicController extends AbstractController
         }
 
         $data = new CommercialItemCharacteristicData();
-        $data->displayOrder = 10;
         $form = $this->createConfigurationForm($data, $characteristic, $optionRepository);
         $form->handleRequest($request);
 

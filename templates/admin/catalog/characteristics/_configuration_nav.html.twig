@@ -1,0 +1,61 @@
+{% set characteristicConfigurationSection = characteristic_configuration_section|default('general') %}
+
+<section class="pf-item-config" aria-label="Configuración de {{ characteristic.name }}">
+    <div class="pf-item-config__summary">
+        <div class="pf-item-config__identity">
+            <div class="pf-item-config__title-row">
+                <h2 class="pf-item-config__title">{{ characteristic.name }}</h2>
+                <span class="pf-status-badge {{ characteristic.isActive ? 'pf-status-badge--success' : 'pf-status-badge--warning' }}">
+                    <span class="pf-status-badge__dot" aria-hidden="true"></span>
+                    {{ characteristic.isActive ? 'Activa' : 'Inactiva' }}
+                </span>
+            </div>
+            <div class="pf-item-config__meta" aria-label="Datos principales de la característica">
+                <code class="pf-table__code">{{ characteristic.code }}</code>
+                <span>{{ characteristic.inputType.label }}</span>
+                {% if characteristic.unitLabel %}<span>{{ characteristic.unitLabel }}</span>{% endif %}
+            </div>
+        </div>
+
+        <a href="{{ path('admin_catalog_characteristics_index') }}" class="btn pf-button pf-button--secondary pf-button--sm">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
+            <span>Volver al catálogo</span>
+        </a>
+    </div>
+
+    <nav class="pf-item-config__nav" aria-label="Secciones de configuración de la característica">
+        <a
+            href="{{ path('admin_catalog_characteristics_configure', {id: characteristic.id}) }}"
+            class="pf-item-config__link {{ characteristicConfigurationSection == 'general' ? 'is-active' : '' }}"
+            {% if characteristicConfigurationSection == 'general' %}aria-current="page"{% endif %}
+        >
+            <i class="bi bi-card-text" aria-hidden="true"></i>
+            <span>General</span>
+        </a>
+
+        {% if characteristic.inputType.supportsOptions %}
+            <a
+                href="{{ path('admin_catalog_characteristics_options', {id: characteristic.id}) }}"
+                class="pf-item-config__link {{ characteristicConfigurationSection == 'options' ? 'is-active' : '' }}"
+                {% if characteristicConfigurationSection == 'options' %}aria-current="page"{% endif %}
+            >
+                <i class="bi bi-list-check" aria-hidden="true"></i>
+                <span>Opciones</span>
+            </a>
+        {% else %}
+            <span class="pf-item-config__link is-disabled" aria-disabled="true" title="Este tipo de característica no utiliza opciones catalogadas">
+                <i class="bi bi-list-check" aria-hidden="true"></i>
+                <span>Opciones</span>
+            </span>
+        {% endif %}
+
+        <a
+            href="{{ path('admin_catalog_characteristics_products', {id: characteristic.id}) }}"
+            class="pf-item-config__link {{ characteristicConfigurationSection == 'products' ? 'is-active' : '' }}"
+            {% if characteristicConfigurationSection == 'products' %}aria-current="page"{% endif %}
+        >
+            <i class="bi bi-box-seam" aria-hidden="true"></i>
+            <span>Productos</span>
+        </a>
+    </nav>
+</section>

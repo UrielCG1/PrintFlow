@@ -1,48 +1,18 @@
 {% extends 'layouts/app.html.twig' %}
 
 {% block title %}{{ pageTitle }} | PrintFlow{% endblock %}
-{% block app_navigation_active %}catalog{% endblock %}
-{% block app_breadcrumb %}Catálogo / Conceptos comerciales / Rangos de precio / {{ pageTitle }}{% endblock %}
+{% block app_navigation_active %}catalog_items{% endblock %}
+{% block app_breadcrumb %}Catálogos / Productos y servicios / {{ item.name }} / Precio y rangos / {{ pageTitle }}{% endblock %}
 
 {% block app_content %}
     <div class="pf-page__content">
-        <div class="pf-page-header">
-            <div class="pf-page-header__content">
-                <h1 class="pf-page-header__title">{{ pageTitle }}</h1>
-                <p class="pf-page-header__description">
-                    {{ item.code }} — {{ item.name }}
-                </p>
-            </div>
-        </div>
-
+        {% include 'admin/catalog/_workspace_nav.html.twig' with {catalog_section: 'items'} %}
+        {% include 'admin/catalog/items/_configuration_nav.html.twig' with {item: item, item_configuration_section: 'pricing'} %}
+        <header class="pf-page-header pf-catalog-page-header"><div class="pf-page-header__content"><h1 class="pf-page-header__title">{{ pageTitle }}</h1><p class="pf-page-header__description">Define a partir de qué cantidad cambia el precio unitario de {{ item.name }}.</p></div></header>
         <div class="pf-card">
             {{ form_start(form, {attr: {class: 'pf-form pf-card__body', novalidate: 'novalidate'}}) }}
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        {{ form_row(form.minQuantity) }}
-                    </div>
-
-                    <div class="col-md-6">
-                        {{ form_row(form.unitPrice) }}
-                    </div>
-                </div>
-
-                <div class="pf-form-actions">
-                    <a
-                        href="{{ path('admin_catalog_item_price_rules_index', {item: item.id}) }}"
-                        class="btn pf-button pf-button--secondary"
-                    >
-                        Cancelar
-                    </a>
-
-                    <button
-                        type="submit"
-                        class="btn pf-button pf-button--primary"
-                    >
-                        <i class="bi bi-check-lg" aria-hidden="true"></i>
-                        <span>{{ rule ? 'Guardar cambios' : 'Crear rango' }}</span>
-                    </button>
-                </div>
+                <div class="row g-3"><div class="col-md-6">{{ form_row(form.minQuantity) }}</div><div class="col-md-6">{{ form_row(form.unitPrice) }}</div></div>
+                <div class="pf-form-actions"><a href="{{ path('admin_catalog_item_price_rules_index', {item: item.id}) }}" class="btn pf-button pf-button--secondary">Cancelar</a><button type="submit" class="btn pf-button pf-button--primary"><i class="bi bi-check-lg" aria-hidden="true"></i><span>{{ rule ? 'Guardar cambios' : 'Crear rango' }}</span></button></div>
             {{ form_end(form) }}
         </div>
     </div>

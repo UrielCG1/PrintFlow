@@ -21,9 +21,10 @@ final class CommercialItemCharacteristicSelectionType extends AbstractType
             'label' => 'Característica',
             'placeholder' => 'Selecciona una característica',
             'choice_label' => static fn (CommercialCharacteristic $characteristic): string => sprintf(
-                '%s%s',
+                '%s%s · %s',
                 $characteristic->getName(),
                 $characteristic->getUnitLabel() !== null ? ' ('.$characteristic->getUnitLabel().')' : '',
+                $characteristic->getInputType()->label(),
             ),
             'help' => 'Solo se muestran características activas que todavía no están configuradas en este Producto.',
         ]);

@@ -1,0 +1,199 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Estado del catálogo | PrintFlow{% endblock %}
+{% block app_navigation_active %}catalog_health{% endblock %}
+{% block app_breadcrumb %}Catálogos / Estado del catálogo{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page__content">
+        {% include 'admin/catalog/_workspace_nav.html.twig' with {catalog_section: 'health'} %}
+
+        <header class="pf-page-header pf-catalog-page-header">
+            <div class="pf-page-header__content">
+                <h1 class="pf-page-header__title">Estado del catálogo</h1>
+                <p class="pf-page-header__description">
+                    Revisa configuraciones incompletas, registros que conviene validar y elementos activos que todavía no participan en ningún flujo conocido.
+                </p>
+            </div>
+
+            <div class="pf-page-header__actions">
+                <a href="{{ path('admin_catalog_health_index') }}" class="btn pf-button pf-button--secondary">
+                    <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+                    <span>Actualizar diagnóstico</span>
+                </a>
+            </div>
+        </header>
+
+        <section class="pf-catalog-health-summary" aria-label="Resumen del diagnóstico">
+            <article class="pf-card pf-catalog-health-metric pf-catalog-health-metric--incomplete">
+                <div class="pf-catalog-health-metric__icon" aria-hidden="true"><i class="bi bi-exclamation-octagon"></i></div>
+                <div>
+                    <span class="pf-catalog-health-metric__value">{{ report.summary.incomplete }}</span>
+                    <span class="pf-catalog-health-metric__label">Incompletos</span>
+                    <p>Inconsistencias que conviene corregir antes de depender del registro en nuevos flujos.</p>
+                </div>
+            </article>
+
+            <article class="pf-card pf-catalog-health-metric pf-catalog-health-metric--attention">
+                <div class="pf-catalog-health-metric__icon" aria-hidden="true"><i class="bi bi-exclamation-triangle"></i></div>
+                <div>
+                    <span class="pf-catalog-health-metric__value">{{ report.summary.attention }}</span>
+                    <span class="pf-catalog-health-metric__label">Atención</span>
+                    <p>Configuraciones válidas que merecen una revisión administrativa o comercial.</p>
+                </div>
+            </article>
+
+            <article class="pf-card pf-catalog-health-metric pf-catalog-health-metric--unused">
+                <div class="pf-catalog-health-metric__icon" aria-hidden="true"><i class="bi bi-box-seam"></i></div>
+                <div>
+                    <span class="pf-catalog-health-metric__value">{{ report.summary.unused }}</span>
+                    <span class="pf-catalog-health-metric__label">Sin uso</span>
+                    <p>Registros activos que hoy no están relacionados con elementos operativos del catálogo.</p>
+                </div>
+            </article>
+
+            <article class="pf-card pf-catalog-health-metric pf-catalog-health-metric--healthy">
+                <div class="pf-catalog-health-metric__icon" aria-hidden="true"><i class="bi bi-check2-circle"></i></div>
+                <div>
+                    <span class="pf-catalog-health-metric__value">{{ report.summary.healthy }}</span>
+                    <span class="pf-catalog-health-metric__label">Sin observaciones</span>
+                    <p>De {{ report.summary.monitored }} registros monitoreados, estos no presentan hallazgos del diagnóstico actual.</p>
+                </div>
+            </article>
+        </section>
+
+        <section class="pf-catalog-health-areas" aria-label="Cobertura por catálogo">
+            {% for key, area in report.areas %}
+                <a
+                    href="{{ path('admin_catalog_health_index', {area: key, severity: selectedSeverity}) }}"
+                    class="pf-card pf-catalog-health-area {{ selectedArea == key ? 'is-active' : '' }}"
+                >
+                    <span class="pf-catalog-health-area__icon" aria-hidden="true">
+                        {% if key == 'items' %}<i class="bi bi-box-seam"></i>{% endif %}
+                        {% if key == 'categories' %}<i class="bi bi-tags"></i>{% endif %}
+                        {% if key == 'units' %}<i class="bi bi-rulers"></i>{% endif %}
+                        {% if key == 'characteristics' %}<i class="bi bi-sliders"></i>{% endif %}
+                    </span>
+                    <span class="pf-catalog-health-area__copy">
+                        <strong>{{ area.label }}</strong>
+                        <small>{{ area.findings }} con observaciones de {{ area.total }}</small>
+                    </span>
+                    <i class="bi bi-chevron-right pf-catalog-health-area__chevron" aria-hidden="true"></i>
+                </a>
+            {% endfor %}
+        </section>
+
+        <div class="pf-catalog-health-note" role="note">
+            <i class="bi bi-info-circle" aria-hidden="true"></i>
+            <div>
+                <strong>El diagnóstico es de solo lectura.</strong>
+                <p>No modifica datos ni desactiva registros automáticamente. “Sin uso” tampoco significa que debas eliminar algo: señala elementos activos que vale la pena revisar.</p>
+            </div>
+        </div>
+
+        <form method="get" action="{{ path('admin_catalog_health_index') }}" class="pf-card pf-form pf-catalog-filters" aria-label="Filtros del diagnóstico de catálogo">
+            <div class="pf-card__body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-5 pf-form-field">
+                        <label for="catalog-health-area" class="form-label">Catálogo</label>
+                        <select id="catalog-health-area" name="area" class="form-select">
+                            <option value="all" {{ selectedArea == 'all' ? 'selected' : '' }}>Todos los catálogos</option>
+                            {% for key, area in report.areas %}
+                                <option value="{{ key }}" {{ selectedArea == key ? 'selected' : '' }}>{{ area.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-4 pf-form-field">
+                        <label for="catalog-health-severity" class="form-label">Estado</label>
+                        <select id="catalog-health-severity" name="severity" class="form-select">
+                            <option value="all" {{ selectedSeverity == 'all' ? 'selected' : '' }}>Todas las observaciones</option>
+                            {% for severity in severityCases %}
+                                <option value="{{ severity.value }}" {{ selectedSeverity == severity.value ? 'selected' : '' }}>{{ severity.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="pf-catalog-filters__actions">
+                            <button type="submit" class="btn pf-button pf-button--primary">
+                                <i class="bi bi-funnel" aria-hidden="true"></i>
+                                <span>Aplicar</span>
+                            </button>
+                            <a href="{{ path('admin_catalog_health_index') }}" class="btn pf-button pf-button--secondary">
+                                <span>Limpiar</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <section aria-labelledby="catalog-health-findings-title">
+            <div class="pf-catalog-health-results-header">
+                <div>
+                    <h2 id="catalog-health-findings-title">Observaciones</h2>
+                    <p>{{ findings|length }} {{ findings|length == 1 ? 'registro coincide' : 'registros coinciden' }} con los filtros actuales.</p>
+                </div>
+            </div>
+
+            {% if findings %}
+                <div class="pf-catalog-health-findings">
+                    {% for finding in findings %}
+                        <article class="pf-card pf-catalog-health-finding pf-catalog-health-finding--{{ finding.severity.value }}">
+                            <div class="pf-catalog-health-finding__status" aria-hidden="true">
+                                {% if finding.severity.value == 'incomplete' %}<i class="bi bi-exclamation-octagon"></i>{% endif %}
+                                {% if finding.severity.value == 'attention' %}<i class="bi bi-exclamation-triangle"></i>{% endif %}
+                                {% if finding.severity.value == 'unused' %}<i class="bi bi-box-seam"></i>{% endif %}
+                            </div>
+
+                            <div class="pf-catalog-health-finding__content">
+                                <div class="pf-catalog-health-finding__heading">
+                                    <div>
+                                        <div class="pf-catalog-health-finding__title-row">
+                                            <h3>{{ finding.entityName }}</h3>
+                                            <span class="pf-catalog-health-badge pf-catalog-health-badge--{{ finding.severity.value }}">{{ finding.severity.label }}</span>
+                                        </div>
+                                        <div class="pf-catalog-health-finding__meta">
+                                            {% if finding.area == 'items' %}<span>Producto / servicio</span>{% endif %}
+                                            {% if finding.area == 'categories' %}<span>Categoría comercial</span>{% endif %}
+                                            {% if finding.area == 'units' %}<span>Unidad de medida</span>{% endif %}
+                                            {% if finding.area == 'characteristics' %}<span>Característica</span>{% endif %}
+                                            <code>{{ finding.entityCode }}</code>
+                                        </div>
+                                    </div>
+
+                                    <div class="pf-catalog-health-finding__action">
+                                        {% if finding.area == 'items' %}
+                                            <a href="{{ path('admin_catalog_items_configure', {id: finding.entityId}) }}" class="btn pf-button pf-button--secondary pf-button--sm">Revisar configuración</a>
+                                        {% elseif finding.area == 'categories' %}
+                                            <a href="{{ path('admin_catalog_categories_index', {q: finding.entityCode, status: 'all'}) }}" class="btn pf-button pf-button--secondary pf-button--sm">Abrir categoría</a>
+                                        {% elseif finding.area == 'units' %}
+                                            <a href="{{ path('admin_catalog_units_index', {q: finding.entityCode, status: 'all'}) }}" class="btn pf-button pf-button--secondary pf-button--sm">Abrir unidad</a>
+                                        {% elseif finding.area == 'characteristics' %}
+                                            <a href="{{ path('admin_catalog_characteristics_configure', {id: finding.entityId}) }}" class="btn pf-button pf-button--secondary pf-button--sm">Revisar configuración</a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <ul class="pf-catalog-health-finding__reasons">
+                                    {% for reason in finding.reasons %}
+                                        <li>{{ reason }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </article>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="pf-card pf-catalog-health-empty">
+                    <span class="pf-catalog-health-empty__icon" aria-hidden="true"><i class="bi bi-check2-circle"></i></span>
+                    <div>
+                        <h3>No hay observaciones con estos filtros</h3>
+                        <p>El diagnóstico actual no encontró registros que coincidan con la combinación seleccionada.</p>
+                    </div>
+                </div>
+            {% endif %}
+        </section>
+    </div>
+{% endblock %}

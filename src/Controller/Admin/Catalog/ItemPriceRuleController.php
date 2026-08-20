@@ -2,12 +2,15 @@
 
 namespace App\Controller\Admin\Catalog;
 
+use App\Application\Catalog\CommercialItemBasePriceData;
+use App\Application\Catalog\CommercialItemManager;
 use App\Application\Catalog\ItemPriceRuleData;
 use App\Application\Catalog\ItemPriceRuleManager;
 use App\Entity\Catalog\CommercialItem;
 use App\Entity\Catalog\ItemPriceRule;
 use App\Entity\Users\User;
 use App\Enum\Catalog\ItemPriceRuleType;
+use App\Form\Admin\Catalog\CommercialItemBasePriceType;
 use App\Form\Admin\Catalog\ItemPriceRuleType as ItemPriceRuleFormType;
 use App\Repository\Catalog\ItemPriceRuleRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -21,16 +24,47 @@ use Symfony\Component\Routing\Attribute\Route;
 )]
 final class ItemPriceRuleController extends AbstractController
 {
-    #[Route('', name: 'index', methods: ['GET'])]
+    #[Route('', name: 'index', methods: ['GET', 'POST'])]
     public function index(
+        Request $request,
         CommercialItem $item,
         ItemPriceRuleRepository $itemPriceRuleRepository,
+        CommercialItemManager $commercialItemManager,
     ): Response {
         $this->denyAccessUnlessGranted('catalog.items.update_price');
 
+        $basePriceData = new CommercialItemBasePriceData();
+        $basePriceData->basePrice = $item->getBasePrice();
+        $basePriceForm = $this->createForm(CommercialItemBasePriceType::class, $basePriceData, [
+            'action' => $this->generateUrl('admin_catalog_item_price_rules_index', ['item' => $item->getId()]),
+            'method' => 'POST',
+        ]);
+        $basePriceForm->handleRequest($request);
+
+        if ($basePriceForm->isSubmitted() && $basePriceForm->isValid()) {
+            try {
+                $commercialItemManager->updateBasePrice(
+                    $item,
+                    (string) $basePriceData->basePrice,
+                    $this->getActor(),
+                );
+                $this->addFlash('success', 'Precio base actualizado correctamente.');
+
+                return $this->redirectToRoute('admin_catalog_item_price_rules_index', [
+                    'item' => $item->getId(),
+                ]);
+            } catch (\InvalidArgumentException $exception) {
+                $this->addFlash('error', $exception->getMessage());
+            }
+        }
+
+        $rules = $itemPriceRuleRepository->findQuantityTiersForItem($item);
+
         return $this->render('admin/catalog/item_price_rules/index.html.twig', [
             'item' => $item,
-            'rules' => $itemPriceRuleRepository->findQuantityTiersForItem($item),
+            'rules' => $rules,
+            'basePriceForm' => $basePriceForm,
+            'activeRuleCount' => count(array_filter($rules, static fn (ItemPriceRule $rule): bool => $rule->isActive())),
         ]);
     }
 

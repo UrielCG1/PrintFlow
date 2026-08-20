@@ -2,49 +2,79 @@
 
 {% block title %}Características de {{ item.name }} | PrintFlow{% endblock %}
 {% block app_navigation_active %}catalog_items{% endblock %}
-{% block app_breadcrumb %}Catálogo / Productos y servicios / {{ item.name }} / Características{% endblock %}
+{% block app_breadcrumb %}Catálogos / Productos y servicios / {{ item.name }} / Características{% endblock %}
 
 {% block app_content %}
     <div class="pf-page__content">
-        <header class="pf-page-header">
+        {% include 'admin/catalog/_workspace_nav.html.twig' with {catalog_section: 'items'} %}
+        {% include 'admin/catalog/items/_configuration_nav.html.twig' with {item: item, item_configuration_section: 'characteristics'} %}
+
+        <header class="pf-page-header pf-catalog-page-header">
             <div class="pf-page-header__content">
-                <h1 class="pf-page-header__title">Características del Producto</h1>
-                <p class="pf-page-header__description"><strong>{{ item.name }}</strong> · {{ item.category.name }} · {{ item.measurementUnit.name }}</p>
+                <h1 class="pf-page-header__title">Características</h1>
+                <p class="pf-page-header__description">Define qué datos se solicitarán al capturar este Producto y en qué orden aparecerán.</p>
             </div>
             <div class="pf-page-header__actions">
-                <a href="{{ path('admin_catalog_items_index') }}" class="btn pf-button pf-button--secondary">Productos y servicios</a>
+                {% if configurations|length > 1 %}
+                    <a href="{{ path('admin_catalog_item_characteristics_order', {item: item.id}) }}" class="btn pf-button pf-button--secondary"><i class="bi bi-arrow-down-up" aria-hidden="true"></i><span>Ordenar captura</span></a>
+                {% endif %}
                 <a href="{{ path('admin_catalog_item_characteristics_select', {item: item.id}) }}" class="btn pf-button pf-button--primary"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Agregar característica</span></a>
             </div>
         </header>
 
-        <div class="alert alert-info" role="status">Estas características determinan qué datos se solicitarán al cotizar este Producto. No modifican su precio base ni sus rangos.</div>
-
         <section class="pf-card pf-card--padding-none" aria-label="Configuración de características">
+            <div class="pf-catalog-list-meta">
+                <p class="pf-catalog-list-meta__summary">{{ configurations|length }} {{ configurations|length == 1 ? 'característica configurada' : 'características configuradas' }}</p>
+                <p class="pf-catalog-list-meta__hint"><i class="bi bi-info-circle" aria-hidden="true"></i>La obligatoriedad y las opciones permitidas pueden variar para cada Producto.</p>
+            </div>
             <div class="pf-table-responsive pf-table-responsive--flat">
-                <table class="pf-table">
-                    <thead><tr><th>Característica</th><th>Tipo</th><th>Obligatoria</th><th>Opciones permitidas</th><th>Orden</th><th class="pf-table__actions-cell">Acciones</th></tr></thead>
+                <table class="pf-table pf-item-characteristics-table">
+                    <thead><tr><th>Característica</th><th>Captura</th><th>Opciones permitidas</th><th class="pf-table__actions-cell">Acciones</th></tr></thead>
                     <tbody>
                         {% for configuration in configurations %}
                             <tr>
-                                <td><span class="pf-table__primary">{{ configuration.characteristic.name }}</span>{% if configuration.characteristic.unitLabel %}<span class="pf-table__secondary">{{ configuration.characteristic.unitLabel }}</span>{% endif %}</td>
-                                <td>{{ configuration.characteristic.inputType.label }}</td>
-                                <td>{{ configuration.isRequired ? 'Sí' : 'No' }}</td>
+                                <td>
+                                    <div class="pf-catalog-item-cell">
+                                        <div class="pf-catalog-item-cell__title-row"><span class="pf-table__primary">{{ configuration.characteristic.name }}</span><span class="pf-catalog-tag">{{ configuration.characteristic.inputType.label }}</span></div>
+                                        <code class="pf-table__code">{{ configuration.characteristic.code }}</code>
+                                        {% if configuration.characteristic.unitLabel %}<span class="pf-catalog-stack__secondary">Unidad: {{ configuration.characteristic.unitLabel }}</span>{% endif %}
+                                    </div>
+                                </td>
+                                <td><span class="pf-catalog-tag {{ configuration.isRequired ? 'is-emphasis' : '' }}">{{ configuration.isRequired ? 'Obligatoria' : 'Opcional' }}</span></td>
                                 <td>
                                     {% if configuration.characteristic.inputType.supportsOptions %}
-                                        {% for allowedOption in configuration.allowedOptions %}{{ allowedOption.characteristicOption.name }}{{ not loop.last ? ', ' : '' }}{% else %}—{% endfor %}
-                                    {% else %}No aplica{% endif %}
+                                        {% if configuration.allowedOptions|length > 0 %}
+                                            <div class="pf-characteristic-option-chips">{% for allowedOption in configuration.allowedOptions %}<span class="pf-catalog-tag">{{ allowedOption.characteristicOption.name }}</span>{% endfor %}</div>
+                                        {% else %}<span class="pf-catalog-muted">Sin opciones permitidas</span>{% endif %}
+                                    {% else %}<span class="pf-catalog-muted">No aplica</span>{% endif %}
                                 </td>
-                                <td>{{ configuration.displayOrder }}</td>
-                                <td class="pf-table__actions-cell"><div class="pf-table__actions">
-                                    <a href="{{ path('admin_catalog_item_characteristics_edit', {item: item.id, configuration: configuration.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm"><i class="bi bi-pencil-square" aria-hidden="true"></i><span>Editar</span></a>
-                                    <form method="post" action="{{ path('admin_catalog_item_characteristics_delete', {item: item.id, configuration: configuration.id}) }}">
-                                        <input type="hidden" name="_token" value="{{ csrf_token('catalog_item_characteristic_delete_' ~ configuration.id) }}">
-                                        <button type="submit" class="btn pf-button pf-button--danger pf-button--sm"><i class="bi bi-trash" aria-hidden="true"></i><span>Retirar</span></button>
-                                    </form>
-                                </div></td>
+                                <td class="pf-table__actions-cell">
+                                    <div class="pf-catalog-row-actions">
+                                        <a href="{{ path('admin_catalog_item_characteristics_edit', {item: item.id, configuration: configuration.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm"><i class="bi bi-sliders" aria-hidden="true"></i><span>Configurar</span></a>
+                                        <details class="pf-catalog-row-menu">
+                                            <summary class="pf-catalog-row-menu__trigger" aria-label="Más acciones para {{ configuration.characteristic.name }}"><i class="bi bi-three-dots-vertical" aria-hidden="true"></i></summary>
+                                            <div class="pf-catalog-row-menu__panel">
+                                                <form
+                                                    method="post"
+                                                    action="{{ path('admin_catalog_item_characteristics_delete', {item: item.id, configuration: configuration.id}) }}"
+                                                    data-controller="ui--confirm-action"
+                                                    data-action="submit->ui--confirm-action#submit"
+                                                    data-ui--confirm-action-title-value="¿Retirar característica del Producto?"
+                                                    data-ui--confirm-action-text-value="{{ configuration.characteristic.name }} dejará de solicitarse al cotizar {{ item.name }}. La definición global de la característica no se eliminará."
+                                                    data-ui--confirm-action-confirm-button-text-value="Sí, retirar"
+                                                    data-ui--confirm-action-cancel-button-text-value="Cancelar"
+                                                    data-ui--confirm-action-icon-value="warning"
+                                                >
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('catalog_item_characteristic_delete_' ~ configuration.id) }}">
+                                                    <button type="submit" class="pf-catalog-row-menu__action is-danger"><i class="bi bi-trash" aria-hidden="true"></i>Retirar del Producto</button>
+                                                </form>
+                                            </div>
+                                        </details>
+                                    </div>
+                                </td>
                             </tr>
                         {% else %}
-                            <tr><td colspan="6" class="pf-table__empty">Este Producto aún no tiene características configuradas.</td></tr>
+                            <tr><td colspan="4" class="pf-table__empty"><div class="pf-table__empty-content"><span class="pf-table__empty-icon" aria-hidden="true"><i class="bi bi-sliders"></i></span><p class="pf-table__empty-title">Sin características configuradas</p><p class="pf-table__empty-description">Este Producto puede cotizarse sin datos adicionales. Agrega características cuando necesites capturar especificaciones controladas.</p><div class="pf-catalog-empty__actions"><a href="{{ path('admin_catalog_item_characteristics_select', {item: item.id}) }}" class="btn pf-button pf-button--primary pf-button--sm"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Agregar característica</span></a></div></div></td></tr>
                         {% endfor %}
                     </tbody>
                 </table>

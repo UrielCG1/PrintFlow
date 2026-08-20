@@ -2,31 +2,59 @@
 
 {% block title %}{{ pageTitle }} | PrintFlow{% endblock %}
 {% block app_navigation_active %}catalog_characteristics{% endblock %}
-{% block app_breadcrumb %}Catálogo / Características de producto / {{ pageTitle }}{% endblock %}
+{% block app_breadcrumb %}Catálogos / Características de producto / {{ pageTitle }}{% endblock %}
 
 {% block app_content %}
-    <div class="pf-page__content">
-        <header class="pf-page-header">
-            <div class="pf-page-header__content">
-                <h1 class="pf-page-header__title">{{ pageTitle }}</h1>
-                <p class="pf-page-header__description">Una característica no cambia el precio; solo controla datos que se solicitarán posteriormente en la cotización.</p>
-            </div>
-        </header>
+<div class="pf-page__content">
+    {% include 'admin/catalog/_workspace_nav.html.twig' with {catalog_section: 'characteristics'} %}
+    {% if characteristic %}
+        {% include 'admin/catalog/characteristics/_configuration_nav.html.twig' with {characteristic: characteristic, characteristic_configuration_section: 'general'} %}
+    {% endif %}
 
-        <div class="pf-card">
-            {{ form_start(form, {attr: {class: 'pf-form pf-card__body', novalidate: 'novalidate'}}) }}
-                <div class="row g-3">
-                    <div class="col-md-4">{{ form_row(form.code) }}</div>
-                    <div class="col-md-4">{{ form_row(form.inputType) }}</div>
-                    <div class="col-md-4">{{ form_row(form.displayOrder) }}</div>
-                    <div class="col-md-8">{{ form_row(form.name) }}</div>
-                    <div class="col-md-4">{{ form_row(form.unitLabel) }}</div>
-                </div>
-                <div class="pf-form-actions">
-                    <a href="{{ path('admin_catalog_characteristics_index') }}" class="btn pf-button pf-button--secondary">Cancelar</a>
-                    <button type="submit" class="btn pf-button pf-button--primary"><i class="bi bi-check-lg" aria-hidden="true"></i><span>{{ characteristic ? 'Guardar cambios' : 'Crear característica' }}</span></button>
-                </div>
-            {{ form_end(form) }}
+    <header class="pf-page-header pf-catalog-page-header">
+        <div class="pf-page-header__content">
+            <h1 class="pf-page-header__title">{{ pageTitle }}</h1>
+            <p class="pf-page-header__description">Define el dato una sola vez; después podrás decidir en qué Productos se utiliza y si es obligatorio.</p>
         </div>
+    </header>
+
+    {% if technicalContract %}
+        <div class="pf-catalog-technical-contract" role="note">
+            <i class="bi bi-shield-lock" aria-hidden="true"></i>
+            <div><strong>Contrato técnico protegido</strong><p>{{ technicalContract.description }} Por seguridad, código, tipo de captura y unidad no son editables desde este formulario.</p></div>
+        </div>
+    {% elseif definitionLocked %}
+        <div class="pf-catalog-technical-contract" role="note">
+            <i class="bi bi-link-45deg" aria-hidden="true"></i>
+            <div><strong>Definición técnica en uso</strong><p>Esta característica ya está configurada en uno o más Productos. Puedes cambiar su nombre visible, pero el código, el tipo de captura y la unidad permanecen bloqueados para no invalidar configuraciones existentes.</p></div>
+        </div>
+    {% endif %}
+
+    <div class="pf-card">
+        {{ form_start(form, {attr: {class: 'pf-form pf-card__body', novalidate: 'novalidate'}}) }}
+            <section class="pf-form-section">
+                <div class="pf-form-section__header"><h2 class="pf-form-section__title">Identidad</h2><p class="pf-form-section__description">El nombre es visible para el personal; el código funciona como identificador técnico estable.</p></div>
+                <div class="row g-3">
+                    <div class="col-lg-7">{{ form_row(form.name) }}</div>
+                    <div class="col-lg-5">{{ form_row(form.code) }}</div>
+                </div>
+            </section>
+
+            <section class="pf-form-section">
+                <div class="pf-form-section__header"><h2 class="pf-form-section__title">Captura</h2><p class="pf-form-section__description">Determina qué control verá el usuario y cómo debe interpretar el valor.</p></div>
+                <div class="row g-3">
+                    <div class="col-lg-6">{{ form_row(form.inputType) }}</div>
+                    <div class="col-lg-6">{{ form_row(form.unitLabel) }}</div>
+                </div>
+            </section>
+
+            <div class="pf-catalog-form-note" role="note"><i class="bi bi-arrow-down-up" aria-hidden="true"></i><div><strong>Orden administrado por separado</strong><p>El orden ya no se captura manualmente. Utiliza “Ordenar características” desde el listado para evitar posiciones duplicadas o inconsistentes.</p></div></div>
+
+            <div class="pf-form-actions">
+                <a href="{{ characteristic ? path('admin_catalog_characteristics_configure', {id: characteristic.id}) : path('admin_catalog_characteristics_index') }}" class="btn pf-button pf-button--secondary">Cancelar</a>
+                <button type="submit" class="btn pf-button pf-button--primary"><i class="bi bi-check-lg" aria-hidden="true"></i><span>{{ characteristic ? 'Guardar cambios' : 'Crear característica' }}</span></button>
+            </div>
+        {{ form_end(form) }}
     </div>
+</div>
 {% endblock %}

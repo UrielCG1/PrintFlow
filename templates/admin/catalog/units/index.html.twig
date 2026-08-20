@@ -1,251 +1,280 @@
 {% extends 'layouts/app.html.twig' %}
 
 {% block title %}Unidades de medida | PrintFlow{% endblock %}
-{% block app_navigation_active %}catalog{% endblock %}
-{% block app_breadcrumb %}Catálogo / Unidades de medida{% endblock %}
-
-{% set canReorder = is_granted('catalog.units.manage') and status == 'active' and search is empty %}
+{% block app_navigation_active %}catalog_units{% endblock %}
+{% block app_breadcrumb %}Catálogos / Unidades de medida{% endblock %}
 
 {% block app_content %}
     <div class="pf-page__content">
-        <div class="pf-page-header">
+        {% include 'admin/catalog/_workspace_nav.html.twig' with {catalog_section: 'units'} %}
+
+        <div class="pf-page-header pf-catalog-page-header">
             <div class="pf-page-header__content">
                 <h1 class="pf-page-header__title">Unidades de medida</h1>
                 <p class="pf-page-header__description">
-                    Define cómo se venden y calculan los conceptos comerciales.
+                    Define unidades, dimensiones, conversiones y precisión para cotización y operación.
                 </p>
             </div>
 
-            <div class="pf-page-header__actions">
-                <a
-                    href="{{ path('admin_catalog_categories_index') }}"
-                    class="btn pf-button pf-button--secondary"
-                >
-                    <i class="bi bi-tags" aria-hidden="true"></i>
-                    <span>Categorías comerciales</span>
-                </a>
-
-                {% if is_granted('catalog.units.manage') %}
-                    <a
-                        href="{{ path('admin_catalog_units_new') }}"
-                        class="btn pf-button pf-button--primary"
-                    >
+            {% if is_granted('catalog.units.manage') %}
+                <div class="pf-page-header__actions">
+                    <a href="{{ path('admin_catalog_units_order') }}" class="btn pf-button pf-button--secondary">
+                        <i class="bi bi-list-ol" aria-hidden="true"></i>
+                        <span>Ordenar unidades</span>
+                    </a>
+                    <a href="{{ path('admin_catalog_units_new') }}" class="btn pf-button pf-button--primary">
                         <i class="bi bi-plus-lg" aria-hidden="true"></i>
                         <span>Nueva unidad</span>
                     </a>
-                {% endif %}
-            </div>
+                </div>
+            {% endif %}
         </div>
 
-        <form method="get" class="pf-card pf-form">
+        <form method="get" action="{{ path('admin_catalog_units_index') }}" class="pf-card pf-form pf-catalog-filters" aria-label="Filtros de unidades de medida">
             <div class="pf-card__body row g-3 align-items-end">
-                <div class="col-md-6 pf-form-field">
-                    <label
-                        for="catalog-unit-search"
-                        class="form-label"
-                    >
-                        Buscar
-                    </label>
-
+                <div class="col-lg-5 pf-form-field">
+                    <label for="catalog-unit-search" class="form-label">Buscar</label>
                     <input
                         id="catalog-unit-search"
                         type="search"
                         name="q"
                         value="{{ search }}"
                         class="form-control"
-                        placeholder="Código o nombre"
+                        placeholder="Código, nombre o símbolo"
                     >
                 </div>
 
-                <div class="col-md-3 pf-form-field">
-                    <label
-                        for="catalog-unit-status"
-                        class="form-label"
-                    >
-                        Estado
-                    </label>
+                <div class="col-lg-3 col-md-5 pf-form-field">
+                    <label for="catalog-unit-dimension" class="form-label">Dimensión</label>
+                    <select id="catalog-unit-dimension" name="dimension" class="form-select">
+                        <option value="all" {{ dimension == 'all' ? 'selected' : '' }}>Todas las dimensiones</option>
+                        {% for dimensionOption in dimensions %}
+                            <option value="{{ dimensionOption.value }}" {{ dimension == dimensionOption.value ? 'selected' : '' }}>
+                                {{ dimensionOption.label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-                    <select
-                        id="catalog-unit-status"
-                        name="status"
-                        class="form-select"
-                    >
+                <div class="col-lg-2 col-md-3 pf-form-field">
+                    <label for="catalog-unit-status" class="form-label">Estado</label>
+                    <select id="catalog-unit-status" name="status" class="form-select">
                         <option value="active" {{ status == 'active' ? 'selected' : '' }}>Activas</option>
                         <option value="inactive" {{ status == 'inactive' ? 'selected' : '' }}>Inactivas</option>
                         <option value="all" {{ status == 'all' ? 'selected' : '' }}>Todas</option>
                     </select>
                 </div>
 
-                <div class="col-md-3 pf-card__header-actions">
-                    <button
-                        type="submit"
-                        class="btn pf-button pf-button--primary"
-                    >
+                <div class="col-lg-2 col-md-4 pf-catalog-filters__actions">
+                    <button type="submit" class="btn pf-button pf-button--primary">
                         <i class="bi bi-search" aria-hidden="true"></i>
                         <span>Filtrar</span>
                     </button>
-
-                    <a
-                        href="{{ path('admin_catalog_units_index') }}"
-                        class="btn pf-button pf-button--secondary"
-                    >
-                        Limpiar
+                    <a href="{{ path('admin_catalog_units_index') }}" class="btn pf-button pf-button--secondary">
+                        <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+                        <span>Limpiar</span>
                     </a>
                 </div>
             </div>
         </form>
 
-        {% if canReorder %}
-            <p class="pf-card__body small text-body-secondary mb-0">
-                Arrastra las categorías para ajustar su orden de visualización.
+        <div class="pf-catalog-list-meta pf-catalog-list-meta--standalone">
+            <p class="pf-catalog-list-meta__summary">
+                {{ page.totalItems }} {{ page.totalItems == 1 ? 'unidad' : 'unidades' }}
             </p>
-        {% endif %}
-
-        <div class="pf-card pf-card--padding-none">
-            
-            <div class="pf-table-responsive pf-table-responsive--flat">
-                <table class="pf-table">
-                    <thead>
-                        <tr>
-                            {% if canReorder %}
-                                <th
-                                    class="pf-table__cell--center"
-                                    aria-label="Reordenar"
-                                ></th>
-                            {% endif %}
-
-                            <th>Código</th>
-                            <th>Nombre</th>
-                            <th>Orden</th>
-                            <th>Estado</th>
-
-                            {% if is_granted('catalog.units.manage') %}
-                                <th class="pf-table__actions-cell">Acciones</th>
-                            {% endif %}
-                        </tr>
-                    </thead>
-
-                    <tbody
-                        {% if canReorder %}
-                            data-controller="ui--sortable"
-                            data-ui--sortable-url-value="{{ path('admin_catalog_units_reorder') }}"
-                            data-ui--sortable-token-value="{{ csrf_token('catalog_unit_reorder') }}"
-                        {% endif %}
-                    >
-                        {% for unit in page.items %}
-                            <tr data-id="{{ unit.id }}" data-sortable-id="{{ unit.id }}">
-                                {% if canReorder %}
-                                    <td class="pf-table__cell--center">
-                                        <button
-                                            type="button"
-                                            class="pf-sortable__handle"
-                                            title="Arrastrar para reordenar"
-                                            aria-label="Arrastrar {{ unit.name }} para reordenar"
-                                        >
-                                            <i class="bi bi-grip-vertical" aria-hidden="true"></i>
-                                        </button>
-                                    </td>
-                                {% endif %}
-
-                                <td>
-                                    <code class="pf-table__code">
-                                        {{ unit.code }}
-                                    </code>
-                                </td>
-
-                                <td>
-                                    <span class="pf-table__primary">
-                                        {{ unit.name }}
-                                    </span>
-                                </td>
-
-                                <td>{{ unit.displayOrder }}</td>
-
-                                <td>
-                                    <span class="pf-status-badge {{ unit.isActive ? 'pf-status-badge--success' : 'pf-status-badge--warning' }}">
-                                        {{ unit.isActive ? 'Activa' : 'Inactiva' }}
-                                    </span>
-                                </td>
-
-                                {% if is_granted('catalog.units.manage') %}
-                                    <td class="pf-table__actions-cell">
-                                        <div class="pf-table__actions">
-                                            <a
-                                                href="{{ path('admin_catalog_units_edit', {id: unit.id}) }}"
-                                                class="btn pf-button pf-button--secondary pf-button--sm"
-                                            >
-                                                <i class="bi bi-pencil-square" aria-hidden="true"></i>
-                                                <span>Editar</span>
-                                            </a>
-
-                                            <form
-                                                method="post"
-                                                action="{{ path('admin_catalog_units_status', {id: unit.id, q: search, status: status, page: page.currentPage}) }}"
-                                            >
-                                                <input
-                                                    type="hidden"
-                                                    name="_token"
-                                                    value="{{ csrf_token('catalog_unit_status_' ~ unit.id) }}"
-                                                >
-
-                                                <button
-                                                    type="submit"
-                                                    class="btn pf-button pf-button--sm {{ unit.isActive ? 'pf-button--danger' : 'pf-button--success' }}"
-                                                >
-                                                    <i class="bi {{ unit.isActive ? 'bi-pause-circle' : 'bi-check-circle' }}" aria-hidden="true"></i>
-                                                    <span>{{ unit.isActive ? 'Desactivar' : 'Reactivar' }}</span>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                {% endif %}
-                            </tr>
-                        {% else %}
-                            <tr>
-                                <td
-                                    colspan="{{ is_granted('catalog.units.manage') ? (canReorder ? 6 : 5) : 4 }}"
-                                    class="pf-table__empty"
-                                >
-                                    No se encontraron unidades de medida.
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            {% if page.totalPages > 1 %}
-                <nav
-                    class="pf-table-footer"
-                    aria-label="Paginación de unidades de medida"
-                >
-                    <ul class="pf-table-footer__pagination">
-                        <li class="pf-table-footer__pagination-item {{ page.currentPage == 1 ? 'disabled' : '' }}">
-                            <a
-                                class="btn pf-button pf-button--secondary pf-button--sm {{ page.currentPage == 1 ? 'disabled' : '' }}"
-                                href="{{ path('admin_catalog_units_index', {q: search, status: status, page: page.currentPage - 1}) }}"
-                            >
-                                Anterior
-                            </a>
-                        </li>
-
-                        <li class="pf-table-footer__pagination-item">
-                            <span class="pf-table-footer__summary">
-                                Página {{ page.currentPage }} de {{ page.totalPages }}
-                            </span>
-                        </li>
-
-                        <li class="pf-table-footer__pagination-item {{ page.currentPage == page.totalPages ? 'disabled' : '' }}">
-                            <a
-                                class="btn pf-button pf-button--secondary pf-button--sm {{ page.currentPage == page.totalPages ? 'disabled' : '' }}"
-                                href="{{ path('admin_catalog_units_index', {q: search, status: status, page: page.currentPage + 1}) }}"
-                            >
-                                Siguiente
-                            </a>
-                        </li>
-                    </ul>
-                </nav>
-            {% endif %}
+            <p class="pf-catalog-list-meta__hint">
+                <i class="bi bi-diagram-2" aria-hidden="true"></i>
+                Las unidades se agrupan por dimensión para hacer visibles sus relaciones de conversión.
+            </p>
         </div>
+
+        <div class="pf-unit-dimensions">
+            {% for group in dimensionGroups %}
+                <section class="pf-card pf-card--padding-none pf-unit-dimension">
+                    <header class="pf-unit-dimension__header">
+                        <div>
+                            <div class="pf-unit-dimension__title-row">
+                                <h2 class="pf-unit-dimension__title">{{ group.dimension.label }}</h2>
+                                <span class="pf-catalog-tag">{{ group.units|length }} {{ group.units|length == 1 ? 'unidad' : 'unidades' }}</span>
+                            </div>
+                            <p class="pf-unit-dimension__description">{{ group.dimension.description }}</p>
+                        </div>
+                    </header>
+
+                    <div class="pf-table-responsive pf-table-responsive--flat">
+                        <table class="pf-table pf-unit-table">
+                            <thead>
+                                <tr>
+                                    <th>Unidad</th>
+                                    <th>Conversión</th>
+                                    <th>Captura</th>
+                                    <th>Uso activo</th>
+                                    <th>Estado</th>
+                                    {% if is_granted('catalog.units.manage') %}
+                                        <th class="pf-table__actions-cell">Acciones</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for unit in group.units %}
+                                    {% set commercialUsage = commercialUsageSummary[unit.id]|default({total: 0, active: 0}) %}
+                                    {% set materialUsage = materialUsageSummary[unit.id]|default({total: 0, active: 0}) %}
+                                    {% set derivedUsage = derivedUsageSummary[unit.id]|default(0) %}
+                                    {% set blocksDeactivation = commercialUsage.active > 0 or materialUsage.active > 0 or derivedUsage > 0 %}
+
+                                    <tr>
+                                        <td>
+                                            <div class="pf-unit-identity">
+                                                <div class="pf-unit-identity__title-row">
+                                                    <span class="pf-table__primary">{{ unit.name }}</span>
+                                                    <span class="pf-unit-symbol">{{ unit.symbol }}</span>
+                                                </div>
+                                                <code class="pf-table__code">{{ unit.code }}</code>
+                                            </div>
+                                        </td>
+
+                                        <td>
+                                            {% if unit.baseUnit %}
+                                                <div class="pf-unit-conversion">
+                                                    <strong>1 {{ unit.symbol }}</strong>
+                                                    <span>= {{ unit.conversionFactorAsFloat }} {{ unit.baseUnit.symbol }}</span>
+                                                    <small>Base: {{ unit.baseUnit.name }}</small>
+                                                </div>
+                                            {% elseif group.dimension.value == 'COUNT' %}
+                                                <div class="pf-catalog-muted">
+                                                    <i class="bi bi-dash-circle" aria-hidden="true"></i>
+                                                    Sin conversión universal
+                                                </div>
+                                            {% else %}
+                                                <div class="pf-unit-base-label">
+                                                    <i class="bi bi-bullseye" aria-hidden="true"></i>
+                                                    Unidad base
+                                                </div>
+                                            {% endif %}
+                                        </td>
+
+                                        <td>
+                                            <div class="pf-catalog-stack">
+                                                <span class="pf-catalog-stack__primary">
+                                                    {{ unit.allowsFraction ? 'Fraccionaria' : 'Solo enteros' }}
+                                                </span>
+                                                <span class="pf-catalog-stack__secondary">
+                                                    {{ unit.allowsFraction ? ('Hasta ' ~ unit.decimalScale ~ ' decimales') : 'Sin decimales' }}
+                                                </span>
+                                            </div>
+                                        </td>
+
+                                        <td>
+                                            <div class="pf-unit-usage-list">
+                                                <a href="{{ path('admin_catalog_items_index', {unit: unit.id, status: 'active'}) }}" class="pf-unit-usage-list__item">
+                                                    <i class="bi bi-box-seam" aria-hidden="true"></i>
+                                                    <strong>{{ commercialUsage.active }}</strong> comerciales
+                                                </a>
+                                                {% if is_granted('materials.view') %}
+                                                    <a href="{{ path('admin_materials_index', {unit: unit.id, status: 'active'}) }}" class="pf-unit-usage-list__item">
+                                                        <i class="bi bi-layers" aria-hidden="true"></i>
+                                                        <strong>{{ materialUsage.active }}</strong> materiales
+                                                    </a>
+                                                {% elseif materialUsage.active > 0 %}
+                                                    <span class="pf-unit-usage-list__item">
+                                                        <i class="bi bi-layers" aria-hidden="true"></i>
+                                                        <strong>{{ materialUsage.active }}</strong> materiales
+                                                    </span>
+                                                {% endif %}
+                                                {% if derivedUsage > 0 %}
+                                                    <span class="pf-unit-usage-list__item">
+                                                        <i class="bi bi-bezier2" aria-hidden="true"></i>
+                                                        <strong>{{ derivedUsage }}</strong> derivadas
+                                                    </span>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+
+                                        <td>
+                                            <span class="pf-status-badge {{ unit.isActive ? 'pf-status-badge--success' : 'pf-status-badge--warning' }}">
+                                                {{ unit.isActive ? 'Activa' : 'Inactiva' }}
+                                            </span>
+                                        </td>
+
+                                        {% if is_granted('catalog.units.manage') %}
+                                            <td class="pf-table__actions-cell">
+                                                <div class="pf-catalog-row-actions">
+                                                    <a href="{{ path('admin_catalog_units_edit', {id: unit.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm">
+                                                        <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                                        <span>Editar</span>
+                                                    </a>
+
+                                                    <details class="pf-catalog-row-menu">
+                                                        <summary class="pf-catalog-row-menu__trigger" aria-label="Más acciones para {{ unit.name }}">
+                                                            <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+                                                        </summary>
+                                                        <div class="pf-catalog-row-menu__panel">
+                                                            {% if unit.isActive and blocksDeactivation %}
+                                                                <span
+                                                                    class="pf-catalog-row-menu__action is-disabled"
+                                                                    title="Esta unidad tiene dependencias activas y no puede desactivarse."
+                                                                >
+                                                                    <i class="bi bi-lock" aria-hidden="true"></i>
+                                                                    Unidad en uso
+                                                                </span>
+                                                            {% else %}
+                                                                <form
+                                                                    method="post"
+                                                                    action="{{ path('admin_catalog_units_status', {id: unit.id, q: search, dimension: dimension, status: status, page: page.currentPage}) }}"
+                                                                    data-controller="ui--confirm-action"
+                                                                    data-action="submit->ui--confirm-action#submit"
+                                                                    data-ui--confirm-action-title-value="{{ unit.isActive ? '¿Desactivar unidad de medida?' : '¿Reactivar unidad de medida?' }}"
+                                                                    data-ui--confirm-action-text-value="{{ unit.isActive ? 'Dejará de estar disponible para nuevas configuraciones que dependan de esta unidad.' : 'Volverá a estar disponible para nuevas configuraciones.' }}"
+                                                                    data-ui--confirm-action-confirm-button-text-value="{{ unit.isActive ? 'Sí, desactivar' : 'Sí, reactivar' }}"
+                                                                    data-ui--confirm-action-cancel-button-text-value="Cancelar"
+                                                                    data-ui--confirm-action-icon-value="warning"
+                                                                >
+                                                                    <input type="hidden" name="_token" value="{{ csrf_token('catalog_unit_status_' ~ unit.id) }}">
+                                                                    <button
+                                                                        type="submit"
+                                                                        class="pf-catalog-row-menu__action {{ unit.isActive ? 'is-danger' : 'is-success' }}"
+                                                                    >
+                                                                        <i class="bi {{ unit.isActive ? 'bi-pause-circle' : 'bi-check-circle' }}" aria-hidden="true"></i>
+                                                                        {{ unit.isActive ? 'Desactivar' : 'Reactivar' }}
+                                                                    </button>
+                                                                </form>
+                                                            {% endif %}
+                                                        </div>
+                                                    </details>
+                                                </div>
+                                            </td>
+                                        {% endif %}
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            {% else %}
+                <div class="pf-card pf-card__body pf-table__empty-content">
+                    <span class="pf-table__empty-icon" aria-hidden="true"><i class="bi bi-rulers"></i></span>
+                    <p class="pf-table__empty-title">No se encontraron unidades de medida</p>
+                    <p class="pf-table__empty-description">Ajusta los filtros o crea una nueva unidad para definir cómo se vende y calcula el catálogo.</p>
+                </div>
+            {% endfor %}
+        </div>
+
+        {% if page.totalPages > 1 %}
+            <footer class="pf-table-footer pf-card">
+                <p class="pf-table-footer__summary">Página <strong>{{ page.currentPage }}</strong> de <strong>{{ page.totalPages }}</strong></p>
+                <nav class="pf-table-footer__pagination" aria-label="Paginación de unidades de medida">
+                    {% if page.currentPage > 1 %}
+                        <a class="btn pf-button pf-button--secondary pf-button--sm" href="{{ path('admin_catalog_units_index', {q: search, dimension: dimension, status: status, page: page.currentPage - 1}) }}">
+                            <i class="bi bi-chevron-left" aria-hidden="true"></i><span>Anterior</span>
+                        </a>
+                    {% endif %}
+                    {% if page.currentPage < page.totalPages %}
+                        <a class="btn pf-button pf-button--secondary pf-button--sm" href="{{ path('admin_catalog_units_index', {q: search, dimension: dimension, status: status, page: page.currentPage + 1}) }}">
+                            <span>Siguiente</span><i class="bi bi-chevron-right" aria-hidden="true"></i>
+                        </a>
+                    {% endif %}
+                </nav>
+            </footer>
+        {% endif %}
     </div>
 {% endblock %}

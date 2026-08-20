@@ -68,11 +68,13 @@ final class CommercialItemType extends AbstractType
                 ),
                 'label' => 'Unidad de medida',
                 'placeholder' => 'Selecciona una unidad',
-            ])
-            ->add('basePrice', TextType::class, [
+            ]);
+
+        if ($options['show_base_price']) {
+            $builder->add('basePrice', TextType::class, [
                 'label' => 'Precio base unitario (MXN)',
                 'help' => $options['can_edit_price']
-                    ? 'Precio antes de aplicar futuros rangos de cantidad.'
+                    ? 'Precio inicial del producto o servicio. Después podrás administrarlo junto con sus rangos.'
                     : 'No cuentas con permiso para modificar el precio.',
                 'disabled' => !$options['can_edit_price'],
                 'attr' => [
@@ -80,8 +82,10 @@ final class CommercialItemType extends AbstractType
                     'placeholder' => '0.00',
                     'maxlength' => 13,
                 ],
-            ])
-            ->add('description', TextareaType::class, [
+            ]);
+        }
+
+        $builder->add('description', TextareaType::class, [
                 'label' => 'Descripción',
                 'required' => false,
                 'attr' => [
@@ -98,10 +102,12 @@ final class CommercialItemType extends AbstractType
             'categories' => [],
             'measurement_units' => [],
             'can_edit_price' => true,
+            'show_base_price' => true,
         ]);
 
         $resolver->setAllowedTypes('categories', 'array');
         $resolver->setAllowedTypes('measurement_units', 'array');
         $resolver->setAllowedTypes('can_edit_price', 'bool');
+        $resolver->setAllowedTypes('show_base_price', 'bool');
     }
 }

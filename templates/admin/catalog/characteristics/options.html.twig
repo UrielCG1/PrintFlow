@@ -2,50 +2,88 @@
 
 {% block title %}Opciones de {{ characteristic.name }} | PrintFlow{% endblock %}
 {% block app_navigation_active %}catalog_characteristics{% endblock %}
-{% block app_breadcrumb %}Catálogo / Características de producto / {{ characteristic.name }} / Opciones{% endblock %}
+{% block app_breadcrumb %}Catálogos / Características de producto / {{ characteristic.name }} / Opciones{% endblock %}
 
 {% block app_content %}
-    <div class="pf-page__content">
-        <header class="pf-page-header">
-            <div class="pf-page-header__content">
-                <h1 class="pf-page-header__title">Opciones: {{ characteristic.name }}</h1>
-                <p class="pf-page-header__description">Valores controlados disponibles para esta característica de lista.</p>
-            </div>
-            <div class="pf-page-header__actions">
-                <a href="{{ path('admin_catalog_characteristics_index') }}" class="btn pf-button pf-button--secondary">Características</a>
-                {% if is_granted('catalog.characteristics.manage') %}
-                    <a href="{{ path('admin_catalog_characteristics_option_new', {id: characteristic.id}) }}" class="btn pf-button pf-button--primary"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Nueva opción</span></a>
-                {% endif %}
-            </div>
-        </header>
+{% set activeOptions = options|filter(option => option.isActive) %}
+<div class="pf-page__content">
+    {% include 'admin/catalog/_workspace_nav.html.twig' with {catalog_section: 'characteristics'} %}
+    {% include 'admin/catalog/characteristics/_configuration_nav.html.twig' with {characteristic: characteristic, characteristic_configuration_section: 'options'} %}
 
-        <section class="pf-card pf-card--padding-none" aria-label="Opciones de característica">
-            <div class="pf-table-responsive pf-table-responsive--flat">
-                <table class="pf-table">
-                    <thead><tr><th>Código</th><th>Opción</th><th>Orden</th><th>Estado</th>{% if is_granted('catalog.characteristics.manage') %}<th class="pf-table__actions-cell">Acciones</th>{% endif %}</tr></thead>
-                    <tbody>
-                        {% for option in options %}
-                            <tr>
-                                <td><code class="pf-table__code">{{ option.code }}</code></td>
-                                <td><span class="pf-table__primary">{{ option.name }}</span></td>
-                                <td>{{ option.displayOrder }}</td>
-                                <td><span class="pf-status-badge {{ option.isActive ? 'pf-status-badge--success' : 'pf-status-badge--warning' }}"><span class="pf-status-badge__dot" aria-hidden="true"></span>{{ option.isActive ? 'Activa' : 'Inactiva' }}</span></td>
-                                {% if is_granted('catalog.characteristics.manage') %}
-                                    <td class="pf-table__actions-cell"><div class="pf-table__actions">
-                                        <a href="{{ path('admin_catalog_characteristics_option_edit', {id: characteristic.id, option: option.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm"><i class="bi bi-pencil-square" aria-hidden="true"></i><span>Editar</span></a>
-                                        <form method="post" action="{{ path('admin_catalog_characteristics_option_status', {id: characteristic.id, option: option.id}) }}">
-                                            <input type="hidden" name="_token" value="{{ csrf_token('catalog_characteristic_option_status_' ~ option.id) }}">
-                                            <button type="submit" class="btn pf-button pf-button--sm {{ option.isActive ? 'pf-button--danger' : 'pf-button--success' }}"><span>{{ option.isActive ? 'Desactivar' : 'Reactivar' }}</span></button>
-                                        </form>
-                                    </div></td>
-                                {% endif %}
-                            </tr>
-                        {% else %}
-                            <tr><td colspan="{{ is_granted('catalog.characteristics.manage') ? 5 : 4 }}" class="pf-table__empty">Aún no hay opciones registradas.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    <header class="pf-page-header pf-catalog-page-header">
+        <div class="pf-page-header__content">
+            <h1 class="pf-page-header__title">Opciones</h1>
+            <p class="pf-page-header__description">Administra los valores controlados que pueden ofrecerse cuando se utiliza {{ characteristic.name }}.</p>
+        </div>
+        {% if is_granted('catalog.characteristics.manage') %}
+            <div class="pf-page-header__actions">
+                {% if activeOptions|length > 1 %}
+                    <a href="{{ path('admin_catalog_characteristics_options_order', {id: characteristic.id}) }}" class="btn pf-button pf-button--secondary"><i class="bi bi-arrow-down-up" aria-hidden="true"></i><span>Ordenar opciones</span></a>
+                {% endif %}
+                <a href="{{ path('admin_catalog_characteristics_option_new', {id: characteristic.id}) }}" class="btn pf-button pf-button--primary"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Nueva opción</span></a>
             </div>
-        </section>
-    </div>
+        {% endif %}
+    </header>
+
+    <section class="pf-card pf-card--padding-none" aria-label="Opciones de la característica">
+        <div class="pf-catalog-list-meta">
+            <p class="pf-catalog-list-meta__summary">{{ options|length }} {{ options|length == 1 ? 'opción registrada' : 'opciones registradas' }}</p>
+            <p class="pf-catalog-list-meta__hint"><i class="bi bi-info-circle" aria-hidden="true"></i>Una opción en uso por Productos activos debe retirarse de esos Productos antes de desactivarse.</p>
+        </div>
+        <div class="pf-table-responsive pf-table-responsive--flat">
+            <table class="pf-table pf-characteristic-options-table">
+                <thead><tr><th>Opción</th><th>Uso</th><th>Estado</th><th class="pf-table__actions-cell">Acciones</th></tr></thead>
+                <tbody>
+                    {% for option in options %}
+                        {% set usage = usageSummary[option.id]|default({total: 0, active: 0}) %}
+                        <tr>
+                            <td><div class="pf-catalog-item-cell"><span class="pf-table__primary">{{ option.name }}</span><code class="pf-table__code">{{ option.code }}</code></div></td>
+                            <td>
+                                <div class="pf-catalog-usage">
+                                    <span class="pf-catalog-stack__primary">{{ usage.active }} {{ usage.active == 1 ? 'Producto activo' : 'Productos activos' }}</span>
+                                    {% if usage.total > usage.active %}<span class="pf-catalog-usage__secondary">{{ usage.total }} configurados en total</span>{% elseif usage.total == 0 %}<span class="pf-catalog-usage__secondary">Sin uso</span>{% endif %}
+                                </div>
+                            </td>
+                            <td><span class="pf-status-badge {{ option.isActive ? 'pf-status-badge--success' : 'pf-status-badge--warning' }}"><span class="pf-status-badge__dot" aria-hidden="true"></span>{{ option.isActive ? 'Activa' : 'Inactiva' }}</span></td>
+                            <td class="pf-table__actions-cell">
+                                <div class="pf-catalog-row-actions">
+                                    {% if is_granted('catalog.characteristics.manage') %}
+                                        <a href="{{ path('admin_catalog_characteristics_option_edit', {id: characteristic.id, option: option.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm"><i class="bi bi-pencil-square" aria-hidden="true"></i><span>Editar</span></a>
+                                        <details class="pf-catalog-row-menu">
+                                            <summary class="pf-catalog-row-menu__trigger" aria-label="Más acciones para {{ option.name }}"><i class="bi bi-three-dots-vertical" aria-hidden="true"></i></summary>
+                                            <div class="pf-catalog-row-menu__panel">
+                                                {% if option.isActive and usage.active > 0 %}
+                                                    <span class="pf-catalog-row-menu__action is-disabled" title="Retira esta opción de los Productos activos antes de desactivarla."><i class="bi bi-lock" aria-hidden="true"></i>En uso por {{ usage.active }}</span>
+                                                {% else %}
+                                                    <form
+                                                        method="post"
+                                                        action="{{ path('admin_catalog_characteristics_option_status', {id: characteristic.id, option: option.id}) }}"
+                                                        data-controller="ui--confirm-action"
+                                                        data-action="submit->ui--confirm-action#submit"
+                                                        data-ui--confirm-action-title-value="{{ option.isActive ? '¿Desactivar opción?' : '¿Reactivar opción?' }}"
+                                                        data-ui--confirm-action-text-value="{{ option.isActive ? 'Dejará de estar disponible para nuevas configuraciones de Producto.' : 'Volverá a estar disponible para seleccionarse en Productos.' }}"
+                                                        data-ui--confirm-action-confirm-button-text-value="{{ option.isActive ? 'Sí, desactivar' : 'Sí, reactivar' }}"
+                                                        data-ui--confirm-action-cancel-button-text-value="Cancelar"
+                                                        data-ui--confirm-action-icon-value="warning"
+                                                    >
+                                                        <input type="hidden" name="_token" value="{{ csrf_token('catalog_characteristic_option_status_' ~ option.id) }}">
+                                                        <button type="submit" class="pf-catalog-row-menu__action {{ option.isActive ? 'is-danger' : 'is-success' }}"><i class="bi {{ option.isActive ? 'bi-pause-circle' : 'bi-check-circle' }}" aria-hidden="true"></i>{{ option.isActive ? 'Desactivar' : 'Reactivar' }}</button>
+                                                    </form>
+                                                {% endif %}
+                                            </div>
+                                        </details>
+                                    {% else %}
+                                        <span class="pf-catalog-muted">Solo lectura</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="4" class="pf-table__empty"><div class="pf-table__empty-content"><span class="pf-table__empty-icon" aria-hidden="true"><i class="bi bi-list-check"></i></span><p class="pf-table__empty-title">Sin opciones registradas</p><p class="pf-table__empty-description">Agrega los valores que podrán seleccionarse al utilizar esta característica.</p></div></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
 {% endblock %}

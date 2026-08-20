@@ -43,7 +43,7 @@ final class ItemPriceRuleManager
             );
         } catch (UniqueConstraintViolationException $exception) {
             throw new \DomainException(
-                'Ya existe un rango con esta cantidad mínima para el concepto.',
+                'Ya existe un rango con esta cantidad mínima para el producto o servicio.',
                 0,
                 $exception,
             );
@@ -86,7 +86,7 @@ final class ItemPriceRuleManager
             );
         } catch (UniqueConstraintViolationException $exception) {
             throw new \DomainException(
-                'Ya existe un rango con esta cantidad mínima para el concepto.',
+                'Ya existe un rango con esta cantidad mínima para el producto o servicio.',
                 0,
                 $exception,
             );

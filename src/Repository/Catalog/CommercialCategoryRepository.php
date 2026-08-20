@@ -4,8 +4,8 @@ namespace App\Repository\Catalog;
 
 use App\Entity\Catalog\CommercialCategory;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\Persistence\ManagerRegistry;
 use Doctrine\DBAL\LockMode;
+use Doctrine\Persistence\ManagerRegistry;
 
 /** @extends ServiceEntityRepository<CommercialCategory> */
 final class CommercialCategoryRepository extends ServiceEntityRepository
@@ -37,7 +37,7 @@ final class CommercialCategoryRepository extends ServiceEntityRepository
         $search = trim($search);
         if ($search !== '') {
             $queryBuilder
-                ->andWhere('category.code LIKE :search OR category.name LIKE :search')
+                ->andWhere('category.code LIKE :search OR category.name LIKE :search OR category.description LIKE :search')
                 ->setParameter('search', '%'.$search.'%');
         }
 
@@ -59,6 +59,7 @@ final class CommercialCategoryRepository extends ServiceEntityRepository
         $items = $queryBuilder
             ->orderBy('category.displayOrder', 'ASC')
             ->addOrderBy('category.name', 'ASC')
+            ->addOrderBy('category.id', 'ASC')
             ->setFirstResult(($page - 1) * $perPage)
             ->setMaxResults($perPage)
             ->getQuery()
@@ -71,9 +72,24 @@ final class CommercialCategoryRepository extends ServiceEntityRepository
             'totalItems' => $totalItems,
         ];
     }
-    /**
-     * @return list<CommercialCategory>
-     */
+
+    /** @return list<CommercialCategory> */
+    public function findActiveOrdered(): array
+    {
+        /** @var list<CommercialCategory> $categories */
+        $categories = $this->createQueryBuilder('category')
+            ->andWhere('category.isActive = :isActive')
+            ->setParameter('isActive', true)
+            ->orderBy('category.displayOrder', 'ASC')
+            ->addOrderBy('category.name', 'ASC')
+            ->addOrderBy('category.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $categories;
+    }
+
+    /** @return list<CommercialCategory> */
     public function findActiveOrderedForUpdate(): array
     {
         /** @var list<CommercialCategory> $categories */
@@ -90,9 +106,7 @@ final class CommercialCategoryRepository extends ServiceEntityRepository
         return $categories;
     }
 
-    /**
-     * @return list<CommercialCategory>
-     */
+    /** @return list<CommercialCategory> */
     public function findAvailableForItemForm(?CommercialCategory $selected = null): array
     {
         $queryBuilder = $this->createQueryBuilder('category')
@@ -114,5 +128,15 @@ final class CommercialCategoryRepository extends ServiceEntityRepository
             ->getResult();
 
         return $categories;
+    }
+
+    public function nextDisplayOrder(): int
+    {
+        $max = $this->createQueryBuilder('category')
+            ->select('MAX(category.displayOrder)')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return ((int) $max) + 10;
     }
 }

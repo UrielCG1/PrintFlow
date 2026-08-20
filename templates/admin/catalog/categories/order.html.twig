@@ -1,0 +1,74 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Ordenar categorías | PrintFlow{% endblock %}
+{% block app_navigation_active %}catalog_categories{% endblock %}
+{% block app_breadcrumb %}Catálogos / Categorías comerciales / Ordenar{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page__content">
+        {% include 'admin/catalog/_workspace_nav.html.twig' with {catalog_section: 'categories'} %}
+
+        <div class="pf-page-header pf-catalog-page-header">
+            <div class="pf-page-header__content">
+                <h1 class="pf-page-header__title">Ordenar categorías</h1>
+                <p class="pf-page-header__description">
+                    Arrastra las categorías activas para definir el orden en que se presentan dentro del catálogo.
+                </p>
+            </div>
+            <div class="pf-page-header__actions">
+                <a href="{{ path('admin_catalog_categories_index') }}" class="btn pf-button pf-button--primary">
+                    <i class="bi bi-check-lg" aria-hidden="true"></i>
+                    <span>Terminar</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="pf-catalog-order-note" role="note">
+            <i class="bi bi-info-circle" aria-hidden="true"></i>
+            <div>
+                <strong>Modo de ordenamiento</strong>
+                <p>Los cambios se guardan automáticamente al soltar cada fila. Las categorías inactivas no participan en este orden.</p>
+            </div>
+        </div>
+
+        <div class="pf-card pf-card--padding-none">
+            <div class="pf-table-responsive pf-table-responsive--flat">
+                <table class="pf-table pf-catalog-order-table">
+                    <thead>
+                        <tr>
+                            <th class="pf-table__cell--center" aria-label="Reordenar"></th>
+                            <th>Categoría</th>
+                            <th>Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody
+                        data-controller="ui--sortable"
+                        data-ui--sortable-url-value="{{ path('admin_catalog_categories_reorder') }}"
+                        data-ui--sortable-token-value="{{ csrf_token('catalog_category_reorder') }}"
+                    >
+                        {% for category in categories %}
+                            <tr data-id="{{ category.id }}" data-sortable-id="{{ category.id }}">
+                                <td class="pf-table__cell--center">
+                                    <button type="button" class="pf-sortable__handle" title="Arrastrar para reordenar" aria-label="Arrastrar {{ category.name }} para reordenar">
+                                        <i class="bi bi-grip-vertical" aria-hidden="true"></i>
+                                    </button>
+                                </td>
+                                <td>
+                                    <div class="pf-catalog-item-cell">
+                                        <span class="pf-table__primary">{{ category.name }}</span>
+                                        <code class="pf-table__code">{{ category.code }}</code>
+                                    </div>
+                                </td>
+                                <td>{{ category.description ?: 'Sin descripción.' }}</td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="3" class="pf-table__empty">No hay categorías activas para ordenar.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

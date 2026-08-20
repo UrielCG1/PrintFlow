@@ -1,0 +1,35 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Ordenar opciones de {{ characteristic.name }} | PrintFlow{% endblock %}
+{% block app_navigation_active %}catalog_characteristics{% endblock %}
+{% block app_breadcrumb %}Catálogos / Características de producto / {{ characteristic.name }} / Opciones / Ordenar{% endblock %}
+
+{% block app_content %}
+<div class="pf-page__content">
+    {% include 'admin/catalog/_workspace_nav.html.twig' with {catalog_section: 'characteristics'} %}
+    {% include 'admin/catalog/characteristics/_configuration_nav.html.twig' with {characteristic: characteristic, characteristic_configuration_section: 'options'} %}
+
+    <header class="pf-page-header pf-catalog-page-header">
+        <div class="pf-page-header__content"><h1 class="pf-page-header__title">Ordenar opciones</h1><p class="pf-page-header__description">Define el orden en que se presentan los valores disponibles para {{ characteristic.name }}.</p></div>
+        <div class="pf-page-header__actions"><a href="{{ path('admin_catalog_characteristics_options', {id: characteristic.id}) }}" class="btn pf-button pf-button--primary"><i class="bi bi-check-lg" aria-hidden="true"></i><span>Terminar</span></a></div>
+    </header>
+
+    <div class="pf-catalog-order-note" role="note"><i class="bi bi-info-circle" aria-hidden="true"></i><div><strong>Orden de opciones activas</strong><p>Arrastra las filas; cada movimiento se guarda automáticamente. Las opciones inactivas conservan su posición histórica y no aparecen aquí.</p></div></div>
+
+    <section class="pf-card pf-card--padding-none">
+        <div class="pf-table-responsive pf-table-responsive--flat">
+            <table class="pf-table pf-catalog-order-table">
+                <thead><tr><th class="pf-table__cell--center" aria-label="Reordenar"></th><th>Opción</th></tr></thead>
+                <tbody data-controller="ui--sortable" data-ui--sortable-url-value="{{ path('admin_catalog_characteristics_options_reorder', {id: characteristic.id}) }}" data-ui--sortable-token-value="{{ csrf_token('catalog_characteristic_option_reorder_' ~ characteristic.id) }}">
+                    {% for option in options %}
+                        <tr data-id="{{ option.id }}" data-sortable-id="{{ option.id }}">
+                            <td class="pf-table__cell--center"><button type="button" class="pf-sortable__handle" title="Arrastrar para reordenar" aria-label="Arrastrar {{ option.name }} para reordenar"><i class="bi bi-grip-vertical" aria-hidden="true"></i></button></td>
+                            <td><div class="pf-catalog-item-cell"><span class="pf-table__primary">{{ option.name }}</span><code class="pf-table__code">{{ option.code }}</code></div></td>
+                        </tr>
+                    {% else %}<tr><td colspan="2" class="pf-table__empty">No hay opciones activas para ordenar.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

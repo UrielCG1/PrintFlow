@@ -2,34 +2,48 @@
 
 {% block title %}Características de producto | PrintFlow{% endblock %}
 {% block app_navigation_active %}catalog_characteristics{% endblock %}
-{% block app_breadcrumb %}Catálogo / Características de producto{% endblock %}
+{% block app_breadcrumb %}Catálogos / Características de producto{% endblock %}
 
 {% block app_content %}
+    {% set canManage = is_granted('catalog.characteristics.manage') %}
+    {% set paginationParams = {q: search, status: status, type: type} %}
+
     <div class="pf-page__content">
-        <header class="pf-page-header">
+        {% include 'admin/catalog/_workspace_nav.html.twig' with {catalog_section: 'characteristics'} %}
+
+        <header class="pf-page-header pf-catalog-page-header">
             <div class="pf-page-header__content">
                 <h1 class="pf-page-header__title">Características de producto</h1>
-                <p class="pf-page-header__description">
-                    Define los datos controlados que se podrán solicitar al cotizar un Producto.
-                </p>
+                <p class="pf-page-header__description">Define una vez los datos que después pueden reutilizarse y adaptarse para distintos Productos.</p>
             </div>
-
-            {% if is_granted('catalog.characteristics.manage') %}
+            {% if canManage %}
                 <div class="pf-page-header__actions">
+                    <a href="{{ path('admin_catalog_characteristics_order') }}" class="btn pf-button pf-button--secondary">
+                        <i class="bi bi-arrow-down-up" aria-hidden="true"></i><span>Ordenar características</span>
+                    </a>
                     <a href="{{ path('admin_catalog_characteristics_new') }}" class="btn pf-button pf-button--primary">
-                        <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                        <span>Nueva característica</span>
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i><span>Nueva característica</span>
                     </a>
                 </div>
             {% endif %}
         </header>
 
-        <form method="get" action="{{ path('admin_catalog_characteristics_index') }}" class="pf-card pf-form" aria-label="Filtros de características">
+        <form method="get" action="{{ path('admin_catalog_characteristics_index') }}" class="pf-card pf-form pf-catalog-filters" aria-label="Filtros de características">
             <div class="pf-card__body">
                 <div class="row g-3 align-items-end">
-                    <div class="col-lg-6 pf-form-field">
+                    <div class="col-lg-5 pf-form-field">
                         <label for="characteristic-search" class="form-label">Buscar</label>
-                        <input id="characteristic-search" type="search" name="q" value="{{ search }}" class="form-control" placeholder="Código o nombre">
+                        <input id="characteristic-search" type="search" name="q" value="{{ search }}" class="form-control" placeholder="Nombre, código o unidad">
+                    </div>
+                    <div class="col-md-4 col-lg-4 pf-form-field">
+                        <label for="characteristic-type" class="form-label">Tipo de captura</label>
+                        <select id="characteristic-type" name="type" class="form-select">
+                            <option value="all" {{ type == 'all' ? 'selected' : '' }}>Todos</option>
+                            <option value="select" {{ type == 'select' ? 'selected' : '' }}>Lista de opciones</option>
+                            <option value="decimal" {{ type == 'decimal' ? 'selected' : '' }}>Número decimal</option>
+                            <option value="text" {{ type == 'text' ? 'selected' : '' }}>Texto corto</option>
+                            <option value="boolean" {{ type == 'boolean' ? 'selected' : '' }}>Sí / No</option>
+                        </select>
                     </div>
                     <div class="col-md-3 pf-form-field">
                         <label for="characteristic-status" class="form-label">Estado</label>
@@ -39,67 +53,108 @@
                             <option value="all" {{ status == 'all' ? 'selected' : '' }}>Todas</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <div class="pf-card__header-actions">
-                            <button type="submit" class="btn pf-button pf-button--primary"><i class="bi bi-search" aria-hidden="true"></i><span>Filtrar</span></button>
-                            <a href="{{ path('admin_catalog_characteristics_index') }}" class="btn pf-button pf-button--secondary"><span>Limpiar</span></a>
-                        </div>
+                </div>
+                <div class="pf-catalog-filters__footer">
+                    <p class="pf-catalog-filters__hint"><i class="bi bi-funnel" aria-hidden="true"></i>Filtra por la forma en que se captura el dato o por su estado operativo.</p>
+                    <div class="pf-catalog-filters__actions">
+                        <button type="submit" class="btn pf-button pf-button--primary"><i class="bi bi-search" aria-hidden="true"></i><span>Filtrar</span></button>
+                        <a href="{{ path('admin_catalog_characteristics_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i><span>Limpiar</span></a>
                     </div>
                 </div>
             </div>
         </form>
 
         <section class="pf-card pf-card--padding-none" aria-label="Listado de características">
+            <div class="pf-catalog-list-meta">
+                <p class="pf-catalog-list-meta__summary">{{ page.totalItems }} {{ page.totalItems == 1 ? 'característica' : 'características' }}</p>
+                <p class="pf-catalog-list-meta__hint"><i class="bi bi-info-circle" aria-hidden="true"></i>Configurar concentra su definición, opciones y Productos que la utilizan.</p>
+            </div>
+
             <div class="pf-table-responsive pf-table-responsive--flat">
-                <table class="pf-table">
+                <table class="pf-table pf-characteristics-table">
                     <thead>
                         <tr>
-                            <th>Código</th>
                             <th>Característica</th>
-                            <th>Tipo de dato</th>
-                            <th>Unidad</th>
-                            <th>Orden</th>
+                            <th>Captura</th>
+                            <th>Opciones</th>
+                            <th>Uso</th>
                             <th>Estado</th>
-                            {% if is_granted('catalog.characteristics.manage') %}<th class="pf-table__actions-cell">Acciones</th>{% endif %}
+                            <th class="pf-table__actions-cell">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for characteristic in page.items %}
+                            {% set options = optionSummary[characteristic.id]|default({total: 0, active: 0}) %}
+                            {% set usage = usageSummary[characteristic.id]|default({total: 0, active: 0}) %}
+                            {% set contract = technicalContracts[characteristic.id]|default(null) %}
                             <tr>
-                                <td><code class="pf-table__code">{{ characteristic.code }}</code></td>
-                                <td><span class="pf-table__primary">{{ characteristic.name }}</span></td>
-                                <td>{{ characteristic.inputType.label }}</td>
-                                <td>{{ characteristic.unitLabel ?? '—' }}</td>
-                                <td>{{ characteristic.displayOrder }}</td>
+                                <td>
+                                    <div class="pf-catalog-item-cell">
+                                        <div class="pf-catalog-item-cell__title-row">
+                                            <span class="pf-table__primary">{{ characteristic.name }}</span>
+                                            {% if contract %}<span class="pf-catalog-tag is-emphasis"><i class="bi bi-shield-lock" aria-hidden="true"></i> Sistema</span>{% endif %}
+                                        </div>
+                                        <code class="pf-table__code">{{ characteristic.code }}</code>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="pf-catalog-stack">
+                                        <span class="pf-catalog-stack__primary">{{ characteristic.inputType.label }}</span>
+                                        <span class="pf-catalog-stack__secondary">{{ characteristic.unitLabel ? 'Unidad: ' ~ characteristic.unitLabel : 'Sin unidad visible' }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if characteristic.inputType.supportsOptions %}
+                                        <a href="{{ path('admin_catalog_characteristics_options', {id: characteristic.id}) }}" class="pf-catalog-usage__link"><strong>{{ options.active }}</strong> {{ options.active == 1 ? 'activa' : 'activas' }}</a>
+                                        {% if options.total > options.active %}<span class="pf-catalog-usage__secondary">{{ options.total }} en total</span>{% endif %}
+                                    {% else %}
+                                        <span class="pf-catalog-muted"><i class="bi bi-dash-circle" aria-hidden="true"></i> No aplica</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="pf-catalog-usage">
+                                        <a href="{{ path('admin_catalog_characteristics_products', {id: characteristic.id}) }}" class="pf-catalog-usage__link"><strong>{{ usage.active }}</strong> {{ usage.active == 1 ? 'Producto activo' : 'Productos activos' }}</a>
+                                        {% if usage.total > usage.active %}<span class="pf-catalog-usage__secondary">{{ usage.total }} configurados en total</span>{% elseif usage.total == 0 %}<span class="pf-catalog-usage__secondary">Sin uso</span>{% endif %}
+                                    </div>
+                                </td>
                                 <td>
                                     <span class="pf-status-badge {{ characteristic.isActive ? 'pf-status-badge--success' : 'pf-status-badge--warning' }}">
-                                        <span class="pf-status-badge__dot" aria-hidden="true"></span>
-                                        {{ characteristic.isActive ? 'Activa' : 'Inactiva' }}
+                                        <span class="pf-status-badge__dot" aria-hidden="true"></span>{{ characteristic.isActive ? 'Activa' : 'Inactiva' }}
                                     </span>
                                 </td>
-                                {% if is_granted('catalog.characteristics.manage') %}
-                                    <td class="pf-table__actions-cell">
-                                        <div class="pf-table__actions">
-                                            {% if characteristic.inputType.supportsOptions %}
-                                                <a href="{{ path('admin_catalog_characteristics_options', {id: characteristic.id}) }}" class="btn pf-button pf-button--subtle pf-button--sm">
-                                                    <i class="bi bi-list-check" aria-hidden="true"></i><span>Opciones</span>
-                                                </a>
-                                            {% endif %}
-                                            <a href="{{ path('admin_catalog_characteristics_edit', {id: characteristic.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm">
-                                                <i class="bi bi-pencil-square" aria-hidden="true"></i><span>Editar</span>
-                                            </a>
-                                            <form method="post" action="{{ path('admin_catalog_characteristics_status', {id: characteristic.id, q: search, status: status, page: page.currentPage}) }}">
-                                                <input type="hidden" name="_token" value="{{ csrf_token('catalog_characteristic_status_' ~ characteristic.id) }}">
-                                                <button type="submit" class="btn pf-button pf-button--sm {{ characteristic.isActive ? 'pf-button--danger' : 'pf-button--success' }}">
-                                                    <span>{{ characteristic.isActive ? 'Desactivar' : 'Reactivar' }}</span>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                {% endif %}
+                                <td class="pf-table__actions-cell">
+                                    <div class="pf-catalog-row-actions">
+                                        <a href="{{ path('admin_catalog_characteristics_configure', {id: characteristic.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm"><i class="bi bi-sliders" aria-hidden="true"></i><span>Configurar</span></a>
+                                        {% if canManage %}
+                                            <details class="pf-catalog-row-menu">
+                                                <summary class="pf-catalog-row-menu__trigger" aria-label="Más acciones para {{ characteristic.name }}"><i class="bi bi-three-dots-vertical" aria-hidden="true"></i></summary>
+                                                <div class="pf-catalog-row-menu__panel">
+                                                    {% if characteristic.isActive and usage.active > 0 %}
+                                                        <span class="pf-catalog-row-menu__action is-disabled" title="Retira primero la característica de los Productos activos."><i class="bi bi-lock" aria-hidden="true"></i>En uso por {{ usage.active }}</span>
+                                                    {% else %}
+                                                        <form
+                                                            method="post"
+                                                            action="{{ path('admin_catalog_characteristics_status', {id: characteristic.id, q: search, type: type, status: status, page: page.currentPage}) }}"
+                                                            data-controller="ui--confirm-action"
+                                                            data-action="submit->ui--confirm-action#submit"
+                                                            data-ui--confirm-action-title-value="{{ characteristic.isActive ? '¿Desactivar característica?' : '¿Reactivar característica?' }}"
+                                                            data-ui--confirm-action-text-value="{{ characteristic.isActive ? 'Dejará de estar disponible para nuevas configuraciones de Producto.' : 'Volverá a estar disponible para configurarse en Productos.' }}"
+                                                            data-ui--confirm-action-confirm-button-text-value="{{ characteristic.isActive ? 'Sí, desactivar' : 'Sí, reactivar' }}"
+                                                            data-ui--confirm-action-cancel-button-text-value="Cancelar"
+                                                            data-ui--confirm-action-icon-value="warning"
+                                                        >
+                                                            <input type="hidden" name="_token" value="{{ csrf_token('catalog_characteristic_status_' ~ characteristic.id) }}">
+                                                            <button type="submit" class="pf-catalog-row-menu__action {{ characteristic.isActive ? 'is-danger' : 'is-success' }}"><i class="bi {{ characteristic.isActive ? 'bi-pause-circle' : 'bi-check-circle' }}" aria-hidden="true"></i>{{ characteristic.isActive ? 'Desactivar' : 'Reactivar' }}</button>
+                                                        </form>
+                                                    {% endif %}
+                                                </div>
+                                            </details>
+                                        {% endif %}
+                                    </div>
+                                </td>
                             </tr>
                         {% else %}
-                            <tr><td colspan="{{ is_granted('catalog.characteristics.manage') ? 7 : 6 }}" class="pf-table__empty">No se encontraron características.</td></tr>
+                            <tr><td colspan="6" class="pf-table__empty"><div class="pf-table__empty-content"><span class="pf-table__empty-icon" aria-hidden="true"><i class="bi bi-sliders"></i></span><p class="pf-table__empty-title">No se encontraron características</p><p class="pf-table__empty-description">Ajusta los filtros o crea una característica reutilizable para los Productos del catálogo.</p></div></td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -107,14 +162,10 @@
 
             {% if page.totalPages > 1 %}
                 <footer class="pf-table-footer">
-                    <p class="pf-table-footer__summary">Página {{ page.currentPage }} de {{ page.totalPages }} · {{ page.totalItems }} registros</p>
-                    <nav class="pf-pagination" aria-label="Paginación de características">
-                        {% if page.currentPage > 1 %}
-                            <a class="btn pf-button pf-button--secondary pf-button--sm" href="{{ path('admin_catalog_characteristics_index', {q: search, status: status, page: page.currentPage - 1}) }}">Anterior</a>
-                        {% endif %}
-                        {% if page.currentPage < page.totalPages %}
-                            <a class="btn pf-button pf-button--secondary pf-button--sm" href="{{ path('admin_catalog_characteristics_index', {q: search, status: status, page: page.currentPage + 1}) }}">Siguiente</a>
-                        {% endif %}
+                    <p class="pf-table-footer__summary">Página <strong>{{ page.currentPage }}</strong> de <strong>{{ page.totalPages }}</strong></p>
+                    <nav class="pf-table-footer__pagination" aria-label="Paginación de características">
+                        {% if page.currentPage > 1 %}<a class="btn pf-button pf-button--secondary pf-button--sm" href="{{ path('admin_catalog_characteristics_index', paginationParams|merge({page: page.currentPage - 1})) }}"><i class="bi bi-chevron-left" aria-hidden="true"></i><span>Anterior</span></a>{% else %}<span class="pf-button pf-button--secondary pf-button--sm disabled" aria-disabled="true"><i class="bi bi-chevron-left" aria-hidden="true"></i><span>Anterior</span></span>{% endif %}
+                        {% if page.currentPage < page.totalPages %}<a class="btn pf-button pf-button--secondary pf-button--sm" href="{{ path('admin_catalog_characteristics_index', paginationParams|merge({page: page.currentPage + 1})) }}"><span>Siguiente</span><i class="bi bi-chevron-right" aria-hidden="true"></i></a>{% else %}<span class="pf-button pf-button--secondary pf-button--sm disabled" aria-disabled="true"><span>Siguiente</span><i class="bi bi-chevron-right" aria-hidden="true"></i></span>{% endif %}
                     </nav>
                 </footer>
             {% endif %}
