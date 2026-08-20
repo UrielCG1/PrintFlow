@@ -1,0 +1,39 @@
+.pf-privacy-body { background: #f4f8f5; color: #172033; }
+.pf-privacy-body .pf-public-shell { padding: 0; }
+.pf-privacy-body .pf-public-content { width: 100%; max-width: none; padding: 0; }
+.pf-privacy { --privacy-green: #167447; --privacy-ink: #172033; --privacy-muted: #5f6c67; }
+.pf-privacy__header { padding: 36px max(24px, calc((100vw - 1120px) / 2)) 48px; background: linear-gradient(135deg, #0d3829, #176343); color: #fff; }
+.pf-privacy__brand { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 42px; color: #fff; font-size: 18px; font-weight: 750; text-decoration: none; }
+.pf-privacy__brand:hover { color: #fff; }
+.pf-privacy__brand-mark { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 11px; background: #27f52e; color: #0b2e21; font-size: 13px; font-weight: 900; }
+.pf-privacy__eyebrow { margin: 0 0 10px; color: #aef2c5; font-size: .78rem; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
+.pf-privacy__header h1 { max-width: 760px; margin: 0; font-size: clamp(2.25rem, 6vw, 4rem); font-weight: 780; letter-spacing: -.04em; }
+.pf-privacy__intro { max-width: 700px; margin: 18px 0 16px; color: #dcece4; font-size: clamp(1rem, 2vw, 1.18rem); line-height: 1.7; }
+.pf-privacy__updated { display: flex; align-items: center; gap: 8px; margin: 0; color: #bcd4c7; font-size: .88rem; }
+.pf-privacy__layout { display: grid; grid-template-columns: 230px minmax(0, 760px); gap: 64px; max-width: 1120px; margin: 0 auto; padding: 56px 24px 80px; }
+.pf-privacy__nav { position: sticky; top: 24px; align-self: start; padding: 22px; border: 1px solid #dce7e0; border-radius: 16px; background: #fff; box-shadow: 0 12px 35px rgb(17 68 47 / 7%); }
+.pf-privacy__nav p { margin: 0 0 12px; color: var(--privacy-ink); font-weight: 750; }
+.pf-privacy__nav ol { margin: 0; padding: 0; list-style: none; }
+.pf-privacy__nav li + li { margin-top: 3px; }
+.pf-privacy__nav a { display: block; padding: 7px 9px; border-radius: 7px; color: var(--privacy-muted); font-size: .88rem; text-decoration: none; }
+.pf-privacy__nav a:hover { background: #edf7f1; color: var(--privacy-green); }
+.pf-privacy__content section { scroll-margin-top: 24px; padding: 0 0 38px; }
+.pf-privacy__content section + section { padding-top: 38px; border-top: 1px solid #dce7e0; }
+.pf-privacy__content h2 { margin: 0 0 18px; color: var(--privacy-ink); font-size: clamp(1.35rem, 3vw, 1.7rem); font-weight: 760; letter-spacing: -.02em; }
+.pf-privacy__content p, .pf-privacy__content li { color: #46534e; line-height: 1.8; }
+.pf-privacy__content a { color: var(--privacy-green); font-weight: 650; }
+.pf-privacy__content ul { padding-left: 1.25rem; }
+.pf-privacy__content li { margin-bottom: 7px; padding-left: 4px; }
+.pf-privacy__callout { display: flex; gap: 13px; margin-top: 22px; padding: 18px; border: 1px solid #bfe3ce; border-radius: 12px; background: #edf8f1; }
+.pf-privacy__callout i { color: var(--privacy-green); font-size: 1.35rem; }
+.pf-privacy__callout p { margin: 0; }
+.pf-privacy__rights { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 22px 0 26px; }
+.pf-privacy__rights div { padding: 18px; border: 1px solid #dce7e0; border-radius: 12px; background: #fff; }
+.pf-privacy__rights strong, .pf-privacy__rights span { display: block; }
+.pf-privacy__rights strong { margin-bottom: 5px; color: var(--privacy-green); }
+.pf-privacy__rights span { color: var(--privacy-muted); font-size: .9rem; line-height: 1.55; }
+.pf-privacy__contact { display: grid; gap: 12px; margin: 24px 0 0; padding: 22px; border-radius: 14px; background: #e8f3ec; font-style: normal; }
+.pf-privacy__contact span { display: flex; align-items: flex-start; gap: 11px; color: #405048; }
+.pf-privacy__contact i { margin-top: 2px; color: var(--privacy-green); }
+@media (max-width: 800px) { .pf-privacy__layout { grid-template-columns: 1fr; gap: 28px; padding-top: 28px; } .pf-privacy__nav { position: static; } .pf-privacy__nav ol { columns: 2; } }
+@media (max-width: 520px) { .pf-privacy__header { padding-top: 24px; } .pf-privacy__brand { margin-bottom: 30px; } .pf-privacy__layout { padding-inline: 16px; } .pf-privacy__nav ol { columns: 1; } .pf-privacy__rights { grid-template-columns: 1fr; } }

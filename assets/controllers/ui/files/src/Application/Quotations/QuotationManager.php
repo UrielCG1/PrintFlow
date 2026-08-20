@@ -174,7 +174,7 @@ final class QuotationManager
                     ->setRecipientEmail((string) $data->recipientEmail)
                     ->setRecipientName($data->recipientName)
                     ->setCopyEmail($data->copyEmail)
-                    ->setSubject(sprintf('Cotización %s | PrintFlow', $quotation->getFolio()))
+                    ->setSubject(sprintf('Cotización %s | Ooxcorp', $quotation->getFolio()))
                     ->setMessageNote($data->message)
                     ->setMessageId($messageId);
 
