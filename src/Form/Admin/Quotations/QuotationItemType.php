@@ -33,6 +33,7 @@ final class QuotationItemType extends AbstractType
                         ->addOrderBy('category.name', 'ASC');
                 },
                 'choice_label' => static fn (CommercialCategory $category): string => $category->getName(),
+                'help' => 'Define el grupo comercial para filtrar los Productos disponibles.',
                 'attr' => [
                     'data-ui--quotation-form-commercial-category' => '',
                     'data-action' => 'change->ui--quotation-form#changeCommercialCategory',
@@ -66,14 +67,18 @@ final class QuotationItemType extends AbstractType
                     'data-quotation-profile' => $item->getQuotationSpecificationProfile()->value,
                     'data-quotation-measurement-unit-code' => $item->getMeasurementUnit()->getCode(),
                     'data-quotation-measurement-unit-name' => $item->getMeasurementUnit()->getName(),
+                    'data-quotation-product-code' => $item->getCode(),
+                    'data-quotation-product-name' => $item->getName(),
                 ],
+                'help' => 'El Producto determina características, unidad de cobro y precio vigente.',
                 'attr' => [
                     'data-ui--quotation-form-commercial-item' => '',
                     'data-action' => 'change->ui--quotation-form#changeCommercialItem',
                 ],
             ])
             ->add('quantity', TextType::class, [
-                'label' => 'Cantidad',
+                'label' => 'Cantidad facturable',
+                'help' => 'En gran formato por m² puede calcularse desde las medidas; cualquier ajuste manual queda identificado.',
                 'attr' => [
                     'inputmode' => 'decimal',
                     'placeholder' => '1.0000',

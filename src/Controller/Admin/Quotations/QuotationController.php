@@ -9,6 +9,7 @@ use App\Application\Quotations\QuotationDecisionData;
 use App\Application\Quotations\QuotationEmailData;
 use App\Application\Quotations\QuotationItemData;
 use App\Application\Quotations\QuotationItemCharacteristicsSpecificationResolver;
+use App\Application\Quotations\QuotationItemPresentationBuilder;
 use App\Application\Quotations\QuotationManager;
 use App\Application\Quotations\QuotationTotalsCalculator;
 use App\Application\Quotations\QuotationRevisionData;
@@ -45,6 +46,7 @@ final class QuotationController extends AbstractController
         private readonly ClientRepository $clientRepository,
         private readonly ClientContactRepository $clientContactRepository,
         private readonly ClientAddressRepository $clientAddressRepository,
+        private readonly QuotationItemPresentationBuilder $itemPresentationBuilder,
     ) {
     }
 
@@ -547,6 +549,7 @@ final class QuotationController extends AbstractController
         return $this->render('admin/quotations/show.html.twig', [
             'quotation' => $quotation,
             'serviceOrder' => $this->serviceOrderRepository->findOneBySourceQuotation($quotation),
+            'presentedItems' => $this->itemPresentationBuilder->presentAll($quotation->getItems()),
             'emailForm' => ($emailForm ?? $this->createForm(
                 QuotationEmailType::class,
                 QuotationEmailData::forQuotation($quotation),

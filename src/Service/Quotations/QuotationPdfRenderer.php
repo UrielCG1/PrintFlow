@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Quotations;
 
+use App\Application\Quotations\QuotationItemPresentationBuilder;
 use App\Entity\Quotations\Quotation;
 use Dompdf\Dompdf;
 use Dompdf\Options;
@@ -13,6 +14,7 @@ final class QuotationPdfRenderer
 {
     public function __construct(
         private readonly Environment $twig,
+        private readonly QuotationItemPresentationBuilder $itemPresentationBuilder,
         private readonly string $issuerName,
         private readonly string $issuerTaxId,
         private readonly string $issuerEmail,
@@ -39,7 +41,7 @@ final class QuotationPdfRenderer
         $dompdf->loadHtml(
             $this->twig->render('admin/quotations/pdf.html.twig', [
                 'quotation' => $quotation,
-                'deliveryDate' => $quotation->getRequestedDeliveryAt(),
+                'deliveryDate' => $quoteRequest?->getNeededAt(),
                 'issuer' => [
                     'name' => $this->issuerName,
                     'tax_id' => $this->issuerTaxId,

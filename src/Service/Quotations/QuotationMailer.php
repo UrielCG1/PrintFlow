@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Quotations;
 
 use App\Application\Quotations\QuotationEmailData;
+use App\Application\Quotations\QuotationItemPresentationBuilder;
 use App\Entity\Quotations\Quotation;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\Mailer\MailerInterface;
@@ -16,6 +17,7 @@ final class QuotationMailer
     public function __construct(
         private readonly MailerInterface $mailer,
         private readonly QuotationPdfRenderer $quotationPdfRenderer,
+        private readonly QuotationItemPresentationBuilder $itemPresentationBuilder,
         private readonly string $fromAddress,
         private readonly string $fromName,
         private readonly string $privacyResponsible,
@@ -43,6 +45,7 @@ final class QuotationMailer
             ->htmlTemplate('emails/quotations/quotation_sent.html.twig')
             ->context([
                 'quotation' => $quotation,
+                'presentedItems' => $this->itemPresentationBuilder->presentAll($quotation->getItems()),
                 'recipientName' => $recipientName,
                 'message' => $message !== '' ? $message : null,
                 'privacyResponsible' => $this->privacyResponsible,
