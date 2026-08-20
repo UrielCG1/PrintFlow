@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Quotations;
 
 use App\Entity\Quotations\Quotation;
+use App\Repository\Quotations\QuoteRequestRepository;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Twig\Environment;
@@ -13,6 +14,7 @@ final class QuotationPdfRenderer
 {
     public function __construct(
         private readonly Environment $twig,
+        private readonly QuoteRequestRepository $quoteRequestRepository,
         private readonly string $issuerName,
         private readonly string $issuerTaxId,
         private readonly string $issuerEmail,
@@ -36,9 +38,12 @@ final class QuotationPdfRenderer
 
         $dompdf = new Dompdf($options);
 
+        $quoteRequest = $this->quoteRequestRepository->findOneBy(['quotation' => $quotation]);
+
         $dompdf->loadHtml(
             $this->twig->render('admin/quotations/pdf.html.twig', [
                 'quotation' => $quotation,
+                'deliveryDate' => $quoteRequest?->getNeededAt(),
                 'issuer' => [
                     'name' => $this->issuerName,
                     'tax_id' => $this->issuerTaxId,
