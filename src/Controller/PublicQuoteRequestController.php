@@ -33,7 +33,10 @@ final class PublicQuoteRequestController extends AbstractController
      foreach($form->get('items') as $index=>$itemForm){$file=$itemForm->get('attachment')->getData();if(!$file)continue;$name=$slugger->slug(pathinfo($file->getClientOriginalName(),PATHINFO_FILENAME)).'-'.bin2hex(random_bytes(6)).'.'.($file->guessExtension()?:'bin');$file->move($uploadDirectory,$name);$data->items[$index]->attachmentPath='uploads/quotations/'.$name;$data->items[$index]->attachmentOriginalName=$file->getClientOriginalName();}
      $quotation=$manager->createPublic($quotationData,$data);$mailer->send($quotation);$this->addFlash('success','Tu solicitud fue confirmada y enviamos la cotización calculada a tu correo.');return $this->redirectToRoute('public_quote_request');
     }catch(\DomainException|\InvalidArgumentException $exception){$form->addError(new FormError($exception->getMessage()));}
-   }
+    }else{
+     $messages=[];foreach($form->getErrors(true) as $error){$messages[]=$error->getMessage();}
+     $form->addError(new FormError('No pudimos enviar la solicitud. Revisa los campos marcados: '.implode(' ',array_unique($messages))));
+    }
   }
   return $this->render('public_quote_request/index.html.twig',['form'=>$form]);
  }
