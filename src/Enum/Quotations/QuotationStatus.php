@@ -4,6 +4,8 @@ namespace App\Enum\Quotations;
 
 enum QuotationStatus: string
 {
+    case REQUEST = 'REQUEST';
+    case IN_REVIEW = 'IN_REVIEW';
     case DRAFT = 'DRAFT';
     case ISSUED = 'ISSUED';
     case SENT = 'SENT';
@@ -17,6 +19,8 @@ enum QuotationStatus: string
     public function label(): string
     {
         return match ($this) {
+            self::REQUEST => 'Solicitud',
+            self::IN_REVIEW => 'En revisión',
             self::DRAFT => 'Borrador',
             self::ISSUED => 'Emitida',
             self::SENT => 'Enviada',

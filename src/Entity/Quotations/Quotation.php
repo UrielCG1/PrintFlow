@@ -32,8 +32,38 @@ class Quotation
     private Client $client;
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(name: 'created_by_user_id', nullable: false, onDelete: 'RESTRICT')]
-    private User $createdBy;
+    #[ORM\JoinColumn(name: 'created_by_user_id', nullable: true, onDelete: 'RESTRICT')]
+    private ?User $createdBy = null;
+
+    #[ORM\Column(length: 20, options: ['default' => 'INTERNAL'])]
+    private string $origin = 'INTERNAL';
+
+    #[ORM\Column(name: 'request_reference', length: 40, unique: true, nullable: true)]
+    private ?string $requestReference = null;
+
+    #[ORM\Column(name: 'requested_delivery_at', type: Types::DATE_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $requestedDeliveryAt = null;
+
+    #[ORM\Column(name: 'contact_preference', length: 20, nullable: true)]
+    private ?string $contactPreference = null;
+
+    #[ORM\Column(name: 'delivery_method', length: 30, nullable: true)]
+    private ?string $deliveryMethod = null;
+
+    #[ORM\Column(name: 'requires_invoice', options: ['default' => false])]
+    private bool $requiresInvoice = false;
+
+    #[ORM\Column(name: 'request_contact_name', length: 160, nullable: true)]
+    private ?string $requestContactName = null;
+
+    #[ORM\Column(name: 'request_email', length: 180, nullable: true)]
+    private ?string $requestEmail = null;
+
+    #[ORM\Column(name: 'request_phone', length: 30, nullable: true)]
+    private ?string $requestPhone = null;
+
+    #[ORM\Column(name: 'request_company_name', length: 180, nullable: true)]
+    private ?string $requestCompanyName = null;
 
     #[ORM\Column(length: 20, enumType: QuotationStatus::class)]
     private QuotationStatus $status = QuotationStatus::DRAFT;
@@ -87,6 +117,15 @@ class Quotation
 
     #[ORM\Column(name: 'decision_evidence_reference', length: 500, nullable: true)]
     private ?string $decisionEvidenceReference = null;
+
+    #[ORM\Column(name: 'purchase_order_number', length: 120, nullable: true)]
+    private ?string $purchaseOrderNumber = null;
+
+    #[ORM\Column(name: 'purchase_order_file', type: Types::JSON, nullable: true)]
+    private ?array $purchaseOrderFile = null;
+
+    #[ORM\Column(name: 'response_screenshot_file', type: Types::JSON, nullable: true)]
+    private ?array $responseScreenshotFile = null;
 
     #[ORM\Column(length: 3, options: ['default' => 'MXN'])]
     private string $currency = 'MXN';
@@ -181,7 +220,7 @@ class Quotation
         return $this;
     }
 
-    public function getCreatedBy(): User
+    public function getCreatedBy(): ?User
     {
         return $this->createdBy;
     }
@@ -191,6 +230,56 @@ class Quotation
         $this->createdBy = $createdBy;
 
         return $this;
+    }
+
+    public function getOrigin(): string { return $this->origin; }
+    public function isPublicRequest(): bool { return $this->origin === 'PUBLIC'; }
+    public function getRequestReference(): ?string { return $this->requestReference; }
+    public function getRequestedDeliveryAt(): ?\DateTimeImmutable { return $this->requestedDeliveryAt; }
+    public function getContactPreference(): ?string { return $this->contactPreference; }
+    public function getDeliveryMethod(): ?string { return $this->deliveryMethod; }
+    public function requiresInvoice(): bool { return $this->requiresInvoice; }
+    public function getRequestContactName(): ?string { return $this->requestContactName; }
+    public function getRequestEmail(): ?string { return $this->requestEmail; }
+    public function getRequestPhone(): ?string { return $this->requestPhone; }
+    public function getRequestCompanyName(): ?string { return $this->requestCompanyName; }
+
+    public function initializePublicRequest(
+        string $reference,
+        string $contactName,
+        string $email,
+        string $phone,
+        ?string $companyName,
+        string $contactPreference,
+        string $deliveryMethod,
+        ?\DateTimeImmutable $requestedDeliveryAt,
+        bool $requiresInvoice,
+    ): self {
+        $this->origin = 'PUBLIC';
+        $this->status = QuotationStatus::REQUEST;
+        $this->requestReference = strtoupper(trim($reference));
+        $this->requestContactName = trim($contactName);
+        $this->requestEmail = strtolower(trim($email));
+        $this->requestPhone = trim($phone);
+        $companyName = trim((string) $companyName);
+        $this->requestCompanyName = $companyName !== '' ? $companyName : null;
+        $this->contactPreference = $contactPreference;
+        $this->deliveryMethod = $deliveryMethod;
+        $this->requestedDeliveryAt = $requestedDeliveryAt;
+        $this->requiresInvoice = $requiresInvoice;
+        return $this;
+    }
+
+    public function startReview(): void
+    {
+        if ($this->status !== QuotationStatus::REQUEST) { throw new \DomainException('Solo una solicitud puede pasar a revisión.'); }
+        $this->status = QuotationStatus::IN_REVIEW;
+    }
+
+    public function prepareDraft(): void
+    {
+        if (!in_array($this->status, [QuotationStatus::REQUEST, QuotationStatus::IN_REVIEW], true)) { throw new \DomainException('La cotización no puede pasar a borrador.'); }
+        $this->status = QuotationStatus::DRAFT;
     }
 
     public function getStatus(): QuotationStatus
@@ -275,8 +364,8 @@ class Quotation
         if (!$this->status->canBeSent()) {
             throw new \DomainException('Solo una cotización emitida o enviada puede enviarse por correo.');
         }
-
-        $this->status = QuotationStatus::SENT;
+        // El envío se conserva en quotation_email_dispatches; no es una etapa
+        // del flujo comercial y por ello la cotización permanece EMITIDA.
     }
 
     public function accept(
@@ -285,6 +374,9 @@ class Quotation
         \DateTimeImmutable $respondedAt,
         ?string $notes,
         ?string $evidenceReference,
+        ?string $purchaseOrderNumber = null,
+        ?array $purchaseOrderFile = null,
+        ?array $responseScreenshotFile = null,
     ): void {
         $this->recordDecision(
             QuotationStatus::ACCEPTED,
@@ -294,6 +386,9 @@ class Quotation
             $notes,
             $evidenceReference,
         );
+        $this->purchaseOrderNumber = self::normalizeOptionalText($purchaseOrderNumber);
+        $this->purchaseOrderFile = $purchaseOrderFile;
+        $this->responseScreenshotFile = $responseScreenshotFile;
     }
 
     public function acceptWithChanges(string $contact, \DateTimeImmutable $respondedAt, string $notes, string $ip): void
@@ -444,6 +539,14 @@ class Quotation
     {
         return $this->decisionEvidenceReference;
     }
+
+    public function getPurchaseOrderNumber(): ?string { return $this->purchaseOrderNumber; }
+
+    /** @return array<string, int|string>|null */
+    public function getPurchaseOrderFile(): ?array { return $this->purchaseOrderFile; }
+
+    /** @return array<string, int|string>|null */
+    public function getResponseScreenshotFile(): ?array { return $this->responseScreenshotFile; }
 
     public function getCurrency(): string
     {

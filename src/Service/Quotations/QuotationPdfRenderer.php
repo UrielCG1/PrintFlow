@@ -6,7 +6,6 @@ namespace App\Service\Quotations;
 
 use App\Application\Quotations\QuotationItemPresentationBuilder;
 use App\Entity\Quotations\Quotation;
-use App\Repository\Quotations\QuoteRequestRepository;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Twig\Environment;
@@ -37,14 +36,13 @@ final class QuotationPdfRenderer
         $options->setIsRemoteEnabled(false);
         $options->setIsPhpEnabled(false);
 
-        $dompdf = new Dompdf($options);
 
-        $quoteRequest = $this->quoteRequestRepository->findOneBy(['quotation' => $quotation]);
+        $dompdf = new Dompdf($options);
 
         $dompdf->loadHtml(
             $this->twig->render('admin/quotations/pdf.html.twig', [
                 'quotation' => $quotation,
-                'presentedItems' => $this->itemPresentationBuilder->presentAll($quotation->getItems()),
+                'deliveryDate' => $quotation->getRequestedDeliveryAt(),
                 'issuer' => [
                     'name' => $this->issuerName,
                     'tax_id' => $this->issuerTaxId,

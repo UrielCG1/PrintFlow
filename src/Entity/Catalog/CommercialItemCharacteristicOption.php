@@ -11,7 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table(name: 'commercial_item_characteristic_options')]
 #[ORM\UniqueConstraint(name: 'uniq_commercial_item_characteristic_options', columns: ['commercial_item_characteristic_id', 'characteristic_option_id'])]
 #[ORM\Index(name: 'idx_commercial_item_characteristic_options_order', columns: ['commercial_item_characteristic_id', 'display_order'])]
-final class CommercialItemCharacteristicOption
+class CommercialItemCharacteristicOption
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

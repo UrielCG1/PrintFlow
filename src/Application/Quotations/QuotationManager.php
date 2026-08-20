@@ -70,6 +70,33 @@ final class QuotationManager
         );
     }
 
+    public function createPublic(QuotationData $data, PublicQuotationRequestData $request): Quotation
+    {
+        return $this->entityManager->wrapInTransaction(function () use ($data, $request): Quotation {
+            $quotation = new Quotation();
+            $this->applyData($quotation, $data);
+            $quotation->initializePublicRequest(
+                sprintf('SOL-%s-%s', (new \DateTimeImmutable())->format('Ymd'), strtoupper(bin2hex(random_bytes(3)))),
+                (string) $request->fullName,
+                (string) $request->email,
+                (string) $request->phone,
+                $request->companyName,
+                $request->contactPreference,
+                $request->deliveryMethod,
+                $request->neededAt,
+                $request->requiresInvoice,
+            );
+            foreach (array_values($quotation->getItems()->toArray()) as $index => $quotationItem) {
+                $source = $request->items[$index] ?? null;
+                if (!$source instanceof PublicQuotationRequestItemData) { continue; }
+                $quotationItem->setRequestDetails($source->requestDetails())->setAttachmentPath($source->attachmentPath)->setAttachmentOriginalName($source->attachmentOriginalName);
+            }
+            $this->entityManager->persist($quotation);
+            $this->entityManager->flush();
+            return $quotation;
+        });
+    }
+
     public function update(
         Quotation $quotation,
         QuotationData $data,
@@ -157,6 +184,16 @@ final class QuotationManager
                 $this->entityManager->flush();
             },
         );
+    }
+
+    public function startReview(Quotation $quotation, User $actor): void
+    {
+        $this->entityManager->wrapInTransaction(function () use ($quotation, $actor): void {$quotation->startReview();$this->auditLogger->record(actor:$actor,action:'quotation.review_started',entityType:'quotation',entityId:$quotation->getId(),newValues:$this->auditSnapshot($quotation));$this->entityManager->flush();});
+    }
+
+    public function prepareDraft(Quotation $quotation, User $actor): void
+    {
+        $this->entityManager->wrapInTransaction(function () use ($quotation, $actor): void {$quotation->prepareDraft();$this->auditLogger->record(actor:$actor,action:'quotation.draft_prepared',entityType:'quotation',entityId:$quotation->getId(),newValues:$this->auditSnapshot($quotation));$this->entityManager->flush();});
     }
 
     public function send(Quotation $quotation, QuotationEmailData $data, User $actor): void
@@ -393,6 +430,9 @@ final class QuotationManager
                         $data->respondedAt,
                         $data->notes,
                         $data->evidenceReference,
+                        $data->purchaseOrderNumber,
+                        $data->purchaseOrderMetadata,
+                        $data->responseScreenshotMetadata,
                     );
                 } else {
                     $quotation->reject(
@@ -882,6 +922,9 @@ final class QuotationManager
             'decision_at' => $quotation->getDecisionAt()?->format(\DATE_ATOM),
             'decision_notes' => $quotation->getDecisionNotes(),
             'decision_evidence_reference' => $quotation->getDecisionEvidenceReference(),
+            'purchase_order_number' => $quotation->getPurchaseOrderNumber(),
+            'purchase_order_file' => $quotation->getPurchaseOrderFile(),
+            'response_screenshot_file' => $quotation->getResponseScreenshotFile(),
             'client_id' => $quotation->getClient()->getId(),
             'client_name' => $quotation->getClientSnapshot()['business_name'] ?? null,
             'commercial_contact' => $quotation->getClientSnapshot()['commercial_contact'] ?? null,

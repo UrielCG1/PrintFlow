@@ -34,6 +34,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Service\Quotations\QuotationPdfRenderer;
+use App\Service\Quotations\QuotationDecisionFileStorage;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
@@ -346,6 +347,24 @@ final class QuotationController extends AbstractController
         return $this->redirectToRoute('admin_quotations_show', ['id' => $quotation->getId()]);
     }
 
+    #[Route('/{id}/iniciar-revision', name: 'admin_quotations_start_review', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function startReview(Request $request, Quotation $quotation, QuotationManager $manager): Response
+    {
+        $this->denyAccessUnlessGranted('quotations.update');
+        if (!$this->isCsrfTokenValid('quotation-review-'.$quotation->getId(), $request->request->getString('_token'))) { throw $this->createAccessDeniedException(); }
+        try { $manager->startReview($quotation, $this->authenticatedUser()); $this->addFlash('success', 'La solicitud pasó a revisión.'); } catch (\DomainException $e) { $this->addFlash('warning', $e->getMessage()); }
+        return $this->redirectToRoute('admin_quotations_show', ['id'=>$quotation->getId()]);
+    }
+
+    #[Route('/{id}/preparar-borrador', name: 'admin_quotations_prepare_draft', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function prepareDraft(Request $request, Quotation $quotation, QuotationManager $manager): Response
+    {
+        $this->denyAccessUnlessGranted('quotations.update');
+        if (!$this->isCsrfTokenValid('quotation-draft-'.$quotation->getId(), $request->request->getString('_token'))) { throw $this->createAccessDeniedException(); }
+        try { $manager->prepareDraft($quotation, $this->authenticatedUser()); $this->addFlash('success', 'La solicitud se convirtió en borrador editable.'); return $this->redirectToRoute('admin_quotations_edit',['id'=>$quotation->getId()]); } catch (\DomainException $e) { $this->addFlash('warning', $e->getMessage()); }
+        return $this->redirectToRoute('admin_quotations_show', ['id'=>$quotation->getId()]);
+    }
+
     #[Route('/{id}/enviar', name: 'admin_quotations_send', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function send(
         Request $request,
@@ -384,22 +403,39 @@ final class QuotationController extends AbstractController
         Request $request,
         Quotation $quotation,
         QuotationManager $quotationManager,
+        QuotationDecisionFileStorage $fileStorage,
     ): Response {
         $this->denyAccessUnlessGranted('quotations.manage_status');
 
-        $form = $this->createForm(QuotationDecisionType::class, new QuotationDecisionData());
+        $form = $this->createForm(QuotationDecisionType::class, new QuotationDecisionData(), ['acceptance_files' => true]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             try {
                 /** @var QuotationDecisionData $data */
                 $data = $form->getData();
+                if ($data->purchaseOrderFile !== null) {
+                    $data->purchaseOrderMetadata = $fileStorage->storePurchaseOrder($quotation, $data->purchaseOrderFile, (string) $data->purchaseOrderNumber);
+                }
+                if ($data->responseScreenshot !== null) {
+                    $data->responseScreenshotMetadata = $fileStorage->storeResponseScreenshot($quotation, $data->responseScreenshot);
+                }
                 $quotationManager->accept($quotation, $data, $this->authenticatedUser());
                 $this->addFlash('success', 'La aceptación comercial quedó registrada correctamente.');
 
                 return $this->redirectToRoute('admin_quotations_show', ['id' => $quotation->getId()]);
-            } catch (\DomainException|\InvalidArgumentException $exception) {
+            } catch (\DomainException|\InvalidArgumentException|\RuntimeException $exception) {
+                if (isset($data) && $data instanceof QuotationDecisionData) {
+                    $fileStorage->remove($data->purchaseOrderMetadata);
+                    $fileStorage->remove($data->responseScreenshotMetadata);
+                }
                 $form->addError(new FormError($exception->getMessage()));
+            } catch (\Throwable $exception) {
+                if (isset($data) && $data instanceof QuotationDecisionData) {
+                    $fileStorage->remove($data->purchaseOrderMetadata);
+                    $fileStorage->remove($data->responseScreenshotMetadata);
+                }
+                throw $exception;
             }
         }
 
@@ -512,6 +548,16 @@ final class QuotationController extends AbstractController
         ]);
     }
 
+    #[Route('/{id}/evidencia/{type}', name: 'admin_quotations_decision_file', requirements: ['id' => '\d+', 'type' => 'purchase-order|response-screenshot'], methods: ['GET'])]
+    public function decisionFile(Quotation $quotation, string $type, QuotationDecisionFileStorage $fileStorage): Response
+    {
+        $this->denyAccessUnlessGranted('quotations.view');
+        $metadata = $type === 'purchase-order' ? $quotation->getPurchaseOrderFile() : $quotation->getResponseScreenshotFile();
+        if ($metadata === null) throw $this->createNotFoundException('La evidencia solicitada no existe.');
+        try { $path = $fileStorage->resolve($metadata); } catch (\InvalidArgumentException|\RuntimeException) { throw $this->createNotFoundException('La evidencia solicitada no está disponible.'); }
+        return $this->file($path, (string) ($metadata['original_name'] ?? $metadata['stored_name'] ?? basename($path)), ResponseHeaderBag::DISPOSITION_ATTACHMENT);
+    }
+
     #[Route('/{id}', name: 'admin_quotations_show', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function show(Quotation $quotation): Response
     {
@@ -539,6 +585,7 @@ final class QuotationController extends AbstractController
             'acceptForm' => ($acceptForm ?? $this->createForm(
                 QuotationDecisionType::class,
                 new QuotationDecisionData(),
+                ['acceptance_files' => true],
             ))->createView(),
             'rejectForm' => ($rejectForm ?? $this->createForm(
                 QuotationDecisionType::class,
