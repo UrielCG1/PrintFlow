@@ -36,12 +36,13 @@ final class QuotationPdfRenderer
         $options->setIsRemoteEnabled(false);
         $options->setIsPhpEnabled(false);
 
+
         $dompdf = new Dompdf($options);
 
         $dompdf->loadHtml(
             $this->twig->render('admin/quotations/pdf.html.twig', [
                 'quotation' => $quotation,
-                'deliveryDate' => $quoteRequest?->getNeededAt(),
+                'deliveryDate' => $quotation->getRequestedDeliveryAt(),
                 'issuer' => [
                     'name' => $this->issuerName,
                     'tax_id' => $this->issuerTaxId,
