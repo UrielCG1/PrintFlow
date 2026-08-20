@@ -51,6 +51,7 @@ final class QuotationMailer
                 'privacyResponsible' => $this->privacyResponsible,
                 'privacyAddress' => $this->privacyAddress,
                 'privacyEmail' => $this->privacyEmail,
+                'privacyUrl' => $this->urlGenerator->generate('app_privacy_notice', [], UrlGeneratorInterface::ABSOLUTE_URL),
                 'acceptanceUrl' => $this->urlGenerator->generate('quotation_public_accept', ['token' => $quotation->ensureAcceptanceToken()], UrlGeneratorInterface::ABSOLUTE_URL),
             ])
             ->attach(

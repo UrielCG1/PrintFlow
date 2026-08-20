@@ -1,0 +1,122 @@
+{% extends 'layouts/public.html.twig' %}
+
+{% block title %}Aviso de Privacidad | Ooxcorp{% endblock %}
+{% block meta_description %}Aviso de Privacidad integral de {{ privacyResponsible }}: tratamiento de datos personales, finalidades y derechos ARCO.{% endblock %}
+{% block body_class %}pf-public-body pf-privacy-body{% endblock %}
+
+{% block public_content %}
+    <article class="pf-privacy" aria-labelledby="privacy-title">
+        <header class="pf-privacy__header">
+            <a class="pf-privacy__brand" href="{{ path('app_home') }}" aria-label="Ir al inicio de Ooxcorp">
+                <span class="pf-privacy__brand-mark" aria-hidden="true">PF</span>
+                <span>Ooxcorp</span>
+            </a>
+            <p class="pf-privacy__eyebrow">Transparencia y protección de datos</p>
+            <h1 id="privacy-title">Aviso de Privacidad</h1>
+            <p class="pf-privacy__intro">Conozca qué datos personales tratamos, para qué los utilizamos y cómo puede ejercer sus derechos.</p>
+            <p class="pf-privacy__updated"><i class="bi bi-calendar3" aria-hidden="true"></i> Última actualización: agosto de 2026</p>
+        </header>
+ 
+        <div class="pf-privacy__layout mt-3">
+            <nav class="pf-privacy__nav" aria-label="Contenido del aviso de privacidad">
+                <p>En esta página</p>
+                <ol>
+                    <li><a href="#responsable">Responsable</a></li>
+                    <li><a href="#datos">Datos recabados</a></li>
+                    <li><a href="#finalidades">Finalidades</a></li>
+                    <li><a href="#uso">Uso y divulgación</a></li>
+                    <li><a href="#arco">Derechos ARCO</a></li>
+                    <li><a href="#limitacion">Limitación y revocación</a></li>
+                    <li><a href="#conservacion">Conservación</a></li>
+                    <li><a href="#cambios">Cambios y contacto</a></li>
+                </ol>
+            </nav>
+
+            <div class="pf-privacy__content">
+                <section id="responsable">
+                    <h2>1. Responsable del tratamiento</h2>
+                    <p><strong>{{ privacyResponsible }}</strong>, con domicilio en <strong>{{ privacyAddress }}</strong>, es responsable del tratamiento y protección de sus datos personales conforme a la legislación mexicana aplicable.</p>
+                </section>
+
+                <section id="datos">
+                    <h2>2. Datos personales que recabamos</h2>
+                    <p>Para prestar nuestros servicios podremos recabar, según corresponda:</p>
+                    <ul>
+                        <li>Nombre y datos de identificación.</li>
+                        <li>Nombre de empresa o razón social.</li>
+                        <li>Teléfono, correo electrónico, domicilio y otros datos de contacto.</li>
+                        <li>Datos fiscales necesarios para facturación.</li>
+                        <li>Información relacionada con cotizaciones, pedidos y servicios solicitados.</li>
+                        <li>Comunicaciones, comentarios u observaciones relacionadas con nuestros servicios.</li>
+                    </ul>
+                    <div class="pf-privacy__callout"><i class="bi bi-shield-check" aria-hidden="true"></i><p>Para las finalidades descritas en este aviso no recabamos intencionalmente datos personales sensibles.</p></div>
+                </section>
+
+                <section id="finalidades">
+                    <h2>3. Finalidades del tratamiento</h2>
+                    <p>Sus datos personales serán utilizados para las siguientes finalidades necesarias para la relación comercial o jurídica:</p>
+                    <ul>
+                        <li>Elaborar, enviar y dar seguimiento a cotizaciones.</li>
+                        <li>Registrar y administrar clientes y contactos.</li>
+                        <li>Procesar, administrar y dar seguimiento a pedidos.</li>
+                        <li>Coordinar la producción y entrega de los servicios solicitados.</li>
+                        <li>Emitir comprobantes fiscales cuando sean requeridos.</li>
+                        <li>Contactarle para aclaraciones, modificaciones o seguimiento.</li>
+                        <li>Brindar atención relacionada con nuestros productos y servicios.</li>
+                        <li>Mantener un historial administrativo y comercial de las operaciones.</li>
+                        <li>Cumplir obligaciones legales, fiscales o contractuales aplicables.</li>
+                    </ul>
+                    <p>No utilizaremos sus datos para finalidades distintas o incompatibles sin informarle previamente y, cuando corresponda, solicitar su consentimiento.</p>
+                </section>
+
+                <section id="uso">
+                    <h2>4. Uso, protección y divulgación</h2>
+                    <p>Adoptamos medidas administrativas, técnicas y físicas razonables para proteger sus datos contra daño, pérdida, alteración, destrucción, acceso, uso o divulgación no autorizados.</p>
+                    <p>Sus datos podrán ser tratados por proveedores que presten servicios por cuenta de <strong>{{ privacyResponsible }}</strong>, únicamente cuando sea necesario para nuestra operación y bajo obligaciones de confidencialidad y protección de datos.</p>
+                    <p>No realizamos transferencias de datos personales a terceros que requieran su consentimiento, salvo que usted las autorice expresamente. Podrán realizarse aquellas necesarias o permitidas por la legislación aplicable.</p>
+                </section>
+
+                <section id="arco">
+                    <h2>5. Derechos ARCO</h2>
+                    <p>Usted puede ejercer en cualquier momento sus derechos de:</p>
+                    <div class="pf-privacy__rights">
+                        <div><strong>Acceso</strong><span>Conocer qué datos tenemos y cómo los utilizamos.</span></div>
+                        <div><strong>Rectificación</strong><span>Solicitar su corrección o actualización.</span></div>
+                        <div><strong>Cancelación</strong><span>Solicitar su eliminación cuando legalmente proceda.</span></div>
+                        <div><strong>Oposición</strong><span>Oponerse a determinados tratamientos cuando proceda.</span></div>
+                    </div>
+                    <p>Envíe su solicitud a <a href="mailto:{{ privacyEmail }}">{{ privacyEmail }}</a> e incluya:</p>
+                    <ul>
+                        <li>Nombre de la persona titular y medio para recibir notificaciones.</li>
+                        <li>Documento que acredite su identidad y, en su caso, la representación legal.</li>
+                        <li>Descripción clara del derecho que desea ejercer y de los datos relacionados.</li>
+                        <li>Información que facilite la localización de sus datos.</li>
+                        <li>Para rectificación, los cambios solicitados y documentación que los sustente, cuando corresponda.</li>
+                    </ul>
+                    <p>La solicitud será atendida dentro de los plazos establecidos por la legislación aplicable.</p>
+                </section>
+
+                <section id="limitacion">
+                    <h2>6. Limitación del uso y revocación del consentimiento</h2>
+                    <p>Puede solicitar la limitación del uso o divulgación de sus datos escribiendo a <a href="mailto:{{ privacyEmail }}">{{ privacyEmail }}</a> e indicando claramente la limitación que desea establecer. Cuando sea legal y técnicamente procedente, adoptaremos las medidas necesarias para atenderla.</p>
+                    <p>Cuando el tratamiento dependa de su consentimiento, podrá revocarlo por el mismo medio. La revocación no tendrá efectos retroactivos ni impedirá el cumplimiento de obligaciones derivadas de una relación jurídica existente o de disposiciones legales.</p>
+                </section>
+
+                <section id="conservacion">
+                    <h2>7. Conservación de los datos</h2>
+                    <p>Los datos serán conservados únicamente durante el tiempo necesario para cumplir las finalidades señaladas y los plazos adicionales exigidos por obligaciones legales, fiscales, administrativas o contractuales. Posteriormente serán eliminados o sometidos al procedimiento correspondiente.</p>
+                </section>
+
+                <section id="cambios">
+                    <h2>8. Cambios al aviso y contacto</h2>
+                    <p>Este aviso podrá actualizarse por cambios legales, administrativos, operativos o en nuestros servicios. Las modificaciones serán publicadas en esta misma página; recomendamos consultarla periódicamente.</p>
+                    <address class="pf-privacy__contact">
+                        <span><i class="bi bi-building" aria-hidden="true"></i><strong>{{ privacyResponsible }}</strong></span>
+                        <span><i class="bi bi-geo-alt" aria-hidden="true"></i>{{ privacyAddress }}</span>
+                        <span><i class="bi bi-envelope" aria-hidden="true"></i><a href="mailto:{{ privacyEmail }}">{{ privacyEmail }}</a></span>
+                    </address>
+                </section>
+            </div>
+        </div>
+    </article>
+{% endblock %}

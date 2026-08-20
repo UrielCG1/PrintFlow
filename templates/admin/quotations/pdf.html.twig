@@ -91,6 +91,23 @@
                 text-align: right;
             }
 
+            .delivery-date {
+                display: inline-block;
+                margin-top: 8px;
+                padding: 7px 10px;
+                border: 2px solid #d92d20;
+                color: #b42318;
+                font-size: 8px;
+                font-weight: 700;
+                line-height: 1.35;
+                text-align: center;
+            }
+
+            .delivery-date-value {
+                display: block;
+                font-size: 10px;
+            }
+
             .section {
                 margin-top: 18px;
             }
@@ -231,6 +248,7 @@
         {% set commercialContact = client.commercial_contact|default(null) %}
         {% set fiscalAddress = quotation.fiscalAddressSnapshot %}
         {% set deliveryAddress = quotation.deliveryAddressSnapshot %}
+        {% set monthNames = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'] %}
 
         <div class="document-header"></div>
 
@@ -262,6 +280,16 @@
                 <td>
                     <h2 class="document-title">Cotización</h2>
                     <p class="folio">{{ quotation.folio }}</p>
+                    <div class="delivery-date">
+                        FECHA DE ENTREGA:
+                        <span class="delivery-date-value">
+                            {% if deliveryDate %}
+                                {{ deliveryDate|date('d') }}/{{ monthNames[deliveryDate|date('n') - 1] }}/{{ deliveryDate|date('Y') }}
+                            {% else %}
+                                POR CONFIRMAR
+                            {% endif %}
+                        </span>
+                    </div>
                 </td>
             </tr>
         </table>
