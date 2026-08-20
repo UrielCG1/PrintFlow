@@ -61,4 +61,17 @@ final class QuotationLifecycleTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $quotation->setRevisionNumber(0);
     }
+
+    public function testPublicRequestMustPassThroughReviewBeforeDraft(): void
+    {
+        $quotation = new Quotation();
+        $quotation->initializePublicRequest('SOL-20260819-ABC123','Ana López','ana@example.com','4421234567','Ejemplo SA','email','pickup',new \DateTimeImmutable('2026-08-30'),true);
+        self::assertSame(QuotationStatus::REQUEST, $quotation->getStatus());
+        self::assertFalse($quotation->isEditable());
+        $quotation->startReview();
+        self::assertSame(QuotationStatus::IN_REVIEW, $quotation->getStatus());
+        $quotation->prepareDraft();
+        self::assertSame(QuotationStatus::DRAFT, $quotation->getStatus());
+        self::assertTrue($quotation->isEditable());
+    }
 }

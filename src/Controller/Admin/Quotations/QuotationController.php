@@ -344,6 +344,24 @@ final class QuotationController extends AbstractController
         return $this->redirectToRoute('admin_quotations_show', ['id' => $quotation->getId()]);
     }
 
+    #[Route('/{id}/iniciar-revision', name: 'admin_quotations_start_review', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function startReview(Request $request, Quotation $quotation, QuotationManager $manager): Response
+    {
+        $this->denyAccessUnlessGranted('quotations.update');
+        if (!$this->isCsrfTokenValid('quotation-review-'.$quotation->getId(), $request->request->getString('_token'))) { throw $this->createAccessDeniedException(); }
+        try { $manager->startReview($quotation, $this->authenticatedUser()); $this->addFlash('success', 'La solicitud pasó a revisión.'); } catch (\DomainException $e) { $this->addFlash('warning', $e->getMessage()); }
+        return $this->redirectToRoute('admin_quotations_show', ['id'=>$quotation->getId()]);
+    }
+
+    #[Route('/{id}/preparar-borrador', name: 'admin_quotations_prepare_draft', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function prepareDraft(Request $request, Quotation $quotation, QuotationManager $manager): Response
+    {
+        $this->denyAccessUnlessGranted('quotations.update');
+        if (!$this->isCsrfTokenValid('quotation-draft-'.$quotation->getId(), $request->request->getString('_token'))) { throw $this->createAccessDeniedException(); }
+        try { $manager->prepareDraft($quotation, $this->authenticatedUser()); $this->addFlash('success', 'La solicitud se convirtió en borrador editable.'); return $this->redirectToRoute('admin_quotations_edit',['id'=>$quotation->getId()]); } catch (\DomainException $e) { $this->addFlash('warning', $e->getMessage()); }
+        return $this->redirectToRoute('admin_quotations_show', ['id'=>$quotation->getId()]);
+    }
+
     #[Route('/{id}/enviar', name: 'admin_quotations_send', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function send(
         Request $request,

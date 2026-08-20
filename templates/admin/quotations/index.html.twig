@@ -8,6 +8,8 @@
 
 {% block app_content %}
     {% set status_labels = {
+        'REQUEST': 'Solicitud',
+        'IN_REVIEW': 'En revisión',
         'DRAFT': 'Borrador',
         'ISSUED': 'Emitida',
         'SENT': 'Enviada',
@@ -20,6 +22,8 @@
     } %}
 
     {% set status_tones = {
+        'REQUEST': 'pf-status-badge--info',
+        'IN_REVIEW': 'pf-status-badge--warning',
         'DRAFT': 'pf-status-badge--warning',
         'ISSUED': 'pf-status-badge--info',
         'SENT': 'pf-status-badge--info',
@@ -73,9 +77,9 @@
 
                             <tr>
                                 <td>
-                                    <strong class="pf-table__primary">{{ quotation.folio ?? 'Borrador' }}</strong>
+                                    <strong class="pf-table__primary">{{ quotation.folio ?? quotation.requestReference ?? 'Borrador' }}</strong>
 
-                                    {% if quotation.folio is null %}
+                                    {% if quotation.folio is null and quotation.requestReference is null %}
                                         <span class="d-block text-muted small">
                                             Registro #{{ quotation.id }}
                                         </span>

@@ -863,11 +863,11 @@ Rutas principales:
 | Activar/desactivar | `/admin/usuarios/{id}/estado` (POST) | `user.deactivate` |
 | Restablecer contraseña | `/admin/usuarios/{id}/restablecer-contrasena` | `user.reset_password` |
 
-Características:
+Características:1
 
 - Búsqueda y paginación administrativa de usuarios (20 por página).
 - No se permite que un usuario cambie sus propios roles desde el formulario de edición.
-- Alta con contraseña temporal y obligación de cambio.
+- Alta con contraseña temporal y obligación1 de cambio.
 - Restablecimiento seguro mediante `UserPasswordHasherInterface`.
 - Cambio de estado con CSRF y auditoría.
 
@@ -996,10 +996,10 @@ Una pantalla autenticada nueva debe partir de este patrón:
 {% block app_content %}
     <div class="pf-page">
         {# encabezado, tarjetas, tabla o formulario #}
-    </div>
+    </div>1
 {% endblock %}
 ```
-
+1
 ### Sidebar y navegación
 
 El sidebar se adapta a móvil mediante `ui--sidebar_controller.js`, backdrop y clase de estado. Cada enlace se condiciona por `is_granted(...)`; no debe mostrarse una opción que terminará en 403. Al añadir un módulo:

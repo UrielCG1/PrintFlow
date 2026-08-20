@@ -50,6 +50,15 @@ class QuotationItem
     #[ORM\Column(name: 'specification_schema_version', options: ['unsigned' => true, 'default' => 1])]
     private int $specificationSchemaVersion = 1;
 
+    #[ORM\Column(name: 'request_details', type: Types::JSON, nullable: true)]
+    private ?array $requestDetails = null;
+
+    #[ORM\Column(name: 'attachment_path', length: 255, nullable: true)]
+    private ?string $attachmentPath = null;
+
+    #[ORM\Column(name: 'attachment_original_name', length: 255, nullable: true)]
+    private ?string $attachmentOriginalName = null;
+
     #[ORM\Column(name: 'created_at', type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
@@ -67,6 +76,13 @@ class QuotationItem
     {
         return $this->id;
     }
+
+    public function getRequestDetails(): ?array { return $this->requestDetails; }
+    public function setRequestDetails(?array $value): self { $this->requestDetails=$value; return $this; }
+    public function getAttachmentPath(): ?string { return $this->attachmentPath; }
+    public function setAttachmentPath(?string $value): self { $this->attachmentPath=$value; return $this; }
+    public function getAttachmentOriginalName(): ?string { return $this->attachmentOriginalName; }
+    public function setAttachmentOriginalName(?string $value): self { $this->attachmentOriginalName=$value; return $this; }
 
     public function getQuotation(): Quotation
     {

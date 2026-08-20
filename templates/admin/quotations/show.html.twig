@@ -1,6 +1,6 @@
 {% extends 'layouts/app.html.twig' %}
 
-{% block title %}Cotización {{ quotation.folio ?? ('#' ~ quotation.id) }} | PrintFlow{% endblock %}
+{% block title %}Cotización {{ quotation.folio ?? quotation.requestReference ?? ('#' ~ quotation.id) }} | PrintFlow{% endblock %}
 
 {% block app_navigation_active %}quotations{% endblock %}
 
@@ -9,6 +9,8 @@
 {% block app_content %}
     {% set status = quotation.status.value %}
     {% set status_tones = {
+        'REQUEST': 'pf-status-badge--info',
+        'IN_REVIEW': 'pf-status-badge--warning',
         'DRAFT': 'pf-status-badge--warning',
         'ISSUED': 'pf-status-badge--info',
         'SENT': 'pf-status-badge--info',
@@ -26,7 +28,7 @@
             <div class="pf-page-header__content">
                 <p class="pf-page-header__eyebrow">Comercial / Cotizaciones</p>
                 <h1 class="pf-page-header__title">
-                    {{ quotation.folio ?? ('Borrador #' ~ quotation.id) }}
+                    {{ quotation.folio ?? quotation.requestReference ?? ('Borrador #' ~ quotation.id) }}
                     {% if quotation.revisionNumber > 1 %}
                         <span class="text-muted">· Revisión {{ quotation.revisionNumber }}</span>
                     {% endif %}
@@ -40,6 +42,12 @@
                 <span class="pf-status-badge {{ status_tones[status]|default('pf-status-badge--neutral') }}">
                     {{ quotation.status.label }}
                 </span>
+
+                {% if status == 'REQUEST' and is_granted('quotations.update') %}
+                    <form method="post" action="{{ path('admin_quotations_start_review',{id:quotation.id}) }}"><input type="hidden" name="_token" value="{{ csrf_token('quotation-review-' ~ quotation.id) }}"><button class="btn pf-button pf-button--primary" type="submit">Iniciar revisión</button></form>
+                {% elseif status == 'IN_REVIEW' and is_granted('quotations.update') %}
+                    <form method="post" action="{{ path('admin_quotations_prepare_draft',{id:quotation.id}) }}"><input type="hidden" name="_token" value="{{ csrf_token('quotation-draft-' ~ quotation.id) }}"><button class="btn pf-button pf-button--primary" type="submit">Preparar borrador</button></form>
+                {% endif %}
 
                 {% if quotation.hasBeenIssued and is_granted('quotations.download_pdf') %}
                     <a href="{{ path('admin_quotations_pdf', {id: quotation.id}) }}" class="btn pf-button pf-button--subtle">
@@ -68,6 +76,14 @@
                 </a>
             </div>
         </header>
+
+        {% if quotation.publicRequest %}
+            <div class="alert alert-info" role="status">
+                <strong>Solicitud pública.</strong>
+                Contacto: {{ quotation.requestContactName }} · {{ quotation.requestEmail }} · {{ quotation.requestPhone }}.
+                {% if quotation.requestedDeliveryAt %} Fecha solicitada: {{ quotation.requestedDeliveryAt|date('d/m/Y') }}.{% endif %}
+            </div>
+        {% endif %}
 
         {% if quotation.previousRevision %}
             <div class="alert alert-secondary" role="status">
