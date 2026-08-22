@@ -28,7 +28,7 @@ final class ClientContactType extends AbstractType
             ])
             ->add('email', EmailType::class, [
                 'label' => 'Correo electrónico',
-                'required' => false,
+                'required' => true,
                 'attr' => [
                     'autocomplete' => 'email',
                     'maxlength' => 180,

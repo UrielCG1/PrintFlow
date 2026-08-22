@@ -13,6 +13,7 @@ final class ClientContactData
     #[Assert\Length(max: 120)]
     public ?string $jobTitle = null;
 
+    #[Assert\NotBlank(message: 'Captura el correo electrónico laboral del contacto.')]
     #[Assert\Email(message: 'Captura un correo electrónico válido.')]
     #[Assert\Length(max: 180)]
     public ?string $email = null;

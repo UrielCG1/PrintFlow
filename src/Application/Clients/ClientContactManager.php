@@ -136,10 +136,17 @@ final class ClientContactManager
         ClientContact $contact,
         ClientContactData $data,
     ): void {
+        $email = strtolower(trim((string) $data->email));
+        if ($email === '') {
+            throw new \DomainException('El correo laboral del contacto es obligatorio.');
+        }
+        if ($this->clientContactRepository->findOneByBusinessEmail($email, $contact->getId()) !== null) {
+            throw new \DomainException('El correo laboral ya está registrado en otro contacto.');
+        }
         $contact
             ->setFullName((string) $data->fullName)
             ->setJobTitle($data->jobTitle)
-            ->setEmail($data->email)
+            ->setEmail($email)
             ->setPhone($data->phone)
             ->setWorkSchedule($data->workHours)
             ->setIsPrimary($data->isPrimary);

@@ -9,9 +9,11 @@ use App\Entity\Common\Phone;
 use App\Entity\Users\User;
 use App\Form\Admin\Clients\ClientType;
 use App\Repository\Clients\ClientRepository;
+use App\Service\Clients\ClientContactEmailVerifier;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Form\FormError;
 use Symfony\Component\Routing\Attribute\Route;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -42,7 +44,7 @@ final class ClientController extends AbstractController
     }
 
     #[Route('/nuevo', name: 'new', methods: ['GET', 'POST'])]
-    public function new(Request $request, ClientManager $clientManager): Response
+    public function new(Request $request, ClientManager $clientManager, ClientContactEmailVerifier $emailVerifier): Response
     {
         $this->denyAccessUnlessGranted('clients.create');
 
@@ -57,9 +59,15 @@ final class ClientController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $clientManager->create($data, $this->getActor());
+            try {
+                $client = $clientManager->create($data, $this->getActor());
+            } catch (\DomainException $exception) {
+                $form->addError(new FormError($exception->getMessage()));
+                return $this->render('admin/clients/form.html.twig', ['form'=>$form,'client'=>null,'pageTitle'=>'Nuevo cliente']);
+            }
 
-            $this->addFlash('success', 'Cliente registrado correctamente.');
+            try { $emailVerifier->sendPendingForClient($client); $this->addFlash('success', 'Cliente registrado correctamente. Enviamos la confirmación a sus contactos.'); }
+            catch (\Throwable) { $this->addFlash('warning', 'El cliente fue registrado, pero no fue posible enviar una confirmación de correo.'); }
 
             return $this->redirectToRoute('admin_clients_index');
         }
@@ -76,6 +84,7 @@ final class ClientController extends AbstractController
         Request $request,
         Client $client,
         ClientManager $clientManager,
+        ClientContactEmailVerifier $emailVerifier,
         EntityManagerInterface $em,
     ): Response {
         $this->denyAccessUnlessGranted('clients.update');
@@ -103,9 +112,15 @@ final class ClientController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $clientManager->update($client, $data, $this->getActor());
+            try {
+                $clientManager->update($client, $data, $this->getActor());
+            } catch (\DomainException $exception) {
+                $form->addError(new FormError($exception->getMessage()));
+                return $this->render('admin/clients/form.html.twig', ['form'=>$form,'client'=>$client,'pageTitle'=>'Editar cliente']);
+            }
 
-            $this->addFlash('success', 'Cliente actualizado correctamente.');
+            try { $emailVerifier->sendPendingForClient($client); $this->addFlash('success', 'Cliente actualizado correctamente.'); }
+            catch (\Throwable) { $this->addFlash('warning', 'El cliente fue actualizado, pero no fue posible enviar una confirmación de correo pendiente.'); }
 
             return $this->redirectToRoute('admin_clients_index');
         }

@@ -19,6 +19,7 @@ final class ClientManager
 
     public function create(ClientData $data, User $actor): Client
     {
+        $this->validateContactEmails($data);
         return $this->entityManager->wrapInTransaction(function () use ($data, $actor): Client {
             $client = new Client();
             $this->applyData($client, $data);
@@ -44,6 +45,7 @@ final class ClientManager
 
     public function update(Client $client, ClientData $data, User $actor): void
     {
+        $this->validateContactEmails($data);
         $oldValues = $this->snapshot($client);
 
         $this->applyData($client, $data);
@@ -122,6 +124,21 @@ final class ClientManager
             ->setNotes($data->notes);
     }
 
+    private function validateContactEmails(ClientData $data): void
+    {
+        $repository = $this->entityManager->getRepository(ClientContact::class);
+        $seen = [];
+        foreach ($data->branches as $branch) {
+            foreach ($branch->contacts as $contact) {
+                $email = strtolower(trim((string) $contact->businessEmail));
+                if ($email === '') { throw new \DomainException('El correo laboral de cada contacto es obligatorio.'); }
+                if (isset($seen[$email])) { throw new \DomainException(sprintf('El correo laboral %s está repetido en el formulario.', $email)); }
+                $seen[$email] = true;
+                if ($repository->findOneByBusinessEmail($email, $contact->id) !== null) { throw new \DomainException(sprintf('El correo laboral %s ya está registrado en otro contacto.', $email)); }
+            }
+        }
+    }
+
     private function syncStructuredData(Client $client, ClientData $data): void
     {
         $this->syncClientPhones($client, $data->phones);
@@ -166,7 +183,7 @@ final class ClientManager
     private function syncBranchContacts(Client $client,ClientBranch $branch,array $rows):void
     {
         $repo=$this->entityManager->getRepository(ClientContact::class);$existing=[];foreach($repo->findBy(['client'=>$client,'branch'=>$branch]) as $a){$existing[(int)$a->getId()]=$a;$a->setIsPrimary(false);} $this->entityManager->flush();$kept=[];
-        foreach($rows as $d){$a=$d->id?($existing[$d->id]??null):null;if(!$a){$person=new Contact((string)$d->firstName);$a=new ClientContact($client,$person);$this->entityManager->persist($person);$this->entityManager->persist($a);} $person=$a->getContact();$person->setFirstName((string)$d->firstName)->setLastName($d->lastName)->setPersonalEmail($d->personalEmail)->setBirthDate($d->birthDate)->setWorkDays($d->workDays)->setWorkHours($d->workHours)->setNotes($d->notes)->setIsActive(true);$a->setBranch($branch)->setDepartment($d->department)->setJobTitle($d->jobTitle)->setEmail($d->businessEmail)->setCanRequestProducts($d->canRequestProducts)->setIsPrimary($d->isPrimary)->setIsActive(true);$this->syncContactPhones($person,$d->phones);if($a->getId())$kept[$a->getId()]=true;}
+        $submittedEmails=[];foreach($rows as $d){$email=strtolower(trim((string)$d->businessEmail));if($email===''||isset($submittedEmails[$email])){throw new \DomainException($email===''?'El correo laboral de cada contacto es obligatorio.':'El correo laboral no puede repetirse entre contactos.');}$submittedEmails[$email]=true;$a=$d->id?($existing[$d->id]??null):null;if($repo->findOneByBusinessEmail($email,$a?->getId())!==null){throw new \DomainException(sprintf('El correo laboral %s ya está registrado en otro contacto.',$email));}if(!$a){$person=new Contact((string)$d->firstName);$a=new ClientContact($client,$person);$this->entityManager->persist($person);$this->entityManager->persist($a);} $person=$a->getContact();$person->setFirstName((string)$d->firstName)->setLastName($d->lastName)->setPersonalEmail($d->personalEmail)->setBirthDate($d->birthDate)->setWorkDays($d->workDays)->setWorkHours($d->workHours)->setNotes($d->notes)->setIsActive(true);$a->setBranch($branch)->setDepartment($d->department)->setJobTitle($d->jobTitle)->setEmail($email)->setCanRequestProducts($d->canRequestProducts)->setIsPrimary($d->isPrimary)->setIsActive(true);$this->syncContactPhones($person,$d->phones);if($a->getId())$kept[$a->getId()]=true;}
         foreach($existing as $id=>$a){if(!isset($kept[$id]))$a->setIsActive(false);}
     }
     /** @param list<ClientPhoneData> $rows */

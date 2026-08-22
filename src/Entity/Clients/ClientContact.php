@@ -14,7 +14,11 @@ class ClientContact {
     /** Sucursal donde atiende. */ #[ORM\ManyToOne(targetEntity:ClientBranch::class),ORM\JoinColumn(name:'client_branch_id',nullable:true,onDelete:'RESTRICT')] private ?ClientBranch $branch=null;
     /** Departamento o área. */ #[ORM\Column(length:120,nullable:true)] private ?string $department=null;
     /** Cargo dentro del cliente. */ #[ORM\Column(name:'job_title',length:120,nullable:true)] private ?string $jobTitle=null;
-    /** Correo laboral propio de esta relación. */ #[ORM\Column(name:'business_email',length:180,nullable:true)] private ?string $businessEmail=null;
+    /** Correo laboral propio de esta relación. */ #[ORM\Column(name:'business_email',length:180,unique:true,nullable:true)] private ?string $businessEmail=null;
+    #[ORM\Column(name:'email_verified_at',type:'datetime_immutable',nullable:true)] private ?\DateTimeImmutable $emailVerifiedAt=null;
+    #[ORM\Column(name:'email_verification_token_hash',length:64,unique:true,nullable:true)] private ?string $emailVerificationTokenHash=null;
+    #[ORM\Column(name:'email_verification_expires_at',type:'datetime_immutable',nullable:true)] private ?\DateTimeImmutable $emailVerificationExpiresAt=null;
+    #[ORM\Column(name:'email_verification_sent_at',type:'datetime_immutable',nullable:true)] private ?\DateTimeImmutable $emailVerificationSentAt=null;
     /** Contacto principal. */ #[ORM\Column(name:'is_primary',options:['default'=>false])] private bool $isPrimary=false;
     /** Puede solicitar productos. */ #[ORM\Column(name:'can_request_products',options:['default'=>true])] private bool $canRequestProducts=true;
     #[ORM\Column(name:'primary_client_id',type:'integer',nullable:true,insertable:false,updatable:false,generated:'ALWAYS',columnDefinition:'INT GENERATED ALWAYS AS (CASE WHEN is_active = 1 AND is_primary = 1 THEN client_id ELSE NULL END) STORED')] private ?int $primaryClientId=null;
@@ -25,7 +29,14 @@ class ClientContact {
     public function getBranch():?ClientBranch{return $this->branch;} public function setBranch(?ClientBranch $v):self{$this->branch=$v;return $this;} public function getDepartment():?string{return $this->department;} public function setDepartment(?string $v):self{$v=trim((string)$v);$this->department=$v?:null;return $this;}
     public function getFullName():string{return $this->contact->getFullName();} public function setFullName(string $v):self{$parts=preg_split('/\s+/',trim($v),2)?:[];$this->contact->setFirstName($parts[0]??'')->setLastName($parts[1]??null);return $this;}
     public function getJobTitle():?string{return $this->jobTitle;} public function setJobTitle(?string $v):self{$v=trim((string)$v);$this->jobTitle=$v?:null;return $this;}
-    public function getEmail():?string{return $this->businessEmail;} public function setEmail(?string $v):self{$v=trim((string)$v);$this->businessEmail=$v?strtolower($v):null;return $this;}
+    public function getEmail():?string{return $this->businessEmail;} public function setEmail(?string $v):self{$v=trim((string)$v);$normalized=$v?strtolower($v):null;if($normalized!==$this->businessEmail){$this->businessEmail=$normalized;$this->emailVerifiedAt=null;$this->clearEmailVerification();}return $this;}
+    public function isEmailVerified():bool{return $this->emailVerifiedAt!==null;}
+    public function getEmailVerifiedAt():?\DateTimeImmutable{return $this->emailVerifiedAt;}
+    public function getEmailVerificationSentAt():?\DateTimeImmutable{return $this->emailVerificationSentAt;}
+    public function beginEmailVerification(string $tokenHash,\DateTimeImmutable $expiresAt):self{$this->emailVerificationTokenHash=$tokenHash;$this->emailVerificationExpiresAt=$expiresAt;$this->emailVerificationSentAt=new \DateTimeImmutable('now',new \DateTimeZone('UTC'));return $this;}
+    public function canConfirmEmail(string $tokenHash,\DateTimeImmutable $now):bool{return $this->emailVerificationTokenHash!==null&&hash_equals($this->emailVerificationTokenHash,$tokenHash)&&$this->emailVerificationExpiresAt!==null&&$this->emailVerificationExpiresAt>=$now;}
+    public function confirmEmail():self{$this->emailVerifiedAt=new \DateTimeImmutable('now',new \DateTimeZone('UTC'));$this->clearEmailVerification();return $this;}
+    public function clearEmailVerification():self{$this->emailVerificationTokenHash=null;$this->emailVerificationExpiresAt=null;$this->emailVerificationSentAt=null;return $this;}
     public function getPhone():?string{return $this->contact->getPrimaryPhone();} public function setPhone(?string $v):self{$this->contact->setPrimaryPhone($v);return $this;}
     public function getWorkSchedule():?string{return $this->contact->getWorkHours();} public function setWorkSchedule(?string $v):self{$this->contact->setWorkHours($v);return $this;}
     public function canRequestProducts():bool{return $this->canRequestProducts;} public function setCanRequestProducts(bool $v):self{$this->canRequestProducts=$v;return $this;}

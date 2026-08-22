@@ -77,6 +77,7 @@ final class ClientContactRepository extends ServiceEntityRepository
             ->andWhere('contact.canRequestProducts = true')
             ->andWhere('person.isActive = true')
             ->andWhere('client.isActive = true')
+            ->andWhere('contact.emailVerifiedAt IS NOT NULL')
             ->setParameter('publicNumber', strtoupper(trim($publicNumber)))
             ->getQuery()
             ->getOneOrNullResult();
@@ -94,11 +95,26 @@ final class ClientContactRepository extends ServiceEntityRepository
             ->andWhere('contact.canRequestProducts = true')
             ->andWhere('person.isActive = true')
             ->andWhere('client.isActive = true')
+            ->andWhere('contact.emailVerifiedAt IS NOT NULL')
             ->andWhere('LOWER(contact.businessEmail) = :email OR LOWER(person.personalEmail) = :email')
             ->setParameter('email', $email)
             ->orderBy('contact.isPrimary', 'DESC')
             ->addOrderBy('contact.id', 'ASC')
             ->getQuery()->getResult();
+    }
+
+    public function findOneByBusinessEmail(string $email, ?int $exceptId = null): ?ClientContact
+    {
+        $query = $this->createQueryBuilder('contact')
+            ->andWhere('LOWER(contact.businessEmail) = :email')
+            ->setParameter('email', strtolower(trim($email)));
+        if ($exceptId !== null) { $query->andWhere('contact.id != :exceptId')->setParameter('exceptId', $exceptId); }
+        return $query->setMaxResults(1)->getQuery()->getOneOrNullResult();
+    }
+
+    public function findByEmailVerificationTokenHash(string $hash): ?ClientContact
+    {
+        return $this->findOneBy(['emailVerificationTokenHash' => $hash]);
     }
 
     /**

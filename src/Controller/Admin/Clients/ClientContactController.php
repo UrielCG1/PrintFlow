@@ -9,10 +9,12 @@ use App\Entity\Clients\ClientContact;
 use App\Entity\Users\User;
 use App\Form\Admin\Clients\ClientContactType;
 use App\Repository\Clients\ClientContactRepository;
+use App\Service\Clients\ClientContactEmailVerifier;
 use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Form\FormError;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route(
@@ -40,6 +42,7 @@ final class ClientContactController extends AbstractController
         Request $request,
         #[MapEntity(id: 'clientId')] Client $client,
         ClientContactManager $clientContactManager,
+        ClientContactEmailVerifier $emailVerifier,
     ): Response {
         $this->denyAccessUnlessGranted('clients.contacts.create');
 
@@ -59,9 +62,15 @@ final class ClientContactController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $clientContactManager->create($client, $data, $this->getActor());
+            try {
+                $contact = $clientContactManager->create($client, $data, $this->getActor());
+            } catch (\DomainException $exception) {
+                $form->addError(new FormError($exception->getMessage()));
+                return $this->render('admin/clients/contacts/form.html.twig', ['client'=>$client,'contact'=>null,'form'=>$form,'pageTitle'=>'Nuevo contacto']);
+            }
 
-            $this->addFlash('success', 'Contacto registrado correctamente.');
+            try { $emailVerifier->send($contact); $this->addFlash('success', 'Contacto registrado correctamente. Enviamos un correo de confirmación.'); }
+            catch (\Throwable) { $this->addFlash('warning', 'El contacto fue registrado, pero no fue posible enviar el correo de confirmación.'); }
 
             return $this->redirectToRoute('admin_client_contacts_index', [
                 'clientId' => $client->getId(),
@@ -87,6 +96,7 @@ final class ClientContactController extends AbstractController
         #[MapEntity(id: 'clientId')] Client $client,
         #[MapEntity(id: 'contactId')] ClientContact $contact,
         ClientContactManager $clientContactManager,
+        ClientContactEmailVerifier $emailVerifier,
     ): Response {
         $this->denyAccessUnlessGranted('clients.contacts.update');
         $this->ensureContactBelongsToClient($contact, $client);
@@ -106,9 +116,15 @@ final class ClientContactController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $clientContactManager->update($contact, $data, $this->getActor());
+            try {
+                $clientContactManager->update($contact, $data, $this->getActor());
+            } catch (\DomainException $exception) {
+                $form->addError(new FormError($exception->getMessage()));
+                return $this->render('admin/clients/contacts/form.html.twig', ['client'=>$client,'contact'=>$contact,'form'=>$form,'pageTitle'=>'Editar contacto']);
+            }
 
-            $this->addFlash('success', 'Contacto actualizado correctamente.');
+            try { if (!$contact->isEmailVerified() && $contact->getEmailVerificationSentAt() === null) { $emailVerifier->send($contact); } $this->addFlash('success', 'Contacto actualizado correctamente.'); }
+            catch (\Throwable) { $this->addFlash('warning', 'El contacto fue actualizado, pero no fue posible enviar el correo de confirmación.'); }
 
             return $this->redirectToRoute('admin_client_contacts_index', [
                 'clientId' => $client->getId(),
