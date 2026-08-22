@@ -1,4 +1,5 @@
 {% macro help_tip(text) %}<button type="button" class="btn btn-link text-success border-0 p-0 pf-field-tooltip" data-controller="ui--tooltip" data-bs-toggle="tooltip" data-bs-title="{{ text|e('html_attr') }}" aria-label="Ayuda: {{ text|e('html_attr') }}"><i class="bi bi-question-circle-fill"></i></button>{% endmacro %}
+{% macro field(field, label, help, widget_class, attr) %}{% import _self as ui %}<div class="pf-field-label">{{ form_label(field,label) }}{{ ui.help_tip(help) }}</div>{{ form_widget(field,{attr:{class:widget_class}|merge(attr|default({}))}) }}{{ form_errors(field) }}{% endmacro %}
 {% macro item(item, number) %}
 {% import _self as ui %}{% set specifications = item.specifications.vars.data|default({}) %}
 <section class="pf-quote-card pf-quote-item" data-ui--public-quote-target="item">
