@@ -1801,10 +1801,34 @@
 
 .pf-quote-item__supporting {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.25rem;
     align-items: start;
     margin-top: 1.5rem;
+}
+
+.pf-quote-item__supporting .pf-file-preview:not([hidden]) {
+    display: grid;
+    grid-template-columns: minmax(12rem, 22rem) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem;
+}
+
+.pf-quote-item__supporting .pf-file-preview__image,
+.pf-quote-item__supporting .pf-file-preview__document {
+    height: 11rem;
+}
+
+.pf-quote-item__supporting .pf-file-preview__details {
+    margin-top: 0;
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    background: var(--pf-surface-container-lowest);
+}
+
+.pf-quote-item__supporting .pf-quote-field--textarea .form-control {
+    min-height: 8rem;
 }
 
 @media (max-width: 991.98px) {
@@ -1836,6 +1860,14 @@
     .pf-dimensions-grid > :last-child,
     .pf-quote-item__selection > :nth-child(2) {
         grid-column: auto;
+    }
+
+    .pf-quote-item__supporting .pf-file-preview:not([hidden]) {
+        grid-template-columns: 1fr;
+    }
+
+    .pf-quote-item__supporting .pf-file-preview__details {
+        margin-top: 0;
     }
 }
 
