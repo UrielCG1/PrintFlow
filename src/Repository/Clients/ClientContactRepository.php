@@ -66,6 +66,25 @@ final class ClientContactRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
+    /** @return list<ClientContact> */
+    public function findActiveRequestersByEmail(string $email): array
+    {
+        $email = strtolower(trim($email));
+        return $this->createQueryBuilder('contact')
+            ->innerJoin('contact.contact', 'person')
+            ->innerJoin('contact.client', 'client')
+            ->addSelect('person', 'client')
+            ->andWhere('contact.isActive = true')
+            ->andWhere('contact.canRequestProducts = true')
+            ->andWhere('person.isActive = true')
+            ->andWhere('client.isActive = true')
+            ->andWhere('LOWER(contact.businessEmail) = :email OR LOWER(person.personalEmail) = :email')
+            ->setParameter('email', $email)
+            ->orderBy('contact.isPrimary', 'DESC')
+            ->addOrderBy('contact.id', 'ASC')
+            ->getQuery()->getResult();
+    }
+
     /**
      * @return list<ClientContact>
      */

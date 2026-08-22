@@ -5,6 +5,12 @@ framework:
     # Note that the session will be started ONLY if you read or write from it.
     session: true
 
+    rate_limiter:
+        public_customer_number_recovery:
+            policy: fixed_window
+            limit: 5
+            interval: '15 minutes'
+
     #esi: true
     #fragments: true
 

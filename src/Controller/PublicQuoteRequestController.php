@@ -10,12 +10,15 @@ use App\Form\PublicQuoteRequestType;
 use App\Repository\Catalog\CommercialItemCharacteristicRepository;
 use App\Repository\Clients\ClientContactRepository;
 use App\Service\Quotations\PublicQuoteRequestMailer;
+use App\Service\Quotations\PublicCustomerNumberMailer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\{JsonResponse,Request,Response};
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\String\Slugger\SluggerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
 final class PublicQuoteRequestController extends AbstractController
 {
  #[Route('/cotizar',name:'public_quote_request',methods:['GET','POST'])]
@@ -46,6 +49,15 @@ final class PublicQuoteRequestController extends AbstractController
  public function customer(string $number,ClientContactRepository $contacts,EntityManagerInterface $em):JsonResponse
  {
   $contact=$contacts->findActiveRequesterByPublicNumber($number);if(!$contact)return $this->json(['message'=>'Cliente no encontrado.'],404);$hasDelivery=false;foreach($em->getRepository(ClientAddress::class)->findForClient($contact->getClient()) as $address){if($address->isActive()&&$address->isDeliveryAddress()){$hasDelivery=true;break;}}$email=$contact->getEmail()?:$contact->getContact()->getPersonalEmail();return $this->json(['name'=>$this->maskName($contact->getFullName()),'email'=>$this->maskEmail($email),'phone'=>$this->maskPhone($contact->getPhone()),'company'=>$this->maskName($contact->getClient()->getBusinessName()),'hasDeliveryAddress'=>$hasDelivery]);
+ }
+ #[Route('/cotizar/recuperar-numero-cliente',name:'public_quote_customer_number_recovery',methods:['POST'])]
+ public function recoverCustomerNumber(Request $request,ClientContactRepository $contacts,PublicCustomerNumberMailer $mailer,#[Autowire(service:'limiter.public_customer_number_recovery')] RateLimiterFactory $limiter):JsonResponse
+ {
+  if(!$this->isCsrfTokenValid('public_customer_number_recovery',$request->request->getString('_token')))return $this->json(['message'=>'La solicitud expiró. Recarga la página e inténtalo nuevamente.'],400);
+  $email=strtolower(trim($request->request->getString('email')));if(filter_var($email,FILTER_VALIDATE_EMAIL)===false)return $this->json(['message'=>'Ingresa un correo electrónico válido.'],422);
+  if(!$limiter->create(($request->getClientIp()??'unknown').'|'.hash('sha256',$email))->consume(1)->isAccepted())return $this->json(['message'=>'Has realizado varios intentos. Espera unos minutos antes de volver a solicitarlo.'],429);
+  $matches=$contacts->findActiveRequestersByEmail($email);if($matches!==[]){try{$mailer->send($email,$matches);}catch(\Throwable){}}
+  return $this->json(['message'=>'Si el correo está registrado, recibirás en unos minutos tu número de cliente. Revisa también la carpeta de correo no deseado.']);
  }
  #[Route('/cotizar/productos/{categoryId}',name:'public_quote_products',requirements:['categoryId'=>'\d+'],methods:['GET'])]
  public function products(int $categoryId,EntityManagerInterface $em,CommercialItemCharacteristicRepository $configurations):JsonResponse

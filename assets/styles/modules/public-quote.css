@@ -1571,6 +1571,36 @@
     gap: var(--pf-space-lg);
 }
 
+.pf-customer-recovery {
+    padding: 1rem 1.15rem;
+    border: 1px solid rgba(var(--pf-primary-container-rgb), 0.18);
+    border-radius: 1rem;
+    background: rgba(var(--pf-primary-container-rgb), 0.055);
+}
+
+.pf-customer-recovery p {
+    margin: 0.2rem 0 0.85rem;
+    color: var(--pf-text-muted);
+    font-size: 0.82rem;
+}
+
+.pf-customer-recovery__form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem;
+}
+
+.pf-customer-recovery__form .form-control,
+.pf-customer-recovery__form .btn {
+    min-height: 3rem;
+}
+
+@media (max-width: 575.98px) {
+    .pf-customer-recovery__form {
+        grid-template-columns: 1fr;
+    }
+}
+
 .pf-file-preview {
     min-height: 0;
     max-width: 100%;
