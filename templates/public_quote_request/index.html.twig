@@ -38,6 +38,7 @@
 
 {% block title %}Solicitar cotización{% endblock %}
 {% block body %}
+{% set success_messages = app.flashes('success') %}
 <div class="pf-public-quote" data-controller="ui--public-quote" data-ui--public-quote-customer-url-value="{{ path('public_quote_customer',{number:'CONTACT_NUMBER'}) }}" data-ui--public-quote-products-url-value="{{ path('public_quote_products',{categoryId:'CATEGORY_ID'}) }}" data-ui--public-quote-price-url-value="{{ path('public_quote_price_preview',{id:'PRODUCT_ID'}) }}">
     <section class="pf-public-quote__hero" style="--pf-quote-hero-image:url('{{ asset('images/quote/hero-printing.jpg') }}')">
         <div class="container-xxl pf-public-quote__hero-container"><div class="pf-public-quote__hero-content">
@@ -58,7 +59,6 @@
 
         <main class="col-12 col-xl-9"><div class="pf-quote-content">
             <div class="pf-quote-stepper" aria-label="Progreso de la solicitud"><div class="pf-quote-stepper__item is-active"><span>1</span><strong>Cotización</strong></div><div class="pf-quote-stepper__line"></div><div class="pf-quote-stepper__item"><span>2</span><strong>Producción</strong></div><div class="pf-quote-stepper__line"></div><div class="pf-quote-stepper__item"><span>3</span><strong>Entrega</strong></div></div>
-            {% for message in app.flashes('success') %}<div class="alert alert-success d-flex align-items-center gap-2 border-0 mb-4"><i class="bi bi-check-circle-fill"></i><span>{{ message }}</span></div>{% endfor %}
             {{ form_start(form,{attr:{class:'pf-quote-form',id:'quote-form','data-action':'submit->ui--public-quote#validate'}}) }}<div class="pf-quote-form__errors">{{ form_errors(form) }}</div>
 
             <section class="pf-quote-card">
@@ -85,5 +85,18 @@
         </div></main>
     </div></div>
     <div class="modal fade" tabindex="-1" data-quote-confirmation-modal aria-labelledby="quote-confirmation-title" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><div><h2 class="modal-title fs-4" id="quote-confirmation-title">Confirma tu solicitud</h2><p class="text-secondary mb-0">Revisa los datos antes de generar el PDF.</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div><div class="modal-body" data-confirmation-summary></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Regresar y corregir</button><button type="button" class="btn pf-public-quote__hero-button" data-action="ui--public-quote#confirmSubmission"><i class="bi bi-check-circle"></i> Confirmar y enviar</button></div></div></div></div>
+    {% if success_messages is not empty %}
+    <div class="modal fade pf-success-modal" tabindex="-1" data-ui--public-quote-target="successModal" aria-labelledby="quote-success-title" aria-describedby="quote-success-description" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
+        <div class="pf-success-modal__hero"><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button><div class="pf-success-modal__check"><i class="bi bi-check-lg"></i></div><span class="pf-success-modal__eyebrow">Solicitud recibida</span><h2 id="quote-success-title">¡Gracias por confiar en PrintFlow!</h2><p id="quote-success-description">Tu proyecto ya está en manos de nuestro equipo.</p></div>
+        <div class="modal-body pf-success-modal__body"><div class="pf-success-modal__timeline">
+          <div class="pf-success-modal__step is-complete"><span><i class="bi bi-envelope-check"></i></span><div><strong>Enviamos tu cotización preliminar</strong><p>Revisa tu correo electrónico; ahí encontrarás el PDF con la información y precios calculados inicialmente.</p></div></div>
+          <div class="pf-success-modal__step"><span><i class="bi bi-person-workspace"></i></span><div><strong>Nuestro equipo revisará tu solicitud</strong><p>Validaremos el archivo, atenderemos tus observaciones y nos comunicaremos contigo si necesitamos aclarar alguna duda o realizar un ajuste.</p></div></div>
+          <div class="pf-success-modal__step"><span><i class="bi bi-send-check"></i></span><div><strong>Recibirás la cotización revisada</strong><p>Pronto llegará a tu correo la cotización con las consideraciones o modificaciones que correspondan.</p></div></div>
+        </div><div class="pf-success-modal__note"><i class="bi bi-heart-fill"></i><p><strong>Gracias por tu preferencia.</strong><br>Será un gusto dar forma a tu proyecto.</p></div></div>
+        <div class="modal-footer pf-success-modal__footer"><button type="button" class="btn pf-public-quote__hero-button" data-bs-dismiss="modal">Entendido <i class="bi bi-arrow-right"></i></button></div>
+      </div></div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

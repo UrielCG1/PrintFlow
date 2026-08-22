@@ -1,11 +1,11 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['existingCustomer','customerLookup','customerNumber','customerSummary','prospectFields','prototype','items','item','deliveryMethod','deliveryAddress','deliveryAddressId'];
+    static targets = ['existingCustomer','customerLookup','customerNumber','customerSummary','prospectFields','prototype','items','item','deliveryMethod','deliveryAddress','deliveryAddressId','successModal'];
     static values = { customerUrl: String, productsUrl: String, priceUrl: String };
 
-    connect() { this.nextIndex = this.itemTargets.length; this.hasDeliveryAddress = false; this.confirmed = false; this.previewUrls = new WeakMap(); this.toggleCustomer(); this.itemTargets.forEach((item) => this.initializeItem(item)); }
-    disconnect() { this.itemTargets.forEach((item) => this.releasePreview(item)); }
+    connect() { this.nextIndex = this.itemTargets.length; this.hasDeliveryAddress = false; this.confirmed = false; this.previewUrls = new WeakMap(); this.toggleCustomer(); this.itemTargets.forEach((item) => this.initializeItem(item)); if(this.hasSuccessModalTarget&&window.bootstrap?.Modal){this.successModal=window.bootstrap.Modal.getOrCreateInstance(this.successModalTarget,{backdrop:'static'});this.successModal.show();} }
+    disconnect() { this.itemTargets.forEach((item) => this.releasePreview(item)); this.successModal?.dispose(); }
     toggleCustomer() {
         const existing = this.existingCustomerTarget.checked;
         this.customerLookupTarget.hidden = !existing; this.prospectFieldsTarget.hidden = existing;
