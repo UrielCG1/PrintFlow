@@ -22,6 +22,10 @@ final class CommercialCategoryManager
     public function create(CommercialCategoryData $data, User $actor): CommercialCategory
     {
         return $this->entityManager->wrapInTransaction(function () use ($data, $actor): CommercialCategory {
+            if ($data->displayOrder <= 0) {
+                $data->displayOrder = $this->commercialCategoryRepository->nextDisplayOrder();
+            }
+
             $category = new CommercialCategory();
             $this->applyData($category, $data);
 
@@ -58,7 +62,7 @@ final class CommercialCategoryManager
         }
 
         if (!$isActive && $this->commercialItemRepository->hasActiveForCategory($category)) {
-            throw new \DomainException('No puedes desactivar una categoría que tiene conceptos comerciales activos.');
+            throw new \DomainException('No puedes desactivar una categoría que tiene productos o servicios activos.');
         }
 
         $this->entityManager->wrapInTransaction(function () use ($category, $isActive, $actor): void {
@@ -140,7 +144,7 @@ final class CommercialCategoryManager
             }
 
             foreach ($categories as $index => $category) {
-                $category->setDisplayOrder($index + 1);
+                $category->setDisplayOrder(($index + 1) * 10);
             }
 
             $this->auditLogger->record(

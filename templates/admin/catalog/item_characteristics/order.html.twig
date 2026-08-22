@@ -1,0 +1,36 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Ordenar características de {{ item.name }} | PrintFlow{% endblock %}
+{% block app_navigation_active %}catalog_items{% endblock %}
+{% block app_breadcrumb %}Catálogos / Productos y servicios / {{ item.name }} / Características / Ordenar{% endblock %}
+
+{% block app_content %}
+<div class="pf-page__content">
+    {% include 'admin/catalog/_workspace_nav.html.twig' with {catalog_section: 'items'} %}
+    {% include 'admin/catalog/items/_configuration_nav.html.twig' with {item: item, item_configuration_section: 'characteristics'} %}
+
+    <header class="pf-page-header pf-catalog-page-header">
+        <div class="pf-page-header__content"><h1 class="pf-page-header__title">Ordenar captura</h1><p class="pf-page-header__description">Define el orden en que el personal verá las características al capturar {{ item.name }} en una cotización.</p></div>
+        <div class="pf-page-header__actions"><a href="{{ path('admin_catalog_item_characteristics_index', {item: item.id}) }}" class="btn pf-button pf-button--primary"><i class="bi bi-check-lg" aria-hidden="true"></i><span>Terminar</span></a></div>
+    </header>
+
+    <div class="pf-catalog-order-note" role="note"><i class="bi bi-info-circle" aria-hidden="true"></i><div><strong>Orden específico del Producto</strong><p>El orden global de Características no se modifica. Aquí solamente defines cómo se presenta la captura para {{ item.name }}.</p></div></div>
+
+    <section class="pf-card pf-card--padding-none">
+        <div class="pf-table-responsive pf-table-responsive--flat">
+            <table class="pf-table pf-catalog-order-table">
+                <thead><tr><th class="pf-table__cell--center" aria-label="Reordenar"></th><th>Característica</th><th>Captura</th></tr></thead>
+                <tbody data-controller="ui--sortable" data-ui--sortable-url-value="{{ path('admin_catalog_item_characteristics_reorder', {item: item.id}) }}" data-ui--sortable-token-value="{{ csrf_token('catalog_item_characteristic_reorder_' ~ item.id) }}">
+                    {% for configuration in configurations %}
+                        <tr data-id="{{ configuration.id }}" data-sortable-id="{{ configuration.id }}">
+                            <td class="pf-table__cell--center"><button type="button" class="pf-sortable__handle" title="Arrastrar para reordenar" aria-label="Arrastrar {{ configuration.characteristic.name }} para reordenar"><i class="bi bi-grip-vertical" aria-hidden="true"></i></button></td>
+                            <td><div class="pf-catalog-item-cell"><span class="pf-table__primary">{{ configuration.characteristic.name }}</span><code class="pf-table__code">{{ configuration.characteristic.code }}</code></div></td>
+                            <td><span class="pf-catalog-tag {{ configuration.isRequired ? 'is-emphasis' : '' }}">{{ configuration.isRequired ? 'Obligatoria' : 'Opcional' }}</span></td>
+                        </tr>
+                    {% else %}<tr><td colspan="3" class="pf-table__empty">No hay características configuradas para ordenar.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

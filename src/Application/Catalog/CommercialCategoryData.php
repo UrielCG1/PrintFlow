@@ -13,9 +13,17 @@ use Symfony\Component\Validator\Constraints as Assert;
     errorPath: 'code',
     message: 'Ya existe una categoría comercial con este código.',
 )]
+#[UniqueEntity(
+    fields: ['name'],
+    entityClass: CommercialCategory::class,
+    identifierFieldNames: ['id'],
+    errorPath: 'name',
+    message: 'Ya existe una categoría comercial con este nombre.',
+)]
 final class CommercialCategoryData
 {
     public ?int $id = null;
+
     #[Assert\NotBlank(message: 'Captura el código de la categoría.')]
     #[Assert\Length(max: 40)]
     #[Assert\Regex(pattern: '/^[A-Za-z0-9][A-Za-z0-9_-]*$/', message: 'El código solo puede contener letras, números, guiones y guiones bajos.')]
@@ -28,6 +36,7 @@ final class CommercialCategoryData
     #[Assert\Length(max: 65535)]
     public ?string $description = null;
 
+    /** Se conserva para persistencia y ordenamiento, pero ya no se captura manualmente. */
     #[Assert\Range(min: 0, notInRangeMessage: 'El orden de visualización no puede ser negativo.')]
     public int $displayOrder = 0;
 }

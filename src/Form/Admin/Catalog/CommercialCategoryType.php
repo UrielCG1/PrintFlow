@@ -4,7 +4,6 @@ namespace App\Form\Admin\Catalog;
 
 use App\Application\Catalog\CommercialCategoryData;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -16,8 +15,8 @@ final class CommercialCategoryType extends AbstractType
     {
         $builder
             ->add('code', TextType::class, [
-                'label' => 'Código',
-                'help' => 'Identificador interno único. Ejemplo: IMPRESION.',
+                'label' => 'Código técnico',
+                'help' => 'Identificador interno único. Ejemplo: GRAN_FORMATO.',
                 'attr' => [
                     'maxlength' => 40,
                     'autocomplete' => 'off',
@@ -37,15 +36,6 @@ final class CommercialCategoryType extends AbstractType
                 'attr' => [
                     'maxlength' => 65535,
                     'rows' => 4,
-                ],
-            ])
-            ->add('displayOrder', IntegerType::class, [
-                'label' => 'Orden de visualización',
-                'help' => 'Los valores menores aparecen primero.',
-                'attr' => [
-                    'min' => 0,
-                    'step' => 1,
-                    'inputmode' => 'numeric',
                 ],
             ]);
     }

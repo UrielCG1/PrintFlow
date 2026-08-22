@@ -1,0 +1,99 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Ordenar unidades | PrintFlow{% endblock %}
+{% block app_navigation_active %}catalog_units{% endblock %}
+{% block app_breadcrumb %}Catálogos / Unidades de medida / Ordenar{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page__content">
+        {% include 'admin/catalog/_workspace_nav.html.twig' with {catalog_section: 'units'} %}
+
+        <div class="pf-page-header pf-catalog-page-header">
+            <div class="pf-page-header__content">
+                <h1 class="pf-page-header__title">Ordenar unidades</h1>
+                <p class="pf-page-header__description">
+                    Ajusta el orden de visualización dentro de cada dimensión sin mezclar unidades incompatibles.
+                </p>
+            </div>
+            <div class="pf-page-header__actions">
+                <a href="{{ path('admin_catalog_units_index') }}" class="btn pf-button pf-button--primary">
+                    <i class="bi bi-check-lg" aria-hidden="true"></i>
+                    <span>Terminar</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="pf-catalog-order-note" role="note">
+            <i class="bi bi-info-circle" aria-hidden="true"></i>
+            <div>
+                <strong>Orden por dimensión</strong>
+                <p>Arrastra únicamente dentro del mismo bloque. Cada movimiento se guarda automáticamente al soltar la fila.</p>
+            </div>
+        </div>
+
+        <div class="pf-unit-dimensions">
+            {% for group in dimensionGroups %}
+                <section class="pf-card pf-card--padding-none pf-unit-dimension">
+                    <header class="pf-unit-dimension__header">
+                        <div>
+                            <div class="pf-unit-dimension__title-row">
+                                <h2 class="pf-unit-dimension__title">{{ group.dimension.label }}</h2>
+                                <span class="pf-catalog-tag">{{ group.units|length }}</span>
+                            </div>
+                            <p class="pf-unit-dimension__description">{{ group.dimension.description }}</p>
+                        </div>
+                    </header>
+
+                    <div class="pf-table-responsive pf-table-responsive--flat">
+                        <table class="pf-table pf-catalog-order-table">
+                            <thead>
+                                <tr>
+                                    <th class="pf-table__cell--center" aria-label="Reordenar"></th>
+                                    <th>Unidad</th>
+                                    <th>Conversión</th>
+                                </tr>
+                            </thead>
+                            <tbody
+                                data-controller="ui--sortable"
+                                data-ui--sortable-url-value="{{ path('admin_catalog_units_reorder') }}"
+                                data-ui--sortable-token-value="{{ csrf_token('catalog_unit_reorder') }}"
+                            >
+                                {% for unit in group.units %}
+                                    <tr data-id="{{ unit.id }}" data-sortable-id="{{ unit.id }}">
+                                        <td class="pf-table__cell--center">
+                                            <button type="button" class="pf-sortable__handle" title="Arrastrar para reordenar" aria-label="Arrastrar {{ unit.name }} para reordenar">
+                                                <i class="bi bi-grip-vertical" aria-hidden="true"></i>
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <div class="pf-unit-identity">
+                                                <div class="pf-unit-identity__title-row">
+                                                    <span class="pf-table__primary">{{ unit.name }}</span>
+                                                    <span class="pf-unit-symbol">{{ unit.symbol }}</span>
+                                                </div>
+                                                <code class="pf-table__code">{{ unit.code }}</code>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if unit.baseUnit %}
+                                                1 {{ unit.symbol }} = {{ unit.conversionFactorAsFloat }} {{ unit.baseUnit.symbol }}
+                                            {% elseif group.dimension.value == 'COUNT' %}
+                                                <span class="pf-catalog-muted">Sin conversión universal</span>
+                                            {% else %}
+                                                <span class="pf-unit-base-label"><i class="bi bi-bullseye" aria-hidden="true"></i> Unidad base</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            {% else %}
+                <div class="pf-card pf-card__body pf-table__empty-content">
+                    <p class="pf-table__empty-title">No hay unidades activas para ordenar.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}

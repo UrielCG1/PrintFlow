@@ -15,7 +15,7 @@ use Symfony\Component\Validator\Constraints as Assert;
     entityClass: CommercialItem::class,
     identifierFieldNames: ['id'],
     errorPath: 'code',
-    message: 'Ya existe un concepto comercial con este código.',
+    message: 'Ya existe un producto o servicio con este código.',
 )]
 final class CommercialItemData
 {
@@ -29,7 +29,7 @@ final class CommercialItemData
     )]
     public ?string $code = null;
 
-    #[Assert\NotNull(message: 'Selecciona el tipo de concepto.')]
+    #[Assert\NotNull(message: 'Selecciona si se trata de un producto o un servicio.')]
     public ?CommercialItemType $type = CommercialItemType::SERVICE;
 
     #[Assert\NotNull(message: 'Selecciona el perfil de especificaciones para cotización.')]

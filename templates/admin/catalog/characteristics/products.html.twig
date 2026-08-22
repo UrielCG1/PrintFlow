@@ -1,0 +1,52 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Productos que utilizan {{ characteristic.name }} | PrintFlow{% endblock %}
+{% block app_navigation_active %}catalog_characteristics{% endblock %}
+{% block app_breadcrumb %}Catálogos / Características de producto / {{ characteristic.name }} / Productos{% endblock %}
+
+{% block app_content %}
+<div class="pf-page__content">
+    {% include 'admin/catalog/_workspace_nav.html.twig' with {catalog_section: 'characteristics'} %}
+    {% include 'admin/catalog/characteristics/_configuration_nav.html.twig' with {characteristic: characteristic, characteristic_configuration_section: 'products'} %}
+
+    <header class="pf-page-header pf-catalog-page-header">
+        <div class="pf-page-header__content"><h1 class="pf-page-header__title">Productos que la utilizan</h1><p class="pf-page-header__description">Consulta dónde se usa la característica y cómo está configurada en cada Producto.</p></div>
+    </header>
+
+    <section class="pf-card pf-card--padding-none" aria-label="Productos que utilizan la característica">
+        <div class="pf-catalog-list-meta"><p class="pf-catalog-list-meta__summary">{{ configurations|length }} {{ configurations|length == 1 ? 'Producto configurado' : 'Productos configurados' }}</p><p class="pf-catalog-list-meta__hint"><i class="bi bi-info-circle" aria-hidden="true"></i>La obligatoriedad y las opciones permitidas pueden variar entre Productos.</p></div>
+        <div class="pf-table-responsive pf-table-responsive--flat">
+            <table class="pf-table pf-characteristic-products-table">
+                <thead><tr><th>Producto</th><th>Configuración comercial</th><th>Captura</th><th>Opciones permitidas</th><th>Estado</th><th class="pf-table__actions-cell">Acción</th></tr></thead>
+                <tbody>
+                    {% for configuration in configurations %}
+                        {% set item = configuration.commercialItem %}
+                        <tr>
+                            <td><div class="pf-catalog-item-cell"><span class="pf-table__primary">{{ item.name }}</span><code class="pf-table__code">{{ item.code }}</code></div></td>
+                            <td><div class="pf-catalog-stack"><span class="pf-catalog-stack__primary">{{ item.category.name }}</span><span class="pf-catalog-stack__secondary"><i class="bi bi-rulers" aria-hidden="true"></i>{{ item.measurementUnit.name }}</span></div></td>
+                            <td><span class="pf-catalog-tag {{ configuration.isRequired ? 'is-emphasis' : '' }}">{{ configuration.isRequired ? 'Obligatoria' : 'Opcional' }}</span></td>
+                            <td>
+                                {% if characteristic.inputType.supportsOptions %}
+                                    {% if configuration.allowedOptions|length > 0 %}
+                                        <div class="pf-characteristic-option-chips">{% for allowedOption in configuration.allowedOptions %}<span class="pf-catalog-tag">{{ allowedOption.characteristicOption.name }}</span>{% endfor %}</div>
+                                    {% else %}<span class="pf-catalog-muted">Sin opciones permitidas</span>{% endif %}
+                                {% else %}<span class="pf-catalog-muted">No aplica</span>{% endif %}
+                            </td>
+                            <td><span class="pf-status-badge {{ item.isActive ? 'pf-status-badge--success' : 'pf-status-badge--warning' }}"><span class="pf-status-badge__dot" aria-hidden="true"></span>{{ item.isActive ? 'Activo' : 'Inactivo' }}</span></td>
+                            <td class="pf-table__actions-cell">
+                                {% if is_granted('catalog.items.configure_characteristics') %}
+                                    <a href="{{ path('admin_catalog_item_characteristics_edit', {item: item.id, configuration: configuration.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm"><i class="bi bi-sliders" aria-hidden="true"></i><span>Configurar</span></a>
+                                {% else %}
+                                    <a href="{{ path('admin_catalog_items_configure', {id: item.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm"><i class="bi bi-eye" aria-hidden="true"></i><span>Ver Producto</span></a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="6" class="pf-table__empty"><div class="pf-table__empty-content"><span class="pf-table__empty-icon" aria-hidden="true"><i class="bi bi-box-seam"></i></span><p class="pf-table__empty-title">Esta característica todavía no se utiliza</p><p class="pf-table__empty-description">Puedes asignarla desde la sección Características de cualquier Producto activo.</p></div></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

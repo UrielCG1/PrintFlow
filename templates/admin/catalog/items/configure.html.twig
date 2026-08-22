@@ -1,0 +1,171 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Configurar {{ item.name }} | PrintFlow{% endblock %}
+{% block app_navigation_active %}catalog_items{% endblock %}
+{% block app_breadcrumb %}Catálogos / Productos y servicios / {{ item.name }}{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page__content">
+        {% include 'admin/catalog/_workspace_nav.html.twig' with {catalog_section: 'items'} %}
+        {% include 'admin/catalog/items/_configuration_nav.html.twig' with {
+            item: item,
+            item_configuration_section: 'general'
+        } %}
+
+        <header class="pf-page-header pf-catalog-page-header">
+            <div class="pf-page-header__content">
+                <h1 class="pf-page-header__title">Configuración general</h1>
+                <p class="pf-page-header__description">
+                    Revisa la identidad comercial del registro y accede a precios o características desde una sola configuración.
+                </p>
+            </div>
+
+            <div class="pf-page-header__actions">
+                {% if is_granted('catalog.items.update') %}
+                    <a href="{{ path('admin_catalog_items_edit', {id: item.id}) }}" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                        <span>Editar información</span>
+                    </a>
+                {% endif %}
+            </div>
+        </header>
+
+        <div class="pf-item-config-grid">
+            <section class="pf-card pf-item-config-panel" aria-labelledby="item-general-heading">
+                <div class="pf-card__body">
+                    <div class="pf-item-config-panel__heading">
+                        <span class="pf-item-config-panel__icon" aria-hidden="true"><i class="bi bi-card-text"></i></span>
+                        <div>
+                            <h2 id="item-general-heading" class="pf-item-config-panel__title">Información comercial</h2>
+                            <p class="pf-item-config-panel__description">Datos que identifican y clasifican este producto o servicio.</p>
+                        </div>
+                    </div>
+
+                    <dl class="pf-item-details">
+                        <div class="pf-item-details__row"><dt>Código</dt><dd><code class="pf-table__code">{{ item.code }}</code></dd></div>
+                        <div class="pf-item-details__row"><dt>Tipo</dt><dd>{{ item.type.label }}</dd></div>
+                        <div class="pf-item-details__row"><dt>Categoría</dt><dd>{{ item.category.name }}</dd></div>
+                        <div class="pf-item-details__row"><dt>Unidad de medida</dt><dd>{{ item.measurementUnit.name }} <span class="pf-item-details__muted">({{ item.measurementUnit.code }})</span></dd></div>
+                        <div class="pf-item-details__row"><dt>Perfil de cotización</dt><dd>{{ item.quotationSpecificationProfile.label }}</dd></div>
+                        <div class="pf-item-details__row pf-item-details__row--full"><dt>Descripción</dt><dd>{{ item.description ?: 'Sin descripción.' }}</dd></div>
+                    </dl>
+                </div>
+            </section>
+
+            <section class="pf-card pf-item-config-panel" aria-labelledby="item-pricing-heading">
+                <div class="pf-card__body">
+                    <div class="pf-item-config-panel__heading">
+                        <span class="pf-item-config-panel__icon" aria-hidden="true"><i class="bi bi-cash-stack"></i></span>
+                        <div>
+                            <h2 id="item-pricing-heading" class="pf-item-config-panel__title">Precio y rangos</h2>
+                            <p class="pf-item-config-panel__description">Precio base y escalas por cantidad utilizadas por el cotizador.</p>
+                        </div>
+                    </div>
+
+                    <div class="pf-item-metric">
+                        <span class="pf-item-metric__label">Precio base</span>
+                        <strong class="pf-item-metric__value">MXN ${{ item.basePrice|number_format(2, '.', ',') }}</strong>
+                    </div>
+
+                    <p class="pf-item-config-panel__status">
+                        <strong>{{ activePriceRuleCount }}</strong> {{ activePriceRuleCount == 1 ? 'rango activo' : 'rangos activos' }}
+                        {% if priceRuleCount > activePriceRuleCount %}
+                            · {{ priceRuleCount - activePriceRuleCount }} {{ (priceRuleCount - activePriceRuleCount) == 1 ? 'inactivo' : 'inactivos' }}
+                        {% endif %}
+                    </p>
+
+                    {% if is_granted('catalog.items.update_price') %}
+                        <a href="{{ path('admin_catalog_item_price_rules_index', {item: item.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm">
+                            <span>Administrar precios</span>
+                            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            </section>
+
+            <section class="pf-card pf-item-config-panel" aria-labelledby="item-characteristics-heading">
+                <div class="pf-card__body">
+                    <div class="pf-item-config-panel__heading">
+                        <span class="pf-item-config-panel__icon" aria-hidden="true"><i class="bi bi-sliders"></i></span>
+                        <div>
+                            <h2 id="item-characteristics-heading" class="pf-item-config-panel__title">Características</h2>
+                            <p class="pf-item-config-panel__description">Datos controlados que se solicitan al capturar una partida.</p>
+                        </div>
+                    </div>
+
+                    {% if item.type.value == 'PRODUCT' %}
+                        <div class="pf-item-metric">
+                            <span class="pf-item-metric__label">Configuradas</span>
+                            <strong class="pf-item-metric__value">{{ characteristicCount }}</strong>
+                        </div>
+
+                        <p class="pf-item-config-panel__status">
+                            {{ characteristicCount == 0
+                                ? 'Este Producto todavía no tiene características configuradas.'
+                                : 'La captura de la cotización utilizará esta configuración.'
+                            }}
+                        </p>
+
+                        {% if is_granted('catalog.items.configure_characteristics') %}
+                            <a href="{{ path('admin_catalog_item_characteristics_index', {item: item.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm">
+                                <span>Administrar características</span>
+                                <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                            </a>
+                        {% endif %}
+                    {% else %}
+                        <div class="pf-item-config-panel__not-applicable">
+                            <i class="bi bi-info-circle" aria-hidden="true"></i>
+                            <span>Las características configurables aplican únicamente a registros de tipo Producto.</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+
+        {% if is_granted('catalog.items.toggle_status') %}
+            {% set blocksReactivation = not item.isActive and (not item.category.isActive or not item.measurementUnit.isActive) %}
+            <section class="pf-card pf-item-danger-zone" aria-labelledby="item-status-heading">
+                <div class="pf-card__body pf-item-danger-zone__body">
+                    <div>
+                        <h2 id="item-status-heading" class="pf-item-danger-zone__title">Estado del registro</h2>
+                        <p class="pf-item-danger-zone__description">
+                            {% if item.isActive %}
+                                Desactivar impide utilizar este producto o servicio en nuevas cotizaciones.
+                            {% elseif blocksReactivation %}
+                                No puede reactivarse mientras su categoría comercial o su unidad de medida permanezcan inactivas.
+                            {% else %}
+                                Reactivar vuelve a dejarlo disponible para nuevas operaciones.
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    {% if blocksReactivation %}
+                        <span class="btn pf-button pf-button--secondary disabled" aria-disabled="true">
+                            <i class="bi bi-lock" aria-hidden="true"></i>
+                            <span>Dependencias inactivas</span>
+                        </span>
+                    {% else %}
+                    <form
+                        method="post"
+                        action="{{ path('admin_catalog_items_status', {id: item.id}) }}"
+                        data-controller="ui--confirm-action"
+                        data-action="submit->ui--confirm-action#submit"
+                        data-ui--confirm-action-title-value="{{ item.isActive ? '¿Desactivar producto o servicio?' : '¿Reactivar producto o servicio?' }}"
+                        data-ui--confirm-action-text-value="{{ item.isActive ? 'Dejará de estar disponible para nuevas cotizaciones.' : 'Volverá a estar disponible para nuevas cotizaciones si su categoría y unidad de medida están activas.' }}"
+                        data-ui--confirm-action-confirm-button-text-value="{{ item.isActive ? 'Sí, desactivar' : 'Sí, reactivar' }}"
+                        data-ui--confirm-action-cancel-button-text-value="Cancelar"
+                        data-ui--confirm-action-icon-value="warning"
+                    >
+                        <input type="hidden" name="_token" value="{{ csrf_token('catalog_item_status_' ~ item.id) }}">
+                        <input type="hidden" name="_return_to" value="configure">
+                        <button type="submit" class="btn pf-button {{ item.isActive ? 'pf-button--danger' : 'pf-button--success' }}">
+                            <i class="bi {{ item.isActive ? 'bi-pause-circle' : 'bi-check-circle' }}" aria-hidden="true"></i>
+                            <span>{{ item.isActive ? 'Desactivar' : 'Reactivar' }}</span>
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </section>
+        {% endif %}
+    </div>
+{% endblock %}

@@ -1,52 +1,48 @@
 {% extends 'layouts/app.html.twig' %}
 
 {% block title %}{{ pageTitle }} | PrintFlow{% endblock %}
-{% block app_navigation_active %}catalog{% endblock %}
-{% block app_breadcrumb %}Catálogo / Categorías comerciales / {{ pageTitle }}{% endblock %}
+{% block app_navigation_active %}catalog_categories{% endblock %}
+{% block app_breadcrumb %}Catálogos / Categorías comerciales / {{ pageTitle }}{% endblock %}
 
 {% block app_content %}
     <div class="pf-page__content">
-        <div class="pf-page-header">
+        {% include 'admin/catalog/_workspace_nav.html.twig' with {catalog_section: 'categories'} %}
+
+        <div class="pf-page-header pf-catalog-page-header">
             <div class="pf-page-header__content">
                 <h1 class="pf-page-header__title">{{ pageTitle }}</h1>
                 <p class="pf-page-header__description">
-                    Define cómo se agruparán los conceptos comerciales del cotizador.
+                    Define la identidad y descripción de la categoría. El orden se administra desde el modo de ordenamiento del catálogo.
                 </p>
             </div>
         </div>
 
         <div class="pf-card">
             {{ form_start(form, {attr: {class: 'pf-form pf-card__body', novalidate: 'novalidate'}}) }}
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        {{ form_row(form.code) }}
+                <div class="pf-form-section">
+                    <div class="pf-form-section__header">
+                        <h2 class="pf-form-section__title">Identidad de la categoría</h2>
+                        <p class="pf-form-section__description">Utiliza un nombre claro para el personal y un código técnico estable.</p>
                     </div>
 
-                    <div class="col-md-8">
-                        {{ form_row(form.name) }}
+                    <div class="row g-3">
+                        <div class="col-md-4">{{ form_row(form.code) }}</div>
+                        <div class="col-md-8">{{ form_row(form.name) }}</div>
+                        <div class="col-12">{{ form_row(form.description) }}</div>
                     </div>
+                </div>
 
-                    <div class="col-12">
-                        {{ form_row(form.description) }}
-                    </div>
-
-                    <div class="col-md-4">
-                        {{ form_row(form.displayOrder) }}
+                <div class="pf-catalog-form-note" role="note">
+                    <i class="bi bi-list-ol" aria-hidden="true"></i>
+                    <div>
+                        <strong>El orden ya no se captura manualmente.</strong>
+                        <p>Al crear una categoría se colocará al final. Después puedes acomodarla desde <em>Ordenar categorías</em>.</p>
                     </div>
                 </div>
 
                 <div class="pf-form-actions">
-                    <a
-                        href="{{ path('admin_catalog_categories_index') }}"
-                        class="btn pf-button pf-button--secondary"
-                    >
-                        Cancelar
-                    </a>
-
-                    <button
-                        type="submit"
-                        class="btn pf-button pf-button--primary"
-                    >
+                    <a href="{{ path('admin_catalog_categories_index') }}" class="btn pf-button pf-button--secondary">Cancelar</a>
+                    <button type="submit" class="btn pf-button pf-button--primary">
                         <i class="bi bi-check-lg" aria-hidden="true"></i>
                         <span>{{ category ? 'Guardar cambios' : 'Crear categoría' }}</span>
                     </button>

@@ -6,13 +6,18 @@ use App\Application\Catalog\MeasurementUnitData;
 use App\Application\Catalog\MeasurementUnitManager;
 use App\Entity\Catalog\MeasurementUnit;
 use App\Entity\Users\User;
+use App\Enum\Catalog\MeasurementDimensionType;
 use App\Form\Admin\Catalog\MeasurementUnitType;
+use App\Repository\Catalog\CommercialItemRepository;
 use App\Repository\Catalog\MeasurementUnitRepository;
+use App\Repository\Materials\MaterialRepository;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\FormError;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\HttpFoundation\JsonResponse;
 
 #[Route('/admin/catalogo/unidades', name: 'admin_catalog_units_')]
 final class MeasurementUnitController extends AbstractController
@@ -21,24 +26,63 @@ final class MeasurementUnitController extends AbstractController
     public function index(
         Request $request,
         MeasurementUnitRepository $measurementUnitRepository,
+        CommercialItemRepository $commercialItemRepository,
+        MaterialRepository $materialRepository,
     ): Response {
         $this->denyAccessUnlessGranted('catalog.view');
 
         $status = $request->query->getString('status', 'active');
+        if (!in_array($status, ['active', 'inactive', 'all'], true)) {
+            $status = 'active';
+        }
+
         $isActive = match ($status) {
             'active' => true,
             'inactive' => false,
             default => null,
         };
 
+        $dimensionValue = strtoupper(trim($request->query->getString('dimension')));
+        $dimension = $dimensionValue !== '' && $dimensionValue !== 'ALL'
+            ? MeasurementDimensionType::tryFrom($dimensionValue)
+            : null;
+
+        $page = $measurementUnitRepository->paginateForAdministration(
+            search: $request->query->getString('q'),
+            isActive: $isActive,
+            dimension: $dimension,
+            page: $request->query->getInt('page', 1),
+            perPage: 100,
+        );
+
+        $unitIds = array_values(array_filter(array_map(
+            static fn (MeasurementUnit $unit): ?int => $unit->getId(),
+            $page['items'],
+        )));
+
         return $this->render('admin/catalog/units/index.html.twig', [
-            'page' => $measurementUnitRepository->paginateForAdministration(
-                search: $request->query->getString('q'),
-                isActive: $isActive,
-                page: $request->query->getInt('page', 1),
-            ),
+            'page' => $page,
+            'dimensionGroups' => $this->groupByDimension($page['items']),
+            'dimensions' => MeasurementDimensionType::orderedCases(),
+            'commercialUsageSummary' => $commercialItemRepository->summarizeUsageByMeasurementUnitIds($unitIds),
+            'materialUsageSummary' => $materialRepository->summarizeUsageByMeasurementUnitIds($unitIds),
+            'derivedUsageSummary' => $measurementUnitRepository->countActiveDerivedByBaseUnitIds($unitIds),
             'search' => $request->query->getString('q'),
             'status' => $status,
+            'dimension' => $dimension?->value ?? 'all',
+        ]);
+    }
+
+    #[Route('/ordenar', name: 'order', methods: ['GET'])]
+    public function order(
+        MeasurementUnitRepository $measurementUnitRepository,
+    ): Response {
+        $this->denyAccessUnlessGranted('catalog.units.manage');
+
+        return $this->render('admin/catalog/units/order.html.twig', [
+            'dimensionGroups' => $this->groupByDimension(
+                $measurementUnitRepository->findActiveOrdered(),
+            ),
         ]);
     }
 
@@ -46,19 +90,28 @@ final class MeasurementUnitController extends AbstractController
     public function new(
         Request $request,
         MeasurementUnitManager $measurementUnitManager,
+        MeasurementUnitRepository $measurementUnitRepository,
     ): Response {
         $this->denyAccessUnlessGranted('catalog.units.manage');
 
         $data = new MeasurementUnitData();
-        $form = $this->createForm(MeasurementUnitType::class, $data);
+        $form = $this->createForm(MeasurementUnitType::class, $data, [
+            'base_units' => $measurementUnitRepository->findAvailableBaseUnits(),
+        ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $measurementUnitManager->create($data, $this->getActor());
+            try {
+                $measurementUnitManager->create($data, $this->getActor());
 
-            $this->addFlash('success', 'Unidad de medida registrada correctamente.');
+                $this->addFlash('success', 'Unidad de medida registrada correctamente.');
 
-            return $this->redirectToRoute('admin_catalog_units_index');
+                return $this->redirectToRoute('admin_catalog_units_index');
+            } catch (UniqueConstraintViolationException) {
+                $form->addError(new FormError('Ya existe otra unidad de medida con ese código o nombre.'));
+            } catch (\DomainException|\InvalidArgumentException $exception) {
+                $form->addError(new FormError($exception->getMessage()));
+            }
         }
 
         return $this->render('admin/catalog/units/form.html.twig', [
@@ -73,6 +126,7 @@ final class MeasurementUnitController extends AbstractController
         Request $request,
         MeasurementUnit $unit,
         MeasurementUnitManager $measurementUnitManager,
+        MeasurementUnitRepository $measurementUnitRepository,
     ): Response {
         $this->denyAccessUnlessGranted('catalog.units.manage');
 
@@ -80,17 +134,36 @@ final class MeasurementUnitController extends AbstractController
         $data->id = $unit->getId();
         $data->code = $unit->getCode();
         $data->name = $unit->getName();
+        $data->symbol = $unit->getSymbol();
+        $data->dimensionType = $unit->getDimension();
+        $data->baseUnit = $unit->getBaseUnit();
+        $data->conversionFactor = $unit->getConversionFactor();
+        $data->decimalScale = $unit->getDecimalScale();
+        $data->allowsFraction = $unit->allowsFraction();
         $data->displayOrder = $unit->getDisplayOrder();
 
-        $form = $this->createForm(MeasurementUnitType::class, $data);
+        $form = $this->createForm(MeasurementUnitType::class, $data, [
+            'base_units' => $measurementUnitRepository->findAvailableBaseUnits(
+                editingUnit: $unit,
+                selectedBaseUnit: $unit->getBaseUnit(),
+            ),
+            'lock_code' => strtoupper($unit->getCode()) === 'M2',
+            'lock_conversion' => strtoupper($unit->getCode()) === 'M2',
+        ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $measurementUnitManager->update($unit, $data, $this->getActor());
+            try {
+                $measurementUnitManager->update($unit, $data, $this->getActor());
 
-            $this->addFlash('success', 'Unidad de medida actualizada correctamente.');
+                $this->addFlash('success', 'Unidad de medida actualizada correctamente.');
 
-            return $this->redirectToRoute('admin_catalog_units_index');
+                return $this->redirectToRoute('admin_catalog_units_index');
+            } catch (UniqueConstraintViolationException) {
+                $form->addError(new FormError('Ya existe otra unidad de medida con ese código o nombre.'));
+            } catch (\DomainException|\InvalidArgumentException $exception) {
+                $form->addError(new FormError($exception->getMessage()));
+            }
         }
 
         return $this->render('admin/catalog/units/form.html.twig', [
@@ -179,6 +252,43 @@ final class MeasurementUnitController extends AbstractController
         }
 
         return $this->json(['message' => 'Orden actualizado correctamente.']);
+    }
+
+    /**
+     * @param list<MeasurementUnit> $units
+     * @return list<array{dimension: MeasurementDimensionType, units: list<MeasurementUnit>}>
+     */
+    private function groupByDimension(array $units): array
+    {
+        $byDimension = [];
+
+        foreach ($units as $unit) {
+            $byDimension[$unit->getDimensionType()][] = $unit;
+        }
+
+        $groups = [];
+
+        foreach (MeasurementDimensionType::orderedCases() as $dimension) {
+            $groupUnits = $byDimension[$dimension->value] ?? [];
+
+            if ($groupUnits === []) {
+                continue;
+            }
+
+            usort(
+                $groupUnits,
+                static fn (MeasurementUnit $left, MeasurementUnit $right): int =>
+                    [$left->getDisplayOrder(), $left->getName(), $left->getId()]
+                    <=> [$right->getDisplayOrder(), $right->getName(), $right->getId()],
+            );
+
+            $groups[] = [
+                'dimension' => $dimension,
+                'units' => $groupUnits,
+            ];
+        }
+
+        return $groups;
     }
 
     private function getActor(): User

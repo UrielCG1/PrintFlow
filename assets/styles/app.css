@@ -30,6 +30,7 @@
 @import url('./modules/users.css');
 @import url('./modules/roles.css');
 @import url('./modules/audit-log.css');
+@import url('./modules/catalog.css');
 
 /* Utilidades */
 @import url('./utilities/utilities.css');

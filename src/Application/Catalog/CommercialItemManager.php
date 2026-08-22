@@ -4,6 +4,8 @@ namespace App\Application\Catalog;
 
 use App\Entity\Catalog\CommercialItem;
 use App\Entity\Users\User;
+use App\Enum\Catalog\CommercialItemType;
+use App\Repository\Catalog\CommercialItemCharacteristicRepository;
 use App\Service\Audit\AuditLogger;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -12,6 +14,7 @@ final class CommercialItemManager
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly AuditLogger $auditLogger,
+        private readonly CommercialItemCharacteristicRepository $itemCharacteristicRepository,
     ) {
     }
 
@@ -48,6 +51,16 @@ final class CommercialItemManager
         $this->entityManager->wrapInTransaction(function () use ($item, $data, $canUpdatePrice, $actor): void {
             $oldValues = $this->snapshot($item);
 
+            if (
+                $item->getType() === CommercialItemType::PRODUCT
+                && $data->type === CommercialItemType::SERVICE
+                && $this->itemCharacteristicRepository->hasForItem($item)
+            ) {
+                throw new \DomainException(
+                    'No puedes convertir este Producto en Servicio mientras tenga características configuradas. Retíralas primero desde la sección Características.',
+                );
+            }
+
             $this->applyData($item, $data, $canUpdatePrice);
 
             $newValues = $this->snapshot($item);
@@ -73,10 +86,43 @@ final class CommercialItemManager
         });
     }
 
+    public function updateBasePrice(CommercialItem $item, string $basePrice, User $actor): void
+    {
+        $this->entityManager->wrapInTransaction(function () use ($item, $basePrice, $actor): void {
+            $oldValues = $this->snapshot($item);
+
+            $item->setBasePrice($basePrice);
+
+            $newValues = $this->snapshot($item);
+            if ($oldValues === $newValues) {
+                return;
+            }
+
+            $this->auditLogger->record(
+                $actor,
+                'commercial_item.price_updated',
+                'commercial_item',
+                $item->getId(),
+                $oldValues,
+                $newValues,
+            );
+
+            $this->entityManager->flush();
+        });
+    }
+
     public function setActive(CommercialItem $item, bool $isActive, User $actor): void
     {
         if ($item->isActive() === $isActive) {
             return;
+        }
+
+        if ($isActive && !$item->getCategory()->isActive()) {
+            throw new \DomainException('No puedes reactivar este producto o servicio mientras su categoría comercial permanezca inactiva.');
+        }
+
+        if ($isActive && !$item->getMeasurementUnit()->isActive()) {
+            throw new \DomainException('No puedes reactivar este producto o servicio mientras su unidad de medida permanezca inactiva.');
         }
 
         $this->entityManager->wrapInTransaction(function () use ($item, $isActive, $actor): void {
@@ -108,7 +154,7 @@ final class CommercialItemManager
             || $data->type === null
             || $data->quotationSpecificationProfile === null
         ) {
-            throw new \LogicException('Los datos del concepto comercial están incompletos.');
+            throw new \LogicException('Los datos del producto o servicio están incompletos.');
         }
 
         $isNewItem = $item->getId() === null;

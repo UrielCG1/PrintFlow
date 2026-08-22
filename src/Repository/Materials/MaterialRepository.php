@@ -65,6 +65,39 @@ final class MaterialRepository extends ServiceEntityRepository
             ->getOneOrNullResult() !== null;
     }
 
+
+    /**
+     * @param list<int> $measurementUnitIds
+     * @return array<int, array{total: int, active: int}>
+     */
+    public function summarizeUsageByMeasurementUnitIds(array $measurementUnitIds): array
+    {
+        if ($measurementUnitIds === []) {
+            return [];
+        }
+
+        $rows = $this->createQueryBuilder('material')
+            ->select('IDENTITY(material.measurementUnit) AS unit_id')
+            ->addSelect('COUNT(material.id) AS total_count')
+            ->addSelect('SUM(CASE WHEN material.isActive = true THEN 1 ELSE 0 END) AS active_count')
+            ->andWhere('IDENTITY(material.measurementUnit) IN (:unitIds)')
+            ->setParameter('unitIds', $measurementUnitIds)
+            ->groupBy('material.measurementUnit')
+            ->getQuery()
+            ->getArrayResult();
+
+        $summary = [];
+
+        foreach ($rows as $row) {
+            $summary[(int) $row['unit_id']] = [
+                'total' => (int) $row['total_count'],
+                'active' => (int) $row['active_count'],
+            ];
+        }
+
+        return $summary;
+    }
+
     public function hasActiveForMeasurementUnit(MeasurementUnit $measurementUnit): bool
     {
         return $this->createQueryBuilder('material')

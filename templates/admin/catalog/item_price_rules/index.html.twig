@@ -1,120 +1,83 @@
 {% extends 'layouts/app.html.twig' %}
 
-{% block title %}Rangos de precio | PrintFlow{% endblock %}
-{% block app_navigation_active %}catalog{% endblock %}
-{% block app_breadcrumb %}Catálogo / Conceptos comerciales / Rangos de precio{% endblock %}
+{% block title %}Precio y rangos | PrintFlow{% endblock %}
+{% block app_navigation_active %}catalog_items{% endblock %}
+{% block app_breadcrumb %}Catálogos / Productos y servicios / {{ item.name }} / Precio y rangos{% endblock %}
 
 {% block app_content %}
     <div class="pf-page__content">
-        <div class="pf-page-header">
+        {% include 'admin/catalog/_workspace_nav.html.twig' with {catalog_section: 'items'} %}
+        {% include 'admin/catalog/items/_configuration_nav.html.twig' with {item: item, item_configuration_section: 'pricing'} %}
+
+        <header class="pf-page-header pf-catalog-page-header">
             <div class="pf-page-header__content">
-                <h1 class="pf-page-header__title">Rangos de precio</h1>
-                <p class="pf-page-header__description">
-                    {{ item.code }} — {{ item.name }}
-                </p>
+                <h1 class="pf-page-header__title">Precio y rangos</h1>
+                <p class="pf-page-header__description">Administra el precio base y las escalas por cantidad desde un mismo lugar.</p>
             </div>
-
             <div class="pf-page-header__actions">
-                <a
-                    href="{{ path('admin_catalog_items_edit', {id: item.id}) }}"
-                    class="btn pf-button pf-button--secondary"
-                >
-                    <i class="bi bi-pencil-square" aria-hidden="true"></i>
-                    <span>Editar concepto</span>
-                </a>
-
-                <a
-                    href="{{ path('admin_catalog_item_price_rules_new', {item: item.id}) }}"
-                    class="btn pf-button pf-button--primary"
-                >
-                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                    <span>Nuevo rango</span>
+                <a href="{{ path('admin_catalog_item_price_rules_new', {item: item.id}) }}" class="btn pf-button pf-button--primary">
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i><span>Nuevo rango</span>
                 </a>
             </div>
-        </div>
+        </header>
 
-        <div class="alert alert-info" role="alert">
-            Si no existe un rango activo aplicable, la cotización utilizará el precio base:
-            <strong>MXN ${{ item.basePrice|number_format(2, '.', ',') }}</strong>.
-        </div>
+        <section class="pf-card pf-catalog-price-base" aria-labelledby="base-price-heading">
+            <div class="pf-card__body pf-catalog-price-base__body">
+                <div class="pf-catalog-price-base__copy">
+                    <span class="pf-item-config-panel__icon" aria-hidden="true"><i class="bi bi-currency-dollar"></i></span>
+                    <div>
+                        <h2 id="base-price-heading" class="pf-item-config-panel__title">Precio base</h2>
+                        <p class="pf-item-config-panel__description">Se usa cuando ningún rango activo alcanza la cantidad cotizada.</p>
+                    </div>
+                </div>
 
-        <div class="pf-card pf-card--padding-none">
+                {{ form_start(basePriceForm, {attr: {class: 'pf-form pf-catalog-price-base__form', novalidate: 'novalidate'}}) }}
+                    <div class="pf-catalog-price-base__field">{{ form_row(basePriceForm.basePrice) }}</div>
+                    <button type="submit" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-check-lg" aria-hidden="true"></i><span>Guardar precio</span>
+                    </button>
+                {{ form_end(basePriceForm) }}
+            </div>
+        </section>
+
+        <section class="pf-card pf-card--padding-none" aria-label="Rangos de precio">
+            <div class="pf-catalog-list-meta">
+                <p class="pf-catalog-list-meta__summary">{{ activeRuleCount }} {{ activeRuleCount == 1 ? 'rango activo' : 'rangos activos' }}</p>
+                <p class="pf-catalog-list-meta__hint"><i class="bi bi-info-circle" aria-hidden="true"></i>Se aplica el rango activo con mayor cantidad mínima que no exceda la cantidad cotizada.</p>
+            </div>
             <div class="pf-table-responsive pf-table-responsive--flat">
                 <table class="pf-table">
-                    <thead>
-                        <tr>
-                            <th>Aplica desde</th>
-                            <th class="pf-table__cell--right">Precio unitario</th>
-                            <th>Estado</th>
-                            <th class="pf-table__actions-cell">Acciones</th>
-                        </tr>
-                    </thead>
-
+                    <thead><tr><th>Aplica desde</th><th class="pf-table__cell--right">Precio unitario</th><th>Estado</th><th class="pf-table__actions-cell">Acciones</th></tr></thead>
                     <tbody>
                         {% for rule in rules %}
                             <tr>
-                                <td>
-                                    {{ rule.minQuantity|number_format(4, '.', ',') }}
-                                    {{ item.measurementUnit.code }}
-                                </td>
-
-                                <td class="pf-table__cell--right pf-table__cell--nowrap">
-                                    MXN ${{ rule.unitPrice|number_format(2, '.', ',') }}
-                                </td>
-
-                                <td>
-                                    <span class="pf-status-badge {{ rule.isActive ? 'pf-status-badge--success' : 'pf-status-badge--warning' }}">
-                                        {{ rule.isActive ? 'Activo' : 'Inactivo' }}
-                                    </span>
-                                </td>
-
-                                <td class="pf-table__actions-cell">
-                                    <div class="pf-table__actions">
-                                        <a
-                                            href="{{ path('admin_catalog_item_price_rules_edit', {
-                                                item: item.id,
-                                                rule: rule.id
-                                            }) }}"
-                                            class="btn pf-button pf-button--secondary pf-button--sm"
-                                        >
-                                            <i class="bi bi-pencil-square" aria-hidden="true"></i>
-                                            <span>Editar</span>
-                                        </a>
-
-                                        <form
-                                            method="post"
-                                            action="{{ path('admin_catalog_item_price_rules_status', {
-                                                item: item.id,
-                                                rule: rule.id
-                                            }) }}"
-                                        >
-                                            <input
-                                                type="hidden"
-                                                name="_token"
-                                                value="{{ csrf_token('item_price_rule_status_' ~ rule.id) }}"
-                                            >
-
-                                            <button
-                                                type="submit"
-                                                class="btn pf-button pf-button--sm {{ rule.isActive ? 'pf-button--danger' : 'pf-button--success' }}"
-                                            >
-                                                <i class="bi {{ rule.isActive ? 'bi-pause-circle' : 'bi-check-circle' }}" aria-hidden="true"></i>
-                                                <span>{{ rule.isActive ? 'Desactivar' : 'Reactivar' }}</span>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
+                                <td><span class="pf-table__primary">{{ rule.minQuantity|number_format(4, '.', ',') }} {{ item.measurementUnit.code }}</span></td>
+                                <td class="pf-table__cell--right pf-table__cell--nowrap">MXN ${{ rule.unitPrice|number_format(2, '.', ',') }}</td>
+                                <td><span class="pf-status-badge {{ rule.isActive ? 'pf-status-badge--success' : 'pf-status-badge--warning' }}">{{ rule.isActive ? 'Activo' : 'Inactivo' }}</span></td>
+                                <td class="pf-table__actions-cell"><div class="pf-table__actions">
+                                    <a href="{{ path('admin_catalog_item_price_rules_edit', {item: item.id, rule: rule.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm"><i class="bi bi-pencil-square" aria-hidden="true"></i><span>Editar</span></a>
+                                    <form
+                                        method="post"
+                                        action="{{ path('admin_catalog_item_price_rules_status', {item: item.id, rule: rule.id}) }}"
+                                        data-controller="ui--confirm-action"
+                                        data-action="submit->ui--confirm-action#submit"
+                                        data-ui--confirm-action-title-value="{{ rule.isActive ? '¿Desactivar rango de precio?' : '¿Reactivar rango de precio?' }}"
+                                        data-ui--confirm-action-text-value="{{ rule.isActive ? 'El cotizador dejará de considerar este rango para nuevas cotizaciones.' : 'El cotizador volverá a considerar este rango cuando la cantidad corresponda.' }}"
+                                        data-ui--confirm-action-confirm-button-text-value="{{ rule.isActive ? 'Sí, desactivar' : 'Sí, reactivar' }}"
+                                        data-ui--confirm-action-cancel-button-text-value="Cancelar"
+                                        data-ui--confirm-action-icon-value="warning"
+                                    >
+                                        <input type="hidden" name="_token" value="{{ csrf_token('item_price_rule_status_' ~ rule.id) }}">
+                                        <button type="submit" class="btn pf-button pf-button--sm {{ rule.isActive ? 'pf-button--danger' : 'pf-button--success' }}"><i class="bi {{ rule.isActive ? 'bi-pause-circle' : 'bi-check-circle' }}" aria-hidden="true"></i><span>{{ rule.isActive ? 'Desactivar' : 'Reactivar' }}</span></button>
+                                    </form>
+                                </div></td>
                             </tr>
                         {% else %}
-                            <tr>
-                                <td colspan="4" class="pf-table__empty">
-                                    Este concepto aún no tiene rangos de precio.
-                                </td>
-                            </tr>
+                            <tr><td colspan="4" class="pf-table__empty"><div class="pf-table__empty-content"><span class="pf-table__empty-icon" aria-hidden="true"><i class="bi bi-cash-stack"></i></span><p class="pf-table__empty-title">Sin rangos de precio</p><p class="pf-table__empty-description">El cotizador utilizará únicamente el precio base hasta que agregues una escala por cantidad.</p></div></td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-        </div>
+        </section>
     </div>
 {% endblock %}

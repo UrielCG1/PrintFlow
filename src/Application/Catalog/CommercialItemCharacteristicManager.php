@@ -41,6 +41,10 @@ final class CommercialItemCharacteristicManager
                 throw new \DomainException('Esta característica ya está configurada para el Producto.');
             }
 
+            if ($data->displayOrder <= 0) {
+                $data->displayOrder = $this->configurationRepository->nextDisplayOrderForItem($item);
+            }
+
             $configuration = (new CommercialItemCharacteristic())
                 ->setCommercialItem($item)
                 ->setCharacteristic($characteristic)
@@ -75,6 +79,7 @@ final class CommercialItemCharacteristicManager
 
         $this->entityManager->wrapInTransaction(function () use ($configuration, $data, $actor): void {
             $oldValues = $this->snapshot($configuration);
+            $data->displayOrder = $configuration->getDisplayOrder();
             $newAllowedOptions = $this->validateAllowedOptions(
                 $configuration->getCharacteristic(),
                 $data->allowedOptions,
@@ -119,6 +124,71 @@ final class CommercialItemCharacteristicManager
                 $configurationId,
                 $oldValues,
                 null,
+            );
+            $this->entityManager->flush();
+        });
+    }
+
+    public function reorderForItem(
+        CommercialItem $item,
+        int $movedId,
+        ?int $beforeId,
+        ?int $afterId,
+        User $actor,
+    ): void {
+        $this->assertConfigurableProduct($item);
+
+        $this->entityManager->wrapInTransaction(function () use ($item, $movedId, $beforeId, $afterId, $actor): void {
+            $configurations = $this->configurationRepository->findForItemForUpdate($item);
+            $moved = $this->findConfiguration($configurations, $movedId);
+
+            if ($moved === null) {
+                throw new \DomainException('La característica que intentas reordenar ya no está configurada en este Producto.');
+            }
+
+            $oldOrder = $this->orderSnapshot($configurations);
+            $movedIndex = array_search($moved, $configurations, true);
+            array_splice($configurations, (int) $movedIndex, 1);
+
+            $before = $beforeId !== null ? $this->findConfiguration($configurations, $beforeId) : null;
+            $after = $afterId !== null ? $this->findConfiguration($configurations, $afterId) : null;
+
+            if (($beforeId !== null && $before === null) || ($afterId !== null && $after === null)) {
+                throw new \DomainException('El orden cambió antes de poder guardar tu movimiento. Inténtalo de nuevo.');
+            }
+
+            if ($before !== null && $after !== null) {
+                $beforeIndex = array_search($before, $configurations, true);
+                $afterIndex = array_search($after, $configurations, true);
+                if ($beforeIndex !== $afterIndex + 1) {
+                    throw new \DomainException('La posición seleccionada ya no es válida.');
+                }
+            }
+
+            if ($before !== null) {
+                array_splice($configurations, (int) array_search($before, $configurations, true), 0, [$moved]);
+            } elseif ($after !== null) {
+                array_splice($configurations, (int) array_search($after, $configurations, true) + 1, 0, [$moved]);
+            } else {
+                $configurations[] = $moved;
+            }
+
+            $newIds = array_map(static fn (CommercialItemCharacteristic $configuration): int => (int) $configuration->getId(), $configurations);
+            if (array_column($oldOrder, 'id') === $newIds) {
+                return;
+            }
+
+            foreach ($configurations as $index => $configuration) {
+                $configuration->setDisplayOrder(($index + 1) * 10);
+            }
+
+            $this->auditLogger->record(
+                $actor,
+                'commercial_item_characteristic.reordered',
+                'commercial_item',
+                $item->getId(),
+                ['characteristic_order' => $oldOrder],
+                ['characteristic_order' => $this->orderSnapshot($configurations)],
             );
             $this->entityManager->flush();
         });
@@ -213,6 +283,30 @@ final class CommercialItemCharacteristicManager
         if ($item->getType() !== CommercialItemType::PRODUCT) {
             throw new \DomainException('Las características solo se configuran en Productos comerciales.');
         }
+    }
+
+    /** @param list<CommercialItemCharacteristic> $configurations */
+    private function findConfiguration(array $configurations, int $id): ?CommercialItemCharacteristic
+    {
+        foreach ($configurations as $configuration) {
+            if ($configuration->getId() === $id) {
+                return $configuration;
+            }
+        }
+
+        return null;
+    }
+
+    /** @param list<CommercialItemCharacteristic> $configurations @return list<array{id: int, display_order: int}> */
+    private function orderSnapshot(array $configurations): array
+    {
+        return array_map(
+            static fn (CommercialItemCharacteristic $configuration): array => [
+                'id' => (int) $configuration->getId(),
+                'display_order' => $configuration->getDisplayOrder(),
+            ],
+            $configurations,
+        );
     }
 
     /** @return array<string, bool|int|string|list<array{id: int, name: string}>> */

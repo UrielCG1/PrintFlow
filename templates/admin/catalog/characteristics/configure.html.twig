@@ -1,0 +1,116 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Configurar {{ characteristic.name }} | PrintFlow{% endblock %}
+{% block app_navigation_active %}catalog_characteristics{% endblock %}
+{% block app_breadcrumb %}Catálogos / Características de producto / {{ characteristic.name }}{% endblock %}
+
+{% block app_content %}
+<div class="pf-page__content">
+    {% include 'admin/catalog/_workspace_nav.html.twig' with {catalog_section: 'characteristics'} %}
+    {% include 'admin/catalog/characteristics/_configuration_nav.html.twig' with {characteristic: characteristic, characteristic_configuration_section: 'general'} %}
+
+    <header class="pf-page-header pf-catalog-page-header">
+        <div class="pf-page-header__content">
+            <h1 class="pf-page-header__title">Configuración general</h1>
+            <p class="pf-page-header__description">Revisa cómo se captura esta característica, su alcance y las dependencias que deben respetarse.</p>
+        </div>
+        {% if is_granted('catalog.characteristics.manage') %}
+            <div class="pf-page-header__actions">
+                <a href="{{ path('admin_catalog_characteristics_edit', {id: characteristic.id}) }}" class="btn pf-button pf-button--primary"><i class="bi bi-pencil-square" aria-hidden="true"></i><span>Editar información</span></a>
+            </div>
+        {% endif %}
+    </header>
+
+    {% if technicalContract %}
+        <div class="pf-catalog-technical-contract" role="note">
+            <i class="bi bi-shield-lock" aria-hidden="true"></i>
+            <div>
+                <strong>Identificador protegido por el cotizador</strong>
+                <p>{{ technicalContract.description }} Puedes cambiar el nombre visible, pero el código <code>{{ technicalContract.code }}</code>, el tipo {{ technicalContract.inputType.label }} y la unidad {{ technicalContract.unitLabel }} permanecen protegidos.</p>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="pf-item-config-grid">
+        <section class="pf-card pf-item-config-panel" aria-labelledby="characteristic-definition-heading">
+            <div class="pf-card__body">
+                <div class="pf-item-config-panel__heading">
+                    <span class="pf-item-config-panel__icon" aria-hidden="true"><i class="bi bi-card-text"></i></span>
+                    <div><h2 id="characteristic-definition-heading" class="pf-item-config-panel__title">Definición</h2><p class="pf-item-config-panel__description">Identidad técnica y forma en que se presenta el dato.</p></div>
+                </div>
+                <dl class="pf-item-details">
+                    <div class="pf-item-details__row"><dt>Código técnico</dt><dd><code class="pf-table__code">{{ characteristic.code }}</code></dd></div>
+                    <div class="pf-item-details__row"><dt>Tipo de captura</dt><dd>{{ characteristic.inputType.label }}</dd></div>
+                    <div class="pf-item-details__row"><dt>Unidad visible</dt><dd>{{ characteristic.unitLabel ?: 'Sin unidad' }}</dd></div>
+                </dl>
+            </div>
+        </section>
+
+        <section class="pf-card pf-item-config-panel" aria-labelledby="characteristic-options-heading">
+            <div class="pf-card__body">
+                <div class="pf-item-config-panel__heading">
+                    <span class="pf-item-config-panel__icon" aria-hidden="true"><i class="bi bi-list-check"></i></span>
+                    <div><h2 id="characteristic-options-heading" class="pf-item-config-panel__title">Opciones</h2><p class="pf-item-config-panel__description">Valores controlados disponibles cuando la captura es una lista.</p></div>
+                </div>
+                {% if characteristic.inputType.supportsOptions %}
+                    <div class="pf-item-metric"><span class="pf-item-metric__label">Opciones activas</span><strong class="pf-item-metric__value">{{ activeOptionCount }}</strong></div>
+                    <p class="pf-item-config-panel__status">{{ optionCount }} {{ optionCount == 1 ? 'opción registrada' : 'opciones registradas' }} en total.</p>
+                    <a href="{{ path('admin_catalog_characteristics_options', {id: characteristic.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm"><span>Administrar opciones</span><i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                {% else %}
+                    <div class="pf-item-config-panel__not-applicable"><i class="bi bi-info-circle" aria-hidden="true"></i><span>El tipo {{ characteristic.inputType.label }} no utiliza un catálogo de opciones.</span></div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="pf-card pf-item-config-panel" aria-labelledby="characteristic-usage-heading">
+            <div class="pf-card__body">
+                <div class="pf-item-config-panel__heading">
+                    <span class="pf-item-config-panel__icon" aria-hidden="true"><i class="bi bi-box-seam"></i></span>
+                    <div><h2 id="characteristic-usage-heading" class="pf-item-config-panel__title">Uso en Productos</h2><p class="pf-item-config-panel__description">Impacto real de esta definición dentro del catálogo comercial.</p></div>
+                </div>
+                <div class="pf-item-metric"><span class="pf-item-metric__label">Productos activos</span><strong class="pf-item-metric__value">{{ activeUsageCount }}</strong></div>
+                <p class="pf-item-config-panel__status">{{ usageCount == 0 ? 'Todavía no se utiliza en ningún Producto.' : usageCount ~ ' configuraciones en total.' }}</p>
+                <a href="{{ path('admin_catalog_characteristics_products', {id: characteristic.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm"><span>Ver Productos</span><i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+            </div>
+        </section>
+    </div>
+
+    {% if is_granted('catalog.characteristics.manage') %}
+        <section class="pf-card pf-item-danger-zone" aria-labelledby="characteristic-status-heading">
+            <div class="pf-card__body pf-item-danger-zone__body">
+                <div>
+                    <h2 id="characteristic-status-heading" class="pf-item-danger-zone__title">Estado de la característica</h2>
+                    <p class="pf-item-danger-zone__description">
+                        {% if characteristic.isActive and activeUsageCount > 0 %}
+                            Está en uso por {{ activeUsageCount }} {{ activeUsageCount == 1 ? 'Producto activo' : 'Productos activos' }}. Retírala primero de esos Productos para poder desactivarla.
+                        {% elseif characteristic.isActive %}
+                            Desactivar impide asignarla a nuevos Productos, sin alterar configuraciones históricas.
+                        {% else %}
+                            Reactivar vuelve a dejarla disponible para nuevas configuraciones de Producto.
+                        {% endif %}
+                    </p>
+                </div>
+                {% if characteristic.isActive and activeUsageCount > 0 %}
+                    <span class="btn pf-button pf-button--secondary disabled" aria-disabled="true"><i class="bi bi-lock" aria-hidden="true"></i><span>En uso</span></span>
+                {% else %}
+                    <form
+                        method="post"
+                        action="{{ path('admin_catalog_characteristics_status', {id: characteristic.id}) }}"
+                        data-controller="ui--confirm-action"
+                        data-action="submit->ui--confirm-action#submit"
+                        data-ui--confirm-action-title-value="{{ characteristic.isActive ? '¿Desactivar característica?' : '¿Reactivar característica?' }}"
+                        data-ui--confirm-action-text-value="{{ characteristic.isActive ? 'Dejará de estar disponible para nuevas configuraciones de Producto.' : 'Volverá a estar disponible para configurarse en Productos.' }}"
+                        data-ui--confirm-action-confirm-button-text-value="{{ characteristic.isActive ? 'Sí, desactivar' : 'Sí, reactivar' }}"
+                        data-ui--confirm-action-cancel-button-text-value="Cancelar"
+                        data-ui--confirm-action-icon-value="warning"
+                    >
+                        <input type="hidden" name="_token" value="{{ csrf_token('catalog_characteristic_status_' ~ characteristic.id) }}">
+                        <input type="hidden" name="_return_to" value="configure">
+                        <button type="submit" class="btn pf-button {{ characteristic.isActive ? 'pf-button--danger' : 'pf-button--success' }}"><i class="bi {{ characteristic.isActive ? 'bi-pause-circle' : 'bi-check-circle' }}" aria-hidden="true"></i><span>{{ characteristic.isActive ? 'Desactivar' : 'Reactivar' }}</span></button>
+                    </form>
+                {% endif %}
+            </div>
+        </section>
+    {% endif %}
+</div>
+{% endblock %}

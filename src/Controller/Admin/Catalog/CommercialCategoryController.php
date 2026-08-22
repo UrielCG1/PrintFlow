@@ -8,11 +8,14 @@ use App\Entity\Catalog\CommercialCategory;
 use App\Entity\Users\User;
 use App\Form\Admin\Catalog\CommercialCategoryType;
 use App\Repository\Catalog\CommercialCategoryRepository;
+use App\Repository\Catalog\CommercialItemRepository;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\FormError;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\HttpFoundation\JsonResponse;
 
 #[Route('/admin/catalogo/categorias', name: 'admin_catalog_categories_')]
 final class CommercialCategoryController extends AbstractController
@@ -21,24 +24,48 @@ final class CommercialCategoryController extends AbstractController
     public function index(
         Request $request,
         CommercialCategoryRepository $commercialCategoryRepository,
+        CommercialItemRepository $commercialItemRepository,
     ): Response {
         $this->denyAccessUnlessGranted('catalog.view');
 
         $status = $request->query->getString('status', 'active');
+        if (!in_array($status, ['active', 'inactive', 'all'], true)) {
+            $status = 'active';
+        }
+
         $isActive = match ($status) {
             'active' => true,
             'inactive' => false,
             default => null,
         };
 
+        $page = $commercialCategoryRepository->paginateForAdministration(
+            search: $request->query->getString('q'),
+            isActive: $isActive,
+            page: $request->query->getInt('page', 1),
+        );
+
+        $categoryIds = array_values(array_filter(array_map(
+            static fn (CommercialCategory $category): ?int => $category->getId(),
+            $page['items'],
+        )));
+
         return $this->render('admin/catalog/categories/index.html.twig', [
-            'page' => $commercialCategoryRepository->paginateForAdministration(
-                search: $request->query->getString('q'),
-                isActive: $isActive,
-                page: $request->query->getInt('page', 1),
-            ),
+            'page' => $page,
+            'usageSummary' => $commercialItemRepository->summarizeUsageByCategoryIds($categoryIds),
             'search' => $request->query->getString('q'),
             'status' => $status,
+        ]);
+    }
+
+    #[Route('/ordenar', name: 'order', methods: ['GET'])]
+    public function order(
+        CommercialCategoryRepository $commercialCategoryRepository,
+    ): Response {
+        $this->denyAccessUnlessGranted('catalog.categories.manage');
+
+        return $this->render('admin/catalog/categories/order.html.twig', [
+            'categories' => $commercialCategoryRepository->findActiveOrdered(),
         ]);
     }
 
@@ -54,11 +81,15 @@ final class CommercialCategoryController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $commercialCategoryManager->create($data, $this->getActor());
+            try {
+                $commercialCategoryManager->create($data, $this->getActor());
 
-            $this->addFlash('success', 'Categoría comercial registrada correctamente.');
+                $this->addFlash('success', 'Categoría comercial registrada correctamente.');
 
-            return $this->redirectToRoute('admin_catalog_categories_index');
+                return $this->redirectToRoute('admin_catalog_categories_index');
+            } catch (UniqueConstraintViolationException) {
+                $form->addError(new FormError('Ya existe otra categoría con ese código o nombre.'));
+            }
         }
 
         return $this->render('admin/catalog/categories/form.html.twig', [
@@ -87,11 +118,15 @@ final class CommercialCategoryController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $commercialCategoryManager->update($category, $data, $this->getActor());
+            try {
+                $commercialCategoryManager->update($category, $data, $this->getActor());
 
-            $this->addFlash('success', 'Categoría comercial actualizada correctamente.');
+                $this->addFlash('success', 'Categoría comercial actualizada correctamente.');
 
-            return $this->redirectToRoute('admin_catalog_categories_index');
+                return $this->redirectToRoute('admin_catalog_categories_index');
+            } catch (UniqueConstraintViolationException) {
+                $form->addError(new FormError('Ya existe otra categoría con ese código o nombre.'));
+            }
         }
 
         return $this->render('admin/catalog/categories/form.html.twig', [

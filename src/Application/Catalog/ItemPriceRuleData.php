@@ -13,7 +13,7 @@ use Symfony\Component\Validator\Constraints as Assert;
     entityClass: ItemPriceRule::class,
     identifierFieldNames: ['id'],
     errorPath: 'minQuantity',
-    message: 'Ya existe un rango con esta cantidad mínima para el concepto.',
+    message: 'Ya existe un rango con esta cantidad mínima para el producto o servicio.',
 )]
 final class ItemPriceRuleData
 {
