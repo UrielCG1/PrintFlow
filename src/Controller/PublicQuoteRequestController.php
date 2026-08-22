@@ -1,8 +1,10 @@
 <?php
 declare(strict_types=1);
 namespace App\Controller;
-use App\Application\Quotations\{PublicQuotationClientResolver,PublicQuotationRequestData,PublicQuotationRequestItemData,QuotationData,QuotationItemCharacteristicsSpecificationResolver,QuotationManager};
+use App\Application\Catalog\CommercialItemPriceResolver;
+use App\Application\Quotations\{PublicQuotationClientResolver,PublicQuotationRequestData,PublicQuotationRequestItemData,QuotationData,QuotationItemCharacteristicsSpecificationResolver,QuotationManager,QuotationTotalsCalculator};
 use App\Entity\Catalog\CommercialItem;
+use App\Entity\Quotations\Quotation;
 use App\Entity\Clients\{Client,ClientAddress,ClientContact};
 use App\Form\PublicQuoteRequestType;
 use App\Repository\Catalog\CommercialItemCharacteristicRepository;
@@ -24,7 +26,7 @@ final class PublicQuoteRequestController extends AbstractController
   if($form->isSubmitted()){
    $existing=(bool)$form->get('existingCustomer')->getData();
    if($existing){$contact=$em->getRepository(ClientContact::class)->findActiveRequesterByPublicNumber((string)$data->customerNumber);if(!$contact instanceof ClientContact){$form->get('customerNumber')->addError(new FormError('No encontramos un contacto activo con este número.'));}else{$verifiedContact=$contact;$data->fullName=$contact->getFullName();$data->email=$contact->getEmail()?:$contact->getContact()->getPersonalEmail();$data->phone=$contact->getPhone();$data->companyName=$contact->getClient()->getBusinessName();}}
-   foreach($data->items as $index=>$item){$itemForm=$form->get('items')->get((string) $index);$raw=$itemForm->get('characteristicsJson')->getData();if($raw){try{$item->characteristics=json_decode($raw,true,32,JSON_THROW_ON_ERROR);}catch(\JsonException){$itemForm->addError(new FormError('Las características de la partida no son válidas.'));}}if($item->product&&$item->category?->getId()!==$item->product->getCategory()->getId())$itemForm->get('product')->addError(new FormError('El producto no pertenece a la categoría seleccionada.'));}
+   foreach($data->items as $index=>$item){$itemForm=$form->get('items')->get((string) $index);if($item->commercialItem&&$item->commercialCategory?->getId()!==$item->commercialItem->getCategory()->getId())$itemForm->get('commercialItem')->addError(new FormError('El producto no pertenece a la categoría seleccionada.'));}
    if($form->isValid()){
     try{
      $customer=$clientResolver->resolve($data,$verifiedContact);$quotationData=new QuotationData();$quotationData->client=$customer->client;$quotationData->commercialContactId=(string)$customer->contact->getId();$quotationData->discountPercent=null;$quotationData->items=array_map(static fn(PublicQuotationRequestItemData $item)=>$item->toQuotationItemData(),$data->items);
@@ -49,7 +51,14 @@ final class PublicQuoteRequestController extends AbstractController
  public function products(int $categoryId,EntityManagerInterface $em,CommercialItemCharacteristicRepository $configurations):JsonResponse
  {
   $items=$em->getRepository(CommercialItem::class)->createQueryBuilder('item')->innerJoin('item.category','category')->andWhere('category.id=:category')->andWhere('category.isActive=true')->andWhere('item.isActive=true')->setParameter('category',$categoryId)->orderBy('item.name','ASC')->getQuery()->getResult();
-  return $this->json(array_map(function(CommercialItem $item)use($configurations):array{$fields=[];foreach($configurations->findForQuotationItem($item) as $configuration){$characteristic=$configuration->getCharacteristic();if(in_array($characteristic->getCode(),['FINISHED_WIDTH_CM','FINISHED_HEIGHT_CM'],true))continue;$key=QuotationItemCharacteristicsSpecificationResolver::fieldKey($characteristic);$options=[];foreach($configuration->getAllowedOptions() as $allowed)$options[]=['value'=>$allowed->getCharacteristicOption()->getCode(),'label'=>$allowed->getCharacteristicOption()->getName()];$fields[$key]=['label'=>$characteristic->getName(),'options'=>$options,'required'=>$configuration->isRequired()];}return ['id'=>$item->getId(),'name'=>$item->getName(),'schema'=>['dimensions'=>$item->getQuotationSpecificationProfile()->value==='LARGE_FORMAT','fields'=>$fields]];},$items));
+   return $this->json(array_map(function(CommercialItem $item)use($configurations):array{$characteristics=[];foreach($configurations->findForQuotationItem($item) as $configuration){$characteristic=$configuration->getCharacteristic();$options=[];foreach($configuration->getAllowedOptions() as $allowed)$options[]=['value'=>$allowed->getCharacteristicOption()->getCode(),'label'=>$allowed->getCharacteristicOption()->getName()];$characteristics[]=['key'=>QuotationItemCharacteristicsSpecificationResolver::fieldKey($characteristic),'code'=>$characteristic->getCode(),'name'=>$characteristic->getName(),'inputType'=>$characteristic->getInputType()->value,'unitLabel'=>$characteristic->getUnitLabel(),'required'=>$configuration->isRequired(),'options'=>$options];}return ['id'=>$item->getId(),'name'=>$item->getName(),'code'=>$item->getCode(),'profile'=>$item->getQuotationSpecificationProfile()->value,'measurementUnit'=>['code'=>$item->getMeasurementUnit()->getCode(),'name'=>$item->getMeasurementUnit()->getName()],'characteristics'=>$characteristics];},$items));
+  }
+ #[Route('/cotizar/preview-precio/{id}',name:'public_quote_price_preview',requirements:['id'=>'\d+'],methods:['GET'])]
+ public function pricePreview(Request $request,int $id,EntityManagerInterface $em,CommercialItemPriceResolver $resolver,QuotationTotalsCalculator $totals):JsonResponse
+ {
+  $item=$em->getRepository(CommercialItem::class)->find($id);if(!$item instanceof CommercialItem||!$item->isActive())return $this->json(['message'=>'Producto no disponible.'],404);
+  try{$resolution=$resolver->resolve($item,$request->query->getString('quantity'));$unitPrice=Quotation::normalizeAmount($resolution->unitPrice,'El precio unitario resuelto');$subtotal=$totals->lineSubtotal($resolution->quantity,$unitPrice);}catch(\InvalidArgumentException $e){return $this->json(['message'=>$e->getMessage()],422);}
+  return $this->json(['quantity'=>$resolution->quantity,'unitPrice'=>$unitPrice,'lineSubtotal'=>$subtotal,'priceSource'=>$resolution->appliedRule===null?'BASE_PRICE':'QUANTITY_TIER','priceRule'=>$resolution->appliedRule===null?null:['minQuantity'=>$resolution->appliedRule->getMinQuantity()],'measurementUnit'=>['code'=>$item->getMeasurementUnit()->getCode(),'name'=>$item->getMeasurementUnit()->getName()]]);
  }
  private function maskName(?string $value):string{return implode(' ',array_map(fn(string $part)=>mb_substr($part,0,1).str_repeat('*',max(2,min(5,mb_strlen($part)-1))),preg_split('/\s+/',trim((string)$value))?:[]));}
  private function maskEmail(?string $value):string{if(!$value||!str_contains($value,'@'))return 'No registrado';[$local,$domain]=explode('@',$value,2);$parts=explode('.',$domain);$host=array_shift($parts);return mb_substr($local,0,1).'***@'.mb_substr($host,0,1).'***'.($parts?'.'.end($parts):'');}

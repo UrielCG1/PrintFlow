@@ -34,10 +34,11 @@
 </section>
 {% endmacro %}
 {% import _self as quote %}
+{% import 'public_quote_request/_commercial_item.html.twig' as commercial_quote %}
 
 {% block title %}Solicitar cotización{% endblock %}
 {% block body %}
-<div class="pf-public-quote" data-controller="ui--public-quote" data-ui--public-quote-customer-url-value="{{ path('public_quote_customer',{number:'CONTACT_NUMBER'}) }}" data-ui--public-quote-products-url-value="{{ path('public_quote_products',{categoryId:'CATEGORY_ID'}) }}">
+<div class="pf-public-quote" data-controller="ui--public-quote" data-ui--public-quote-customer-url-value="{{ path('public_quote_customer',{number:'CONTACT_NUMBER'}) }}" data-ui--public-quote-products-url-value="{{ path('public_quote_products',{categoryId:'CATEGORY_ID'}) }}" data-ui--public-quote-price-url-value="{{ path('public_quote_price_preview',{id:'PRODUCT_ID'}) }}">
     <section class="pf-public-quote__hero" style="--pf-quote-hero-image:url('{{ asset('images/quote/hero-printing.jpg') }}')">
         <div class="container-xxl pf-public-quote__hero-container"><div class="pf-public-quote__hero-content">
             <div class="pf-public-quote__badge"><span class="pf-public-quote__badge-dot"></span>Soluciones de impresión para empresas</div>
@@ -68,8 +69,8 @@
             </section>
 
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4"><div><div class="pf-section-label mb-1">Trabajos a cotizar</div><p class="mb-0 text-secondary">Puedes incluir varias partidas en una solicitud.</p></div><button type="button" class="btn pf-public-quote__hero-button" data-action="ui--public-quote#addItem"><i class="bi bi-plus-lg"></i> Agregar partida</button></div>
-            <template data-ui--public-quote-target="prototype">{{ quote.item(form.items.vars.prototype,'__number__') }}</template>
-            <div data-ui--public-quote-target="items">{% for item in form.items %}{{ quote.item(item,loop.index) }}{% endfor %}</div>{{ form_errors(form.items) }}
+            <template data-ui--public-quote-target="prototype">{{ commercial_quote.item(form.items.vars.prototype,'__number__') }}</template>
+            <div data-ui--public-quote-target="items">{% for item in form.items %}{{ commercial_quote.item(item,loop.index) }}{% endfor %}</div>{{ form_errors(form.items) }}
 
             <section class="pf-quote-card">
                 <div class="pf-quote-card__header"><div class="pf-quote-card__icon"><i class="bi bi-truck"></i></div><div><h2>Entrega y facturación</h2><p>Información logística y detalles fiscales.</p></div></div>
