@@ -5,9 +5,9 @@ use Symfony\Component\Validator\Constraints as Assert;
 final class PublicQuotationRequestData
 {
  public ?string $customerNumber=null;
- #[Assert\NotBlank(message:'Captura el nombre completo.'),Assert\Length(max:150)] public ?string $fullName=null;
- #[Assert\NotBlank(message:'Captura el correo electrónico.'),Assert\Email(message:'Captura un correo electrónico válido.'),Assert\Length(max:180)] public ?string $email=null;
- #[Assert\NotBlank(message:'Captura el teléfono o WhatsApp.'),Assert\Length(max:30)] public ?string $phone=null;
+ #[Assert\NotBlank(message:'Captura el nombre completo.',groups:['public_prospect']),Assert\Length(max:150)] public ?string $fullName=null;
+ #[Assert\NotBlank(message:'Captura el correo electrónico.',groups:['public_prospect']),Assert\Email(message:'Captura un correo electrónico válido.'),Assert\Length(max:180)] public ?string $email=null;
+ #[Assert\NotBlank(message:'Captura el teléfono o WhatsApp.',groups:['public_prospect']),Assert\Length(max:30)] public ?string $phone=null;
  #[Assert\Length(max:180)] public ?string $companyName=null;
  #[Assert\Choice(['whatsapp','email','phone'])] public string $contactPreference='whatsapp';
  #[Assert\Valid,Assert\Count(min:1,max:100)] public array $items=[];

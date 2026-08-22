@@ -4,6 +4,7 @@ use App\Application\Quotations\PublicQuotationRequestData;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\{CheckboxType,ChoiceType,CollectionType,DateType,EmailType,HiddenType,TelType,TextType};
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\FormInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 final class PublicQuoteRequestType extends AbstractType
 {
@@ -18,5 +19,5 @@ final class PublicQuoteRequestType extends AbstractType
   ->add('neededAt',DateType::class,['label'=>'Fecha deseada de entrega','required'=>false,'widget'=>'single_text','help'=>'La fecha es una preferencia. La fecha final se confirmará de acuerdo con la disponibilidad de producción y entrega.','constraints'=>[new \Symfony\Component\Validator\Constraints\GreaterThanOrEqual(value:'today',message:'La fecha deseada no puede ser anterior al día de hoy.')],'attr'=>['min'=>(new \DateTimeImmutable('today'))->format('Y-m-d'),'data-action'=>'change->ui--public-quote#showDateNotice']])
   ->add('deliveryMethod',ChoiceType::class,['label'=>'Método de entrega','choices'=>['Recoger en sucursal'=>'pickup','Envío a domicilio'=>'shipping','Por definir'=>'undefined']])
   ->add('requiresInvoice',CheckboxType::class,['label'=>'Necesito factura','required'=>false]);}
- public function configureOptions(OptionsResolver $r):void{$r->setDefaults(['data_class'=>PublicQuotationRequestData::class,'csrf_token_id'=>'public_quote_request']);}
+ public function configureOptions(OptionsResolver $r):void{$r->setDefaults(['data_class'=>PublicQuotationRequestData::class,'csrf_token_id'=>'public_quote_request','validation_groups'=>static function(FormInterface $form):array{return (bool)$form->get('existingCustomer')->getData()?['Default']:['Default','public_prospect'];}]);}
 }
