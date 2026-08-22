@@ -11,7 +11,7 @@ final class PublicQuoteRequestType extends AbstractType
   ->add('existingCustomer',CheckboxType::class,['mapped'=>false,'required'=>false,'label'=>'Ya soy cliente'])
   ->add('customerNumber',TextType::class,['required'=>false,'label'=>'Número de cliente','help'=>'Usa el número público asignado a tu contacto.','attr'=>['autocomplete'=>'off','maxlength'=>27,'placeholder'=>'CL-XXXXXXXXXXXXXXXXXXXXXXXX']])
   ->add('deliveryAddressId',HiddenType::class,['mapped'=>false,'required'=>false])
-  ->add('fullName',TextType::class,['label'=>'Nombre completo'])->add('email',EmailType::class,['label'=>'Correo electrónico'])->add('phone',TelType::class,['label'=>'Teléfono o WhatsApp'])
+  ->add('fullName',TextType::class,['label'=>'Nombre completo','required'=>false])->add('email',EmailType::class,['label'=>'Correo electrónico','required'=>false])->add('phone',TelType::class,['label'=>'Teléfono o WhatsApp','required'=>false])
   ->add('contactPreference',ChoiceType::class,['label'=>'Medio de contacto preferido','choices'=>['WhatsApp'=>'whatsapp','Correo electrónico'=>'email','Llamada telefónica'=>'phone']])
   ->add('companyName',TextType::class,['label'=>'Nombre de empresa','required'=>false])
   ->add('items',CollectionType::class,['entry_type'=>QuoteRequestItemType::class,'allow_add'=>true,'allow_delete'=>true,'by_reference'=>false,'prototype'=>true,'label'=>false])
