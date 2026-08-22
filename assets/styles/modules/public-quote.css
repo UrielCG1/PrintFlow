@@ -2034,6 +2034,44 @@
 }
 
 /* Confirmación posterior al envío de la solicitud pública. */
+.pf-confirmation-contact {
+    margin-bottom: 1.25rem;
+    padding: 1.25rem;
+    border: 1px solid rgba(var(--pf-primary-container-rgb), 0.2);
+    border-radius: 1rem;
+    background: linear-gradient(
+        135deg,
+        rgba(var(--pf-primary-container-rgb), 0.075),
+        rgba(var(--pf-primary-container-rgb), 0.025)
+    );
+}
+
+.pf-confirmation-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    color: var(--pf-primary);
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+}
+
+.pf-confirmation-contact .pf-verified-contact__header {
+    margin-bottom: 1rem;
+}
+
+.pf-confirmation-contact .pf-verified-contact__field {
+    background: var(--pf-surface-container-lowest);
+}
+
+@media (max-width: 575.98px) {
+    .pf-confirmation-contact {
+        padding: 1rem;
+    }
+}
+
 .pf-success-modal .modal-content {
     overflow: hidden;
     border: 0;
