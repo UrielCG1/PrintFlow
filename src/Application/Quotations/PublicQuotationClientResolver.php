@@ -20,6 +20,9 @@ final class PublicQuotationClientResolver
   $contact=$this->findMatchingContact($client,(string)$data->email,(string)$data->phone);
   if(!$contact instanceof ClientContact)$contact=$this->createContact($client,$data);
 
+  if($client->getClientType()==='INDIVIDUAL'&&trim((string)$data->companyName)!==''){$holder=$client->getIndividualHolderContact();if($holder){$holder->setDepartment('Contacto comercial')->setJobTitle('Contacto principal');}$client->setClientType('COMPANY')->setBusinessName(trim((string)$data->companyName))->setIndividualHolderContact(null);}
+  elseif($client->getClientType()==='INDIVIDUAL'&&$client->getIndividualHolderContact()===null){$client->setIndividualHolderContact($contact);}
+
   $this->em->flush();
   return new PublicQuotationCustomerResolution($client,$contact);
  }
@@ -40,8 +43,10 @@ final class PublicQuotationClientResolver
  {
   $parts=preg_split('/\s+/',trim((string)$data->fullName),2)?:[];
   $person=(new Contact($parts[0]??'Contacto'))->setLastName($parts[1]??null)->setPersonalEmail($data->email)->setPrimaryPhone($data->phone);
-  $contact=(new ClientContact($client,$person))->setEmail($data->email)->setPhone($data->phone)->setDepartment('Contacto comercial')->setJobTitle('Solicitante')->setIsPrimary($this->hasNoActiveContacts($client))->setCanRequestProducts(true);
+  $isHolder=$client->getClientType()==='INDIVIDUAL';
+  $contact=(new ClientContact($client,$person))->setEmail($data->email)->setPhone($data->phone)->setDepartment($isHolder?'Titular':'Contacto comercial')->setJobTitle($isHolder?'Titular del cliente':'Solicitante')->setIsPrimary($this->hasNoActiveContacts($client))->setCanRequestProducts(true);
   $this->em->persist($contact);
+  if($isHolder)$client->setIndividualHolderContact($contact);
   return $contact;
  }
 

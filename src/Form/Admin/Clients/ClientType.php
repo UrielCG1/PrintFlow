@@ -24,7 +24,7 @@ final class ClientType extends AbstractType
         $currentCategory = $options['current_category'];
 
         $builder
-            ->add('clientType', ChoiceType::class, ['label'=>'Tipo de cliente','choices'=>['Empresa'=>'COMPANY','Persona física'=>'INDIVIDUAL']])
+            ->add('clientType', ChoiceType::class, ['label'=>'Tipo de cliente','choices'=>['Empresa'=>'COMPANY','Persona física'=>'INDIVIDUAL'],'attr'=>['data-ui--client-type-target'=>'type','data-action'=>'change->ui--client-type#change']])
             ->add('businessName', TextType::class, [
                 'label' => 'Nombre comercial',
                 'attr' => [
@@ -70,6 +70,7 @@ final class ClientType extends AbstractType
                 'attr' => [
                     'autocomplete' => 'email',
                     'maxlength' => 180,
+                    'data-ui--client-type-target' => 'email',
                 ],
             ])
             ->add('legalName', TextType::class, [

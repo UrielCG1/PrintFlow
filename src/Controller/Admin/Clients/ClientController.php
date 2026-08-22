@@ -50,11 +50,6 @@ final class ClientController extends AbstractController
 
         $data = new ClientData();
         $data->phones[] = new ClientPhoneData();
-        $branch = new ClientBranchData();
-        $branch->addresses[] = new ClientBranchAddressData();
-        $branch->phones[] = new ClientPhoneData();
-        $contact = new ClientInlineContactData(); $contact->phones[] = new ClientPhoneData(); $branch->contacts[] = $contact;
-        $data->branches[] = $branch;
         $form = $this->createForm(ClientType::class, $data);
         $form->handleRequest($request);
 

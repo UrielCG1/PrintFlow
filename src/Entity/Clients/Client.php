@@ -57,6 +57,10 @@ class Client
     #[ORM\JoinColumn(name: 'client_category_id', nullable: true, onDelete: 'RESTRICT')]
     private ?ClientCategory $category = null;
 
+    #[ORM\OneToOne(targetEntity: ClientContact::class)]
+    #[ORM\JoinColumn(name: 'individual_holder_contact_id', nullable: true, unique: true, onDelete: 'RESTRICT')]
+    private ?ClientContact $individualHolderContact = null;
+
     #[ORM\Column(length: 180, nullable: true)]
     private ?string $email = null;
 
@@ -235,6 +239,14 @@ class Client
     public function getDefaultDiscountPercent(): float
     {
         return (float) ($this->category?->getDiscountPercentage() ?? '0.00');
+    }
+
+    public function getIndividualHolderContact(): ?ClientContact { return $this->individualHolderContact; }
+    public function setIndividualHolderContact(?ClientContact $contact): self
+    {
+        if ($contact !== null && $contact->getClient() !== $this) { throw new \DomainException('El titular debe pertenecer al mismo cliente.'); }
+        $this->individualHolderContact = $contact;
+        return $this;
     }
 
     public function getEmail(): ?string

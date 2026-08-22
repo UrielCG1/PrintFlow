@@ -63,6 +63,10 @@ final class ClientData
     #[Assert\Callback]
     public function validateCollections(ExecutionContextInterface $context): void
     {
+        if ($this->clientType === 'INDIVIDUAL') {
+            if (trim((string) $this->email) === '') { $context->buildViolation('Captura el correo del titular.')->atPath('email')->addViolation(); }
+            if ($this->branches !== []) { $context->buildViolation('Una persona física no puede tener sucursales. Registra sus domicilios y contactos directamente después de crearla.')->atPath('branches')->addViolation(); }
+        }
         $mainBranches=0;$primaryContacts=0;$codes=[];
         foreach($this->branches as $branch){if($branch->isMain)$mainBranches++;$code=strtoupper(trim((string)$branch->code));if($code!==''&&isset($codes[$code])){$context->buildViolation('El código de cada sucursal debe ser único dentro del cliente.')->atPath('branches')->addViolation();} $codes[$code]=true;foreach($branch->contacts as $contact){if($contact->isPrimary)$primaryContacts++;}}
         if($mainBranches>1){$context->buildViolation('Solo puede existir una sucursal principal.')->atPath('branches')->addViolation();}

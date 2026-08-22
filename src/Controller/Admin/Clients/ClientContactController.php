@@ -161,11 +161,12 @@ final class ClientContactController extends AbstractController
             throw $this->createAccessDeniedException('La solicitud no es válida.');
         }
 
-        $clientContactManager->setActive(
-            $contact,
-            !$contact->isActive(),
-            $this->getActor(),
-        );
+        try {
+            $clientContactManager->setActive($contact, !$contact->isActive(), $this->getActor());
+        } catch (\DomainException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+            return $this->redirectToRoute('admin_client_contacts_index', ['clientId' => $client->getId()]);
+        }
 
         $this->addFlash(
             'success',

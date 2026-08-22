@@ -27,6 +27,7 @@ final class ClientManager
             $this->entityManager->persist($client);
             $this->entityManager->flush();
             $this->syncStructuredData($client, $data);
+            $this->synchronizeIndividualHolder($client, $data);
             $this->entityManager->flush();
 
             $this->auditLogger->record(
@@ -50,6 +51,7 @@ final class ClientManager
 
         $this->applyData($client, $data);
         $this->syncStructuredData($client, $data);
+        $this->synchronizeIndividualHolder($client, $data);
 
         $newValues = $this->snapshot($client);
 
@@ -139,6 +141,31 @@ final class ClientManager
         }
     }
 
+    private function synchronizeIndividualHolder(Client $client, ClientData $data): void
+    {
+        if ($data->clientType !== 'INDIVIDUAL') {
+            $formerHolder = $client->getIndividualHolderContact();
+            if ($formerHolder !== null) { $formerHolder->setDepartment('Contacto comercial'); if ($formerHolder->getJobTitle() === 'Titular del cliente') { $formerHolder->setJobTitle(null); } }
+            $client->setIndividualHolderContact(null);
+            return;
+        }
+        if ($data->branches !== []) { throw new \DomainException('Una persona física no puede tener sucursales.'); }
+        $email = strtolower(trim((string) $data->email));
+        if ($email === '') { throw new \DomainException('El correo del titular es obligatorio.'); }
+        $holder = $client->getIndividualHolderContact();
+        if ($this->entityManager->getRepository(ClientContact::class)->findOneByBusinessEmail($email, $holder?->getId()) !== null) { throw new \DomainException('El correo del titular ya está registrado en otro contacto.'); }
+        if ($holder === null) {
+            $parts = preg_split('/\s+/', trim((string) $data->businessName), 2) ?: [];
+            $person = new Contact($parts[0] ?? 'Cliente');
+            $holder = new ClientContact($client, $person);
+            $this->entityManager->persist($person); $this->entityManager->persist($holder); $client->setIndividualHolderContact($holder);
+        }
+        $parts = preg_split('/\s+/', trim((string) $data->businessName), 2) ?: [];
+        $holder->getContact()->setFirstName($parts[0] ?? 'Cliente')->setLastName($parts[1] ?? null)->setPersonalEmail($email)->setBirthDate($data->birthDate)->setIsActive(true);
+        $holder->setEmail($email)->setPhone($client->getPhone())->setDepartment('Titular')->setJobTitle('Titular del cliente')->setCanRequestProducts(true)->setIsPrimary(true)->setIsActive(true);
+        $client->setBusinessName($holder->getFullName())->setEmail($email);
+    }
+
     private function syncStructuredData(Client $client, ClientData $data): void
     {
         $this->syncClientPhones($client, $data->phones);
@@ -199,6 +226,7 @@ final class ClientManager
     {
         return [
             'client_type' => $client->getClientType(),
+            'individual_holder_contact_id' => $client->getIndividualHolderContact()?->getId(),
             'business_name' => $client->getBusinessName(),
             'tax_id' => $client->getTaxId(),
             'legal_name' => $client->getLegalName(),

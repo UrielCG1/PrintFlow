@@ -44,7 +44,7 @@
         <div class="pf-card pf-clients-form-card pf-clients-form-card--wide">
             {% form_theme form 'form/printflow_theme.html.twig' 'form/client_collections_theme.html.twig' %}
 
-            {{ form_start(form, { attr: { class: 'pf-form pf-card__body' } }) }}
+            {{ form_start(form, { attr: { class: 'pf-form pf-card__body', 'data-controller': 'ui--client-type' } }) }}
                 <div class="pf-clients-form-section">
                     <div class="pf-clients-form-section__heading">
                         <h2>Información general</h2>
@@ -93,7 +93,11 @@
                     {{ form_row(form.billingEmail) }}
                 </div>
 
-                <div class="pf-clients-form-section">
+                <div class="pf-clients-form-section" data-ui--client-type-target="individualNotice" hidden>
+                    <div class="alert alert-success mb-0"><div class="d-flex gap-3"><i class="bi bi-person-check fs-4"></i><div><strong>El cliente será su propio titular</strong><p class="mb-0 mt-1">Crearemos automáticamente su contacto principal con el nombre, correo y teléfono capturados. Podrás agregar otros contactos y varios domicilios después de guardar, sin crear sucursales.</p></div></div></div>
+                </div>
+
+                <div class="pf-clients-form-section" data-ui--client-type-target="branches">
                     <div class="pf-clients-form-section__heading"><h2>Sucursales, domicilios y contactos</h2><p>Cada sucursal incluye sus domicilios, teléfonos, fax y personas de contacto.</p></div>
                     {{ form_widget(form.branches) }}
                 </div>

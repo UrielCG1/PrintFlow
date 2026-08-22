@@ -24,6 +24,7 @@ final class ClientContactManager
         ClientContactData $data,
         User $actor,
     ): ClientContact {
+        if ($client->getClientType() === 'INDIVIDUAL' && $data->isPrimary) { throw new \DomainException('El titular de una persona física es su único contacto principal.'); }
         return $this->entityManager->wrapInTransaction(
             function () use ($client, $data, $actor): ClientContact {
                 if ($data->isPrimary) {
@@ -65,6 +66,7 @@ final class ClientContactManager
         ClientContactData $data,
         User $actor,
     ): void {
+        if ($contact->getClient()->getClientType() === 'INDIVIDUAL' && $contact->getClient()->getIndividualHolderContact() !== $contact && $data->isPrimary) { throw new \DomainException('El titular de una persona física es su único contacto principal.'); }
         $this->entityManager->wrapInTransaction(
             function () use ($contact, $data, $actor): void {
                 $oldValues = $this->snapshot($contact);
@@ -106,6 +108,7 @@ final class ClientContactManager
         bool $isActive,
         User $actor,
     ): void {
+        if (!$isActive && $contact->getClient()->getClientType() === 'INDIVIDUAL' && $contact->getClient()->getIndividualHolderContact() === $contact) { throw new \DomainException('No se puede desactivar al titular de una persona física. Convierte primero el cliente a empresa.'); }
         if ($contact->isActive() === $isActive) {
             return;
         }
@@ -150,6 +153,11 @@ final class ClientContactManager
             ->setPhone($data->phone)
             ->setWorkSchedule($data->workHours)
             ->setIsPrimary($data->isPrimary);
+
+        if ($contact->getClient()->getClientType() === 'INDIVIDUAL' && $contact->getClient()->getIndividualHolderContact() === $contact) {
+            $contact->setIsPrimary(true);
+            $contact->getClient()->setBusinessName((string) $data->fullName)->setEmail($email);
+        }
 
         if ($contact->getContact() !== null) {
             [$firstName, $lastName] = $this->splitName((string) $data->fullName);
@@ -207,6 +215,7 @@ final class ClientContactManager
             'work_days' => $contact->getContact()?->getWorkDays(),
             'work_hours' => $contact->getContact()?->getWorkHours(),
             'is_primary' => $contact->isPrimary(),
+            'is_individual_holder' => $contact->getClient()->getIndividualHolderContact() === $contact,
             'is_active' => $contact->isActive(),
         ];
     }

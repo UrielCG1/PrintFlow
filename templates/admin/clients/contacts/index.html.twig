@@ -75,6 +75,9 @@
                                 </td>
 
                                 <td>
+                                    {% if client.individualHolderContact and client.individualHolderContact.id == contact.id %}
+                                        <span class="pf-status-badge pf-status-badge--success">Titular</span>
+                                    {% endif %}
                                     {% if contact.primary %}
                                         <span class="pf-status-badge pf-status-badge--info">
                                             Principal
@@ -87,6 +90,9 @@
                                 <td>
                                     <span class="pf-status-badge {{ contact.active ? 'pf-status-badge--success' : 'pf-status-badge--warning' }}">
                                         {{ contact.active ? 'Activo' : 'Inactivo' }}
+                                    </span>
+                                    <span class="pf-status-badge {{ contact.emailVerified ? 'pf-status-badge--success' : 'pf-status-badge--warning' }}">
+                                        {{ contact.emailVerified ? 'Correo verificado' : 'Correo pendiente' }}
                                     </span>
                                 </td>
 
