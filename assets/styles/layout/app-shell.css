@@ -84,6 +84,37 @@ body.pf-app,
 }
 
 /* =========================================================
+   PIE DE LA APLICACION
+   ========================================================= */
+
+.pf-app-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--pf-space-md);
+
+    width: min(100%, 90rem);
+    margin: auto auto 0;
+    padding: var(--pf-space-lg) var(--pf-page-padding);
+
+    color: var(--pf-secondary);
+    border-top: 1px solid var(--pf-border-color);
+
+    font-size: var(--pf-font-size-label-sm);
+}
+
+.pf-app-footer__brand {
+    display: inline-flex;
+    align-items: center;
+}
+
+.pf-app-footer__logo {
+    display: block;
+    width: 7.5rem;
+    height: auto;
+}
+
+/* =========================================================
    DISTRIBUCIÓN INTERNA DE PÁGINA
    ========================================================= */
 
@@ -158,6 +189,10 @@ body.pf-app,
     .pf-page {
         padding: var(--pf-space-lg);
     }
+
+    .pf-app-footer {
+        padding-inline: var(--pf-space-lg);
+    }
 }
 
 /* =========================================================
@@ -171,6 +206,12 @@ body.pf-app,
 
     .pf-page__content {
         gap: var(--pf-space-md);
+    }
+
+    .pf-app-footer {
+        align-items: flex-start;
+        flex-direction: column;
+        padding-inline: var(--pf-space-md);
     }
 }
 

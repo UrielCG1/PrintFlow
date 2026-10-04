@@ -42,6 +42,9 @@
 <div class="pf-public-quote" data-controller="ui--public-quote" data-ui--public-quote-customer-url-value="{{ path('public_quote_customer',{number:'CONTACT_NUMBER'}) }}" data-ui--public-quote-products-url-value="{{ path('public_quote_products',{categoryId:'CATEGORY_ID'}) }}" data-ui--public-quote-price-url-value="{{ path('public_quote_price_preview',{id:'PRODUCT_ID'}) }}" data-ui--public-quote-recovery-url-value="{{ path('public_quote_customer_number_recovery') }}">
     <section class="pf-public-quote__hero" style="--pf-quote-hero-image:url('{{ asset('images/quote/hero-printing.jpg') }}')">
         <div class="container-xxl pf-public-quote__hero-container"><div class="pf-public-quote__hero-content">
+            <a href="{{ path('public_quote_request') }}" class="pf-public-quote__brand" aria-label="PrintFlow, inicio">
+                {% include 'partials/_brand_logo.html.twig' with { logo_class: 'pf-public-quote__brand-logo' } %}
+            </a>
             <div class="pf-public-quote__badge"><span class="pf-public-quote__badge-dot"></span>Soluciones de impresión para empresas</div>
             <h1 class="pf-public-quote__hero-title">Dale forma a tus ideas <span>con impresión profesional.</span></h1>
             <p class="pf-public-quote__hero-description">Cotiza materiales impresos para tu negocio de manera rápida. Cuéntanos qué necesitas y prepararemos una propuesta adaptada a tu proyecto.</p>
@@ -84,6 +87,12 @@
             {{ form_end(form) }}
         </div></main>
     </div></div>
+    <footer class="pf-public-quote__footer">
+        <div class="container-xxl pf-public-quote__footer-inner">
+            {% include 'partials/_brand_logo.html.twig' with { logo_class: 'pf-public-quote__footer-logo' } %}
+            <span>Soluciones de impresión para empresas</span>
+        </div>
+    </footer>
     <div class="modal fade" tabindex="-1" data-quote-confirmation-modal aria-labelledby="quote-confirmation-title" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><div><h2 class="modal-title fs-4" id="quote-confirmation-title">Confirma tu solicitud</h2><p class="text-secondary mb-0">Revisa los datos antes de generar el PDF.</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div><div class="modal-body" data-confirmation-summary></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Regresar y corregir</button><button type="button" class="btn pf-public-quote__hero-button" data-action="ui--public-quote#confirmSubmission"><i class="bi bi-check-circle"></i> Confirmar y enviar</button></div></div></div></div>
     {% if success_messages is not empty %}
     <div class="modal fade pf-success-modal" tabindex="-1" data-ui--public-quote-target="successModal" aria-labelledby="quote-success-title" aria-describedby="quote-success-description" aria-hidden="true">

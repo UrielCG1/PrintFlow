@@ -1144,6 +1144,17 @@ button.pf-user-action {
     width: min(100%, 42rem);
 }
 
+.pf-user-reset-form__brand {
+    display: inline-flex;
+    margin-bottom: var(--pf-space-xl);
+}
+
+.pf-user-reset-form__brand-logo {
+    display: block;
+    width: 10rem;
+    height: auto;
+}
+
 /* =========================================================
    RESPONSIVE: TABLET
    ========================================================= */

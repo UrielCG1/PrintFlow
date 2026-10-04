@@ -6,9 +6,9 @@
 .pf-privacy__header { position:relative; isolation:isolate; overflow:hidden; min-height:430px; padding:32px max(24px,calc((100vw - 1160px)/2)) 92px; background:radial-gradient(circle at 83% 18%,rgb(55 239 103 / 20%),transparent 22rem),linear-gradient(125deg,#062d21 0%,#0a4c36 58%,#106744 100%); color:#fff; }
 .pf-privacy__header::before { position:absolute; z-index:-1; top:70px; right:8%; width:290px; height:290px; border:1px solid rgb(255 255 255 / 12%); border-radius:42% 58% 63% 37%/45% 35% 65% 55%; content:""; transform:rotate(18deg); }
 .pf-privacy__header::after { position:absolute; z-index:-1; right:-40px; bottom:-210px; width:480px; height:480px; border:85px solid rgb(255 255 255 / 4%); border-radius:50%; content:""; }
-.pf-privacy__brand { display:inline-flex; align-items:center; gap:11px; margin-bottom:64px; color:#fff; font-size:1.05rem; font-weight:780; letter-spacing:-.01em; text-decoration:none; }
+.pf-privacy__brand { display:inline-flex; align-items:center; margin-bottom:64px; text-decoration:none; }
 .pf-privacy__brand:hover,.pf-privacy__brand:focus-visible { color:#fff; }
-.pf-privacy__brand-mark { display:grid; width:39px; height:39px; place-items:center; border-radius:11px; background:var(--privacy-lime); box-shadow:0 8px 22px rgb(56 239 103 / 22%); color:#043622; font-size:.75rem; font-weight:900; }
+.pf-privacy__brand-logo { display:block; width:154px; max-width:100%; height:auto; border-radius:6px; }
 .pf-privacy__eyebrow { display:inline-flex; align-items:center; gap:9px; margin:0 0 15px; color:#88f4a6; font-size:.75rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
 .pf-privacy__eyebrow::before { width:24px; height:2px; background:var(--privacy-lime); content:""; }
 .pf-privacy__header h1 { max-width:800px; margin:0; color:#fff; font-size:clamp(2.75rem,6.5vw,5.25rem); font-weight:800; letter-spacing:-.055em; line-height:.98; }

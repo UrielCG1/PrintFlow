@@ -102,6 +102,8 @@
             </div>
         {% endif %}
 
+        {% set commercialContact = quotation.clientSnapshot.commercial_contact|default(null) %}
+
         <div class="row g-4 mb-4">
             <div class="col-12 col-md-4">
                 <section class="pf-card h-100">
@@ -115,10 +117,22 @@
             <div class="col-12 col-md-4">
                 <section class="pf-card h-100">
                     <div class="pf-card__body">
-                        <span class="text-muted small d-block mb-1">Cliente</span>
-                        <strong>{{ quotation.clientSnapshot.legal_name ?? quotation.clientSnapshot.business_name ?? 'No especificado' }}</strong>
+                        {% if commercialContact %}
+                            <span class="text-muted small d-block mb-1">Contacto comercial</span>
+                            <strong>{{ commercialContact.full_name|default('No especificado') }}</strong>
+                            {% if commercialContact.job_title|default(null) %}
+                                <span class="d-block text-muted small">{{ commercialContact.job_title }}</span>
+                            {% endif %}
+                            {% if commercialContact.email|default(null) or commercialContact.phone|default(null) %}
+                                <span class="d-block text-muted small mt-2">{{ commercialContact.email|default('') }}{% if commercialContact.email|default(null) and commercialContact.phone|default(null) %} Â· {% endif %}{{ commercialContact.phone|default('') }}</span>
+                            {% endif %}
+                            <span class="d-block text-muted small mt-2">Cliente: {{ quotation.clientSnapshot.legal_name ?? quotation.clientSnapshot.business_name ?? 'No especificado' }}</span>
+                        {% else %}
+                            <span class="text-muted small d-block mb-1">Cliente</span>
+                            <strong>{{ quotation.clientSnapshot.legal_name ?? quotation.clientSnapshot.business_name ?? 'No especificado' }}</strong>
+                        {% endif %}
                         {% if quotation.clientSnapshot.tax_id ?? false %}
-                            <span class="d-block text-muted small mt-2">RFC: {{ quotation.clientSnapshot.tax_id }}</span>
+                            <span class="d-block text-muted small {{ commercialContact ? '' : 'mt-2' }}">RFC: {{ quotation.clientSnapshot.tax_id }}</span>
                         {% endif %}
                     </div>
                 </section>
@@ -138,7 +152,6 @@
             </div>
         </div>
 
-        {% set commercialContact = quotation.clientSnapshot.commercial_contact|default(null) %}
         {% set fiscalAddress = quotation.fiscalAddressSnapshot %}
         {% set deliveryAddress = quotation.deliveryAddressSnapshot %}
         {% if commercialContact or fiscalAddress or deliveryAddress %}

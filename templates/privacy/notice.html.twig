@@ -8,8 +8,7 @@
     <article class="pf-privacy" aria-labelledby="privacy-title">
         <header class="pf-privacy__header">
             <a class="pf-privacy__brand" href="{{ path('app_home') }}" aria-label="Ir al inicio de Ooxcorp">
-                <span class="pf-privacy__brand-mark" aria-hidden="true">PF</span>
-                <span>Ooxcorp</span>
+                {% include 'partials/_brand_logo.html.twig' with { logo_class: 'pf-privacy__brand-logo' } %}
             </a>
             <p class="pf-privacy__eyebrow">Transparencia y protección de datos</p>
             <h1 id="privacy-title">Aviso de Privacidad</h1>
