@@ -13,4 +13,17 @@ class ContactPhone { use Timestampable;
     /** Vigencia de la asignación. */ #[ORM\Column(name:'is_active',options:['default'=>true])] private bool $isActive=true;
     public function __construct(Contact $contact,Phone $phone){$this->contact=$contact;$this->phone=$phone;$this->initializeTimestamps();}
     public function getId():?int{return $this->id;} public function getPhone():Phone{return $this->phone;} public function isPrimary():bool{return $this->isPrimary;} public function isActive():bool{return $this->isActive;} public function setLabel(?string $v):self{$v=trim((string)$v);$this->label=$v?:null;return $this;} public function setIsPrimary(bool $v):self{$this->isPrimary=$v;return $this;} public function setIsActive(bool $v):self{$this->isActive=$v;return $this;}
+
+    /** Obtiene la persona de contacto. */
+    public function getContact(): Contact
+    {
+        return $this->contact;
+    }
+
+    /** Obtiene la etiqueta del teléfono. */
+    public function getLabel(): ?string
+    {
+        return $this->label;
+    }
+
 }
