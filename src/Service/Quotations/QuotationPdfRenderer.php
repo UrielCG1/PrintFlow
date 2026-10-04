@@ -20,6 +20,7 @@ final class QuotationPdfRenderer
         private readonly string $issuerEmail,
         private readonly string $issuerPhone,
         private readonly string $issuerAddress,
+        private readonly PdfBrandLogoProvider $brandLogo,
     ) {
     }
 
@@ -43,6 +44,7 @@ final class QuotationPdfRenderer
             $this->twig->render('admin/quotations/pdf.html.twig', [
                 'quotation' => $quotation,
                 'deliveryDate' => $quotation->getRequestedDeliveryAt(),
+                'brandLogoSrc' => $this->brandLogo->dataUri(),
                 'issuer' => [
                     'name' => $this->issuerName,
                     'tax_id' => $this->issuerTaxId,

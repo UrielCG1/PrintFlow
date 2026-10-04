@@ -75,6 +75,13 @@
                 font-size: 8.5px;
             }
 
+            .brand-logo {
+                display: block;
+                width: 128px;
+                height: auto;
+                margin: 0 0 12px auto;
+            }
+
             .document-title {
                 margin: 0 0 5px;
                 color: #10a816;
@@ -277,7 +284,8 @@
                     {% endif %}
                 </td>
 
-                <td>
+                <td class="text-end">
+                    <img class="brand-logo" src="{{ brandLogoSrc }}" alt="OoxCorp">
                     <h2 class="document-title">Cotización</h2>
                     <p class="folio">{{ quotation.folio }}</p>
                     <div class="delivery-date">

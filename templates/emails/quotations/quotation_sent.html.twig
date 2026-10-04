@@ -22,6 +22,12 @@
                                                 VIGENCIA HASTA:<br>
                                                 <span style="font-size:14px;">{{ quotation.expiresAt|date('d/m/Y') }}</span>
                                             </div>
+                                            {% if quotation.requestedDeliveryAt %}
+                                                <div style="display:inline-block;margin-top:8px;padding:10px 12px;border:2px solid #d92d20;border-radius:8px;background:#fff1f0;color:#b42318;font-size:12px;font-weight:700;line-height:1.4;text-align:center;">
+                                                    FECHA DE ENTREGA:<br>
+                                                    <span style="font-size:14px;">{{ quotation.requestedDeliveryAt|date('d/m/Y') }}</span>
+                                                </div>
+                                            {% endif %}
                                         </td>
                                     </tr>
                                 </table>

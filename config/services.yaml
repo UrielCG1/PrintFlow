@@ -29,6 +29,10 @@ services:
             $issuerPhone: '%env(string:PRINTFLOW_QUOTATION_ISSUER_PHONE)%'
             $issuerAddress: '%env(string:PRINTFLOW_QUOTATION_ISSUER_ADDRESS)%'
 
+    App\Service\Quotations\PdfBrandLogoProvider:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+
     App\Service\Quotations\QuotationMailer:
         arguments:
             $fromAddress: '%env(string:MAILER_FROM_ADDRESS)%'
