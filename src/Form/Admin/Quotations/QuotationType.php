@@ -46,17 +46,6 @@ final class QuotationType extends AbstractType
                 'input' => 'datetime_immutable',
                 'help' => 'Último día en que esta propuesta comercial será válida.',
             ])
-            ->add('discountPercent', TextType::class, [
-                'label' => 'Descuento global (%)',
-                'required' => false,
-                'help' => 'Se propone el descuento predeterminado del cliente; puedes ajustarlo para este borrador.',
-                'attr' => [
-                    'inputmode' => 'decimal',
-                    'placeholder' => '0.00',
-                    'data-ui--quotation-form-target' => 'discountPercent',
-                    'data-action' => 'input->ui--quotation-form#markDiscountAsManual',
-                ],
-            ])
             ->add('commercialContactId', HiddenType::class, [
                 'required' => false,
                 'attr' => [

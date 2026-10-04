@@ -28,9 +28,6 @@ class ClientCategory
     private ?string $code = null;
 
     /** Porcentaje de descuento sugerido para los clientes de esta categoría. */
-    #[ORM\Column(name: 'discount_percentage', type: 'decimal', precision: 5, scale: 2, options: ['default' => '0.00'])]
-    private string $discountPercentage = '0.00';
-
     #[ORM\Column(name: 'display_order', options: ['default' => 0])]
     private int $displayOrder = 0;
 
@@ -74,8 +71,6 @@ class ClientCategory
 
     public function getCode(): ?string { return $this->code; }
     public function setCode(?string $value): self { $value=trim((string)$value); $this->code=$value?strtoupper($value):null; return $this; }
-    public function getDiscountPercentage(): string { return $this->discountPercentage; }
-    public function setDiscountPercentage(string $value): self { $this->discountPercentage=number_format((float)$value,2,'.',''); return $this; }
 
     public function setDescription(?string $description): self
     {

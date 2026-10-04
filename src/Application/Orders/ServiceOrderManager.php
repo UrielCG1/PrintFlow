@@ -570,6 +570,11 @@ final class ServiceOrderManager
             'acceptance_contact' => $quotation->getDecisionContact(),
             'acceptance_notes' => $quotation->getDecisionNotes(),
             'acceptance_evidence_reference' => $quotation->getDecisionEvidenceReference(),
+            'pricing_engine_version' => $quotation->getPricingEngineVersion(),
+            'pricing_calculation_version' => $quotation->getPricingCalculationVersion(),
+            'pricing_hash' => $quotation->getPricingHash(),
+            'volume_hash' => $quotation->getVolumeHash(),
+            'discount_breakdown' => $quotation->getDiscountBreakdown(),
         ];
     }
 

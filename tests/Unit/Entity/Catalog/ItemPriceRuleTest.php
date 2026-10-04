@@ -12,10 +12,10 @@ final class ItemPriceRuleTest extends TestCase
     public function testNormalizesMinimumQuantity(): void
     {
         $cases = [
-            ['10', '10.0000'],
-            ['10.5', '10.5000'],
-            ['2,25', '2.2500'],
-            [' 1.125 ', '1.1250'],
+            ['10', '10.000000'],
+            ['10.5', '10.500000'],
+            ['2,25', '2.250000'],
+            [' 1.125 ', '1.125000'],
         ];
 
         foreach ($cases as [$input, $expected]) {
@@ -38,7 +38,7 @@ final class ItemPriceRuleTest extends TestCase
     public function testRejectsMinimumQuantityWithTooManyDecimals(): void
     {
         $this->expectException(\InvalidArgumentException::class);
-        ItemPriceRule::normalizeMinimumQuantity('1.00001');
+        ItemPriceRule::normalizeMinimumQuantity('1.0000001');
     }
 
     public function testRejectsNonNumericMinimumQuantity(): void

@@ -3,6 +3,7 @@
 namespace App\Application\Clients;
 
 use App\Entity\Clients\ClientCategory;
+use App\Entity\Clients\ClientClass;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
@@ -45,6 +46,7 @@ final class ClientData
     public ?string $defaultCfdiUseCode = null;
 
     public ?ClientCategory $category = null;
+    public ?ClientClass $clientClass = null;
 
     #[Assert\Email(message: 'Captura un correo electrónico válido.')]
     #[Assert\Length(max: 180)]

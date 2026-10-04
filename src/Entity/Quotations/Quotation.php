@@ -154,6 +154,30 @@ class Quotation
     #[ORM\Column(name: 'discount_amount', type: Types::DECIMAL, precision: 14, scale: 2)]
     private string $discountAmount = '0.00';
 
+    #[ORM\Column(name: 'discount_breakdown', type: Types::JSON)]
+    private array $discountBreakdown = [];
+
+    #[ORM\Column(name: 'additional_discount_percent', type: Types::DECIMAL, precision: 7, scale: 4, options: ['default' => '0.0000'])]
+    private string $additionalDiscountPercent = '0.0000';
+
+    #[ORM\Column(name: 'additional_discount_reason', type: Types::TEXT, nullable: true)]
+    private ?string $additionalDiscountReason = null;
+
+    #[ORM\Column(name: 'pricing_engine_version', length: 10, options: ['default' => 'LEGACY'])]
+    private string $pricingEngineVersion = 'LEGACY';
+
+    #[ORM\Column(name: 'pricing_calculation_version', options: ['unsigned' => true, 'default' => 1])]
+    private int $pricingCalculationVersion = 1;
+
+    #[ORM\Column(name: 'pricing_hash', length: 64, nullable: true)]
+    private ?string $pricingHash = null;
+
+    #[ORM\Column(name: 'volume_calculation_version', options: ['unsigned' => true, 'default' => 0])]
+    private int $volumeCalculationVersion = 0;
+
+    #[ORM\Column(name: 'volume_hash', length: 64, nullable: true)]
+    private ?string $volumeHash = null;
+
     #[ORM\Column(name: 'taxable_amount', type: Types::DECIMAL, precision: 14, scale: 2)]
     private string $taxableAmount = '0.00';
 
@@ -200,7 +224,7 @@ class Quotation
         $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
         $this->createdAt = $now;
         $this->updatedAt = $now;
-        $this->acceptanceToken = bin2hex(random_bytes(32));
+        $this->acceptanceToken = null;
     }
 
     public function getId(): ?int
@@ -356,6 +380,7 @@ class Quotation
         $this->issuedAt = $issuedAt->setTimezone(
             new \DateTimeZone('UTC'),
         );
+        $this->ensureAcceptanceToken();
         $this->status = QuotationStatus::ISSUED;
     }
 
@@ -672,6 +697,29 @@ class Quotation
     {
         return $this->discountAmount;
     }
+
+    public function getDiscountBreakdown(): array { return $this->discountBreakdown; }
+    public function setDiscountBreakdown(array $value): self { $this->discountBreakdown = $value; return $this; }
+    public function getAdditionalDiscountPercent(): string { return $this->additionalDiscountPercent; }
+    public function setAdditionalDiscountPercent(string $value): self
+    {
+        $value = \Brick\Math\BigDecimal::of(str_replace(',', '.', trim($value)));
+        if ($value->compareTo('0') < 0 || $value->compareTo('100') > 0) throw new \InvalidArgumentException('El descuento adicional debe estar entre 0 y 100%.');
+        $this->additionalDiscountPercent = $value->toScale(4)->__toString();
+        return $this;
+    }
+    public function getAdditionalDiscountReason(): ?string { return $this->additionalDiscountReason; }
+    public function setAdditionalDiscountReason(?string $value): self { $this->additionalDiscountReason = trim((string) $value) ?: null; return $this; }
+    public function getPricingEngineVersion(): string { return $this->pricingEngineVersion; }
+    public function setPricingEngineVersion(string $value): self { $this->pricingEngineVersion = strtoupper(trim($value)); return $this; }
+    public function getPricingCalculationVersion(): int { return $this->pricingCalculationVersion; }
+    public function incrementPricingCalculationVersion(): self { ++$this->pricingCalculationVersion; return $this; }
+    public function getPricingHash(): ?string { return $this->pricingHash; }
+    public function setPricingHash(?string $value): self { $this->pricingHash = $value; return $this; }
+    public function getVolumeCalculationVersion(): int { return $this->volumeCalculationVersion; }
+    public function incrementVolumeCalculationVersion(): self { ++$this->volumeCalculationVersion; return $this; }
+    public function getVolumeHash(): ?string { return $this->volumeHash; }
+    public function setVolumeHash(?string $value): self { $this->volumeHash = $value; return $this; }
 
     public function getTaxableAmount(): string
     {

@@ -32,7 +32,7 @@ class ItemPriceRule
     #[ORM\Column(name: 'rule_type', length: 30, enumType: ItemPriceRuleType::class)]
     private ItemPriceRuleType $ruleType;
 
-    #[ORM\Column(name: 'min_quantity', type: Types::DECIMAL, precision: 14, scale: 4)]
+    #[ORM\Column(name: 'min_quantity', type: Types::DECIMAL, precision: 18, scale: 6)]
     private string $minQuantity;
 
     #[ORM\Column(name: 'unit_price', type: Types::DECIMAL, precision: 12, scale: 2)]
@@ -143,19 +143,12 @@ class ItemPriceRule
     {
         $value = trim(str_replace(',', '.', $quantity));
 
-        if (preg_match('/^(?:0|[1-9]\d{0,9})(?:\.\d{1,4})?$/D', $value) !== 1) {
+        if (preg_match('/^(?:0|[1-9]\d{0,11})(?:\.\d{1,6})?$/D', $value) !== 1) {
             throw new \InvalidArgumentException('La cantidad mínima no tiene un formato válido.');
         }
-
-        [$integer, $decimal] = array_pad(explode('.', $value, 2), 2, '');
-        $integer = ltrim($integer, '0') ?: '0';
-        $normalized = $integer.'.'.str_pad($decimal, 4, '0');
-
-        if ($normalized === '0.0000') {
-            throw new \InvalidArgumentException('La cantidad mínima debe ser mayor que cero.');
-        }
-
-        return $normalized;
+        $decimal = \Brick\Math\BigDecimal::of($value);
+        if ($decimal->compareTo('0') <= 0) { throw new \InvalidArgumentException('La cantidad mínima debe ser mayor que cero.'); }
+        return $decimal->toScale(6)->__toString();
     }
 
     #[ORM\PreUpdate]

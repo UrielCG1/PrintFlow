@@ -18,12 +18,6 @@ final class QuotationData
     public ?string $notes = null;
 
     #[Assert\Regex(
-        pattern: '/^(?:0|[1-9]\d{0,2})(?:[.,]\d{1,2})?$/',
-        message: 'El descuento debe usar hasta dos decimales.',
-    )]
-    public ?string $discountPercent = null;
-
-    #[Assert\Regex(
         pattern: '/^\d+$/',
         message: 'El contacto comercial seleccionado no es válido.',
     )]
@@ -83,8 +77,6 @@ final class QuotationData
         $data->client = $quotation->getClient();
         $data->expiresAt = $quotation->getExpiresAt();
         $data->notes = $quotation->getNotes();
-        $data->discountPercent = $quotation->getDiscountPercent();
-
         $commercialContactId = $quotation->getClientSnapshot()['commercial_contact']['client_contact_id'] ?? null;
         $fiscalAddressId = $quotation->getFiscalAddressSnapshot()['client_address_id'] ?? null;
         $deliveryAddressId = $quotation->getDeliveryAddressSnapshot()['client_address_id'] ?? null;

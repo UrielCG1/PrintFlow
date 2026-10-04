@@ -57,7 +57,7 @@ final class QuotationItemCharacteristicsSpecificationResolverTest extends TestCa
             'MANUAL',
         );
 
-        self::assertSame('3.0000', $result['quantity']);
+        self::assertSame('3.000000', $result['quantity']);
         self::assertSame(2, $result['schema_version']);
         self::assertSame(
             QuotationItemCharacteristicsSpecificationResolver::PROFILE,
@@ -65,7 +65,7 @@ final class QuotationItemCharacteristicsSpecificationResolverTest extends TestCa
         );
         self::assertSame('MATTE', $result['snapshot']['values']['FINISH']['submitted_value']);
         self::assertSame('Mate', $result['snapshot']['values']['FINISH']['display_value']);
-        self::assertSame('12.5000', $result['snapshot']['values']['FINISHED_WIDTH_CM']['submitted_value']);
+        self::assertSame('12.500000', $result['snapshot']['values']['FINISHED_WIDTH_CM']['submitted_value']);
         self::assertArrayNotHasKey('NOT_CONFIGURED', $result['snapshot']['values']);
     }
 
@@ -158,9 +158,9 @@ final class QuotationItemCharacteristicsSpecificationResolverTest extends TestCa
             'AUTO',
         );
 
-        self::assertSame('1.5000', $result['quantity']);
+        self::assertSame('1.500000', $result['quantity']);
         self::assertSame('DIMENSIONS', $result['snapshot']['billing_quantity']['source']);
-        self::assertSame('100.0000', $result['snapshot']['large_format']['values']['finished_width_cm']);
+        self::assertSame('100.000000', $result['snapshot']['large_format']['values']['finished_width_cm']);
         self::assertSame('MATTE', $result['snapshot']['values']['FINISH']['submitted_value']);
     }
 
@@ -203,10 +203,10 @@ final class QuotationItemCharacteristicsSpecificationResolverTest extends TestCa
             'AUTO',
         );
 
-        self::assertSame('6.0000', $result['quantity']);
-        self::assertSame('200.0000', $result['snapshot']['values']['FINISHED_WIDTH_CM']['submitted_value']);
-        self::assertSame('300.0000', $result['snapshot']['values']['FINISHED_HEIGHT_CM']['submitted_value']);
-        self::assertSame('6.0000', $result['snapshot']['large_format']['calculated']['area_m2']);
+        self::assertSame('6.000000', $result['quantity']);
+        self::assertSame('200.000000', $result['snapshot']['values']['FINISHED_WIDTH_CM']['submitted_value']);
+        self::assertSame('300.000000', $result['snapshot']['values']['FINISHED_HEIGHT_CM']['submitted_value']);
+        self::assertSame('6.000000', $result['snapshot']['large_format']['calculated']['area_m2']);
     }
 
     private function item(): CommercialItem

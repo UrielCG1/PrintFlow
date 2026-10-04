@@ -3,6 +3,9 @@
 namespace App\Form\Admin\Clients;
 
 use App\Application\Clients\ClientContactData;
+use App\Entity\Clients\ClientClass;
+use Doctrine\ORM\EntityRepository;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
@@ -20,6 +23,15 @@ final class ClientContactType extends AbstractType
             ->add('fullName', TextType::class, [
                 'label' => 'Nombre completo',
                 'attr' => ['maxlength' => 160],
+            ])
+            ->add('clientClassOverride', EntityType::class, [
+                'class' => ClientClass::class,
+                'choice_label' => static fn (ClientClass $class): string => $class->getCode().' — '.$class->getName(),
+                'label' => 'Clase del contacto',
+                'placeholder' => 'Heredar clase del cliente',
+                'required' => false,
+                'disabled' => !$options['class_editable'],
+                'help' => 'Si queda vacío, hereda la clase vigente del cliente.',
             ])
             ->add('jobTitle', TextType::class, [
                 'label' => 'Puesto o área',
@@ -69,8 +81,10 @@ final class ClientContactType extends AbstractType
         $resolver->setDefaults([
             'data_class' => ClientContactData::class,
             'contact_is_active' => true,
+            'class_editable' => false,
         ]);
 
         $resolver->setAllowedTypes('contact_is_active', 'bool');
+        $resolver->setAllowedTypes('class_editable', 'bool');
     }
 }

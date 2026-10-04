@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\Quotations\Quotation;
+use App\Application\Quotations\QuotationVolumeApprovalService;
 use App\Enum\Quotations\QuotationStatus;
 use App\Service\Quotations\QuotationAcceptanceNotifier;
 use Doctrine\ORM\EntityManagerInterface;
@@ -16,7 +17,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class QuotationPublicAcceptanceController extends AbstractController
 {
     #[Route('/cotizacion/aceptar/{token}', name: 'quotation_public_accept', requirements: ['token' => '[a-f0-9]{48,64}'], methods: ['GET', 'POST'])]
-    public function __invoke(string $token, Request $request, EntityManagerInterface $em, QuotationAcceptanceNotifier $notifier): Response
+    public function __invoke(string $token, Request $request, EntityManagerInterface $em, QuotationAcceptanceNotifier $notifier, QuotationVolumeApprovalService $approvals): Response
     {
         $quotation = $em->getRepository(Quotation::class)->findOneBy(['acceptanceToken' => $token]);
         if (!$quotation) { throw $this->createNotFoundException('El enlace de aceptación no es válido.'); }
@@ -35,6 +36,9 @@ final class QuotationPublicAcceptanceController extends AbstractController
             if (mb_strlen($name) > 160) { $errors[] = 'El nombre no puede exceder 160 caracteres.'; }
             if (mb_strlen($notes) > 5000) { $errors[] = 'Las observaciones no pueden exceder 5,000 caracteres.'; }
 
+            if ($errors === []) {
+                try { $approvals->assertApproved($quotation); } catch (\DomainException $exception) { $errors[] = $exception->getMessage(); }
+            }
             if ($errors === []) {
                 $ip = substr((string) ($request->getClientIp() ?? 'unknown'), 0, 45);
                 $quotation->acceptFromPublicLink($name, new \DateTimeImmutable('now'), $notes ?: null, $ip);

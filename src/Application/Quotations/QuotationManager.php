@@ -11,6 +11,12 @@ use App\Entity\Clients\ClientContact;
 use App\Entity\Quotations\Quotation;
 use App\Entity\Quotations\QuotationEmailDispatch;
 use App\Entity\Quotations\QuotationItem;
+use App\Entity\Discounts\QuotationVolumeDiscountReview;
+use App\Entity\Discounts\QuotationDiscountApplication;
+use App\Entity\Discounts\QuotationItemDiscountAllocation;
+use App\Entity\Discounts\DiscountType;
+use App\Entity\Discounts\VolumeDiscountRule;
+use App\Entity\Clients\ClientClass;
 use App\Entity\Users\User;
 use App\Enum\Quotations\QuotationStatus;
 use App\Repository\Catalog\CommercialItemRepository;
@@ -41,6 +47,8 @@ final class QuotationManager
         private readonly ClientAddressRepository $clientAddressRepository,
         private readonly CommercialItemRepository $commercialItemRepository,
         private readonly QuotationItemSpecificationResolver $specificationResolver,
+        private readonly QuotationDiscountEngine $quotationDiscountEngine,
+        private readonly QuotationVolumeApprovalService $quotationVolumeApprovalService,
     ) {
     }
 
@@ -54,6 +62,8 @@ final class QuotationManager
 
                 $this->entityManager->persist($quotation);
                 $this->entityManager->flush();
+                $this->persistDiscountApplications($quotation, $actor);
+                $this->syncVolumeReview($quotation, $actor, 'USER');
 
                 $this->auditLogger->record(
                     actor: $actor,
@@ -93,6 +103,8 @@ final class QuotationManager
             }
             $this->entityManager->persist($quotation);
             $this->entityManager->flush();
+            $this->persistDiscountApplications($quotation, null);
+            $this->syncVolumeReview($quotation, null, 'PUBLIC');
             return $quotation;
         });
     }
@@ -129,6 +141,9 @@ final class QuotationManager
                     newValues: $newValues,
                 );
 
+                $this->syncVolumeReview($quotation, $actor, 'USER');
+                $this->persistDiscountApplications($quotation, $actor);
+
                 $this->entityManager->flush();
             },
         );
@@ -159,6 +174,7 @@ final class QuotationManager
                         'Esta cotización ya fue emitida o dejó de ser editable.',
                     );
                 }
+                $this->quotationVolumeApprovalService->assertApproved($quotation);
 
                 $oldValues = $this->auditSnapshot($quotation);
 
@@ -186,6 +202,23 @@ final class QuotationManager
         );
     }
 
+    public function applyAdditionalDiscount(Quotation $quotation, string $percentage, string $reason, User $actor): void
+    {
+        if (!$quotation->isEditable()) throw new \DomainException('El descuento adicional sólo puede aplicarse antes de emitir la cotización.');
+        if (trim($reason) === '') throw new \InvalidArgumentException('El motivo del descuento adicional es obligatorio.');
+        $this->entityManager->wrapInTransaction(function () use ($quotation, $percentage, $reason, $actor): void {
+            $this->entityManager->refresh($quotation, LockMode::PESSIMISTIC_WRITE);
+            $oldValues = $this->auditSnapshot($quotation);
+            $quotation->setAdditionalDiscountPercent($percentage)->setAdditionalDiscountReason($reason);
+            $this->applyData($quotation, QuotationData::fromQuotation($quotation));
+            $this->entityManager->flush();
+            $this->persistDiscountApplications($quotation, $actor);
+            $this->syncVolumeReview($quotation, $actor, 'USER');
+            $this->auditLogger->record(actor: $actor, action: 'quotation.additional_discount_applied', entityType: 'quotation', entityId: $quotation->getId(), oldValues: $oldValues, newValues: $this->auditSnapshot($quotation));
+            $this->entityManager->flush();
+        });
+    }
+
     public function startReview(Quotation $quotation, User $actor): void
     {
         $this->entityManager->wrapInTransaction(function () use ($quotation, $actor): void {$quotation->startReview();$this->auditLogger->record(actor:$actor,action:'quotation.review_started',entityType:'quotation',entityId:$quotation->getId(),newValues:$this->auditSnapshot($quotation));$this->entityManager->flush();});
@@ -206,6 +239,7 @@ final class QuotationManager
             function () use ($quotation, $data, $actor): void {
                 $this->entityManager->refresh($quotation, LockMode::PESSIMISTIC_WRITE);
                 $this->assertCanProcessCommercialResponse($quotation);
+                $this->quotationVolumeApprovalService->assertApproved($quotation);
 
                 if (!$quotation->getStatus()->canBeSent()) {
                     throw new \DomainException('Esta cotización no está disponible para enviarse por correo.');
@@ -327,6 +361,8 @@ final class QuotationManager
                 $quotation->supersede((string) $data->reason, $this->now());
                 $this->entityManager->persist($revision);
                 $this->entityManager->flush();
+                $this->persistDiscountApplications($revision, $actor);
+                $this->syncVolumeReview($revision, $actor, 'USER');
 
                 $this->auditLogger->record(
                     actor: $actor,
@@ -417,6 +453,7 @@ final class QuotationManager
             function () use ($quotation, $targetStatus, $data, $actor): void {
                 $this->entityManager->refresh($quotation, LockMode::PESSIMISTIC_WRITE);
                 $this->assertCanProcessCommercialResponse($quotation);
+                $this->quotationVolumeApprovalService->assertApproved($quotation);
 
                 if ($data->channel === null || $data->respondedAt === null) {
                     throw new \LogicException('Los datos de la respuesta comercial están incompletos.');
@@ -501,10 +538,6 @@ final class QuotationManager
             );
         }
 
-        $discountPercent = $this->resolveDiscountPercent(
-            $data->discountPercent,
-            $client,
-        );
         $commercialContact = $this->resolveCommercialContact(
             $data->commercialContactId,
             $client,
@@ -528,8 +561,7 @@ final class QuotationManager
             ->setFiscalAddressSnapshot($this->clientAddressSnapshot($fiscalAddress))
             ->setDeliveryAddressSnapshot($this->clientAddressSnapshot($deliveryAddress))
             ->setExpiresAt($data->expiresAt)
-            ->setNotes($data->notes)
-            ->setDiscountPercent($discountPercent);
+            ->setNotes($data->notes);
 
         $resolvedItems = [];
 
@@ -581,6 +613,7 @@ final class QuotationManager
             $resolvedItems[] = [
                 'line_number' => $index + 1,
                 'commercial_item' => $commercialItem,
+                'ordered_quantity' => $itemData->quantity,
                 'quantity' => $resolution->quantity,
                 'unit_price' => $unitPrice,
                 'line_subtotal' => $lineSubtotal,
@@ -596,11 +629,13 @@ final class QuotationManager
             ];
         }
 
-        $totals = $this->totalsCalculator->calculate(
-            array_column($resolvedItems, 'line_subtotal'),
-            $quotation->getDiscountPercent(),
-            $quotation->getTaxRate(),
-        );
+        $effectiveClass = $commercialContact?->getEffectiveClientClass() ?? $client->getClientClass();
+        $calculated = $this->quotationDiscountEngine->calculate($resolvedItems, $effectiveClass, $quotation->getTaxRate(), $quotation->getAdditionalDiscountPercent(), $quotation->getAdditionalDiscountReason());
+        $oldPricingHash = $quotation->getPricingHash();
+        $oldVolumeHash = $quotation->getVolumeHash();
+        if ($oldPricingHash !== null && $oldPricingHash !== $calculated['pricing_hash']) { $quotation->incrementPricingCalculationVersion(); }
+        if ($oldVolumeHash === null || $oldVolumeHash !== $calculated['volume_hash']) { $quotation->incrementVolumeCalculationVersion(); }
+        $quotation->setPricingEngineVersion('V2')->setPricingHash($calculated['pricing_hash'])->setVolumeHash($calculated['volume_hash'])->setDiscountBreakdown($calculated['applications']);
 
         $currentItems = array_values($quotation->getItems()->toArray());
 
@@ -610,6 +645,8 @@ final class QuotationManager
             $quotationItem
                 ->setLineNumber($resolvedItem['line_number'])
                 ->setCommercialItem($resolvedItem['commercial_item'])
+                ->setOrderedQuantity($resolvedItem['ordered_quantity'])
+                ->setCalculationOrigin('CALCULATED')
                 ->setQuantity($resolvedItem['quantity'])
                 ->setUnitPrice($resolvedItem['unit_price'])
                 ->setLineSubtotal($resolvedItem['line_subtotal'])
@@ -630,12 +667,67 @@ final class QuotationManager
         }
 
         $quotation->setTotals(
-            subtotal: $totals->subtotal,
-            discountAmount: $totals->discountAmount,
-            taxableAmount: $totals->taxableAmount,
-            taxAmount: $totals->taxAmount,
-            total: $totals->total,
+            subtotal: $calculated['subtotal'],
+            discountAmount: $calculated['discount_amount'],
+            taxableAmount: $calculated['taxable_amount'],
+            taxAmount: $calculated['tax_amount'],
+            total: $calculated['total'],
         );
+    }
+
+    private function syncVolumeReview(Quotation $quotation, ?User $actor, string $origin): void
+    {
+        $hasVolume = array_filter($quotation->getDiscountBreakdown(), static fn (array $item): bool => ($item['type'] ?? null) === 'VOLUME' && (float) ($item['discount_amount'] ?? 0) > 0) !== [];
+        if (!$hasVolume || $quotation->getVolumeHash() === null) { return; }
+        $current = $this->quotationVolumeApprovalService->currentReview($quotation);
+        if ($current !== null && in_array($current->getStatus(), ['PENDING', 'APPROVED'], true)) { return; }
+        $review = (new QuotationVolumeDiscountReview($quotation, $quotation->getVolumeCalculationVersion(), $quotation->getVolumeHash()))
+            ->setReviewAttempt(($current?->getReviewAttempt() ?? 0) + 1)
+            ->setRequestedBy($actor)->setOrigin($origin);
+        $this->entityManager->persist($review);
+    }
+
+    private function persistDiscountApplications(Quotation $quotation, ?User $actor): void
+    {
+        if ($quotation->getId() === null || $quotation->getPricingEngineVersion() !== 'V2') { return; }
+        $this->entityManager->getConnection()->executeStatement('DELETE FROM quotation_discount_applications WHERE quotation_id = ?', [$quotation->getId()]);
+        $types = $this->entityManager->getRepository(DiscountType::class);
+        $categories = $this->entityManager->getRepository(\App\Entity\Catalog\CommercialCategory::class);
+        $rules = $this->entityManager->getRepository(VolumeDiscountRule::class);
+        $classes = $this->entityManager->getRepository(ClientClass::class);
+        foreach ($quotation->getDiscountBreakdown() as $order => $data) {
+            $type = $types->findOneBy(['code' => $data['type'] ?? '']);
+            if (!$type instanceof DiscountType) { continue; }
+            $category = isset($data['category_id']) ? $categories->find((int) $data['category_id']) : null;
+            $application = (new QuotationDiscountApplication($quotation, $type))
+                ->setPricingCalculationVersion($quotation->getPricingCalculationVersion())
+                ->setScope(($data['scope'] ?? 'QUOTATION') === 'BUSINESS_LINE' ? 'BUSINESS_LINE' : 'QUOTATION')
+                ->setScopeKey($category ? 'CATEGORY:'.$category->getId() : 'QUOTE')
+                ->setCommercialCategory($category)
+                ->setPercentage((string) ($data['percentage'] ?? '0'))
+                ->setBaseAmount((string) ($data['base_amount'] ?? '0'))
+                ->setDiscountAmount((string) ($data['discount_amount'] ?? '0'))
+                ->setReason(isset($data['reason']) ? (string) $data['reason'] : null)
+                ->setCreatedBy($actor)
+                ->setContextSnapshot($data)
+                ->setDisplayOrder((int) $order);
+            if (isset($data['rule_id']) && ($rule = $rules->find((int) $data['rule_id'])) instanceof VolumeDiscountRule) { $application->setSourceVolumeRule($rule); }
+            if (isset($data['class']) && ($class = $classes->findOneBy(['code' => $data['class']])) instanceof ClientClass) { $application->setSourceClientClass($class); }
+            $this->entityManager->persist($application);
+            $this->entityManager->flush();
+            $eligible = array_values(array_filter($quotation->getItems()->toArray(), static function (QuotationItem $item) use ($application, $category): bool {
+                return $application->getScope() === 'QUOTATION' || ($category !== null && $item->getCommercialItem()->getCategory()->getId() === $category->getId());
+            }));
+            $remaining = \Brick\Math\BigDecimal::of($application->getDiscountAmount());
+            foreach ($eligible as $index => $item) {
+                $amount = $index === count($eligible) - 1
+                    ? $remaining
+                    : \Brick\Math\BigDecimal::of($item->getLineSubtotal())->multipliedBy($application->getPercentage())->dividedBy('100', 2, \Brick\Math\RoundingMode::HalfUp);
+                $amount = $amount->toScale(2, \Brick\Math\RoundingMode::HalfUp);
+                $remaining = $remaining->minus($amount);
+                $this->entityManager->persist((new QuotationItemDiscountAllocation($application, $item))->setBaseAmount($item->getLineSubtotal())->setDiscountAmount($amount->__toString()));
+            }
+        }
     }
 
     private function resolveActiveClient(?\App\Entity\Clients\Client $selectedClient): \App\Entity\Clients\Client
@@ -755,7 +847,7 @@ final class QuotationManager
             || trim($submittedDiscountPercent) === '';
 
         $rawPercent = $usesClientDefault
-            ? (string) $client->getDefaultDiscountPercent()
+            ? '0.0000'
             : trim($submittedDiscountPercent);
 
         $rawPercent = str_replace(',', '.', $rawPercent);
@@ -800,6 +892,8 @@ final class QuotationManager
             'default_cfdi_use_code' => $client->getDefaultCfdiUseCode(),
             'email' => $client->getEmail(),
             'phone' => $client->getPhone(),
+            'client_class' => $client->getClientClass()?->getCode(),
+            'client_class_revision' => $client->getClientClass()?->getConfigRevision(),
             'commercial_contact' => $commercialContact === null ? null : [
                 'client_contact_id' => $commercialContact->getId(),
                 'full_name' => $commercialContact->getFullName(),
@@ -807,6 +901,8 @@ final class QuotationManager
                 'job_title' => $commercialContact->getJobTitle(),
                 'email' => $commercialContact->getEmail(),
                 'phone' => $commercialContact->getPhone(),
+                'effective_client_class' => $commercialContact->getEffectiveClientClass()?->getCode(),
+                'class_source' => $commercialContact->getClientClassOverride() === null ? 'CLIENT' : 'CONTACT_OVERRIDE',
             ],
         ];
     }
@@ -931,7 +1027,9 @@ final class QuotationManager
             'fiscal_address' => $quotation->getFiscalAddressSnapshot(),
             'delivery_address' => $quotation->getDeliveryAddressSnapshot(),
             'expires_at' => $quotation->getExpiresAt()->format('Y-m-d'),
-            'discount_percent' => $quotation->getDiscountPercent(),
+            'legacy_discount_percent_snapshot' => $quotation->getPricingEngineVersion() === 'LEGACY' ? $quotation->getDiscountPercent() : null,
+            'discount_breakdown' => $quotation->getDiscountBreakdown(),
+            'pricing_engine_version' => $quotation->getPricingEngineVersion(),
             'tax_rate' => $quotation->getTaxRate(),
             'subtotal' => $quotation->getSubtotal(),
             'discount_amount' => $quotation->getDiscountAmount(),

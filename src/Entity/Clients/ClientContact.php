@@ -12,6 +12,7 @@ class ClientContact {
     /** Cliente relacionado. */ #[ORM\ManyToOne(targetEntity:Client::class),ORM\JoinColumn(name:'client_id',nullable:false,onDelete:'RESTRICT')] private Client $client;
     /** Persona normalizada; única fuente de nombre, cumpleaños, horario y teléfonos. */ #[ORM\ManyToOne(targetEntity:Contact::class,cascade:['persist']),ORM\JoinColumn(name:'contact_id',nullable:false,onDelete:'RESTRICT')] private Contact $contact;
     /** Sucursal donde atiende. */ #[ORM\ManyToOne(targetEntity:ClientBranch::class),ORM\JoinColumn(name:'client_branch_id',nullable:true,onDelete:'RESTRICT')] private ?ClientBranch $branch=null;
+    /** Override opcional de la clase del cliente; NULL significa herencia dinámica. */ #[ORM\ManyToOne(targetEntity:ClientClass::class),ORM\JoinColumn(name:'client_class_override_id',nullable:true,onDelete:'RESTRICT')] private ?ClientClass $clientClassOverride=null;
     /** Departamento o área. */ #[ORM\Column(length:120,nullable:true)] private ?string $department=null;
     /** Cargo dentro del cliente. */ #[ORM\Column(name:'job_title',length:120,nullable:true)] private ?string $jobTitle=null;
     /** Correo laboral propio de esta relación. */ #[ORM\Column(name:'business_email',length:180,unique:true,nullable:true)] private ?string $businessEmail=null;
@@ -27,6 +28,8 @@ class ClientContact {
     public function __construct(Client $client,Contact $contact){$this->client=$client;$this->contact=$contact;$this->publicNumber='CL-'.strtoupper(bin2hex(random_bytes(12)));$this->createdAt=$this->updatedAt=new \DateTimeImmutable('now',new \DateTimeZone('UTC'));}
     public function getId():?int{return $this->id;} public function getPublicNumber():string{return $this->publicNumber;} public function getClient():Client{return $this->client;} public function getContact():Contact{return $this->contact;}
     public function getBranch():?ClientBranch{return $this->branch;} public function setBranch(?ClientBranch $v):self{$this->branch=$v;return $this;} public function getDepartment():?string{return $this->department;} public function setDepartment(?string $v):self{$v=trim((string)$v);$this->department=$v?:null;return $this;}
+    public function getClientClassOverride():?ClientClass{return $this->clientClassOverride;} public function setClientClassOverride(?ClientClass $v):self{$this->clientClassOverride=$v;return $this;}
+    public function getEffectiveClientClass():?ClientClass{return $this->clientClassOverride ?? $this->client->getClientClass();}
     public function getFullName():string{return $this->contact->getFullName();} public function setFullName(string $v):self{$parts=preg_split('/\s+/',trim($v),2)?:[];$this->contact->setFirstName($parts[0]??'')->setLastName($parts[1]??null);return $this;}
     public function getJobTitle():?string{return $this->jobTitle;} public function setJobTitle(?string $v):self{$v=trim((string)$v);$this->jobTitle=$v?:null;return $this;}
     public function getEmail():?string{return $this->businessEmail;} public function setEmail(?string $v):self{$v=trim((string)$v);$normalized=$v?strtolower($v):null;if($normalized!==$this->businessEmail){$this->businessEmail=$normalized;$this->emailVerifiedAt=null;$this->clearEmailVerification();}return $this;}

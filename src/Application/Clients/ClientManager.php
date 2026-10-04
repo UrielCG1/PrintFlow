@@ -4,6 +4,7 @@ namespace App\Application\Clients;
 
 use App\Entity\Clients\Client;
 use App\Entity\Users\User;
+use App\Repository\Clients\ClientClassRepository;
 use App\Service\Audit\AuditLogger;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Entity\Clients\{ClientAddress,ClientBranch,ClientBranchAddress,ClientBranchPhone,ClientContact,ClientPhone};
@@ -14,6 +15,7 @@ final class ClientManager
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly AuditLogger $auditLogger,
+        private readonly ClientClassRepository $clientClassRepository,
     ) {
     }
 
@@ -22,11 +24,11 @@ final class ClientManager
         $this->validateContactEmails($data);
         return $this->entityManager->wrapInTransaction(function () use ($data, $actor): Client {
             $client = new Client();
-            $this->applyData($client, $data);
+            $this->applyData($client, $data, $actor);
 
             $this->entityManager->persist($client);
             $this->entityManager->flush();
-            $this->syncStructuredData($client, $data);
+            $this->syncStructuredData($client, $data, $actor);
             $this->synchronizeIndividualHolder($client, $data);
             $this->entityManager->flush();
 
@@ -49,8 +51,8 @@ final class ClientManager
         $this->validateContactEmails($data);
         $oldValues = $this->snapshot($client);
 
-        $this->applyData($client, $data);
-        $this->syncStructuredData($client, $data);
+        $this->applyData($client, $data, $actor);
+        $this->syncStructuredData($client, $data, $actor);
         $this->synchronizeIndividualHolder($client, $data);
 
         $newValues = $this->snapshot($client);
@@ -108,8 +110,12 @@ final class ClientManager
         });
     }
 
-    private function applyData(Client $client, ClientData $data): void
+    private function applyData(Client $client, ClientData $data, User $actor): void
     {
+        $clientClass = $this->resolveClientClass($client, $data, $actor);
+        if ($clientClass === null) {
+            throw new \DomainException('El catálogo de clases de cliente no está configurado.');
+        }
         $client
             ->setClientType($data->clientType)
             ->setBusinessName((string) $data->businessName)
@@ -122,8 +128,27 @@ final class ClientManager
             ->setBillingEmail($data->billingEmail)
             ->setDefaultCfdiUseCode($data->defaultCfdiUseCode)
             ->setCategory($data->category)
+            ->setClientClass($clientClass)
             ->setEmail($data->email)
             ->setNotes($data->notes);
+    }
+
+    private function resolveClientClass(Client $client, ClientData $data, User $actor): \App\Entity\Clients\ClientClass
+    {
+        $current = $client->getClientClass();
+        $requested = $data->clientClass;
+        $isAdmin = in_array('ROLE_ADMIN', $actor->getRoles(), true);
+
+        if ($requested !== null && (!$current || $requested->getId() !== $current->getId()) && !$isAdmin) {
+            throw new \DomainException('Solo un administrador puede cambiar la clase del cliente.');
+        }
+
+        $resolved = $requested ?? $current ?? $this->clientClassRepository->findByCode('C');
+        if ($resolved === null) {
+            throw new \DomainException('El catálogo de clases de cliente no está configurado.');
+        }
+
+        return $resolved;
     }
 
     private function validateContactEmails(ClientData $data): void
@@ -166,7 +191,7 @@ final class ClientManager
         $client->setBusinessName($holder->getFullName())->setEmail($email);
     }
 
-    private function syncStructuredData(Client $client, ClientData $data): void
+    private function syncStructuredData(Client $client, ClientData $data, User $actor): void
     {
         $this->syncClientPhones($client, $data->phones);
         foreach($this->entityManager->getRepository(ClientContact::class)->findBy(['client'=>$client]) as $contact){$contact->setIsPrimary(false);}
@@ -180,7 +205,7 @@ final class ClientManager
             if (!$branch) { $branch=new ClientBranch($client,(string)$branchData->code,(string)$branchData->name); $this->entityManager->persist($branch); }
             $branch->setCode((string)$branchData->code)->setName((string)$branchData->name)->setCategory($branchData->category)->setEmail($branchData->email)->setNotes($branchData->notes)->setIsMain($branchData->isMain)->setIsActive(true);
             $this->entityManager->flush(); $kept[(int)$branch->getId()]=true;
-            $this->syncBranchPhones($branch,$branchData->phones); $this->syncBranchAddresses($branch,$branchData->addresses); $this->syncBranchContacts($client,$branch,$branchData->contacts);
+            $this->syncBranchPhones($branch,$branchData->phones); $this->syncBranchAddresses($branch,$branchData->addresses); $this->syncBranchContacts($client,$branch,$branchData->contacts, $actor);
         }
         foreach ($existingBranches as $id=>$branch) { if(!isset($kept[$id])){$branch->setIsActive(false)->setIsMain(false);foreach($this->entityManager->getRepository(ClientBranchPhone::class)->findBy(['branch'=>$branch]) as $phone){$phone->setIsActive(false);}foreach($this->entityManager->getRepository(ClientContact::class)->findBy(['client'=>$client,'branch'=>$branch]) as $contact){$contact->setIsActive(false);}foreach($this->entityManager->getRepository(ClientBranchAddress::class)->findBy(['branch'=>$branch]) as $address){$address->setIsActive(false);$this->entityManager->getRepository(ClientAddress::class)->findOneBy(['client'=>$client,'address'=>$address->getAddress()])?->setIsActive(false);}} }
     }
@@ -207,7 +232,7 @@ final class ClientManager
         foreach($existing as $id=>$a){if(!isset($kept[$id])){$a->setIsActive(false);$clientAddress=$this->entityManager->getRepository(ClientAddress::class)->findOneBy(['client'=>$branch->getClient(),'address'=>$a->getAddress()]);$clientAddress?->setIsActive(false);}}
     }
     /** @param list<ClientInlineContactData> $rows */
-    private function syncBranchContacts(Client $client,ClientBranch $branch,array $rows):void
+    private function syncBranchContacts(Client $client,ClientBranch $branch,array $rows, User $actor):void
     {
         $repo=$this->entityManager->getRepository(ClientContact::class);$existing=[];foreach($repo->findBy(['client'=>$client,'branch'=>$branch]) as $a){$existing[(int)$a->getId()]=$a;$a->setIsPrimary(false);} $this->entityManager->flush();$kept=[];
         $submittedEmails=[];foreach($rows as $d){$email=strtolower(trim((string)$d->businessEmail));if($email===''||isset($submittedEmails[$email])){throw new \DomainException($email===''?'El correo laboral de cada contacto es obligatorio.':'El correo laboral no puede repetirse entre contactos.');}$submittedEmails[$email]=true;$a=$d->id?($existing[$d->id]??null):null;if($repo->findOneByBusinessEmail($email,$a?->getId())!==null){throw new \DomainException(sprintf('El correo laboral %s ya está registrado en otro contacto.',$email));}if(!$a){$person=new Contact((string)$d->firstName);$a=new ClientContact($client,$person);$this->entityManager->persist($person);$this->entityManager->persist($a);} $person=$a->getContact();$person->setFirstName((string)$d->firstName)->setLastName($d->lastName)->setPersonalEmail($d->personalEmail)->setBirthDate($d->birthDate)->setWorkDays($d->workDays)->setWorkHours($d->workHours)->setNotes($d->notes)->setIsActive(true);$a->setBranch($branch)->setDepartment($d->department)->setJobTitle($d->jobTitle)->setEmail($email)->setCanRequestProducts($d->canRequestProducts)->setIsPrimary($d->isPrimary)->setIsActive(true);$this->syncContactPhones($person,$d->phones);if($a->getId())$kept[$a->getId()]=true;}
@@ -237,7 +262,7 @@ final class ClientManager
             'billing_email' => $client->getBillingEmail(),
             'default_cfdi_use_code' => $client->getDefaultCfdiUseCode(),
             'client_category_id' => $client->getCategory()?->getId(),
-            'category_discount_percentage' => $client->getDefaultDiscountPercent(),
+            'client_class' => $client->getClientClass()?->getCode(),
             'email' => $client->getEmail(),
             'phone' => $client->getPhone(),
             'notes' => $client->getNotes(),

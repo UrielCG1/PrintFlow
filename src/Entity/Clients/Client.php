@@ -57,6 +57,10 @@ class Client
     #[ORM\JoinColumn(name: 'client_category_id', nullable: true, onDelete: 'RESTRICT')]
     private ?ClientCategory $category = null;
 
+    #[ORM\ManyToOne(targetEntity: ClientClass::class)]
+    #[ORM\JoinColumn(name: 'client_class_id', nullable: false, onDelete: 'RESTRICT')]
+    private ?ClientClass $clientClass = null;
+
     #[ORM\OneToOne(targetEntity: ClientContact::class)]
     #[ORM\JoinColumn(name: 'individual_holder_contact_id', nullable: true, unique: true, onDelete: 'RESTRICT')]
     private ?ClientContact $individualHolderContact = null;
@@ -236,10 +240,8 @@ class Client
         return $this;
     }
 
-    public function getDefaultDiscountPercent(): float
-    {
-        return (float) ($this->category?->getDiscountPercentage() ?? '0.00');
-    }
+    public function getClientClass(): ?ClientClass { return $this->clientClass; }
+    public function setClientClass(?ClientClass $clientClass): self { $this->clientClass = $clientClass; return $this; }
 
     public function getIndividualHolderContact(): ?ClientContact { return $this->individualHolderContact; }
     public function setIndividualHolderContact(?ClientContact $contact): self

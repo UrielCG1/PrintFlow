@@ -29,7 +29,13 @@ class QuotationItem
     #[ORM\Column(name: 'line_number', options: ['unsigned' => true])]
     private int $lineNumber;
 
-    #[ORM\Column(type: Types::DECIMAL, precision: 14, scale: 4)]
+    #[ORM\Column(name: 'ordered_quantity', type: Types::DECIMAL, precision: 18, scale: 6, nullable: true)]
+    private ?string $orderedQuantity = null;
+
+    #[ORM\Column(name: 'calculation_origin', length: 20, options: ['default' => 'LEGACY_UNKNOWN'])]
+    private string $calculationOrigin = 'LEGACY_UNKNOWN';
+
+    #[ORM\Column(type: Types::DECIMAL, precision: 18, scale: 6)]
     private string $quantity;
 
     #[ORM\Column(name: 'unit_price', type: Types::DECIMAL, precision: 12, scale: 2)]
@@ -129,23 +135,28 @@ class QuotationItem
         return $this->quantity;
     }
 
+    public function getOrderedQuantity(): ?string { return $this->orderedQuantity; }
+    public function setOrderedQuantity(?string $quantity): self
+    {
+        if ($quantity === null || trim($quantity) === '') { $this->orderedQuantity = null; return $this; }
+        $value = \Brick\Math\BigDecimal::of(str_replace(',', '.', trim($quantity)));
+        if ($value->compareTo('0') <= 0) { throw new \InvalidArgumentException('La cantidad solicitada debe ser mayor que cero.'); }
+        $this->orderedQuantity = $value->toScale(6)->__toString();
+        return $this;
+    }
+    public function getCalculationOrigin(): string { return $this->calculationOrigin; }
+    public function setCalculationOrigin(string $value): self { $this->calculationOrigin = strtoupper(trim($value)); return $this; }
+
     public function setQuantity(string $quantity): self
     {
         $value = trim(str_replace(',', '.', $quantity));
 
-        if (preg_match('/^(?:0|[1-9]\d{0,9})(?:\.\d{1,4})?$/D', $value) !== 1) {
+        if (preg_match('/^(?:0|[1-9]\d{0,11})(?:\.\d{1,6})?$/D', $value) !== 1) {
             throw new \InvalidArgumentException('La cantidad no tiene un formato válido.');
         }
-
-        [$integer, $decimal] = array_pad(explode('.', $value, 2), 2, '');
-        $integer = ltrim($integer, '0') ?: '0';
-        $normalized = $integer.'.'.str_pad($decimal, 4, '0');
-
-        if ($normalized === '0.0000') {
-            throw new \InvalidArgumentException('La cantidad debe ser mayor que cero.');
-        }
-
-        $this->quantity = $normalized;
+        $decimal = \Brick\Math\BigDecimal::of($value);
+        if ($decimal->compareTo('0') <= 0) { throw new \InvalidArgumentException('La cantidad debe ser mayor que cero.'); }
+        $this->quantity = $decimal->toScale(6)->__toString();
 
         return $this;
     }

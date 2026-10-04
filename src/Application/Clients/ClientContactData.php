@@ -2,10 +2,12 @@
 
 namespace App\Application\Clients;
 
+use App\Entity\Clients\ClientClass;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final class ClientContactData
 {
+    public ?ClientClass $clientClassOverride = null;
     #[Assert\NotBlank(message: 'Captura el nombre completo del contacto.')]
     #[Assert\Length(max: 160)]
     public ?string $fullName = null;

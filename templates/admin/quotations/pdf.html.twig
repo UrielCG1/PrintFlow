@@ -444,8 +444,14 @@
                         <td>Subtotal</td>
                         <td class="text-end">${{ quotation.subtotal|number_format(2, '.', ',') }}</td>
                     </tr>
+                    {% for discount in quotation.discountBreakdown %}
+                        <tr>
+                            <td>{{ discount.type == 'VOLUME' ? 'Por volumen' : (discount.type == 'LOYALTY' ? 'Por lealtad' : 'Descuento adicional') }} ({{ discount.percentage|number_format(2, '.', ',') }}%)</td>
+                            <td class="text-end">-${{ discount.discount_amount|number_format(2, '.', ',') }}</td>
+                        </tr>
+                    {% endfor %}
                     <tr>
-                        <td>Descuento ({{ quotation.discountPercent|number_format(2, '.', ',') }}%)</td>
+                        <td>Descuento total</td>
                         <td class="text-end">-${{ quotation.discountAmount|number_format(2, '.', ',') }}</td>
                     </tr>
                     <tr>

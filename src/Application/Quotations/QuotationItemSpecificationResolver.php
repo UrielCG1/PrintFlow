@@ -95,7 +95,7 @@ final class QuotationItemSpecificationResolver
 
         $area = BigDecimal::of($width)
             ->multipliedBy($height)
-            ->dividedBy('10000', 4, RoundingMode::HalfUp)
+            ->dividedBy('10000', 6, RoundingMode::HalfUp)
             ->__toString();
 
         $quantityMode = strtoupper(trim($submittedQuantityMode));
@@ -129,7 +129,7 @@ final class QuotationItemSpecificationResolver
                 'calculated' => [
                     'area_m2' => $area,
                     'formula' => 'finished_width_cm * finished_height_cm / 10000',
-                    'scale' => 4,
+                    'scale' => 6,
                 ],
                 'billing_quantity' => [
                     'value' => $quantity,
@@ -153,13 +153,13 @@ final class QuotationItemSpecificationResolver
     {
         $value = trim(str_replace(',', '.', (string) $value));
 
-        if (preg_match('/^(?:0|[1-9]\d{0,9})(?:\.\d{1,4})?$/D', $value) !== 1) {
+        if (preg_match('/^(?:0|[1-9]\d{0,9})(?:\.\d{1,6})?$/D', $value) !== 1) {
             throw new \InvalidArgumentException(sprintf('%s debe ser un número con máximo cuatro decimales.', $field));
         }
 
         [$integer, $decimal] = array_pad(explode('.', $value, 2), 2, '');
         $integer = ltrim($integer, '0') ?: '0';
-        $normalized = $integer.'.'.str_pad($decimal, 4, '0');
+        $normalized = $integer.'.'.str_pad($decimal, 6, '0');
 
         if ($normalized === '0.0000') {
             throw new \InvalidArgumentException(sprintf('%s debe ser mayor que cero.', $field));

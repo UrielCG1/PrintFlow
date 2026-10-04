@@ -58,7 +58,7 @@ final class ClientContactController extends AbstractController
         }
 
         $data = new ClientContactData();
-        $form = $this->createForm(ClientContactType::class, $data);
+        $form = $this->createForm(ClientContactType::class, $data, ['class_editable' => $this->isGranted('clients.contacts.assign_class')]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -109,9 +109,11 @@ final class ClientContactController extends AbstractController
         $data->workDays = $contact->getContact()?->getWorkDays();
         $data->workHours = $contact->getContact()?->getWorkHours();
         $data->isPrimary = $contact->isPrimary();
+        $data->clientClassOverride = $contact->getClientClassOverride();
 
         $form = $this->createForm(ClientContactType::class, $data, [
             'contact_is_active' => $contact->isActive(),
+            'class_editable' => $this->isGranted('clients.contacts.assign_class'),
         ]);
         $form->handleRequest($request);
 

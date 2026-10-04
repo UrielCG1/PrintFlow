@@ -7,7 +7,7 @@ final class PublicQuotationRequestItemData
 {
  #[Assert\NotNull(message:'Selecciona una categoría.')] public ?CommercialCategory $commercialCategory=null;
  #[Assert\NotNull(message:'Selecciona un Producto.')] public ?CommercialItem $commercialItem=null;
- #[Assert\NotBlank(message:'Captura la cantidad.'),Assert\Regex(pattern:'/^(?:0|[1-9]\d{0,9})(?:[.,]\d{1,4})?$/',message:'La cantidad debe usar hasta cuatro decimales.')] public ?string $quantity='1.0000';
+ #[Assert\NotBlank(message:'Captura la cantidad.'),Assert\Regex(pattern:'/^(?:0|[1-9]\d{0,9})(?:[.,]\d{1,6})?$/',message:'La cantidad debe usar hasta seis decimales.')] public ?string $quantity='1.000000';
  /** @var array<string,string> */ public array $specifications=[];
  #[Assert\Choice(choices:[QuotationItemData::QUANTITY_MODE_AUTO,QuotationItemData::QUANTITY_MODE_MANUAL])] public string $quantityMode=QuotationItemData::QUANTITY_MODE_AUTO;
  #[Assert\Length(max:5000)] public ?string $notes=null;

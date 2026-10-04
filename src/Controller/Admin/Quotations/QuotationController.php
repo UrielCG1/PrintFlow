@@ -11,6 +11,7 @@ use App\Application\Quotations\QuotationItemData;
 use App\Application\Quotations\QuotationItemCharacteristicsSpecificationResolver;
 use App\Application\Quotations\QuotationItemPresentationBuilder;
 use App\Application\Quotations\QuotationManager;
+use App\Application\Quotations\QuotationVolumeApprovalService;
 use App\Application\Quotations\QuotationTotalsCalculator;
 use App\Application\Quotations\QuotationRevisionData;
 use App\Entity\Quotations\Quotation;
@@ -90,7 +91,6 @@ final class QuotationController extends AbstractController
             'legalName' => $client->getLegalName(),
             'email' => $client->getEmail(),
             'phone' => $client->getPhone(),
-            'defaultDiscountPercent' => $client->getDefaultDiscountPercent(),
             'commercialContacts' => array_map(
                 fn ($contact): array => $this->commercialContactContext($contact),
                 $commercialContacts,
@@ -344,6 +344,38 @@ final class QuotationController extends AbstractController
             $this->addFlash('warning', $exception->getMessage());
         }
 
+        return $this->redirectToRoute('admin_quotations_show', ['id' => $quotation->getId()]);
+    }
+
+    #[Route('/{id}/aprobar-descuento-volumen', name: 'admin_quotations_approve_volume_discount', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function approveVolumeDiscount(Request $request, Quotation $quotation, QuotationVolumeApprovalService $approvals): Response
+    {
+        $this->denyAccessUnlessGranted('quotations.approve_volume_discount');
+        if (!$this->isCsrfTokenValid('quotation-volume-approve-'.$quotation->getId(), $request->request->getString('_token'))) { throw $this->createAccessDeniedException(); }
+        try { $approvals->approve($quotation, $this->authenticatedUser(), $request->request->getString('notes')); $this->addFlash('success', 'El descuento por volumen fue aprobado.'); }
+        catch (\DomainException|\InvalidArgumentException $e) { $this->addFlash('warning', $e->getMessage()); }
+        return $this->redirectToRoute('admin_quotations_show', ['id' => $quotation->getId()]);
+    }
+
+    #[Route('/{id}/descuento-adicional', name: 'admin_quotations_additional_discount', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function additionalDiscount(Request $request, Quotation $quotation, QuotationManager $manager): Response
+    {
+        $this->denyAccessUnlessGranted('quotations.apply_additional_discount');
+        if (!$this->isCsrfTokenValid('quotation-additional-discount-'.$quotation->getId(), $request->request->getString('_token'))) { throw $this->createAccessDeniedException(); }
+        try {
+            $manager->applyAdditionalDiscount($quotation, $request->request->getString('percentage'), $request->request->getString('reason'), $this->authenticatedUser());
+            $this->addFlash('success', 'El descuento adicional fue aplicado y quedó registrado.');
+        } catch (\DomainException|\InvalidArgumentException $e) { $this->addFlash('warning', $e->getMessage()); }
+        return $this->redirectToRoute('admin_quotations_show', ['id' => $quotation->getId()]);
+    }
+
+    #[Route('/{id}/rechazar-descuento-volumen', name: 'admin_quotations_reject_volume_discount', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function rejectVolumeDiscount(Request $request, Quotation $quotation, QuotationVolumeApprovalService $approvals): Response
+    {
+        $this->denyAccessUnlessGranted('quotations.approve_volume_discount');
+        if (!$this->isCsrfTokenValid('quotation-volume-reject-'.$quotation->getId(), $request->request->getString('_token'))) { throw $this->createAccessDeniedException(); }
+        try { $approvals->reject($quotation, $this->authenticatedUser(), $request->request->getString('notes')); $this->addFlash('success', 'El descuento por volumen fue rechazado.'); }
+        catch (\DomainException|\InvalidArgumentException $e) { $this->addFlash('warning', $e->getMessage()); }
         return $this->redirectToRoute('admin_quotations_show', ['id' => $quotation->getId()]);
     }
 

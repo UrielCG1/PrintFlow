@@ -277,6 +277,34 @@
             </section>
         {% endif %}
 
+        {% set hasVolumeDiscount = false %}
+        {% for discount in quotation.discountBreakdown %}
+            {% if discount.type == 'VOLUME' and discount.discount_amount|default(0) > 0 %}{% set hasVolumeDiscount = true %}{% endif %}
+        {% endfor %}
+        {% if hasVolumeDiscount %}
+            <section class="pf-card mb-4 border-warning">
+                <header class="pf-card__header">
+                    <h2 class="pf-card__title">Aprobación de descuento por volumen</h2>
+                    <p class="pf-card__description">La emisión, el envío formal y la aceptación permanecerán bloqueados hasta una aprobación administrativa.</p>
+                </header>
+                <div class="pf-card__body d-flex gap-2 flex-wrap">
+                    {% if is_granted('quotations.approve_volume_discount') %}
+                        <form method="post" action="{{ path('admin_quotations_approve_volume_discount', {id: quotation.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('quotation-volume-approve-' ~ quotation.id) }}">
+                            <button class="btn pf-button pf-button--primary" type="submit">Aprobar descuento</button>
+                        </form>
+                        <form method="post" action="{{ path('admin_quotations_reject_volume_discount', {id: quotation.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('quotation-volume-reject-' ~ quotation.id) }}">
+                            <input type="hidden" name="notes" value="Requiere ajustes antes de aprobar.">
+                            <button class="btn pf-button pf-button--danger" type="submit">Rechazar descuento</button>
+                        </form>
+                    {% else %}
+                        <span class="text-warning">Pendiente de aprobación por un administrador.</span>
+                    {% endif %}
+                </div>
+            </section>
+        {% endif %}
+
         {% if can_send or can_receive_decision %}
             <section class="pf-card mb-4">
                 <header class="pf-card__header">
@@ -284,6 +312,21 @@
                     <p class="pf-card__description">Cada acción requiere confirmación explícita y queda registrada en la bitácora.</p>
                 </header>
                 <div class="pf-card__body quotation-actions">
+                    {% if quotation.isEditable and is_granted('quotations.apply_additional_discount') %}
+                        <details class="quotation-action quotation-action--additional">
+                            <summary class="fw-semibold"><span>Aplicar descuento adicional</span><small>Requiere motivo</small></summary>
+                            <div class="quotation-action__content">
+                                <form method="post" action="{{ path('admin_quotations_additional_discount', {id: quotation.id}) }}" class="pf-form quotation-action__form">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('quotation-additional-discount-' ~ quotation.id) }}">
+                                    <div class="row g-3">
+                                        <div class="col-md-4"><label class="form-label" for="additional_discount_percentage">Porcentaje</label><input class="form-control" id="additional_discount_percentage" name="percentage" type="number" min="0" max="100" step="0.0001" required></div>
+                                        <div class="col-md-8"><label class="form-label" for="additional_discount_reason">Motivo</label><input class="form-control" id="additional_discount_reason" name="reason" maxlength="5000" required></div>
+                                    </div>
+                                    <button type="submit" class="btn pf-button pf-button--secondary mt-3">Guardar descuento adicional</button>
+                                </form>
+                            </div>
+                        </details>
+                    {% endif %}
                     {% if can_send and is_granted('quotations.send') %}
                         <details class="quotation-action quotation-action--send"{% if emailForm.vars.submitted %} open{% endif %}>
                             <summary class="fw-semibold"><span>Enviar por correo con PDF adjunto</span><small>Registrar envío</small></summary>
@@ -435,7 +478,14 @@
                 <dl class="row justify-content-end mb-0">
                     <dt class="col-sm-3 text-sm-end">Subtotal</dt>
                     <dd class="col-sm-2 text-sm-end">${{ quotation.subtotal|number_format(2, '.', ',') }}</dd>
-                    <dt class="col-sm-3 text-sm-end">Descuento ({{ quotation.discountPercent|number_format(2, '.', ',') }}%)</dt>
+                    {% for discount in quotation.discountBreakdown %}
+                        <dt class="col-sm-3 text-sm-end">{{ discount.type == 'VOLUME' ? 'Por volumen' : (discount.type == 'LOYALTY' ? 'Por lealtad' : 'Descuento adicional') }} ({{ discount.percentage|number_format(2, '.', ',') }}%)</dt>
+                        <dd class="col-sm-2 text-sm-end">-${{ discount.discount_amount|number_format(2, '.', ',') }}</dd>
+                    {% else %}
+                        <dt class="col-sm-3 text-sm-end">Descuento</dt>
+                        <dd class="col-sm-2 text-sm-end">-$0.00</dd>
+                    {% endfor %}
+                    <dt class="col-sm-3 text-sm-end">Descuento total</dt>
                     <dd class="col-sm-2 text-sm-end">-${{ quotation.discountAmount|number_format(2, '.', ',') }}</dd>
                     <dt class="col-sm-3 text-sm-end">IVA ({{ (quotation.taxRate * 100)|number_format(2, '.', ',') }}%)</dt>
                     <dd class="col-sm-2 text-sm-end">${{ quotation.taxAmount|number_format(2, '.', ',') }}</dd>

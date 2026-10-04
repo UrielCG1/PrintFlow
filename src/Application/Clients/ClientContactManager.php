@@ -40,7 +40,7 @@ final class ClientContactManager
                     ->setWorkDays($data->workDays)
                     ->setWorkHours($data->workHours);
                 $contact = new ClientContact($client, $person);
-                $this->applyData($contact, $data);
+                $this->applyData($contact, $data, $actor);
 
                 $this->entityManager->persist($person);
                 $this->entityManager->persist($contact);
@@ -81,7 +81,7 @@ final class ClientContactManager
                     $this->entityManager->flush();
                 }
 
-                $this->applyData($contact, $data);
+                $this->applyData($contact, $data, $actor);
 
                 $newValues = $this->snapshot($contact);
 
@@ -138,6 +138,7 @@ final class ClientContactManager
     private function applyData(
         ClientContact $contact,
         ClientContactData $data,
+        User $actor,
     ): void {
         $email = strtolower(trim((string) $data->email));
         if ($email === '') {
@@ -153,6 +154,13 @@ final class ClientContactManager
             ->setPhone($data->phone)
             ->setWorkSchedule($data->workHours)
             ->setIsPrimary($data->isPrimary);
+
+        if ($data->clientClassOverride !== null && !in_array('ROLE_ADMIN', $actor->getRoles(), true)) {
+            throw new \DomainException('Sólo un administrador puede cambiar la clase del contacto.');
+        }
+        if (in_array('ROLE_ADMIN', $actor->getRoles(), true)) {
+            $contact->setClientClassOverride($data->clientClassOverride);
+        }
 
         if ($contact->getClient()->getClientType() === 'INDIVIDUAL' && $contact->getClient()->getIndividualHolderContact() === $contact) {
             $contact->setIsPrimary(true);

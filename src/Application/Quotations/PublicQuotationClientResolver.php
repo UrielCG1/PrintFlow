@@ -4,10 +4,11 @@ namespace App\Application\Quotations;
 use App\Entity\Clients\{Client,ClientCategory,ClientContact};
 use App\Entity\Common\Contact;
 use App\Repository\Clients\ClientRepository;
+use App\Repository\Clients\ClientClassRepository;
 use Doctrine\ORM\EntityManagerInterface;
 final class PublicQuotationClientResolver
 {
- public function __construct(private readonly ClientRepository $clients,private readonly EntityManagerInterface $em){}
+ public function __construct(private readonly ClientRepository $clients,private readonly EntityManagerInterface $em,private readonly ClientClassRepository $clientClasses){}
 
  public function resolve(PublicQuotationRequestData $data,?ClientContact $verifiedContact=null):PublicQuotationCustomerResolution
  {
@@ -32,7 +33,10 @@ final class PublicQuotationClientResolver
   $category=$this->em->getRepository(ClientCategory::class)->findOneBy(['code'=>'PROSPECT_NO_PURCHASE','isActive'=>true]);
   if(!$category instanceof ClientCategory)throw new \DomainException('No está configurada la categoría de clientes prospecto.');
   $hasCompany=trim((string)$data->companyName)!=='';
+  $clientClass=$this->clientClasses->findByCode('C');
+  if($clientClass===null)throw new \DomainException('No está configurada la clase C para prospectos.');
   $client=(new Client())->setBusinessName($hasCompany?trim((string)$data->companyName):trim((string)$data->fullName))->setClientType($hasCompany?'COMPANY':'INDIVIDUAL')->setCategory($category)->setNotes('Creado automáticamente desde una solicitud pública de cotización.');
+  $client->setClientClass($clientClass);
   if(!$hasCompany)$client->setEmail($data->email)->setPhone($data->phone);
   $this->em->persist($client);
   $this->em->flush();

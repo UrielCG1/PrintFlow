@@ -5,6 +5,7 @@ namespace App\Form\Admin\Clients;
 use App\Application\Clients\ClientData;
 use App\Application\Clients\{ClientBranchData, ClientBranchAddressData, ClientInlineContactData, ClientPhoneData};
 use App\Entity\Clients\ClientCategory;
+use App\Entity\Clients\ClientClass;
 use App\Repository\Clients\ClientCategoryRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
@@ -25,6 +26,14 @@ final class ClientType extends AbstractType
 
         $builder
             ->add('clientType', ChoiceType::class, ['label'=>'Tipo de cliente','choices'=>['Empresa'=>'COMPANY','Persona física'=>'INDIVIDUAL'],'attr'=>['data-ui--client-type-target'=>'type','data-action'=>'change->ui--client-type#change']])
+            ->add('clientClass', EntityType::class, [
+                'class' => ClientClass::class,
+                'choice_label' => static fn (ClientClass $class): string => $class->getCode().' — '.$class->getName(),
+                'label' => 'Clase de cliente',
+                'required' => false,
+                'disabled' => !$options['class_editable'],
+                'help' => 'La clase determina el descuento automático por lealtad.',
+            ])
             ->add('businessName', TextType::class, [
                 'label' => 'Nombre comercial',
                 'attr' => [
@@ -132,12 +141,14 @@ final class ClientType extends AbstractType
         $resolver->setDefaults([
             'data_class' => ClientData::class,
             'current_category' => null,
+            'class_editable' => false,
         ]);
 
         $resolver->setAllowedTypes('current_category', [
             'null',
             ClientCategory::class,
         ]);
+        $resolver->setAllowedTypes('class_editable', 'bool');
     }
 
     private function newBranchData(): ClientBranchData

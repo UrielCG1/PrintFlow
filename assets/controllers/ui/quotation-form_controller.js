@@ -7,14 +7,11 @@ export default class extends Controller {
         'emptyState',
         'itemCount',
         'client',
-        'discountPercent',
         'clientContext',
         'clientBusinessName',
         'clientLegalName',
         'clientEmail',
         'clientPhone',
-        'clientDefaultDiscount',
-        'discountOrigin',
         'commercialContext',
         'commercialContact',
         'fiscalAddress',
@@ -37,9 +34,6 @@ export default class extends Controller {
 
     connect() {
         this.nextIndex = this.getNextIndex();
-        this.discountOrigin = this.discountPercentTarget.value.trim() === ''
-            ? 'CLIENT_DEFAULT'
-            : 'MANUAL';
         this.clientContextRequest = 0;
         this.productContextRequest = 0;
         this.productContextActive = true;
@@ -53,10 +47,7 @@ export default class extends Controller {
             this.filterProductsForCategory(item);
             this.configureItemSpecifications(item, { loadCharacteristics: true });
         });
-        this.loadSelectedClientContext({
-            applyClientDefault: true,
-            applyCommercialDefaults: false,
-        });
+        this.loadSelectedClientContext({ applyCommercialDefaults: false });
         this.focusFirstError();
     }
 
@@ -69,11 +60,9 @@ export default class extends Controller {
     }
 
     async changeClient() {
-        const previousDiscountOrigin = this.discountOrigin;
         this.refreshWorkflow();
 
         const context = await this.loadSelectedClientContext({
-            applyClientDefault: false,
         });
 
         if (!context) {
@@ -82,33 +71,11 @@ export default class extends Controller {
 
         this.applyCommercialDefaults(context);
 
-        if (previousDiscountOrigin === 'MANUAL') {
-            const shouldApplyClientDefault = await this.confirmDiscountReplacement(
-                context,
-            );
-
-            if (!shouldApplyClientDefault) {
-                this.discountOrigin = 'MANUAL';
-                this.refreshDiscountOrigin();
-
-                return;
-            }
-        }
-
-        this.applyClientDefaultDiscount(context);
+        return context;
     }
 
     markDiscountAsManual() {
-        if (this.discountPercentTarget.value.trim() === '') {
-            if (this.currentClientContext) {
-                this.applyClientDefaultDiscount(this.currentClientContext);
-            }
-
-            return;
-        }
-
-        this.discountOrigin = 'MANUAL';
-        this.refreshDiscountOrigin();
+        return;
     }
 
     changeCommercialContact() {
@@ -1123,10 +1090,7 @@ export default class extends Controller {
         return Number.parseFloat(normalized);
     }
 
-    async loadSelectedClientContext({
-        applyClientDefault,
-        applyCommercialDefaults = false,
-    }) {
+    async loadSelectedClientContext({ applyCommercialDefaults = false } = {}) {
         const clientId = this.clientTarget.value;
 
         if (clientId === '') {
@@ -1186,10 +1150,6 @@ export default class extends Controller {
             this.setClientContextState('success');
             this.refreshWorkflow();
 
-            if (applyClientDefault && this.discountOrigin === 'CLIENT_DEFAULT') {
-                this.applyClientDefaultDiscount(context);
-            }
-
             return context;
         } catch (error) {
             if (request === this.clientContextRequest) {
@@ -1218,12 +1178,7 @@ export default class extends Controller {
         this.clientPhoneTarget.textContent = context.phone
             ? `Teléfono: ${context.phone}`
             : 'Sin teléfono registrado.';
-        this.clientDefaultDiscountTarget.textContent = `${this.formatPercent(
-            context.defaultDiscountPercent,
-        )}%`;
-
         this.clientContextTarget.classList.remove('d-none');
-        this.refreshDiscountOrigin();
     }
 
     renderCommercialContext(context, { applyCommercialDefaults }) {
@@ -1416,11 +1371,7 @@ export default class extends Controller {
     }
 
     applyClientDefaultDiscount(context) {
-        const discount = this.formatPercent(context.defaultDiscountPercent);
-
-        this.discountPercentTarget.value = discount;
-        this.discountOrigin = 'CLIENT_DEFAULT';
-        this.refreshDiscountOrigin();
+        return;
     }
 
     refreshDiscountOrigin() {
@@ -1435,7 +1386,7 @@ export default class extends Controller {
 
     async confirmDiscountReplacement(context) {
         const title = 'El descuento fue ajustado manualmente';
-        const text = `El cliente seleccionado tiene un descuento predeterminado de ${this.formatPercent(context.defaultDiscountPercent)}%. ¿Deseas aplicarlo?`;
+        const text = '';
 
         if (window.Swal) {
             const result = await window.Swal.fire({
@@ -1457,10 +1408,7 @@ export default class extends Controller {
     async retryClientContext(event) {
         event.preventDefault();
 
-        await this.loadSelectedClientContext({
-            applyClientDefault: this.discountOrigin === 'CLIENT_DEFAULT',
-            applyCommercialDefaults: false,
-        });
+        await this.loadSelectedClientContext({ applyCommercialDefaults: false });
     }
 
     async retryProductContext(event) {

@@ -38,7 +38,7 @@ class ServiceOrderItem
     #[ORM\Column(name: 'line_number', options: ['unsigned' => true])]
     private int $lineNumber;
 
-    #[ORM\Column(type: Types::DECIMAL, precision: 14, scale: 4)]
+    #[ORM\Column(type: Types::DECIMAL, precision: 18, scale: 6)]
     private string $quantity;
 
     #[ORM\Column(name: 'unit_price', type: Types::DECIMAL, precision: 12, scale: 2)]

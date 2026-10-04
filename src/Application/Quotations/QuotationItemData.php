@@ -19,8 +19,8 @@ final class QuotationItemData
 
     #[Assert\NotBlank(message: 'Captura la cantidad.')]
     #[Assert\Regex(
-        pattern: '/^(?:0|[1-9]\d{0,9})(?:[.,]\d{1,4})?$/',
-        message: 'La cantidad debe usar hasta cuatro decimales.',
+        pattern: '/^(?:0|[1-9]\d{0,9})(?:[.,]\d{1,6})?$/',
+        message: 'La cantidad debe usar hasta seis decimales.',
     )]
     public ?string $quantity = '1.0000';
 

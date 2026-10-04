@@ -50,7 +50,9 @@ final class ClientController extends AbstractController
 
         $data = new ClientData();
         $data->phones[] = new ClientPhoneData();
-        $form = $this->createForm(ClientType::class, $data);
+        $form = $this->createForm(ClientType::class, $data, [
+            'class_editable' => $this->isGranted('clients.assign_class'),
+        ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -96,6 +98,7 @@ final class ClientController extends AbstractController
         $data->billingEmail = $client->getBillingEmail();
         $data->defaultCfdiUseCode = $client->getDefaultCfdiUseCode();
         $data->category = $client->getCategory();
+        $data->clientClass = $client->getClientClass();
         $data->email = $client->getEmail();
         $data->phone = $client->getPhone();
         $data->notes = $client->getNotes();
@@ -103,6 +106,7 @@ final class ClientController extends AbstractController
 
         $form = $this->createForm(ClientType::class, $data, [
             'current_category' => $client->getCategory(),
+            'class_editable' => $this->isGranted('clients.assign_class'),
         ]);
         $form->handleRequest($request);
 
