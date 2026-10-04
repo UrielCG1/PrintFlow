@@ -15,7 +15,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 #[AsCommand(
     name: 'app:security:bootstrap',
-    description: 'Crea los roles, permisos y el primer administrador de PrintFlow.',
+    description: 'Crea los roles, permisos y el primer administrador de OoxCorp.',
 )]
 final class BootstrapSecurityCommand extends Command
 {
@@ -161,7 +161,7 @@ final class BootstrapSecurityCommand extends Command
         $fullName = trim((string) $helper->ask(
             $input,
             $output,
-            new Question('Nombre completo del administrador [Administrador PrintFlow]: ', 'Administrador PrintFlow'),
+            new Question('Nombre completo del administrador [Administrador OoxCorp]: ', 'Administrador OoxCorp'),
         ));
 
         $username = strtolower(trim((string) $helper->ask(

@@ -42,7 +42,7 @@
 <div class="pf-public-quote" data-controller="ui--public-quote" data-ui--public-quote-customer-url-value="{{ path('public_quote_customer',{number:'CONTACT_NUMBER'}) }}" data-ui--public-quote-products-url-value="{{ path('public_quote_products',{categoryId:'CATEGORY_ID'}) }}" data-ui--public-quote-price-url-value="{{ path('public_quote_price_preview',{id:'PRODUCT_ID'}) }}" data-ui--public-quote-recovery-url-value="{{ path('public_quote_customer_number_recovery') }}">
     <section class="pf-public-quote__hero" style="--pf-quote-hero-image:url('{{ asset('images/quote/hero-printing.jpg') }}')">
         <div class="container-xxl pf-public-quote__hero-container"><div class="pf-public-quote__hero-content">
-            <a href="{{ path('public_quote_request') }}" class="pf-public-quote__brand" aria-label="PrintFlow, inicio">
+            <a href="{{ path('public_quote_request') }}" class="pf-public-quote__brand" aria-label="OoxCorp, inicio">
                 {% include 'partials/_brand_logo.html.twig' with { logo_class: 'pf-public-quote__brand-logo' } %}
             </a>
             <div class="pf-public-quote__badge"><span class="pf-public-quote__badge-dot"></span>Soluciones de impresión para empresas</div>
@@ -97,7 +97,7 @@
     {% if success_messages is not empty %}
     <div class="modal fade pf-success-modal" tabindex="-1" data-ui--public-quote-target="successModal" aria-labelledby="quote-success-title" aria-describedby="quote-success-description" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
-        <div class="pf-success-modal__hero"><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button><div class="pf-success-modal__check"><i class="bi bi-check-lg"></i></div><span class="pf-success-modal__eyebrow">Solicitud recibida</span><h2 id="quote-success-title">¡Gracias por confiar en PrintFlow!</h2><p id="quote-success-description">Tu proyecto ya está en manos de nuestro equipo.</p></div>
+        <div class="pf-success-modal__hero"><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button><div class="pf-success-modal__check"><i class="bi bi-check-lg"></i></div><span class="pf-success-modal__eyebrow">Solicitud recibida</span><h2 id="quote-success-title">¡Gracias por confiar en OoxCorp!</h2><p id="quote-success-description">Tu proyecto ya está en manos de nuestro equipo.</p></div>
         <div class="modal-body pf-success-modal__body"><div class="pf-success-modal__timeline">
           <div class="pf-success-modal__step is-complete"><span><i class="bi bi-envelope-check"></i></span><div><strong>Enviamos tu cotización preliminar</strong><p>Revisa tu correo electrónico; ahí encontrarás el PDF con la información y precios calculados inicialmente.</p></div></div>
           <div class="pf-success-modal__step"><span><i class="bi bi-person-workspace"></i></span><div><strong>Nuestro equipo revisará tu solicitud</strong><p>Validaremos el archivo, atenderemos tus observaciones y nos comunicaremos contigo si necesitamos aclarar alguna duda o realizar un ajuste.</p></div></div>

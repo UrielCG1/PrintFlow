@@ -87,14 +87,25 @@
 }
 
 .pf-public-quote__brand {
+    position: absolute;
+    top: var(--pf-space-lg);
+    right: var(--pf-space-lg);
+    z-index: 2;
+
     display: inline-flex;
     align-items: center;
-    margin-bottom: 2.25rem;
+    margin: 0;
+    padding: 0.5rem 0.75rem;
+
+    background-color: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.78);
+    border-radius: var(--pf-radius-md);
+    box-shadow: var(--pf-shadow-sm);
 }
 
 .pf-public-quote__brand-logo {
     display: block;
-    width: 10.5rem;
+    width: 9.5rem;
     max-width: 100%;
     height: auto;
 }
@@ -1429,7 +1440,7 @@
     .pf-public-quote__hero-container {
         min-height: auto;
 
-        padding-top: 3.5rem;
+        padding-top: 6.5rem;
         padding-bottom: 3.5rem;
     }
 
@@ -1439,7 +1450,8 @@
     }
 
     .pf-public-quote__brand {
-        margin-bottom: 1.75rem;
+        top: var(--pf-space-md);
+        right: var(--pf-space-md);
     }
 
     .pf-public-quote__footer-inner {
@@ -1522,8 +1534,12 @@
 
 @media (max-width: 479.98px) {
     .pf-public-quote__hero-container {
-        padding-top: 2.5rem;
+        padding-top: 6rem;
         padding-bottom: 3rem;
+    }
+
+    .pf-public-quote__brand-logo {
+        width: 8rem;
     }
 
     .pf-public-quote__badge {

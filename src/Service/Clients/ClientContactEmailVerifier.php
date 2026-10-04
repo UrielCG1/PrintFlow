@@ -33,7 +33,7 @@ final class ClientContactEmailVerifier
             $message = (new TemplatedEmail())
                 ->from(new Address($this->fromAddress, $this->fromName))
                 ->to(new Address($email, $contact->getFullName()))
-                ->subject('Confirma tu correo | Ooxcorp')
+                ->subject('Confirma tu correo | OoxCorp')
                 ->htmlTemplate('emails/clients/contact_email_verification.html.twig')
                 ->context([
                     'contact' => $contact,

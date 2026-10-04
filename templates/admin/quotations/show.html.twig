@@ -1,12 +1,18 @@
 {% extends 'layouts/app.html.twig' %}
 
-{% block title %}Cotización {{ quotation.folio ?? quotation.requestReference ?? ('#' ~ quotation.id) }} | PrintFlow{% endblock %}
+{% block title %}Cotización {{ quotation.folio ?? quotation.requestReference ?? ('#' ~ quotation.id) }} | OoxCorp{% endblock %}
 
 {% block app_navigation_active %}quotations{% endblock %}
 
 {% block app_breadcrumb %}Comercial / Cotizaciones / Detalle{% endblock %}
 
 {% block app_content %}
+    {% form_theme emailForm 'form/printflow_theme.html.twig' %}
+    {% form_theme acceptForm 'form/printflow_theme.html.twig' %}
+    {% form_theme rejectForm 'form/printflow_theme.html.twig' %}
+    {% form_theme cancellationForm 'form/printflow_theme.html.twig' %}
+    {% form_theme revisionForm 'form/printflow_theme.html.twig' %}
+
     {% set status = quotation.status.value %}
     {% set status_tones = {
         'REQUEST': 'pf-status-badge--info',
@@ -277,12 +283,12 @@
                     <h2 class="pf-card__title">Acciones comerciales</h2>
                     <p class="pf-card__description">Cada acción requiere confirmación explícita y queda registrada en la bitácora.</p>
                 </header>
-                <div class="pf-card__body d-grid gap-3">
+                <div class="pf-card__body quotation-actions">
                     {% if can_send and is_granted('quotations.send') %}
-                        <details class="border rounded p-3">
-                            <summary class="fw-semibold">Enviar por correo con PDF adjunto</summary>
-                            <div class="pt-3">
-                                {{ form_start(emailForm, {action: path('admin_quotations_send', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form'}}) }}
+                        <details class="quotation-action quotation-action--send"{% if emailForm.vars.submitted %} open{% endif %}>
+                            <summary class="fw-semibold"><span>Enviar por correo con PDF adjunto</span><small>Registrar envío</small></summary>
+                            <div class="quotation-action__content">
+                                {{ form_start(emailForm, {action: path('admin_quotations_send', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form quotation-action__form'}}) }}
                                     {{ form_errors(emailForm) }}
                                     <div class="row g-3">
                                         <div class="col-md-6">{{ form_row(emailForm.recipientEmail) }}</div>
@@ -297,10 +303,10 @@
                     {% endif %}
 
                     {% if can_receive_decision and is_granted('quotations.manage_status') %}
-                        <details class="border rounded p-3">
-                            <summary class="fw-semibold text-success">Registrar aceptación</summary>
-                            <div class="pt-3">
-                                {{ form_start(acceptForm, {action: path('admin_quotations_accept', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form'}}) }}
+                        <details class="quotation-action quotation-action--accept"{% if acceptForm.vars.submitted %} open{% endif %}>
+                            <summary class="fw-semibold text-success"><span>Registrar aceptación</span><small>Registrar respuesta</small></summary>
+                            <div class="quotation-action__content">
+                                {{ form_start(acceptForm, {action: path('admin_quotations_accept', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form quotation-action__form'}}) }}
                                     {{ form_errors(acceptForm) }}
                                     <div class="row g-3">
                                         <div class="col-md-6">{{ form_row(acceptForm.channel) }}</div>
@@ -316,10 +322,10 @@
                             </div>
                         </details>
 
-                        <details class="border rounded p-3">
-                            <summary class="fw-semibold text-danger">Registrar rechazo</summary>
-                            <div class="pt-3">
-                                {{ form_start(rejectForm, {action: path('admin_quotations_reject', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form'}}) }}
+                        <details class="quotation-action quotation-action--reject"{% if rejectForm.vars.submitted %} open{% endif %}>
+                            <summary class="fw-semibold text-danger"><span>Registrar rechazo</span><small>Registrar respuesta</small></summary>
+                            <div class="quotation-action__content">
+                                {{ form_start(rejectForm, {action: path('admin_quotations_reject', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form quotation-action__form'}}) }}
                                     {{ form_errors(rejectForm) }}
                                     <div class="row g-3">
                                         <div class="col-md-6">{{ form_row(rejectForm.channel) }}</div>
@@ -333,13 +339,13 @@
                             </div>
                         </details>
 
-                        <details class="border rounded p-3">
-                            <summary class="fw-semibold">Cancelar cotización</summary>
-                            <div class="pt-3">
-                                {{ form_start(cancellationForm, {action: path('admin_quotations_cancel', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form'}}) }}
+                        <details class="quotation-action quotation-action--cancel"{% if cancellationForm.vars.submitted %} open{% endif %}>
+                            <summary class="fw-semibold"><span>Cancelar cotización</span><small>Acción definitiva</small></summary>
+                            <div class="quotation-action__content">
+                                {{ form_start(cancellationForm, {action: path('admin_quotations_cancel', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form quotation-action__form'}}) }}
                                     {{ form_errors(cancellationForm) }}
                                     {{ form_row(cancellationForm.reason) }}
-                                    <button type="submit" class="btn pf-button pf-button--secondary mt-3">Cancelar cotización</button>
+                                    <button type="submit" class="btn pf-button pf-button--danger-subtle mt-3">Cancelar cotización</button>
                                 {{ form_end(cancellationForm) }}
                             </div>
                         </details>
@@ -355,7 +361,7 @@
                     <p class="pf-card__description">La cotización actual se marcará como reemplazada; su información continuará disponible como historial.</p>
                 </header>
                 <div class="pf-card__body">
-                    {{ form_start(revisionForm, {action: path('admin_quotations_create_revision', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form'}}) }}
+                    {{ form_start(revisionForm, {action: path('admin_quotations_create_revision', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form quotation-revision-form'}}) }}
                         {{ form_errors(revisionForm) }}
                         {{ form_row(revisionForm.reason) }}
                         <button type="submit" class="btn pf-button pf-button--secondary mt-2">Crear nueva revisión</button>

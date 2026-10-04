@@ -15,7 +15,7 @@ final class HomeController extends AbstractController
     public function index(): Response
     {
         return $this->render('home/index.html.twig', [
-            'app_name' => 'PrintFlow',
+            'app_name' => 'OoxCorp',
             'php_version' => PHP_VERSION,
             'symfony_version' => Kernel::VERSION,
             'environment' => $this->getParameter('kernel.environment'),
@@ -27,7 +27,7 @@ final class HomeController extends AbstractController
     {
         return $this->json([
             'status' => 'ok',
-            'app' => 'PrintFlow',
+            'app' => 'OoxCorp',
             'php_version' => PHP_VERSION,
             'symfony_version' => Kernel::VERSION,
             'environment' => $this->getParameter('kernel.environment'),

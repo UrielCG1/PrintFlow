@@ -41,7 +41,7 @@ final class QuotationMailer
         $email = (new TemplatedEmail())
             ->from(new Address($this->fromAddress, $this->fromName))
             ->to(new Address($recipientEmail, $recipientName))
-            ->subject(sprintf('Cotización %s | PrintFlow', $quotation->getFolio()))
+            ->subject(sprintf('Cotización %s | OoxCorp', $quotation->getFolio()))
             ->htmlTemplate('emails/quotations/quotation_sent.html.twig')
             ->context([
                 'quotation' => $quotation,
