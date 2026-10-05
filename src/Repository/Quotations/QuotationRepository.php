@@ -32,6 +32,8 @@ final class QuotationRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('quotation')
             ->leftJoin('quotation.previousRevision', 'previousRevision')
             ->addSelect('previousRevision')
+            ->leftJoin('quotation.revisions', 'replacement')
+            ->addSelect('replacement')
             ->orderBy('quotation.updatedAt', 'DESC')
             ->addOrderBy('quotation.id', 'DESC')
             ->setMaxResults(200)

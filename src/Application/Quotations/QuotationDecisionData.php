@@ -62,6 +62,10 @@ final class QuotationDecisionData
             $context->buildViolation('Adjunta la captura de pantalla de la respuesta por WhatsApp.')->atPath('responseScreenshot')->addViolation();
         }
 
+        if ($this->acceptanceFiles) {
+            return;
+        }
+
         if (trim((string) $this->notes) !== '' || trim((string) $this->evidenceReference) !== '' || $this->purchaseOrderFile !== null || $this->responseScreenshot !== null) {
             return;
         }

@@ -28,9 +28,9 @@
         'SUPERSEDED': 'pf-status-badge--neutral'
     } %}
     {# Las capacidades comerciales se resuelven desde QuotationStatus, no desde listas duplicadas en Twig. #}
-    {% set can_send = quotation.status.canBeSent() %}
-    {% set can_receive_decision = quotation.status.canReceiveDecision() %}
-    {% set can_revise = quotation.status.canBeRevised() %}
+    {% set can_send = quotation.status.canBeSent() and is_granted('quotations.send') %}
+    {% set can_receive_decision = quotation.status.canReceiveDecision() and is_granted('quotations.manage_status') %}
+    {% set can_revise = quotation.status.canBeRevised() and quotation.revisions is empty and is_granted('quotations.create_revision') %}
 
     <section class="pf-page__content">
         <header class="pf-page-header">
@@ -110,49 +110,58 @@
 
         {% set commercialContact = quotation.clientSnapshot.commercial_contact|default(null) %}
 
-        <div class="row g-4 mb-4">
+        <div class="row g-3 mb-4 quotation-detail-summary">
             <div class="col-12 col-md-4">
-                <section class="pf-card h-100">
+                <section class="pf-card h-100 quotation-detail-summary-card quotation-detail-summary-card--total">
                     <div class="pf-card__body">
-                        <span class="text-muted small d-block mb-1">Total</span>
-                        <strong class="fs-3">${{ quotation.total|number_format(2, '.', ',') }} {{ quotation.currency }}</strong>
-                        <span class="d-block text-muted small mt-2">IVA: ${{ quotation.taxAmount|number_format(2, '.', ',') }}</span>
+                        <span class="quotation-detail-summary-card__icon" aria-hidden="true"><i class="bi bi-currency-dollar"></i></span>
+                        <div class="quotation-detail-summary-card__content">
+                            <span class="quotation-detail-summary-card__label">Total de la cotización</span>
+                            <strong class="quotation-detail-summary-card__value">${{ quotation.total|number_format(2, '.', ',') }} <small>{{ quotation.currency }}</small></strong>
+                            <span class="quotation-detail-summary-card__meta">IVA incluido: ${{ quotation.taxAmount|number_format(2, '.', ',') }}</span>
+                        </div>
                     </div>
                 </section>
             </div>
             <div class="col-12 col-md-4">
-                <section class="pf-card h-100">
+                <section class="pf-card h-100 quotation-detail-summary-card">
                     <div class="pf-card__body">
+                        <span class="quotation-detail-summary-card__icon" aria-hidden="true"><i class="bi bi-person-vcard"></i></span>
+                        <div class="quotation-detail-summary-card__content">
                         {% if commercialContact %}
-                            <span class="text-muted small d-block mb-1">Contacto comercial</span>
-                            <strong>{{ commercialContact.full_name|default('No especificado') }}</strong>
+                            <span class="quotation-detail-summary-card__label">Contacto comercial</span>
+                            <strong class="quotation-detail-summary-card__value quotation-detail-summary-card__value--compact">{{ commercialContact.full_name|default('No especificado') }}</strong>
                             {% if commercialContact.job_title|default(null) %}
-                                <span class="d-block text-muted small">{{ commercialContact.job_title }}</span>
+                                <span class="quotation-detail-summary-card__meta">{{ commercialContact.job_title }}</span>
                             {% endif %}
                             {% if commercialContact.email|default(null) or commercialContact.phone|default(null) %}
-                                <span class="d-block text-muted small mt-2">{{ commercialContact.email|default('') }}{% if commercialContact.email|default(null) and commercialContact.phone|default(null) %} Â· {% endif %}{{ commercialContact.phone|default('') }}</span>
+                                <span class="quotation-detail-summary-card__meta">{{ commercialContact.email|default('') }}{% if commercialContact.email|default(null) and commercialContact.phone|default(null) %} · {% endif %}{{ commercialContact.phone|default('') }}</span>
                             {% endif %}
-                            <span class="d-block text-muted small mt-2">Cliente: {{ quotation.clientSnapshot.legal_name ?? quotation.clientSnapshot.business_name ?? 'No especificado' }}</span>
+                            <span class="quotation-detail-summary-card__meta">{{ quotation.clientSnapshot.legal_name ?? quotation.clientSnapshot.business_name ?? 'No especificado' }}</span>
                         {% else %}
-                            <span class="text-muted small d-block mb-1">Cliente</span>
-                            <strong>{{ quotation.clientSnapshot.legal_name ?? quotation.clientSnapshot.business_name ?? 'No especificado' }}</strong>
+                            <span class="quotation-detail-summary-card__label">Cliente</span>
+                            <strong class="quotation-detail-summary-card__value quotation-detail-summary-card__value--compact">{{ quotation.clientSnapshot.legal_name ?? quotation.clientSnapshot.business_name ?? 'No especificado' }}</strong>
                         {% endif %}
                         {% if quotation.clientSnapshot.tax_id ?? false %}
-                            <span class="d-block text-muted small {{ commercialContact ? '' : 'mt-2' }}">RFC: {{ quotation.clientSnapshot.tax_id }}</span>
+                            <span class="quotation-detail-summary-card__meta">RFC: {{ quotation.clientSnapshot.tax_id }}</span>
                         {% endif %}
+                        </div>
                     </div>
                 </section>
             </div>
             <div class="col-12 col-md-4">
-                <section class="pf-card h-100">
+                <section class="pf-card h-100 quotation-detail-summary-card">
                     <div class="pf-card__body">
-                        <span class="text-muted small d-block mb-1">Emisión</span>
+                        <span class="quotation-detail-summary-card__icon" aria-hidden="true"><i class="bi bi-calendar2-check"></i></span>
+                        <div class="quotation-detail-summary-card__content">
+                        <span class="quotation-detail-summary-card__label">Emisión</span>
                         {% if quotation.issuedAt %}
-                            <strong>{{ quotation.issuedAt|date('d/m/Y H:i', 'America/Mexico_City') }}</strong>
-                            <span class="d-block text-muted small mt-2">Creada por {{ quotation.createdBy.fullName }}</span>
+                            <strong class="quotation-detail-summary-card__value quotation-detail-summary-card__value--compact">{{ quotation.issuedAt|date('d/m/Y H:i', 'America/Mexico_City') }}</strong>
+                            <span class="quotation-detail-summary-card__meta">Creada por {{ quotation.createdBy.fullName }}</span>
                         {% else %}
-                            <strong>Pendiente de emisión</strong>
+                            <strong class="quotation-detail-summary-card__value quotation-detail-summary-card__value--compact">Pendiente de emisión</strong>
                         {% endif %}
+                        </div>
                     </div>
                 </section>
             </div>
@@ -167,34 +176,43 @@
                     <p class="pf-card__description">Información seleccionada y congelada para esta cotización.</p>
                 </header>
                 <div class="pf-card__body">
-                    <dl class="row mb-0">
+                    <div class="quotation-detail-commercial-grid">
                         {% if commercialContact %}
-                            <dt class="col-sm-3">Contacto comercial</dt>
-                            <dd class="col-sm-9">
-                                {{ commercialContact.full_name|default('No especificado') }}
-                                {% if commercialContact.job_title|default(null) %} · {{ commercialContact.job_title }}{% endif %}
+                            <article class="quotation-detail-commercial-field quotation-detail-commercial-field--contact">
+                                <span class="quotation-detail-commercial-field__icon" aria-hidden="true"><i class="bi bi-person-lines-fill"></i></span>
+                                <div class="quotation-detail-commercial-field__content">
+                                <h3>Contacto comercial</h3>
+                                <strong>{{ commercialContact.full_name|default('No especificado') }}</strong>
+                                {% if commercialContact.job_title|default(null) %}<span>{{ commercialContact.job_title }}</span>{% endif %}
                                 {% if commercialContact.email|default(null) or commercialContact.phone|default(null) %}
-                                    <span class="d-block text-muted small">{{ commercialContact.email|default('') }}{% if commercialContact.email|default(null) and commercialContact.phone|default(null) %} · {% endif %}{{ commercialContact.phone|default('') }}</span>
+                                    <span>{{ commercialContact.email|default('') }}{% if commercialContact.email|default(null) and commercialContact.phone|default(null) %} · {% endif %}{{ commercialContact.phone|default('') }}</span>
                                 {% endif %}
-                            </dd>
+                                </div>
+                            </article>
                         {% endif %}
                         {% if fiscalAddress %}
-                            <dt class="col-sm-3">Domicilio fiscal</dt>
-                            <dd class="col-sm-9">
-                                {% if fiscalAddress.label|default(null) %}<strong>{{ fiscalAddress.label }}</strong><br>{% endif %}
-                                {% if fiscalAddress.recipient_name|default(null) %}{{ fiscalAddress.recipient_name }}<br>{% endif %}
-                                {{ fiscalAddress.formatted_address|default('No especificado') }}
-                            </dd>
+                            <article class="quotation-detail-commercial-field">
+                                <span class="quotation-detail-commercial-field__icon" aria-hidden="true"><i class="bi bi-receipt-cutoff"></i></span>
+                                <div class="quotation-detail-commercial-field__content">
+                                    <h3>Domicilio fiscal</h3>
+                                    {% if fiscalAddress.label|default(null) %}<strong>{{ fiscalAddress.label }}</strong>{% endif %}
+                                    {% if fiscalAddress.recipient_name|default(null) %}<span>{{ fiscalAddress.recipient_name }}</span>{% endif %}
+                                    <p>{{ fiscalAddress.formatted_address|default('No especificado') }}</p>
+                                </div>
+                            </article>
                         {% endif %}
                         {% if deliveryAddress %}
-                            <dt class="col-sm-3">Domicilio de entrega</dt>
-                            <dd class="col-sm-9">
-                                {% if deliveryAddress.label|default(null) %}<strong>{{ deliveryAddress.label }}</strong><br>{% endif %}
-                                {% if deliveryAddress.recipient_name|default(null) %}{{ deliveryAddress.recipient_name }}<br>{% endif %}
-                                {{ deliveryAddress.formatted_address|default('No especificado') }}
-                            </dd>
+                            <article class="quotation-detail-commercial-field">
+                                <span class="quotation-detail-commercial-field__icon" aria-hidden="true"><i class="bi bi-geo-alt"></i></span>
+                                <div class="quotation-detail-commercial-field__content">
+                                    <h3>Domicilio de entrega</h3>
+                                    {% if deliveryAddress.label|default(null) %}<strong>{{ deliveryAddress.label }}</strong>{% endif %}
+                                    {% if deliveryAddress.recipient_name|default(null) %}<span>{{ deliveryAddress.recipient_name }}</span>{% endif %}
+                                    <p>{{ deliveryAddress.formatted_address|default('No especificado') }}</p>
+                                </div>
+                            </article>
                         {% endif %}
-                    </dl>
+                    </div>
                 </div>
             </section>
         {% endif %}
@@ -225,9 +243,13 @@
                             <dt class="col-sm-3">Evidencia</dt>
                             <dd class="col-sm-9" style="white-space: pre-line;">{{ quotation.decisionEvidenceReference }}</dd>
                         {% endif %}
+                        {% if quotation.purchaseOrderNumber %}
+                            <dt class="col-sm-3">Folio de orden de compra</dt>
+                            <dd class="col-sm-9">{{ quotation.purchaseOrderNumber }}</dd>
+                        {% endif %}
                         {% if quotation.purchaseOrderFile %}
-                            <dt class="col-sm-3">Orden de compra</dt>
-                            <dd class="col-sm-9"><a class="btn btn-sm btn-outline-primary" href="{{ path('admin_quotations_decision_file', {id: quotation.id, type: 'purchase-order'}) }}"><i class="bi bi-file-earmark-pdf"></i> Descargar {{ quotation.purchaseOrderNumber ?: 'orden de compra' }}</a></dd>
+                            <dt class="col-sm-3">Archivo adjunto</dt>
+                            <dd class="col-sm-9"><a class="btn btn-sm btn-outline-primary" href="{{ path('admin_quotations_decision_file', {id: quotation.id, type: 'purchase-order'}) }}"><i class="bi bi-file-earmark-pdf"></i> Descargar orden de compra en PDF</a></dd>
                         {% endif %}
                         {% if quotation.responseScreenshotFile %}
                             <dt class="col-sm-3">Captura de respuesta</dt>
@@ -277,16 +299,27 @@
             </section>
         {% endif %}
 
-        {% if can_send or can_receive_decision %}
+        {% if can_send or can_receive_decision or can_revise %}
             <section class="pf-card mb-4">
-                <header class="pf-card__header">
-                    <h2 class="pf-card__title">Acciones comerciales</h2>
-                    <p class="pf-card__description">Cada acción requiere confirmación explícita y queda registrada en la bitácora.</p>
+                <header class="pf-card__header quotation-actions__header">
+                    <div>
+                        <span class="quotation-actions__eyebrow">Seguimiento de cotización</span>
+                        <h2 class="pf-card__title">Acciones comerciales</h2>
+                        <p class="pf-card__description">Elige el siguiente paso. Cada cambio queda registrado en la bitácora.</p>
+                    </div>
+                    <span class="pf-status-badge {{ status_tones[status]|default('pf-status-badge--neutral') }}">
+                        {{ quotation.status.label }}
+                    </span>
                 </header>
                 <div class="pf-card__body quotation-actions">
+                    <div class="quotation-actions__grid">
                     {% if can_send and is_granted('quotations.send') %}
                         <details class="quotation-action quotation-action--send"{% if emailForm.vars.submitted %} open{% endif %}>
-                            <summary class="fw-semibold"><span>Enviar por correo con PDF adjunto</span><small>Registrar envío</small></summary>
+                            <summary class="quotation-action__summary">
+                                <span class="quotation-action__icon" aria-hidden="true"><i class="bi bi-envelope-paper"></i></span>
+                                <span class="quotation-action__copy"><strong>Enviar al cliente</strong><span>Prepara el correo y adjunta el PDF de esta versión.</span></span>
+                                <span class="quotation-action__toggle">Completar envío <i class="bi bi-chevron-down" aria-hidden="true"></i></span>
+                            </summary>
                             <div class="quotation-action__content">
                                 {{ form_start(emailForm, {action: path('admin_quotations_send', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form quotation-action__form'}}) }}
                                     {{ form_errors(emailForm) }}
@@ -304,7 +337,11 @@
 
                     {% if can_receive_decision and is_granted('quotations.manage_status') %}
                         <details class="quotation-action quotation-action--accept"{% if acceptForm.vars.submitted %} open{% endif %}>
-                            <summary class="fw-semibold text-success"><span>Registrar aceptación</span><small>Registrar respuesta</small></summary>
+                            <summary class="quotation-action__summary">
+                                <span class="quotation-action__icon" aria-hidden="true"><i class="bi bi-check2-circle"></i></span>
+                                <span class="quotation-action__copy"><strong>Registrar aceptación</strong><span>Guarda quién aprobó y cuándo. El folio y PDF de su orden de compra son opcionales.</span></span>
+                                <span class="quotation-action__toggle">Registrar <i class="bi bi-chevron-down" aria-hidden="true"></i></span>
+                            </summary>
                             <div class="quotation-action__content">
                                 {{ form_start(acceptForm, {action: path('admin_quotations_accept', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form quotation-action__form'}}) }}
                                     {{ form_errors(acceptForm) }}
@@ -313,8 +350,21 @@
                                         <div class="col-md-6">{{ form_row(acceptForm.contact) }}</div>
                                         <div class="col-md-6">{{ form_row(acceptForm.respondedAt) }}</div>
                                         <div class="col-12">{{ form_row(acceptForm.notes) }}</div>
-                                        <div class="col-md-6">{{ form_row(acceptForm.purchaseOrderNumber) }}</div>
-                                        <div class="col-md-6">{{ form_row(acceptForm.purchaseOrderFile) }}</div>
+                                        <div class="col-12">
+                                            <section class="quotation-action__optional-group">
+                                                <div class="quotation-action__optional-heading">
+                                                    <div>
+                                                        <h3>Orden de compra del cliente</h3>
+                                                        <p>Registra el folio y adjunta el PDF si el cliente la proporcionó.</p>
+                                                    </div>
+                                                    <span>Opcional</span>
+                                                </div>
+                                                <div class="row g-3 quotation-action__optional-fields">
+                                                    <div class="col-md-6">{{ form_row(acceptForm.purchaseOrderNumber) }}</div>
+                                                    <div class="col-md-6">{{ form_row(acceptForm.purchaseOrderFile) }}</div>
+                                                </div>
+                                            </section>
+                                        </div>
                                         <div class="col-12">{{ form_row(acceptForm.responseScreenshot) }}</div>
                                     </div>
                                     <button type="submit" class="btn pf-button pf-button--primary mt-3">Confirmar aceptación</button>
@@ -323,7 +373,11 @@
                         </details>
 
                         <details class="quotation-action quotation-action--reject"{% if rejectForm.vars.submitted %} open{% endif %}>
-                            <summary class="fw-semibold text-danger"><span>Registrar rechazo</span><small>Registrar respuesta</small></summary>
+                            <summary class="quotation-action__summary">
+                                <span class="quotation-action__icon" aria-hidden="true"><i class="bi bi-x-circle"></i></span>
+                                <span class="quotation-action__copy"><strong>Registrar rechazo</strong><span>Conserva el motivo y la evidencia de la respuesta.</span></span>
+                                <span class="quotation-action__toggle">Registrar <i class="bi bi-chevron-down" aria-hidden="true"></i></span>
+                            </summary>
                             <div class="quotation-action__content">
                                 {{ form_start(rejectForm, {action: path('admin_quotations_reject', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form quotation-action__form'}}) }}
                                     {{ form_errors(rejectForm) }}
@@ -340,7 +394,11 @@
                         </details>
 
                         <details class="quotation-action quotation-action--cancel"{% if cancellationForm.vars.submitted %} open{% endif %}>
-                            <summary class="fw-semibold"><span>Cancelar cotización</span><small>Acción definitiva</small></summary>
+                            <summary class="quotation-action__summary">
+                                <span class="quotation-action__icon" aria-hidden="true"><i class="bi bi-slash-circle"></i></span>
+                                <span class="quotation-action__copy"><strong>Cancelar cotización</strong><span>Acción definitiva. Indica el motivo antes de confirmar.</span></span>
+                                <span class="quotation-action__toggle">Revisar acción <i class="bi bi-chevron-down" aria-hidden="true"></i></span>
+                            </summary>
                             <div class="quotation-action__content">
                                 {{ form_start(cancellationForm, {action: path('admin_quotations_cancel', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form quotation-action__form'}}) }}
                                     {{ form_errors(cancellationForm) }}
@@ -350,22 +408,25 @@
                             </div>
                         </details>
                     {% endif %}
-                </div>
-            </section>
-        {% endif %}
 
-        {% if can_revise and quotation.revisions is empty and is_granted('quotations.create_revision') %}
-            <section class="pf-card mb-4">
-                <header class="pf-card__header">
-                    <h2 class="pf-card__title">Generar nueva revisión</h2>
-                    <p class="pf-card__description">La cotización actual se marcará como reemplazada; su información continuará disponible como historial.</p>
-                </header>
-                <div class="pf-card__body">
-                    {{ form_start(revisionForm, {action: path('admin_quotations_create_revision', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form quotation-revision-form'}}) }}
-                        {{ form_errors(revisionForm) }}
-                        {{ form_row(revisionForm.reason) }}
-                        <button type="submit" class="btn pf-button pf-button--secondary mt-2">Crear nueva revisión</button>
-                    {{ form_end(revisionForm) }}
+                    {% if can_revise %}
+                        <details class="quotation-action quotation-action--revision{% if not can_receive_decision %} quotation-action--full{% endif %}"{% if revisionForm.vars.submitted %} open{% endif %}>
+                            <summary class="quotation-action__summary">
+                                <span class="quotation-action__icon" aria-hidden="true"><i class="bi bi-arrow-repeat"></i></span>
+                                <span class="quotation-action__copy"><strong>Generar nueva revisión</strong><span>Conserva esta versión como historial y abre un nuevo borrador.</span></span>
+                                <span class="quotation-action__toggle">Crear revisión <i class="bi bi-chevron-down" aria-hidden="true"></i></span>
+                            </summary>
+                            <div class="quotation-action__content">
+                                <p class="quotation-action__notice"><i class="bi bi-info-circle" aria-hidden="true"></i>La versión actual quedará marcada como reemplazada; su folio, importes y evidencia se conservarán.</p>
+                                {{ form_start(revisionForm, {action: path('admin_quotations_create_revision', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form quotation-revision-form'}}) }}
+                                    {{ form_errors(revisionForm) }}
+                                    {{ form_row(revisionForm.reason) }}
+                                    <button type="submit" class="btn pf-button pf-button--secondary">Crear nueva revisión</button>
+                                {{ form_end(revisionForm) }}
+                            </div>
+                        </details>
+                    {% endif %}
+                    </div>
                 </div>
             </section>
         {% endif %}
@@ -388,60 +449,41 @@
                 <h2 class="pf-card__title">Partidas e importes congelados</h2>
                 <p class="pf-card__description">Los Productos, especificaciones e importes corresponden a esta versión de la cotización y se muestran desde sus snapshots históricos.</p>
             </header>
-            <div class="pf-card__body p-0">
-                <div class="pf-table-responsive">
-                    <table class="pf-table">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Producto y especificaciones</th>
-                                <th class="pf-table__cell--right">Cantidad</th>
-                                <th class="pf-table__cell--right">P. unitario</th>
-                                <th class="pf-table__cell--right">Importe</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in presentedItems %}
-                                <tr>
-                                    <td>{{ item.line_number }}</td>
-                                    <td>
-                                        <strong>{{ item.product.name }}</strong>
-                                        {% if item.product.code %}
-                                            <span class="d-block text-muted small">{{ item.product.code }}</span>
-                                        {% endif %}
-                                        {% if item.product.description %}
-                                            <span class="d-block text-muted small mt-1">{{ item.product.description }}</span>
-                                        {% endif %}
-
-                                        {% if item.specifications is not empty %}
-                                            <dl class="row g-0 mt-2 mb-0 small">
-                                                {% for specification in item.specifications %}
-                                                    <dt class="col-sm-4 text-muted fw-normal">{{ specification.label }}</dt>
-                                                    <dd class="col-sm-8 mb-1">{{ specification.value }}</dd>
-                                                {% endfor %}
-                                            </dl>
-                                        {% endif %}
-                                    </td>
-                                    <td class="pf-table__cell--right">{{ item.quantity_display }}</td>
-                                    <td class="pf-table__cell--right">${{ item.unit_price|number_format(2, '.', ',') }}</td>
-                                    <td class="pf-table__cell--right">${{ item.line_subtotal|number_format(2, '.', ',') }}</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+            <div class="pf-card__body quotation-detail-items">
+                {% for item in presentedItems %}
+                    <article class="quotation-detail-item">
+                        <header class="quotation-detail-item__header">
+                            <span class="quotation-detail-item__number">Partida {{ item.line_number }}</span>
+                            <div class="quotation-detail-item__product">
+                                <h3>{{ item.product.name }}</h3>
+                                {% if item.product.code %}<span>{{ item.product.code }}</span>{% endif %}
+                            </div>
+                        </header>
+                        {% if item.product.description %}
+                            <p class="quotation-detail-item__description">{{ item.product.description }}</p>
+                        {% endif %}
+                        {% if item.specifications is not empty %}
+                            <dl class="quotation-detail-item__specifications">
+                                {% for specification in item.specifications %}
+                                    <div><dt>{{ specification.label }}</dt><dd>{{ specification.value }}</dd></div>
+                                {% endfor %}
+                            </dl>
+                        {% endif %}
+                        <div class="quotation-detail-item__amounts">
+                            <div><span>Cantidad</span><strong>{{ item.quantity_display }}</strong></div>
+                            <div><span>Precio unitario</span><strong>${{ item.unit_price|number_format(2, '.', ',') }}</strong></div>
+                            <div class="quotation-detail-item__subtotal"><span>Importe</span><strong>${{ item.line_subtotal|number_format(2, '.', ',') }}</strong></div>
+                        </div>
+                    </article>
+                {% else %}
+                    <p class="quotation-detail-items__empty">Esta versión no tiene partidas registradas.</p>
+                {% endfor %}
             </div>
-            <div class="pf-card__body border-top">
-                <dl class="row justify-content-end mb-0">
-                    <dt class="col-sm-3 text-sm-end">Subtotal</dt>
-                    <dd class="col-sm-2 text-sm-end">${{ quotation.subtotal|number_format(2, '.', ',') }}</dd>
-                    <dt class="col-sm-3 text-sm-end">Descuento ({{ quotation.discountPercent|number_format(2, '.', ',') }}%)</dt>
-                    <dd class="col-sm-2 text-sm-end">-${{ quotation.discountAmount|number_format(2, '.', ',') }}</dd>
-                    <dt class="col-sm-3 text-sm-end">IVA ({{ (quotation.taxRate * 100)|number_format(2, '.', ',') }}%)</dt>
-                    <dd class="col-sm-2 text-sm-end">${{ quotation.taxAmount|number_format(2, '.', ',') }}</dd>
-                    <dt class="col-sm-3 text-sm-end">Total</dt>
-                    <dd class="col-sm-2 text-sm-end fw-semibold">${{ quotation.total|number_format(2, '.', ',') }} {{ quotation.currency }}</dd>
-                </dl>
+            <div class="pf-card__body border-top quotation-detail-totals">
+                <div class="quotation-detail-totals__metric"><span>Subtotal</span><strong>${{ quotation.subtotal|number_format(2, '.', ',') }}</strong></div>
+                <div class="quotation-detail-totals__metric"><span>Descuento ({{ quotation.discountPercent|number_format(2, '.', ',') }}%)</span><strong>−${{ quotation.discountAmount|number_format(2, '.', ',') }}</strong></div>
+                <div class="quotation-detail-totals__metric"><span>IVA ({{ (quotation.taxRate * 100)|number_format(2, '.', ',') }}%)</span><strong>${{ quotation.taxAmount|number_format(2, '.', ',') }}</strong></div>
+                <div class="quotation-detail-totals__metric quotation-detail-totals__metric--grand"><span>Total</span><strong>${{ quotation.total|number_format(2, '.', ',') }} <small>{{ quotation.currency }}</small></strong></div>
             </div>
         </section>
 

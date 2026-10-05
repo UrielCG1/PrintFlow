@@ -51,15 +51,16 @@ final class QuotationDecisionType extends AbstractType
         if ($options['acceptance_files']) {
             $builder
                 ->add('purchaseOrderNumber', TextType::class, [
-                    'label' => 'Número de orden de compra',
+                    'label' => 'Folio de orden (opcional)',
                     'required' => false,
-                    'help' => 'Obligatorio cuando se adjunta una orden de compra.',
+                    'help' => 'Solo se requiere este folio si adjuntas el PDF de la orden.',
                     'attr' => ['maxlength' => 120],
                 ])
                 ->add('purchaseOrderFile', FileType::class, [
-                    'label' => 'Orden de compra (PDF)',
+                    'label' => 'Adjuntar PDF de la orden (opcional)',
                     'required' => false,
                     'mapped' => true,
+                    'help' => 'Puedes registrar la aceptación sin adjuntar este documento. Máximo 20 MB.',
                     'attr' => ['accept' => 'application/pdf,.pdf'],
                 ])
                 ->add('responseScreenshot', FileType::class, [
