@@ -64,9 +64,20 @@ final class QuotationDiscountEngine
                     'category_id' => $group['category']->getId(), 'volume' => $group['volume']->toScale(6)->__toString(),
                     'percentage' => $percent, 'base_amount' => $group['base']->toScale(2)->__toString(),
                     'discount_amount' => $amount->toScale(2)->__toString(), 'rule_id' => $rule?->getId(),
+                    'min_volume' => $rule?->getMinVolume(),
+                    'unit' => $profile?->getCostingUnit()?->getSymbol() ?: $profile?->getCostingUnit()?->getName(),
                 ];
             }
-            $volumeFingerprint[] = [$group['category']->getId(), $group['volume']->toScale(6)->__toString(), $rule?->getId(), $percent];
+            $volumeFingerprint[] = [
+                $group['category']->getId(),
+                $group['volume']->toScale(6)->__toString(),
+                $rule?->getId(),
+                $rule?->getMinVolume(),
+                $rule?->getConfigRevision(),
+                $profile?->getProfileRevision(),
+                $profile?->getStrategyVersion(),
+                $percent,
+            ];
         }
 
         $loyalty = $clientClass?->getLoyaltyDiscountPercent() ?? '0.0000';

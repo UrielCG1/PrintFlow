@@ -287,7 +287,52 @@
                     <h2 class="pf-card__title">Aprobación de descuento por volumen</h2>
                     <p class="pf-card__description">La emisión, el envío formal y la aceptación permanecerán bloqueados hasta una aprobación administrativa.</p>
                 </header>
-                <div class="pf-card__body d-flex gap-2 flex-wrap">
+                <div class="pf-card__body">
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm align-middle mb-0">
+                            <caption class="caption-top text-muted small pt-0">Detalle de las reglas aplicadas sobre la base bruta original de cada linea de negocio.</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Linea de negocio</th>
+                                    <th scope="col" class="text-end">Volumen acumulado</th>
+                                    <th scope="col" class="text-end">Tramo desde</th>
+                                    <th scope="col" class="text-end">Porcentaje</th>
+                                    <th scope="col" class="text-end">Base original</th>
+                                    <th scope="col" class="text-end">Descuento</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for discount in quotation.discountBreakdown %}
+                                    {% if discount.type == 'VOLUME' and discount.discount_amount|default(0) > 0 %}
+                                        <tr>
+                                            <th scope="row">
+                                                {{ discount.category|default('Linea de negocio') }}
+                                                {% if discount.rule_id|default(null) %}
+                                                    <small class="d-block text-muted fw-normal">Regla #{{ discount.rule_id }}</small>
+                                                {% endif %}
+                                            </th>
+                                            <td class="text-end text-nowrap">
+                                                {{ discount.volume|default('0')|number_format(2, '.', ',') }}
+                                                <small class="text-muted">{{ discount.unit|default('unid.') }}</small>
+                                            </td>
+                                            <td class="text-end text-nowrap">
+                                                {% if discount.min_volume|default(null) is not null %}
+                                                    {{ discount.min_volume|number_format(2, '.', ',') }} {{ discount.unit|default('') }}
+                                                {% else %}
+                                                    <span class="text-muted">No disponible</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end text-nowrap">{{ discount.percentage|default('0')|number_format(2, '.', ',') }}%</td>
+                                            <td class="text-end text-nowrap">${{ discount.base_amount|default('0')|number_format(2, '.', ',') }} {{ quotation.currency }}</td>
+                                            <td class="text-end text-nowrap text-success fw-semibold">-${{ discount.discount_amount|default('0')|number_format(2, '.', ',') }} {{ quotation.currency }}</td>
+                                        </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert alert-warning py-2 small mb-3">Verifica el volumen, el tramo y el porcentaje antes de aprobar. La emision, el envio formal y la aceptacion permaneceran bloqueados hasta resolver esta revision.</div>
+                    <div class="d-flex gap-2 flex-wrap">
                     {% if is_granted('quotations.approve_volume_discount') %}
                         <form method="post" action="{{ path('admin_quotations_approve_volume_discount', {id: quotation.id}) }}">
                             <input type="hidden" name="_token" value="{{ csrf_token('quotation-volume-approve-' ~ quotation.id) }}">
@@ -301,6 +346,7 @@
                     {% else %}
                         <span class="text-warning">Pendiente de aprobación por un administrador.</span>
                     {% endif %}
+                    </div>
                 </div>
             </section>
         {% endif %}
