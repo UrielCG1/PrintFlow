@@ -28,6 +28,16 @@ final class PublicQuoteRequestController extends AbstractController
   $data=new PublicQuotationRequestData();if(!$request->isMethod('POST'))$data->addItem(new PublicQuotationRequestItemData());
   $form=$this->createForm(PublicQuoteRequestType::class,$data);$form->handleRequest($request);$verifiedContact=null;
   if($form->isSubmitted()){
+   // Las características se generan dinámicamente después de cargar el
+   // producto. Recuperamos también el payload crudo para no perder campos
+   // como finished_height_cm cuando Symfony no tenía hijos preconstruidos.
+   $rawForm = $request->request->all($form->getName());
+   foreach ($data->items as $index => $item) {
+    $rawSpecifications = $rawForm['items'][$index]['specifications'] ?? null;
+    if (is_array($rawSpecifications)) {
+     $item->specifications = array_replace($item->specifications, array_map(static fn ($value): string => (string) $value, $rawSpecifications));
+    }
+   }
    $existing=(bool)$form->get('existingCustomer')->getData();
    if($existing){$contact=$em->getRepository(ClientContact::class)->findActiveRequesterByPublicNumber((string)$data->customerNumber);if(!$contact instanceof ClientContact){$form->get('customerNumber')->addError(new FormError('No encontramos un contacto activo con este número.'));}else{$verifiedContact=$contact;$data->fullName=$contact->getFullName();$data->email=$contact->getEmail()?:$contact->getContact()->getPersonalEmail();$data->phone=$contact->getPhone();$data->companyName=$contact->getClient()->getBusinessName();}}
    foreach($data->items as $index=>$item){$itemForm=$form->get('items')->get((string) $index);if($item->commercialItem&&$item->commercialCategory?->getId()!==$item->commercialItem->getCategory()->getId())$itemForm->get('commercialItem')->addError(new FormError('El producto no pertenece a la categoría seleccionada.'));}

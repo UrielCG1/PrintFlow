@@ -209,6 +209,28 @@ final class QuotationItemCharacteristicsSpecificationResolverTest extends TestCa
         self::assertSame('6.000000', $result['snapshot']['large_format']['calculated']['area_m2']);
     }
 
+    public function testAcceptsDimensionCharacteristicKeyWithDifferentCasing(): void
+    {
+        $height = (new CommercialCharacteristic())
+            ->setCode('FINISHED_HEIGHT_CM')
+            ->setName('Alto terminado')
+            ->setInputType(CommercialCharacteristicInputType::DECIMAL)
+            ->setUnitLabel('cm');
+        $configuration = (new CommercialItemCharacteristic())
+            ->setCharacteristic($height)
+            ->setIsRequired(true);
+
+        $result = (new QuotationItemCharacteristicsSpecificationResolver())->resolve(
+            $this->item(),
+            [$configuration],
+            ['CHARACTERISTIC_FINISHED_HEIGHT_CM' => '25'],
+            '1',
+            'MANUAL',
+        );
+
+        self::assertSame('25.000000', $result['snapshot']['values']['FINISHED_HEIGHT_CM']['submitted_value']);
+    }
+
     private function item(): CommercialItem
     {
         $unit = (new MeasurementUnit())

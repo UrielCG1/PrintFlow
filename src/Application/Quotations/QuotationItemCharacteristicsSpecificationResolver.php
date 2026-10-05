@@ -241,7 +241,7 @@ final class QuotationItemCharacteristicsSpecificationResolver
     ): string {
         $fieldKey = self::fieldKey($characteristic);
 
-        $value = match ($characteristic->getCode()) {
+        $value = match (strtoupper(trim($characteristic->getCode()))) {
             /*
              * En gran formato estos dos campos tienen una captura especializada
              * y visible. Cuando existen, son la fuente canónica para la
@@ -260,7 +260,24 @@ final class QuotationItemCharacteristicsSpecificationResolver
             default => $submittedSpecifications[$fieldKey] ?? '',
         };
 
-        return trim((string) $value);
+        if ($value !== null && trim((string) $value) !== '') {
+            return trim((string) $value);
+        }
+
+        // Compatibilidad con formularios que enviaron la clave en mayúsculas,
+        // con guiones o sin el prefijo characteristic_. El código técnico es
+        // la autoridad, no la etiqueta visible.
+        $expected = strtolower($fieldKey);
+        $code = strtolower(trim($characteristic->getCode()));
+        foreach ($submittedSpecifications as $key => $candidate) {
+            $normalizedKey = strtolower((string) $key);
+            $normalizedKey = preg_replace('/[^a-z0-9]+/', '_', $normalizedKey) ?? $normalizedKey;
+            if ($normalizedKey === $expected || ltrim($normalizedKey, '_') === $code || str_ends_with($normalizedKey, '_'.$code)) {
+                return trim((string) $candidate);
+            }
+        }
+
+        return '';
     }
 
     /**
