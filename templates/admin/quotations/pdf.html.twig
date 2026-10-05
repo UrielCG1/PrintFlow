@@ -438,18 +438,52 @@
                 </tbody>
             </table>
 
+            {% if quotation.discountBreakdown is not empty %}
+                <section class="section">
+                    <h2 class="section-title">Desglose de descuentos aplicados</h2>
+
+                    <table class="items">
+                        <thead>
+                            <tr>
+                                <th style="width: 22%;">Tipo</th>
+                                <th style="width: 36%;">Alcance o regla aplicada</th>
+                                <th style="width: 12%;" class="number">Porcentaje</th>
+                                <th style="width: 15%;" class="number">Base</th>
+                                <th style="width: 15%;" class="number">Importe</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for discount in quotation.discountBreakdown %}
+                                <tr>
+                                    <td>{{ discount.type == 'VOLUME' ? 'Descuento por volumen' : (discount.type == 'LOYALTY' ? 'Descuento por lealtad' : 'Descuento adicional') }}</td>
+                                    <td>
+                                        {% if discount.type == 'VOLUME' %}
+                                            {{ discount.category|default('Línea de negocio') }}<br>
+                                            <span class="item-description">Volumen: {{ discount.volume|default('0')|number_format(2, '.', ',') }} {{ discount.unit|default('unid.') }}{% if discount.min_volume|default(null) is not null %} · Tramo desde {{ discount.min_volume|number_format(2, '.', ',') }} {{ discount.unit|default('') }}{% endif %}</span>
+                                        {% elseif discount.type == 'LOYALTY' %}
+                                            <span class="item-description">Clase de cliente: {{ discount.class|default('No especificada') }}</span>
+                                        {% elseif discount.reason|default(null) %}
+                                            {{ discount.reason }}
+                                        {% else %}
+                                            <span class="item-description">Aplicado a la cotización</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="number">{{ discount.percentage|default('0')|number_format(2, '.', ',') }}%</td>
+                                    <td class="number">${{ discount.base_amount|default('0')|number_format(2, '.', ',') }}</td>
+                                    <td class="number">-${{ discount.discount_amount|default('0')|number_format(2, '.', ',') }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </section>
+            {% endif %}
+
             <div class="totals-wrapper">
                 <table class="totals-table">
                     <tr>
                         <td>Subtotal</td>
                         <td class="text-end">${{ quotation.subtotal|number_format(2, '.', ',') }}</td>
                     </tr>
-                    {% for discount in quotation.discountBreakdown %}
-                        <tr>
-                            <td>{{ discount.type == 'VOLUME' ? 'Por volumen' : (discount.type == 'LOYALTY' ? 'Por lealtad' : 'Descuento adicional') }} ({{ discount.percentage|number_format(2, '.', ',') }}%)</td>
-                            <td class="text-end">-${{ discount.discount_amount|number_format(2, '.', ',') }}</td>
-                        </tr>
-                    {% endfor %}
                     <tr>
                         <td>Descuento total</td>
                         <td class="text-end">-${{ quotation.discountAmount|number_format(2, '.', ',') }}</td>

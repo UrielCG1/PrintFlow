@@ -43,6 +43,7 @@ final class QuotationPdfRenderer
         $dompdf->loadHtml(
             $this->twig->render('admin/quotations/pdf.html.twig', [
                 'quotation' => $quotation,
+                'presentedItems' => $this->itemPresentationBuilder->presentAll($quotation->getItems()),
                 'deliveryDate' => $quotation->getRequestedDeliveryAt(),
                 'brandLogoSrc' => $this->brandLogo->dataUri(),
                 'issuer' => [

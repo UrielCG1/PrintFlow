@@ -6,5 +6,63 @@
 <table class="header"><tr><td><h1 class="issuer">{{ issuer.name }}</h1><p class="detail">RFC: {{ issuer.tax_id }}</p><p class="detail">{{ issuer.address }}</p><p class="detail">{{ issuer.email }} | {{ issuer.phone }}</p></td><td class="header-right"><img class="brand-logo" src="{{ brandLogoSrc }}" alt="OoxCorp"><h2 class="title">Cotización</h2><p class="folio">{{ quotation.requestReference }}</p><div class="delivery-date">FECHA DE ENTREGA:<span class="delivery-date-value">{% if quotation.requestedDeliveryAt %}{{ quotation.requestedDeliveryAt|date('d') }}/{{ monthNames[quotation.requestedDeliveryAt|date('n') - 1] }}/{{ quotation.requestedDeliveryAt|date('Y') }}*{% else %}POR CONFIRMAR{% endif %}</span></div><p class="delivery-date-note">* Fecha de entrega pendiente de confirmación.</p></td></tr></table>
 <section class="section"><h2 class="section-title">Datos del cliente</h2><table class="summary"><tr><td><span class="label">Cliente</span>{{ quotation.requestContactName }}</td><td><span class="label">Empresa</span>{{ quotation.requestCompanyName|default('No especificada') }}</td></tr><tr><td><span class="label">Correo</span>{{ quotation.requestEmail }}</td><td><span class="label">Teléfono</span>{{ quotation.requestPhone }}</td></tr></table></section>
 <section class="section"><h2 class="section-title">Información del documento</h2><table class="summary"><tr><td><span class="label">Fecha de solicitud</span>{{ quotation.createdAt|date('d/m/Y H:i') }}</td><td><span class="label">Vigencia del cálculo</span>{{ quotation.expiresAt|date('d/m/Y') }}</td></tr></table></section>
-<section class="section"><h2 class="section-title">Partidas cotizadas</h2><table class="items"><thead><tr><th>#</th><th>Concepto</th><th class="number">Cantidad</th><th class="number">P. unitario</th><th class="number">Subtotal</th></tr></thead><tbody>{% for line in lines %}<tr><td>{{ line.number }}</td><td><small>{{ line.code }}</small><br><strong>{{ line.name }}</strong>{% if line.notes %}<br>{{ line.notes }}{% endif %}</td><td class="number">{{ line.quantity }}</td><td class="number">${{ line.unit_price|number_format(2,'.',',') }}</td><td class="number">${{ line.subtotal|number_format(2,'.',',') }}</td></tr>{% endfor %}</tbody></table></section>
-<div class="totals-wrap"><table class="totals"><tr><td>Subtotal</td><td class="number">${{ quotation.subtotal|number_format(2,'.',',') }}</td></tr><tr><td>Descuento</td><td class="number">-${{ quotation.discountAmount|number_format(2,'.',',') }}</td></tr><tr><td>IVA</td><td class="number">${{ quotation.taxAmount|number_format(2,'.',',') }}</td></tr><tr class="grand"><td>Total</td><td class="number">${{ quotation.total|number_format(2,'.',',') }} {{ quotation.currency }}</td></tr></table></div><div class="notes"><strong>Importante:</strong> los importes se calcularon con las reglas comerciales vigentes. Un asesor confirmará disponibilidad y fecha final de entrega.</div></body></html>
+<section class="section">
+    <h2 class="section-title">Partidas cotizadas</h2>
+    <table class="items">
+        <thead><tr><th>#</th><th>Concepto y especificaciones</th><th class="number">Cantidad</th><th class="number">P. unitario</th><th class="number">Subtotal</th></tr></thead>
+        <tbody>
+            {% for item in presentedItems %}
+                <tr>
+                    <td>{{ item.line_number }}</td>
+                    <td>
+                        {% if item.product.code %}<small>{{ item.product.code }}</small><br>{% endif %}
+                        <strong>{{ item.product.name }}</strong>
+                        {% if item.product.description %}<br><small>{{ item.product.description }}</small>{% endif %}
+                        {% if item.specifications is not empty %}
+                            <table style="width:100%;margin-top:4px;border-collapse:collapse;">
+                                {% for specification in item.specifications %}
+                                    <tr><td style="width:38%;padding:1px 5px 1px 0;border:0;color:#667085;font-size:7.5px;">{{ specification.label }}</td><td style="padding:1px 0;border:0;font-size:7.5px;">{{ specification.value }}</td></tr>
+                                {% endfor %}
+                            </table>
+                        {% endif %}
+                        {% if item.request_notes %}<br><small>{{ item.request_notes|nl2br }}</small>{% endif %}
+                    </td>
+                    <td class="number">{{ item.quantity_display }}</td>
+                    <td class="number">${{ item.unit_price|number_format(2,'.',',') }}</td>
+                    <td class="number">${{ item.line_subtotal|number_format(2,'.',',') }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% if quotation.discountBreakdown is not empty %}
+    <section class="section">
+        <h2 class="section-title">Desglose de descuentos aplicados</h2>
+        <table class="items">
+            <thead><tr><th>Tipo</th><th>Alcance o regla aplicada</th><th class="number">Porcentaje</th><th class="number">Base</th><th class="number">Importe</th></tr></thead>
+            <tbody>
+                {% for discount in quotation.discountBreakdown %}
+                    <tr>
+                        <td>{{ discount.type == 'VOLUME' ? 'Descuento por volumen' : (discount.type == 'LOYALTY' ? 'Descuento por lealtad' : 'Descuento adicional') }}</td>
+                        <td>
+                            {% if discount.type == 'VOLUME' %}
+                                {{ discount.category|default('Línea de negocio') }}<br>
+                                <small>Volumen: {{ discount.volume|default('0')|number_format(2, '.', ',') }} {{ discount.unit|default('unid.') }}{% if discount.min_volume|default(null) is not null %} · Tramo desde {{ discount.min_volume|number_format(2, '.', ',') }} {{ discount.unit|default('') }}{% endif %}</small>
+                            {% elseif discount.type == 'LOYALTY' %}
+                                <small>Clase de cliente: {{ discount.class|default('No especificada') }}</small>
+                            {% elseif discount.reason|default(null) %}
+                                {{ discount.reason }}
+                            {% else %}
+                                <small>Aplicado a la cotización</small>
+                            {% endif %}
+                        </td>
+                        <td class="number">{{ discount.percentage|default('0')|number_format(2, '.', ',') }}%</td>
+                        <td class="number">${{ discount.base_amount|default('0')|number_format(2, '.', ',') }}</td>
+                        <td class="number">-${{ discount.discount_amount|default('0')|number_format(2, '.', ',') }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+{% endif %}
+<div class="totals-wrap"><table class="totals"><tr><td>Subtotal</td><td class="number">${{ quotation.subtotal|number_format(2,'.',',') }}</td></tr><tr><td>Descuento total</td><td class="number">-${{ quotation.discountAmount|number_format(2,'.',',') }}</td></tr><tr><td>IVA</td><td class="number">${{ quotation.taxAmount|number_format(2,'.',',') }}</td></tr><tr class="grand"><td>Total</td><td class="number">${{ quotation.total|number_format(2,'.',',') }} {{ quotation.currency }}</td></tr></table></div><div class="notes"><strong>Importante:</strong> los importes se calcularon con las reglas comerciales vigentes. Un asesor confirmará disponibilidad y fecha final de entrega.</div></body></html>
