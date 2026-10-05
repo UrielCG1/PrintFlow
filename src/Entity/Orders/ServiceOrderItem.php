@@ -140,21 +140,18 @@ class ServiceOrderItem
 
     public function setQuantity(string $quantity): self
     {
-        $quantity = trim(str_replace(',', '.', $quantity));
+        $value = trim(str_replace(',', '.', $quantity));
 
-        if (preg_match('/^(?:0|[1-9]\d{0,9})(?:\.\d{1,4})?$/D', $quantity) !== 1) {
+        if (preg_match('/^(?:0|[1-9]\d{0,11})(?:\.\d{1,6})?$/D', $value) !== 1) {
             throw new \InvalidArgumentException('La cantidad de la partida no tiene un formato válido.');
         }
 
-        [$integer, $decimal] = array_pad(explode('.', $quantity, 2), 2, '');
-        $integer = ltrim($integer, '0') ?: '0';
-        $normalized = $integer.'.'.str_pad($decimal, 4, '0');
-
-        if ($normalized === '0.0000') {
+        $decimal = \Brick\Math\BigDecimal::of($value);
+        if ($decimal->compareTo('0') <= 0) {
             throw new \InvalidArgumentException('La cantidad de la partida debe ser mayor que cero.');
         }
 
-        $this->quantity = $normalized;
+        $this->quantity = $decimal->toScale(6)->__toString();
 
         return $this;
     }
