@@ -40,6 +40,7 @@
 {% block body %}
 {% set success_messages = app.flashes('success') %}
 <div class="pf-public-quote" data-controller="ui--public-quote" data-ui--public-quote-customer-url-value="{{ path('public_quote_customer',{number:'CONTACT_NUMBER'}) }}" data-ui--public-quote-products-url-value="{{ path('public_quote_products',{categoryId:'CATEGORY_ID'}) }}" data-ui--public-quote-price-url-value="{{ path('public_quote_price_preview',{id:'PRODUCT_ID'}) }}" data-ui--public-quote-recovery-url-value="{{ path('public_quote_customer_number_recovery') }}" data-ui--public-quote-volume-discount-alerts-url-value="{{ path('public_quote_volume_discount_alerts') }}">
+<div class="pf-public-quote" data-controller="ui--public-quote" data-ui--public-quote-customer-url-value="{{ path('public_quote_customer',{number:'CONTACT_NUMBER'}) }}" data-ui--public-quote-products-url-value="{{ path('public_quote_products',{categoryId:0}) }}" data-ui--public-quote-price-url-value="{{ path('public_quote_price_preview',{id:0}) }}" data-ui--public-quote-recovery-url-value="{{ path('public_quote_customer_number_recovery') }}">
     <section class="pf-public-quote__hero" style="--pf-quote-hero-image:url('{{ asset('images/quote/hero-printing.jpg') }}')">
         <div class="container-xxl pf-public-quote__hero-container"><div class="pf-public-quote__hero-content">
             <a href="{{ path('public_quote_request') }}" class="pf-public-quote__brand" aria-label="OoxCorp, inicio">

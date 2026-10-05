@@ -37,6 +37,9 @@ security:
     access_control:
         - { path: ^/cotizacion/aceptar/, roles: PUBLIC_ACCESS }
         - { path: ^/cotizar(?:/|$), roles: PUBLIC_ACCESS }
+        - { path: ^/cotizar$, roles: PUBLIC_ACCESS }
+        - { path: '^/cotizar/(?:cliente/[A-Z0-9_-]+|productos/\d+|preview-precio/\d+|recuperar-numero-cliente)$', roles: PUBLIC_ACCESS }
+        - { path: '^/confirmar-correo-contacto/[a-f0-9]{64}$', roles: PUBLIC_ACCESS }
         - { path: ^/login$, roles: PUBLIC_ACCESS }
         - { path: ^/reset-password, roles: PUBLIC_ACCESS }
         - { path: ^/, roles: ROLE_USER }

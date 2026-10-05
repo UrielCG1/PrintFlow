@@ -64,6 +64,7 @@
                             <th>Folio</th>
                             <th>Cliente</th>
                             <th>Estado</th>
+                            <th>Relación de versiones</th>
                             <th>Vigencia</th>
                             <th class="pf-table__cell--right">Total</th>
                             <th>Última actualización</th>
@@ -102,6 +103,31 @@
                                     <span class="pf-status-badge {{ status_tones[status]|default('pf-status-badge--neutral') }}">
                                         {{ status_labels[status]|default(status) }}
                                     </span>
+                                </td>
+
+                                <td>
+                                    {% set replacement = quotation.revisions|first %}
+                                    {% if replacement %}
+                                        <span class="pf-status-badge pf-status-badge--neutral">Reemplazada</span>
+                                        <span class="d-block text-muted small mt-1">
+                                            por
+                                            <a href="{{ path('admin_quotations_show', {id: replacement.id}) }}">
+                                                {{ replacement.folio ?? ('Borrador · registro #' ~ replacement.id) }}
+                                            </a>
+                                        </span>
+                                    {% else %}
+                                        <span class="pf-status-badge pf-status-badge--info">Versión actual</span>
+                                        {% if quotation.previousRevision %}
+                                            <span class="d-block text-muted small mt-1">
+                                                Reemplaza a
+                                                <a href="{{ path('admin_quotations_show', {id: quotation.previousRevision.id}) }}">
+                                                    {{ quotation.previousRevision.folio ?? ('Borrador · registro #' ~ quotation.previousRevision.id) }}
+                                                </a>
+                                            </span>
+                                        {% else %}
+                                            <span class="d-block text-muted small mt-1">Sin reemplazo previo</span>
+                                        {% endif %}
+                                    {% endif %}
                                 </td>
 
                                 <td>
@@ -164,7 +190,7 @@
                             </tr>
                         {% else %}
                             <tr>
-                                <td colspan="7" class="pf-table__empty">
+                                <td colspan="8" class="pf-table__empty">
                                     <div class="pf-table__empty-content">
                                         <i class="bi bi-file-earmark-text pf-table__empty-icon" aria-hidden="true"></i>
                                         <strong class="pf-table__empty-title">Aún no hay cotizaciones registradas.</strong>
