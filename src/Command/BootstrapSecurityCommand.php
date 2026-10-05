@@ -164,6 +164,31 @@ final class BootstrapSecurityCommand extends Command
     {
         $helper = $this->getHelper('question');
 
+        // El bootstrap es idempotente: sincroniza seguridad y sólo solicita
+        // credenciales cuando todavía no existe un administrador activo.
+        $this->entityManager->getConnection()->close();
+        $roles = $this->seedRoles();
+        $permissions = $this->seedPermissions();
+        $this->assignPermissions($roles, $permissions);
+        $this->entityManager->flush();
+
+        $existingAdmin = $this->entityManager->getRepository(User::class)
+            ->createQueryBuilder('user')
+            ->innerJoin('user.assignedRoles', 'role')
+            ->andWhere('role.code = :adminRole')
+            ->andWhere('user.isActive = :active')
+            ->andWhere('user.deletedAt IS NULL')
+            ->setParameter('adminRole', 'ROLE_ADMIN')
+            ->setParameter('active', true)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if ($existingAdmin instanceof User) {
+            $output->writeln('<info>Roles y permisos sincronizados. Ya existe un administrador activo; no se creó otro usuario.</info>');
+            return Command::SUCCESS;
+        }
+
         // No se consulta la base mientras el usuario captura los datos.
         $fullName = trim((string) $helper->ask(
             $input,
