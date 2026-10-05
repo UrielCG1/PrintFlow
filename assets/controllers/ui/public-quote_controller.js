@@ -2,7 +2,7 @@ import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
     static targets = ['existingCustomer','customerLookup','customerNumber','customerSummary','prospectFields','prototype','items','item','deliveryMethod','deliveryAddress','deliveryAddressId','successModal','recoveryPanel','recoveryEmail','recoveryButton','recoveryToken','recoveryStatus'];
-    static values = { customerUrl: String, productsUrl: String, priceUrl: String, recoveryUrl: String };
+    static values = { customerUrl: String, productsUrl: String, priceUrl: String, recoveryUrl: String, volumeDiscountAlertsUrl: String };
 
     connect() { this.nextIndex = this.itemTargets.length; this.hasDeliveryAddress = false; this.confirmed = false; this.previewUrls = new WeakMap(); this.toggleCustomer(); this.itemTargets.forEach((item) => this.initializeItem(item)); if(this.hasSuccessModalTarget&&window.bootstrap?.Modal){this.successModal=window.bootstrap.Modal.getOrCreateInstance(this.successModalTarget,{backdrop:'static'});this.successModal.show();} }
     disconnect() { this.itemTargets.forEach((item) => this.releasePreview(item)); this.successModal?.dispose(); }
@@ -49,7 +49,53 @@ export default class extends Controller {
     releasePreview(item) { const url = this.previewUrls?.get(item); if (url) { URL.revokeObjectURL(url); this.previewUrls.delete(item); } }
     formatBytes(bytes) { if (bytes < 1024) return `${bytes} B`; if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`; return `${(bytes / 1048576).toFixed(1)} MB`; }
     verifiedField(icon, label, value) { return `<div class="pf-verified-contact__field"><span class="pf-verified-contact__field-icon"><i class="bi bi-${icon}"></i></span><div><small>${label}</small><strong>${this.escape(value)}</strong></div></div>`; }
-    validate(event) { if (!this.itemTargets.length) { event.preventDefault(); this.addItem(); return; } if (this.confirmed) return; event.preventDefault(); const form = event.currentTarget; if (!form.checkValidity()) { form.reportValidity(); return; } this.renderConfirmation(); bootstrap.Modal.getOrCreateInstance(this.element.querySelector('[data-quote-confirmation-modal]')).show(); }
+    async fetchVolumeDiscountAlerts() {
+        const items = this.itemTargets.map((item) => ({
+            category_id: item.querySelector('[data-commercial-category]')?.value || '',
+            quantity: item.querySelector('[data-quantity]')?.value || '',
+        })).filter((item) => item.category_id !== '' && item.quantity !== '');
+
+        if (items.length === 0 || !this.hasVolumeDiscountAlertsUrlValue) return [];
+
+        try {
+            const response = await fetch(this.volumeDiscountAlertsUrlValue, {
+                method: 'POST',
+                headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items }),
+            });
+            if (!response.ok) return [];
+
+            const data = await response.json();
+
+            return Array.isArray(data.alerts) ? data.alerts : [];
+        } catch (_) {
+            return [];
+        }
+    }
+    renderVolumeDiscountAlerts(alerts) {
+        if (!alerts.length) return;
+
+        const summary = this.element.querySelector('[data-confirmation-summary]');
+        const content = alerts.map((alert) => {
+            const additional = this.formatVolume(alert.additional_volume);
+            const current = this.formatVolume(alert.current_volume);
+            const minimum = this.formatVolume(alert.minimum_volume);
+            const percent = this.formatVolume(alert.discount_percent);
+            const unit = this.escape(alert.unit || 'unidades');
+            const category = this.escape(alert.category || 'esta línea de negocio');
+
+            return `<div class="d-flex gap-3 align-items-start ${alerts.length > 1 ? 'mb-3' : ''}"><i class="bi bi-graph-up-arrow fs-4" aria-hidden="true"></i><div><strong>Te faltan ${additional} ${unit} para obtener ${percent}% de descuento por volumen.</strong><p class="mb-0 mt-1">En ${category} acumulas ${current} de ${minimum} ${unit} requeridos.</p></div></div>`;
+        }).join('');
+        summary.insertAdjacentHTML('afterbegin', `<div class="alert alert-success border-success mb-4"><div class="fw-semibold mb-2">Estás muy cerca de un descuento por volumen</div>${content}</div>`);
+    }
+    formatVolume(value) {
+        const number = Number(value);
+
+        return Number.isFinite(number)
+            ? new Intl.NumberFormat('es-MX', { maximumFractionDigits: 4 }).format(number)
+            : String(value || '0');
+    }
+    async validate(event) { if (!this.itemTargets.length) { event.preventDefault(); this.addItem(); return; } if (this.confirmed) return; event.preventDefault(); const form = event.currentTarget; if (!form.checkValidity()) { form.reportValidity(); return; } const volumeAlerts = await this.fetchVolumeDiscountAlerts(); this.renderConfirmation(); this.renderVolumeDiscountAlerts(volumeAlerts); bootstrap.Modal.getOrCreateInstance(this.element.querySelector('[data-quote-confirmation-modal]')).show(); }
     confirmSubmission() { this.confirmed = true; bootstrap.Modal.getInstance(this.element.querySelector('[data-quote-confirmation-modal]'))?.hide(); this.element.querySelector('form').requestSubmit(); }
     renderConfirmation() { const form=this.element.querySelector('form'); const value=(suffix)=>form.querySelector(`[name$="[${suffix}]"]`)?.value||''; const label=(suffix)=>{const field=form.querySelector(`[name$="[${suffix}]"]`);return field?.selectedOptions?.[0]?.text||field?.value||'—';}; const existing=this.existingCustomerTarget.checked;const contact=existing?this.customerSummaryTarget.innerHTML:`<div class="pf-verified-contact"><div class="pf-verified-contact__header"><span class="pf-verified-contact__check"><i class="bi bi-person-check"></i></span><div><strong>Datos de contacto</strong><p>Información de la persona que solicita la cotización.</p></div></div><div class="pf-verified-contact__grid">${this.verifiedField('person','Nombre',value('fullName'))}${this.verifiedField('envelope','Correo',value('email'))}${this.verifiedField('telephone','Teléfono',value('phone'))}${this.verifiedField('building','Empresa',value('companyName')||'No indicada')}</div></div>`; const items=this.itemTargets.map((item,index)=>{const get=(suffix)=>item.querySelector(`[name$="[${suffix}]"]`);const text=(suffix)=>get(suffix)?.selectedOptions?.[0]?.text||get(suffix)?.value||'—';const file=get('attachment')?.files?.[0]?.name||'Sin archivo';return `<div class="border rounded-3 p-3 mb-3"><strong>Partida ${index+1}: ${this.escape(text('commercialItem'))}</strong><div class="small text-secondary mt-2">Categoría: ${this.escape(text('commercialCategory'))}<br>Cantidad: ${this.escape(text('quantity'))}<br>Archivo: ${this.escape(file)}</div></div>`;}).join(''); this.element.querySelector('[data-confirmation-summary]').innerHTML=`<section class="pf-confirmation-contact"><div class="pf-confirmation-section-title"><i class="bi bi-shield-check"></i><span>Contacto</span></div>${contact}</section>${items}<div><small class="text-uppercase text-secondary fw-bold">Entrega</small><div>${this.escape(label('deliveryMethod'))} · ${this.escape(value('neededAt')||'Sin fecha preferida')}</div></div><div class="alert alert-success mt-3 mb-0">Los precios se calcularán con las reglas comerciales vigentes de OoxCorp.</div>`; }
     escape(value) { const node = document.createElement('div'); node.textContent = value ?? ''; return node.innerHTML; }

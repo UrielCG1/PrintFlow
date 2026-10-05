@@ -3,9 +3,11 @@ declare(strict_types=1);
 namespace App\Controller;
 use App\Application\Catalog\CommercialItemPriceResolver;
 use App\Application\Quotations\{PublicQuotationClientResolver,PublicQuotationRequestData,PublicQuotationRequestItemData,QuotationData,QuotationItemCharacteristicsSpecificationResolver,QuotationManager,QuotationTotalsCalculator};
-use App\Entity\Catalog\CommercialItem;
+use App\Entity\Catalog\{CommercialCategory,CommercialItem};
+use App\Entity\Discounts\{CommercialCostingProfile,DiscountType,VolumeDiscountRule};
 use App\Entity\Quotations\Quotation;
 use App\Entity\Clients\{Client,ClientAddress,ClientContact};
+use Brick\Math\BigDecimal;
 use App\Form\PublicQuoteRequestType;
 use App\Repository\Catalog\CommercialItemCharacteristicRepository;
 use App\Repository\Clients\ClientContactRepository;
@@ -82,6 +84,75 @@ final class PublicQuoteRequestController extends AbstractController
   $item=$em->getRepository(CommercialItem::class)->find($id);if(!$item instanceof CommercialItem||!$item->isActive())return $this->json(['message'=>'Producto no disponible.'],404);
   try{$resolution=$resolver->resolve($item,$request->query->getString('quantity'));$unitPrice=Quotation::normalizeAmount($resolution->unitPrice,'El precio unitario resuelto');$subtotal=$totals->lineSubtotal($resolution->quantity,$unitPrice);}catch(\InvalidArgumentException $e){return $this->json(['message'=>$e->getMessage()],422);}
   return $this->json(['quantity'=>$resolution->quantity,'unitPrice'=>$unitPrice,'lineSubtotal'=>$subtotal,'priceSource'=>$resolution->appliedRule===null?'BASE_PRICE':'QUANTITY_TIER','priceRule'=>$resolution->appliedRule===null?null:['minQuantity'=>$resolution->appliedRule->getMinQuantity()],'measurementUnit'=>['code'=>$item->getMeasurementUnit()->getCode(),'name'=>$item->getMeasurementUnit()->getName()]]);
+ }
+ #[Route('/cotizar/alertas-descuento-volumen',name:'public_quote_volume_discount_alerts',methods:['POST'])]
+ public function volumeDiscountAlerts(Request $request,EntityManagerInterface $em):JsonResponse
+ {
+  try {
+   $payload=json_decode($request->getContent(),true,512,JSON_THROW_ON_ERROR);
+  } catch (\JsonException) {
+   return $this->json(['message'=>'La información de las partidas no es válida.'],422);
+  }
+
+  $items=array_slice(is_array($payload['items']??null)?$payload['items']:[],0,30);
+  $volumes=[];
+  foreach($items as $item) {
+   if(!is_array($item)) continue;
+   $categoryId=filter_var($item['category_id']??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
+   if($categoryId===false) continue;
+   try {
+    $quantity=BigDecimal::of(str_replace(',','.',trim((string)($item['quantity']??''))));
+   } catch (\Throwable) {
+    continue;
+   }
+   if($quantity->compareTo('0')<=0) continue;
+   $volumes[$categoryId]=($volumes[$categoryId]??BigDecimal::zero())->plus($quantity);
+  }
+  if($volumes===[]) return $this->json(['alerts'=>[]]);
+
+  $volumeType=$em->getRepository(DiscountType::class)->findOneBy(['code'=>'VOLUME']);
+  if(!$volumeType instanceof DiscountType) return $this->json(['alerts'=>[]]);
+
+  $alerts=[];
+  foreach($volumes as $categoryId=>$volume) {
+   $category=$em->getRepository(CommercialCategory::class)->find($categoryId);
+   if(!$category instanceof CommercialCategory) continue;
+   $profile=$em->getRepository(CommercialCostingProfile::class)->findOneBy(['commercialCategory'=>$category,'isActive'=>true]);
+   if(!$profile instanceof CommercialCostingProfile) continue;
+
+   $rules=$em->getRepository(VolumeDiscountRule::class)->createQueryBuilder('rule')
+    ->andWhere('rule.profile=:profile')->andWhere('rule.discountType=:type')->andWhere('rule.isActive=true')
+    ->setParameter('profile',$profile)->setParameter('type',$volumeType)
+    ->orderBy('rule.minVolume','ASC')->getQuery()->getResult();
+   $currentPercent=BigDecimal::zero();
+   $nextRule=null;
+   foreach($rules as $rule) {
+    $minimum=BigDecimal::of($rule->getMinVolume());
+    if($minimum->compareTo($volume)<=0) {
+     $currentPercent=BigDecimal::of($rule->getDiscountPercent());
+     continue;
+    }
+    if(BigDecimal::of($rule->getDiscountPercent())->compareTo($currentPercent)>0) {
+     $nextRule=$rule;
+     break;
+    }
+   }
+   if(!$nextRule instanceof VolumeDiscountRule) continue;
+
+   $minimum=BigDecimal::of($nextRule->getMinVolume());
+   if($volume->compareTo($minimum->multipliedBy('0.9'))<0) continue;
+   $alerts[]=[
+    'category_id'=>$categoryId,
+    'category'=>$category->getName(),
+    'current_volume'=>$volume->toScale(6)->__toString(),
+    'minimum_volume'=>$nextRule->getMinVolume(),
+    'additional_volume'=>$minimum->minus($volume)->toScale(6)->__toString(),
+    'unit'=>$profile->getCostingUnit()->getSymbol(),
+    'discount_percent'=>$nextRule->getDiscountPercent(),
+   ];
+  }
+
+  return $this->json(['alerts'=>$alerts]);
  }
  private function maskName(?string $value):string{return implode(' ',array_map(fn(string $part)=>mb_substr($part,0,1).str_repeat('*',max(2,min(5,mb_strlen($part)-1))),preg_split('/\s+/',trim((string)$value))?:[]));}
  private function maskEmail(?string $value):string{if(!$value||!str_contains($value,'@'))return 'No registrado';[$local,$domain]=explode('@',$value,2);$parts=explode('.',$domain);$host=array_shift($parts);return mb_substr($local,0,1).'***@'.mb_substr($host,0,1).'***'.($parts?'.'.end($parts):'');}
