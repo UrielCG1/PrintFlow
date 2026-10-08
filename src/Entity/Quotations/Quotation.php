@@ -65,7 +65,7 @@ class Quotation
     #[ORM\Column(name: 'request_company_name', length: 180, nullable: true)]
     private ?string $requestCompanyName = null;
 
-    #[ORM\Column(length: 20, enumType: QuotationStatus::class)]
+    #[ORM\Column(length: 30, enumType: QuotationStatus::class)]
     private QuotationStatus $status = QuotationStatus::DRAFT;
 
     #[ORM\ManyToOne(targetEntity: self::class, inversedBy: 'revisions')]

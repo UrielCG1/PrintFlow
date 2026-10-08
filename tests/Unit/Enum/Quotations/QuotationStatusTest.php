@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Enum\Quotations;
 
 use App\Enum\Quotations\QuotationStatus;
+use App\Entity\Quotations\Quotation;
+use Doctrine\ORM\Mapping\Column;
 use PHPUnit\Framework\TestCase;
 
 final class QuotationStatusTest extends TestCase
@@ -39,5 +41,15 @@ final class QuotationStatusTest extends TestCase
     public function testAcceptedWithChangesHasItsOwnCommercialLabel(): void
     {
         self::assertSame('Aceptada con cambios', QuotationStatus::ACCEPTED_WITH_CHANGES->label());
+    }
+
+    public function testEveryStatusFitsTheMappedDatabaseColumn(): void
+    {
+        $property = new \ReflectionProperty(Quotation::class, 'status');
+        $mapping = $property->getAttributes(Column::class)[0]->newInstance();
+
+        foreach (QuotationStatus::cases() as $status) {
+            self::assertLessThanOrEqual($mapping->length, strlen($status->value), $status->value);
+        }
     }
 }
