@@ -410,6 +410,7 @@ class Quotation
             $respondedAt,
             $notes,
             $evidenceReference,
+            $responseScreenshotFile,
         );
         $this->purchaseOrderNumber = self::normalizeOptionalText($purchaseOrderNumber);
         $this->purchaseOrderFile = $purchaseOrderFile;
@@ -440,6 +441,7 @@ class Quotation
         \DateTimeImmutable $respondedAt,
         ?string $notes,
         ?string $evidenceReference,
+        ?array $responseScreenshotFile = null,
     ): void {
         $this->recordDecision(
             QuotationStatus::REJECTED,
@@ -448,7 +450,9 @@ class Quotation
             $respondedAt,
             $notes,
             $evidenceReference,
+            $responseScreenshotFile,
         );
+        $this->responseScreenshotFile = $responseScreenshotFile;
     }
 
     public function cancel(string $reason, \DateTimeImmutable $cancelledAt): void
@@ -819,6 +823,7 @@ class Quotation
         \DateTimeImmutable $respondedAt,
         ?string $notes,
         ?string $evidenceReference,
+        ?array $responseScreenshotFile = null,
     ): void {
         if (!$this->status->canReceiveDecision()) {
             throw new \DomainException('Solo una cotización emitida o enviada puede recibir una respuesta comercial.');
@@ -835,7 +840,7 @@ class Quotation
 
         $notes = self::normalizeOptionalText($notes);
         $evidenceReference = self::normalizeOptionalText($evidenceReference);
-        if ($notes === null && $evidenceReference === null) {
+        if ($notes === null && $evidenceReference === null && $responseScreenshotFile === null) {
             throw new \InvalidArgumentException('Registra una observación o una referencia de evidencia de la respuesta.');
         }
 

@@ -32,6 +32,12 @@
     {% set can_receive_decision = quotation.status.canReceiveDecision() and is_granted('quotations.manage_status') %}
     {% set can_revise = quotation.status.canBeRevised() and quotation.revisions is empty and is_granted('quotations.create_revision') %}
 
+    {% if decisionErrors is not empty %}
+        <span hidden data-controller="ui--quotation-decision-alert"
+              data-ui--quotation-decision-alert-message-value="{{ decisionErrors|join(' ') }}"
+              data-ui--quotation-decision-alert-panel-value="{{ decisionErrorPanel }}"></span>
+    {% endif %}
+
     <section class="pf-page__content">
         <header class="pf-page-header">
             <div class="pf-page-header__content">
@@ -425,20 +431,23 @@
                     {% endif %}
 
                     {% if can_receive_decision and is_granted('quotations.manage_status') %}
-                        <details class="quotation-action quotation-action--accept"{% if acceptForm.vars.submitted %} open{% endif %}>
+                        <details class="quotation-action quotation-action--accept"{% if acceptForm.vars.submitted or (decisionErrors is not empty and decisionErrorPanel == '.quotation-action--accept') %} open{% endif %}>
                             <summary class="quotation-action__summary">
                                 <span class="quotation-action__icon" aria-hidden="true"><i class="bi bi-check2-circle"></i></span>
                                 <span class="quotation-action__copy"><strong>Registrar aceptación</strong><span>Guarda quién aprobó y cuándo. El folio y PDF de su orden de compra son opcionales.</span></span>
                                 <span class="quotation-action__toggle">Registrar <i class="bi bi-chevron-down" aria-hidden="true"></i></span>
                             </summary>
                             <div class="quotation-action__content">
-                                {{ form_start(acceptForm, {action: path('admin_quotations_accept', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form quotation-action__form'}}) }}
+                                {{ form_start(acceptForm, {action: path('admin_quotations_accept', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form quotation-action__form', 'data-controller': 'ui--quotation-response'}}) }}
                                     {{ form_errors(acceptForm) }}
+                                    <p class="text-secondary small mb-3">Para registrar la aceptación, agrega una observación o una referencia de evidencia. Si la respuesta fue por WhatsApp, adjunta su captura.</p>
                                     <div class="row g-3">
-                                        <div class="col-md-6">{{ form_row(acceptForm.channel) }}</div>
+                                        <div class="col-md-6">{{ form_row(acceptForm.channel, {attr: {'data-ui--quotation-response-target': 'channel', 'data-action': 'change->ui--quotation-response#update'}}) }}</div>
                                         <div class="col-md-6">{{ form_row(acceptForm.contact) }}</div>
                                         <div class="col-md-6">{{ form_row(acceptForm.respondedAt) }}</div>
                                         <div class="col-12">{{ form_row(acceptForm.notes) }}</div>
+                                        <div class="col-12">{{ form_row(acceptForm.evidenceReference) }}</div>
+                                        <div class="col-12" data-ui--quotation-response-target="screenshot" hidden>{{ form_row(acceptForm.responseScreenshot) }}</div>
                                         <div class="col-12">
                                             <section class="quotation-action__optional-group">
                                                 <div class="quotation-action__optional-heading">
@@ -454,28 +463,29 @@
                                                 </div>
                                             </section>
                                         </div>
-                                        <div class="col-12">{{ form_row(acceptForm.responseScreenshot) }}</div>
                                     </div>
                                     <button type="submit" class="btn pf-button pf-button--primary mt-3">Confirmar aceptación</button>
                                 {{ form_end(acceptForm) }}
                             </div>
                         </details>
 
-                        <details class="quotation-action quotation-action--reject"{% if rejectForm.vars.submitted %} open{% endif %}>
+                        <details class="quotation-action quotation-action--reject"{% if rejectForm.vars.submitted or (decisionErrors is not empty and decisionErrorPanel == '.quotation-action--reject') %} open{% endif %}>
                             <summary class="quotation-action__summary">
                                 <span class="quotation-action__icon" aria-hidden="true"><i class="bi bi-x-circle"></i></span>
                                 <span class="quotation-action__copy"><strong>Registrar rechazo</strong><span>Conserva el motivo y la evidencia de la respuesta.</span></span>
                                 <span class="quotation-action__toggle">Registrar <i class="bi bi-chevron-down" aria-hidden="true"></i></span>
                             </summary>
                             <div class="quotation-action__content">
-                                {{ form_start(rejectForm, {action: path('admin_quotations_reject', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form quotation-action__form'}}) }}
+                                {{ form_start(rejectForm, {action: path('admin_quotations_reject', {id: quotation.id}), method: 'POST', attr: {class: 'pf-form quotation-action__form', 'data-controller': 'ui--quotation-response'}}) }}
                                     {{ form_errors(rejectForm) }}
+                                    <p class="text-secondary small mb-3">Para registrar el rechazo, agrega una observación, una referencia o una captura de WhatsApp.</p>
                                     <div class="row g-3">
-                                        <div class="col-md-6">{{ form_row(rejectForm.channel) }}</div>
+                                        <div class="col-md-6">{{ form_row(rejectForm.channel, {attr: {'data-ui--quotation-response-target': 'channel', 'data-action': 'change->ui--quotation-response#update'}}) }}</div>
                                         <div class="col-md-6">{{ form_row(rejectForm.contact) }}</div>
                                         <div class="col-md-6">{{ form_row(rejectForm.respondedAt) }}</div>
                                         <div class="col-12">{{ form_row(rejectForm.notes) }}</div>
                                         <div class="col-12">{{ form_row(rejectForm.evidenceReference) }}</div>
+                                        <div class="col-12" data-ui--quotation-response-target="screenshot" hidden>{{ form_row(rejectForm.responseScreenshot) }}</div>
                                     </div>
                                     <button type="submit" class="btn pf-button pf-button--danger mt-3">Confirmar rechazo</button>
                                 {{ form_end(rejectForm) }}

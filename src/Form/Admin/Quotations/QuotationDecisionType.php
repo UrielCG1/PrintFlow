@@ -46,6 +46,18 @@ final class QuotationDecisionType extends AbstractType
                 'required' => false,
                 'attr' => ['rows' => 4, 'maxlength' => 5000],
             ])
+            ->add('evidenceReference', TextType::class, [
+                'label' => 'Referencia de evidencia',
+                'required' => false,
+                'help' => 'Indica una observación o una referencia para documentar la respuesta. La captura de WhatsApp también sirve como evidencia.',
+                'attr' => ['maxlength' => 500],
+            ])
+            ->add('responseScreenshot', FileType::class, [
+                'label' => 'Captura de la respuesta por WhatsApp',
+                'required' => false,
+                'help' => $options['acceptance_files'] ? 'Obligatoria al aceptar por WhatsApp. Máximo 10 MB.' : 'Opcional al rechazar por WhatsApp. Máximo 10 MB.',
+                'attr' => ['accept' => 'image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp'],
+            ])
             ;
 
         if ($options['acceptance_files']) {
@@ -62,19 +74,7 @@ final class QuotationDecisionType extends AbstractType
                     'mapped' => true,
                     'help' => 'Puedes registrar la aceptación sin adjuntar este documento. Máximo 20 MB.',
                     'attr' => ['accept' => 'application/pdf,.pdf'],
-                ])
-                ->add('responseScreenshot', FileType::class, [
-                    'label' => 'Captura de pantalla de la respuesta',
-                    'required' => false,
-                    'mapped' => true,
-                    'help' => 'Obligatoria cuando el canal de respuesta es WhatsApp.',
-                    'attr' => ['accept' => 'image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp'],
                 ]);
-        } else {
-            $builder->add('evidenceReference', TextType::class, [
-                'label' => 'Referencia de evidencia', 'required' => false,
-                'help' => 'Ejemplo: correo, enlace de WhatsApp o folio de llamada.', 'attr' => ['maxlength' => 500],
-            ]);
         }
     }
 

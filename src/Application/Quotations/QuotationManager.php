@@ -478,6 +478,7 @@ final class QuotationManager
                         $data->respondedAt,
                         $data->notes,
                         $data->evidenceReference,
+                        $data->responseScreenshotMetadata,
                     );
                 }
 

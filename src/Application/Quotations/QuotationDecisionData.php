@@ -62,11 +62,11 @@ final class QuotationDecisionData
             $context->buildViolation('Adjunta la captura de pantalla de la respuesta por WhatsApp.')->atPath('responseScreenshot')->addViolation();
         }
 
-        if ($this->acceptanceFiles) {
-            return;
+        if ($this->channel !== QuotationResponseChannel::WHATSAPP && $this->responseScreenshot !== null) {
+            $context->buildViolation('La captura de respuesta solo corresponde al canal WhatsApp.')->atPath('responseScreenshot')->addViolation();
         }
 
-        if (trim((string) $this->notes) !== '' || trim((string) $this->evidenceReference) !== '' || $this->purchaseOrderFile !== null || $this->responseScreenshot !== null) {
+        if (trim((string) $this->notes) !== '' || trim((string) $this->evidenceReference) !== '' || $this->responseScreenshot !== null) {
             return;
         }
 

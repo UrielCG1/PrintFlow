@@ -28,11 +28,14 @@ final class QuotationEmailData
     {
         $data = new self();
         $client = $quotation->getClientSnapshot();
+        $contact = $client['commercial_contact'] ?? [];
 
-        $data->recipientEmail = $client['billing_email']
+        $data->recipientEmail = $contact['email']
+            ?? $client['billing_email']
             ?? $client['email']
             ?? null;
-        $data->recipientName = $client['legal_name']
+        $data->recipientName = $contact['full_name']
+            ?? $client['legal_name']
             ?? $client['business_name']
             ?? null;
 

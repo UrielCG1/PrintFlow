@@ -461,7 +461,8 @@ final class QuotationController extends AbstractController
                     $fileStorage->remove($data->purchaseOrderMetadata);
                     $fileStorage->remove($data->responseScreenshotMetadata);
                 }
-                $form->addError(new FormError($exception->getMessage()));
+                $this->addFlash('quotation_decision_error', ['panel' => '.quotation-action--accept', 'message' => $exception->getMessage()]);
+                return $this->redirectToRoute('admin_quotations_show', ['id' => $quotation->getId()]);
             } catch (\Throwable $exception) {
                 if (isset($data) && $data instanceof QuotationDecisionData) {
                     $fileStorage->remove($data->purchaseOrderMetadata);
@@ -479,6 +480,7 @@ final class QuotationController extends AbstractController
         Request $request,
         Quotation $quotation,
         QuotationManager $quotationManager,
+        QuotationDecisionFileStorage $fileStorage,
     ): Response {
         $this->denyAccessUnlessGranted('quotations.manage_status');
 
@@ -489,12 +491,24 @@ final class QuotationController extends AbstractController
             try {
                 /** @var QuotationDecisionData $data */
                 $data = $form->getData();
+                if ($data->responseScreenshot !== null) {
+                    $data->responseScreenshotMetadata = $fileStorage->storeResponseScreenshot($quotation, $data->responseScreenshot);
+                }
                 $quotationManager->reject($quotation, $data, $this->authenticatedUser());
                 $this->addFlash('success', 'El rechazo comercial quedó registrado correctamente.');
 
                 return $this->redirectToRoute('admin_quotations_show', ['id' => $quotation->getId()]);
-            } catch (\DomainException|\InvalidArgumentException $exception) {
-                $form->addError(new FormError($exception->getMessage()));
+            } catch (\DomainException|\InvalidArgumentException|\RuntimeException $exception) {
+                if (isset($data) && $data instanceof QuotationDecisionData) {
+                    $fileStorage->remove($data->responseScreenshotMetadata);
+                }
+                $this->addFlash('quotation_decision_error', ['panel' => '.quotation-action--reject', 'message' => $exception->getMessage()]);
+                return $this->redirectToRoute('admin_quotations_show', ['id' => $quotation->getId()]);
+            } catch (\Throwable $exception) {
+                if (isset($data) && $data instanceof QuotationDecisionData) {
+                    $fileStorage->remove($data->responseScreenshotMetadata);
+                }
+                throw $exception;
             }
         }
 
@@ -591,11 +605,12 @@ final class QuotationController extends AbstractController
     }
 
     #[Route('/{id}', name: 'admin_quotations_show', requirements: ['id' => '\d+'], methods: ['GET'])]
-    public function show(Quotation $quotation): Response
+    public function show(Request $request, Quotation $quotation): Response
     {
         $this->denyAccessUnlessGranted('quotations.view');
 
-        return $this->renderQuotationDetail($quotation);
+        $decisionFailure = $request->getSession()->getFlashBag()->get('quotation_decision_error')[0] ?? null;
+        return $this->renderQuotationDetail($quotation, decisionFailure: $decisionFailure);
     }
 
     private function renderQuotationDetail(
@@ -605,11 +620,25 @@ final class QuotationController extends AbstractController
         ?FormInterface $rejectForm = null,
         ?FormInterface $cancellationForm = null,
         ?FormInterface $revisionForm = null,
+        ?array $decisionFailure = null,
     ): Response {
+        $submittedDecisionForm = $acceptForm?->isSubmitted() ? $acceptForm : ($rejectForm?->isSubmitted() ? $rejectForm : null);
+        $decisionErrors = [];
+        if ($decisionFailure !== null) {
+            $decisionErrors[] = (string) ($decisionFailure['message'] ?? 'No fue posible registrar la respuesta.');
+        } elseif ($submittedDecisionForm !== null) {
+            foreach ($submittedDecisionForm->getErrors(true) as $error) {
+                $decisionErrors[] = $error->getMessage();
+            }
+            $decisionErrors = array_values(array_unique($decisionErrors));
+        }
+
         return $this->render('admin/quotations/show.html.twig', [
             'quotation' => $quotation,
             'serviceOrder' => $this->serviceOrderRepository->findOneBySourceQuotation($quotation),
             'presentedItems' => $this->itemPresentationBuilder->presentAll($quotation->getItems()),
+            'decisionErrors' => $decisionErrors,
+            'decisionErrorPanel' => $decisionFailure['panel'] ?? ($acceptForm?->isSubmitted() ? '.quotation-action--accept' : '.quotation-action--reject'),
             'emailForm' => ($emailForm ?? $this->createForm(
                 QuotationEmailType::class,
                 QuotationEmailData::forQuotation($quotation),
