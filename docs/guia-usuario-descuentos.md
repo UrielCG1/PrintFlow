@@ -117,7 +117,7 @@ La línea de negocio corresponde a la categoría comercial, por ejemplo:
 - Promocionales
 - Serigrafía
 
-El volumen se obtiene de la cantidad de costeo calculada por la fórmula de la categoría. Después se suman todas las partidas de la misma categoría.
+**Estado actual:** el motor suma la cantidad facturable de las partidas de una categoría; todavía no aplica las cuatro fórmulas técnicas de la [matriz de cotización](matriz-cotizacion-costos.md). Los perfiles nuevos se crean pendientes/inactivos. No configures tramos de offset o serigrafía hasta confirmar la base del umbral y enlazar su cálculo al cotizador.
 
 ### Reglas de volumen
 
@@ -130,16 +130,7 @@ Cada regla contiene:
 
 El límite superior es implícito: una regla aplica hasta que se alcanza el siguiente volumen mínimo.
 
-### Ejemplo de configuración
-
-| Línea | Volumen mínimo | Descuento |
-|---|---:|---:|
-| Impresión digital | 1.000000 m² | 0.0000% |
-| Impresión digital | 20.000000 m² | 3.0000% |
-| Impresión digital | 50.000000 m² | 6.0000% |
-| Impresión digital | 100.000000 m² | 9.0000% |
-
-Si dos partidas de impresión digital producen `30 m²` y `25 m²`, el volumen acumulado es `55 m²`. Se selecciona el tramo de `50 m²` y se aplica `6%` únicamente a esas partidas.
+Los mínimos, porcentajes y la unidad del umbral son datos pendientes del cliente. No hay escalas predeterminadas.
 
 ### Pasos para editar una regla
 
@@ -150,7 +141,7 @@ Si dos partidas de impresión digital producen `30 m²` y `25 m²`, el volumen a
 
 El sistema rechaza porcentajes fuera de `0–100`, volúmenes menores o iguales a cero, y porcentajes que disminuyan al aumentar el volumen mínimo.
 
-> Importante: si no existen reglas, primero debe existir un perfil de costeo válido para la línea de negocio. No se deben reutilizar las reglas de precio unitario como reglas de descuento.
+> Importante: un perfil pendiente no activa reglas. Las reglas de precio unitario y las de descuento son configuraciones diferentes.
 
 ## 5. ¿Cuándo debe aprobarse un descuento por volumen?
 

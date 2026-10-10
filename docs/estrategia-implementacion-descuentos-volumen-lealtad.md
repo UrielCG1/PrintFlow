@@ -1,5 +1,7 @@
 # Prompt de implementación: costeo por volumen y descuentos aditivos
 
+> Nota de actualización (2026-10-09): este documento conserva una propuesta histórica. Para las fórmulas y los datos pendientes vigentes, consultar [Matriz de cotización y estructura de costos](matriz-cotizacion-costos.md). En particular, la interpretación anterior de promocionales como `piezas + posiciones` queda pendiente de confirmación frente a la interpretación comercial más reciente de `precio de pieza + precio de personalización`.
+
 ## Rol y objetivo
 
 Actúa como arquitecto de software, desarrollador Symfony/PHP, especialista en bases de datos y diseñador frontend. Implementa de extremo a extremo en este repositorio el nuevo motor de costeo y descuentos para cotizaciones de OoxCorp.
@@ -152,7 +154,7 @@ Actualiza de manera consistente:
 - mensajes de campos faltantes;
 - configuración/activación de artículos comerciales.
 
-El perfil declara qué rol satisface cada operando y valida cardinalidad. Piezas y conteos son enteros positivos, salvo posiciones de personalización que pueden ser cero; múltiplos/factores aceptan decimal positivo. Los máximos técnicos configurables deben estar validados y versionados. Aunque `piezas + posiciones` es una unidad compuesta poco convencional, fue confirmada como fórmula inicial y no debe reinterpretarse como multiplicación ni como suma de precios sin una nueva decisión de negocio.
+El perfil declara qué rol satisface cada operando y valida cardinalidad. Piezas y conteos son enteros positivos, salvo posiciones de personalización que pueden ser cero; múltiplos/factores aceptan decimal positivo. Los máximos técnicos configurables deben estar validados y versionados. La antigua propuesta `piezas + posiciones` queda supersedida como regla automática: la interpretación comercial más reciente suma el precio del artículo y el de la personalización, pendiente de confirmación y tarifas del cliente.
 
 #### Compatibilidad entre cantidad y precio
 

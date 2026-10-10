@@ -49,12 +49,14 @@ final class DiscountConfigurationController extends AbstractController
             if (!$unit instanceof MeasurementUnit || !$unit->isActive()) throw new \DomainException('Selecciona una unidad de costeo activa.');
             if (!in_array($method, $allowed, true)) throw new \DomainException('El método de cálculo seleccionado no es válido.');
             if ($em->getRepository(CommercialCostingProfile::class)->findOneBy(['commercialCategory' => $category]) instanceof CommercialCostingProfile) throw new \DomainException('La línea de negocio ya tiene un perfil de costeo.');
-            $profile = (new CommercialCostingProfile())->setCommercialCategory($category)->setCostingUnit($unit)->setCalculationMethod($method)->setParameters([]);
+            // Un perfil sin operandos, tarifas ni política de redondeo es un
+            // borrador: activarlo permitiría descuentos con volumen incorrecto.
+            $profile = (new CommercialCostingProfile())->setCommercialCategory($category)->setCostingUnit($unit)->setCalculationMethod($method)->setParameters([])->setIsActive(false);
             $em->persist($profile);
             $em->flush();
             $audit->record(actor: $this->actor(), action: 'discount.costing_profile_created', entityType: 'commercial_costing_profile', entityId: $profile->getId(), newValues: ['category' => $category->getCode(), 'method' => $method, 'unit' => $unit->getCode()]);
             $em->flush();
-            $this->addFlash('success', 'Perfil de costeo creado. Ya puedes agregar sus reglas de volumen.');
+            $this->addFlash('success', 'Perfil de costeo creado como pendiente. Falta configurar sus datos y validar la fórmula antes de activar descuentos por volumen.');
         } catch (\Throwable $e) { $this->addFlash('warning', $e->getMessage()); }
         return $this->redirectToRoute('admin_discounts_index');
     }
