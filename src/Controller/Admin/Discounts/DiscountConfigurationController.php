@@ -49,8 +49,7 @@ final class DiscountConfigurationController extends AbstractController
             if (!$unit instanceof MeasurementUnit || !$unit->isActive()) throw new \DomainException('Selecciona una unidad de costeo activa.');
             if (!in_array($method, $allowed, true)) throw new \DomainException('El método de cálculo seleccionado no es válido.');
             if ($em->getRepository(CommercialCostingProfile::class)->findOneBy(['commercialCategory' => $category]) instanceof CommercialCostingProfile) throw new \DomainException('La línea de negocio ya tiene un perfil de costeo.');
-            // Un perfil sin operandos, tarifas ni política de redondeo es un
-            // borrador: activarlo permitiría descuentos con volumen incorrecto.
+            // Un perfil sin sus factores y tarifa es un borrador.
             $profile = (new CommercialCostingProfile())->setCommercialCategory($category)->setCostingUnit($unit)->setCalculationMethod($method)->setParameters([])->setIsActive(false);
             $em->persist($profile);
             $em->flush();

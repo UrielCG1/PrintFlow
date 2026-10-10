@@ -8,11 +8,8 @@ use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
 
 /**
- * Calcula magnitudes técnicas de la matriz comercial, sin inferir tarifas.
- *
- * La cantidad física, el costo de producción y el precio de venta son datos
- * distintos. Esta clase sólo resuelve la primera parte; ninguna fórmula de
- * factores sustituye una tarifa, una merma o un cargo de preparación.
+ * Calcula las magnitudes de las cuatro operaciones del cliente.
+ * Las tarifas se reciben de forma explícita; nunca se suponen.
  */
 final class QuotationCostMatrixCalculator
 {
@@ -35,6 +32,28 @@ final class QuotationCostMatrixCalculator
             self::SCREEN_SIZE_HUNDRED_INK => $this->screen($operands, $policy),
             default => throw new \InvalidArgumentException('El método de la matriz de cotización no es válido.'),
         };
+    }
+
+    /**
+     * Precio simple de la partida, antes de descuentos e impuestos.
+     *
+     * @param array{method:string, quantity:string, unit:string, operands:array<string,string>, formula:string} $calculation
+     * @param array<string, mixed> $prices
+     */
+    public function price(array $calculation, array $prices): string
+    {
+        $quantity = BigDecimal::of($calculation['quantity']);
+        $amount = match ($calculation['method']) {
+            self::DIGITAL_AREA => $quantity->multipliedBy($this->money($prices, 'price_per_m2')),
+            self::OFFSET_SHEET_COLOR_THOUSAND => $quantity->multipliedBy($this->money($prices, 'price_per_letter_color_thousand')),
+            self::PROMOTIONAL_PIECE_PERSONALIZATION => $quantity->multipliedBy(
+                $this->money($prices, 'article_price_per_piece')->plus($this->money($prices, 'personalization_price_per_piece')),
+            ),
+            self::SCREEN_SIZE_HUNDRED_INK => $quantity->multipliedBy($this->money($prices, 'price_per_size_hundred_ink')),
+            default => throw new \InvalidArgumentException('El método de la matriz de cotización no es válido.'),
+        };
+
+        return (string) $amount->toScale(2, RoundingMode::HalfUp);
     }
 
     /** @param array<string, mixed> $operands */
@@ -91,19 +110,16 @@ final class QuotationCostMatrixCalculator
     private function promotional(array $operands): array
     {
         $pieces = $this->integer($operands, 'pieces');
-        $positions = $this->integer($operands, 'personalization_positions', true);
 
-        // PIEZA + PERSONALIZACIÓN representa dos importes a sumar, no una
-        // suma entre unidades físicas incompatibles. Sus tarifas siguen pendientes.
+        // PIEZA + PERSONALIZACIÓN suma los dos precios unitarios por pieza.
         return [
             'method' => self::PROMOTIONAL_PIECE_PERSONALIZATION,
             'quantity' => (string) $pieces,
             'unit' => 'PIECE',
             'operands' => [
                 'pieces' => (string) $pieces,
-                'personalization_positions' => (string) $positions,
             ],
-            'formula' => 'pieces (base article); personalization is a separate price component',
+            'formula' => 'pieces * (article_price_per_piece + personalization_price_per_piece)',
         ];
     }
 
@@ -151,15 +167,15 @@ final class QuotationCostMatrixCalculator
     }
 
     /** @param array<string, mixed> $values */
-    private function integer(array $values, string $key, bool $allowZero = false): BigDecimal
+    private function integer(array $values, string $key): BigDecimal
     {
         $raw = $values[$key] ?? null;
         if (!is_string($raw) && !is_int($raw)) {
             throw new \DomainException(sprintf('Pendiente: %s.', $key));
         }
         $raw = trim((string) $raw);
-        if (preg_match($allowZero ? '/^(?:0|[1-9]\d{0,9})$/D' : '/^[1-9]\d{0,9}$/D', $raw) !== 1) {
-            throw new \DomainException(sprintf('%s debe ser un entero %s.', $key, $allowZero ? 'no negativo' : 'positivo'));
+        if (preg_match('/^[1-9]\d{0,9}$/D', $raw) !== 1) {
+            throw new \DomainException(sprintf('%s debe ser un entero positivo.', $key));
         }
 
         return BigDecimal::of($raw);
@@ -175,5 +191,20 @@ final class QuotationCostMatrixCalculator
 
         return $pieces->dividedBy($blockSize, 6, RoundingMode::HalfUp)
             ->toScale($mode === 'ROUND_UP' ? 0 : 6, $mode === 'ROUND_UP' ? RoundingMode::Ceiling : RoundingMode::HalfUp);
+    }
+
+    /** @param array<string, mixed> $prices */
+    private function money(array $prices, string $key): BigDecimal
+    {
+        $raw = $prices[$key] ?? null;
+        if (!is_string($raw) && !is_int($raw)) {
+            throw new \DomainException(sprintf('Pendiente: %s.', $key));
+        }
+        $raw = trim(str_replace(',', '.', (string) $raw));
+        if (preg_match('/^(?:0|[1-9]\d{0,9})(?:\.\d{1,2})?$/D', $raw) !== 1) {
+            throw new \DomainException(sprintf('%s debe ser un importe no negativo con máximo dos decimales.', $key));
+        }
+
+        return BigDecimal::of($raw);
     }
 }

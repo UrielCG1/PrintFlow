@@ -1,6 +1,6 @@
 # Prompt de implementación: costeo por volumen y descuentos aditivos
 
-> Nota de actualización (2026-10-09): este documento conserva una propuesta histórica. Para las fórmulas y los datos pendientes vigentes, consultar [Matriz de cotización y estructura de costos](matriz-cotizacion-costos.md). En particular, la interpretación anterior de promocionales como `piezas + posiciones` queda pendiente de confirmación frente a la interpretación comercial más reciente de `precio de pieza + precio de personalización`.
+> Nota de actualización (2026-10-10): este documento conserva una propuesta histórica más compleja. La versión vigente y simplificada está en [Matriz de cotización](matriz-cotizacion-costos.md). Para promocionales se propone sumar el precio de la pieza y el de su personalización, pendiente de confirmación del cliente.
 
 ## Rol y objetivo
 
