@@ -10,7 +10,7 @@
             <div class="pf-page-header__content">
                 <p class="pf-page-header__eyebrow">{{ item.serviceOrder.folio }} · {{ item.trackingCode }}</p>
                 <h1 class="pf-page-header__title">Impresión · partida {{ item.displayLineNumber }}</h1>
-                <p class="pf-page-header__description">{{ item.commercialItemSnapshot.name ?? item.commercialItem.name }} · {{ item.quantity }} unidades contratadas</p>
+                <p class="pf-page-header__description">{{ item.commercialItemSnapshot.name ?? item.commercialItem.name }} · Cantidad contratada: {{ item.quantity|number_format(6, '.', ',')|trim('0', 'right')|trim('.', 'right') }} {{ item.commercialItemSnapshot.measurement_unit.code|default('') }}</p>
             </div>
             <div class="pf-page-header__actions"><a href="{{ path('admin_printing_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-arrow-left" aria-hidden="true"></i> Cola de Impresión</a></div>
         </header>

@@ -165,6 +165,23 @@ final class ServiceOrderCommercialAccessTest extends TestCase
         }
     }
 
+    public function testDesignReviewShowsPlanningDependencyBeforeOrderIsReady(): void
+    {
+        $designer = $this->createUserWithPermissions('qa-designer-pending', 'ROLE_QA_DESIGNER_PENDING', [
+            'production.view', 'production.design.review', 'service_orders.view',
+        ]);
+        $item = $this->serviceOrder->getItems()->first();
+        self::assertInstanceOf(ServiceOrderItem::class, $item);
+
+        $this->browser->loginUser($designer);
+        $this->browser->request('GET', '/admin/diseno/partidas/'.$item->getId());
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        $html = (string) $this->browser->getResponse()->getContent();
+        self::assertStringContainsString('Pendiente de planificación', $html);
+        self::assertStringNotContainsString('Iniciar revisión de Diseño', $html);
+        $this->assertNoCommercialData($html, 'design detail pending planning');
+    }
+
     public function testCompletedProductionCanBeReviewedReleasedAndDeliveredAsSeparateHitos(): void
     {
         $quality = $this->createUserWithPermissions('qa-quality-flow', 'ROLE_QA_QUALITY_FLOW', [
@@ -596,6 +613,127 @@ final class ServiceOrderCommercialAccessTest extends TestCase
         self::assertSame('110.000000', $item->getProductionSpecificationsSnapshot()['finished_width_cm']);
         self::assertSame('technical_correction', $item->getProductionSpecificationsSnapshot()['_production_adjustment']['type']);
         self::assertSame('Las medidas de producción se corrigieron; revisa la ruta y confírmala antes de planificar.', $item->getPlanningIssue());
+    }
+
+    public function testManualMaterialsUseHttpPermissionsAndIdempotencyWithoutInventoryMovements(): void
+    {
+        $manager = $this->createUserWithPermissions('qa-material-manager', 'ROLE_QA_MATERIAL_MANAGER', ['production.view', 'production.assign']);
+        $operator = $this->createUserWithPermissions('qa-material-worker', 'ROLE_QA_MATERIAL_WORKER', ['production.view', 'production.execute']);
+        $otherOperator = $this->createUserWithPermissions('qa-material-other', 'ROLE_QA_MATERIAL_OTHER', ['production.view', 'production.execute']);
+        $plan = $this->createMaterialTestPlan($operator);
+        $planId = $plan->getId();
+        $queue = '/admin/produccion/ejecucion';
+        $plannedPath = $queue.'/operaciones/'.$planId.'/materiales/prevision';
+
+        $this->browser->loginUser($manager);
+        $crawler = $this->browser->request('GET', $queue);
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        $form = $crawler->filter('form[action="'.$plannedPath.'"]')->form([
+            'material_name' => 'Película de laminado QA', 'quantity' => '4.5', 'unit' => 'm²',
+        ]);
+        $plannedPayload = $form->getPhpValues();
+        $this->browser->submit($form);
+        self::assertSame(302, $this->browser->getResponse()->getStatusCode(), 'Material previsto debe guardarse por HTTP.');
+        $this->browser->request('POST', $plannedPath, $plannedPayload);
+        self::assertSame(302, $this->browser->getResponse()->getStatusCode());
+        $this->browser->followRedirect();
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        self::assertStringContainsString('Película de laminado QA', (string) $this->browser->getResponse()->getContent());
+        $connection = $this->kernel->getContainer()->get('doctrine')->getConnection();
+        self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM production_material_usages'));
+
+        $this->browser->loginUser($operator);
+        $this->browser->request('POST', $plannedPath, $plannedPayload);
+        self::assertSame(403, $this->browser->getResponse()->getStatusCode());
+        $crawler = $this->browser->request('GET', $queue);
+        $startForm = $crawler->filter('form[action="'.$queue.'/operaciones/'.$planId.'/iniciar"]')->form();
+        $this->browser->submit($startForm);
+        self::assertSame(302, $this->browser->getResponse()->getStatusCode());
+        $crawler = $this->browser->followRedirect();
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        $form = $crawler->filter('form[action$="/materiales/usados"]')->form([
+            'material_name' => 'Película de laminado QA', 'quantity' => '5', 'unit' => 'm²',
+            'waste' => '0.5', 'waste_reason' => 'Recorte de prueba.',
+        ]);
+        $usedPath = parse_url($form->getUri(), PHP_URL_PATH);
+        $usedPayload = $form->getPhpValues();
+
+        // Keep the session's valid CSRF token: rejection must come from ownership, not a forged token.
+        $this->browser->loginUser($otherOperator);
+        $this->browser->request('POST', $usedPath, $usedPayload);
+        self::assertSame(302, $this->browser->getResponse()->getStatusCode());
+        $this->browser->followRedirect();
+        self::assertStringContainsString('Solo la persona asignada', (string) $this->browser->getResponse()->getContent());
+        $connection = $this->kernel->getContainer()->get('doctrine')->getConnection();
+        self::assertSame(1, (int) $connection->fetchOne('SELECT COUNT(*) FROM production_material_usages'));
+
+        $this->browser->loginUser($operator);
+        $this->browser->request('POST', $usedPath, array_replace($usedPayload, ['_token' => 'forged']));
+        self::assertSame(403, $this->browser->getResponse()->getStatusCode());
+        $this->browser->request('POST', $usedPath, $usedPayload);
+        self::assertSame(302, $this->browser->getResponse()->getStatusCode());
+        $this->browser->request('POST', $usedPath, $usedPayload);
+        self::assertSame(302, $this->browser->getResponse()->getStatusCode());
+        $this->browser->followRedirect();
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        $this->assertNoCommercialData((string) $this->browser->getResponse()->getContent(), 'manual material capture');
+        $connection = $this->kernel->getContainer()->get('doctrine')->getConnection();
+        self::assertSame(2, (int) $connection->fetchOne('SELECT COUNT(*) FROM production_material_usages'));
+        self::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM inventory_movements'));
+        $usage = $connection->fetchAssociative('SELECT * FROM production_material_usages WHERE actual_quantity IS NOT NULL');
+        self::assertIsArray($usage);
+        self::assertEquals(5, $usage['actual_quantity']);
+        self::assertEquals(4.5, $usage['planned_quantity']);
+        self::assertEquals(0.5, $usage['waste_quantity']);
+        self::assertNull($usage['material_variant_id']);
+        self::assertNull($usage['inventory_movement_id']);
+    }
+
+    public function testPrintingShowsRecordedMaterialWithItsMeasurementDateAndWithoutCommercialData(): void
+    {
+        $operator = $this->createUserWithPermissions('qa-printing-material', 'ROLE_QA_PRINTING_MATERIAL', ['production.view']);
+        $plan = $this->createMaterialTestPlan($operator, 'IMP-IMPRESION');
+        $execution = new \App\Entity\Production\ProductionOperationExecution($plan, $operator, $operator, 1);
+        $plan->addExecution($execution);
+        $execution->complete('Impresión de prueba terminada.');
+        $usage = new \App\Entity\Production\ProductionMaterialUsage(
+            $plan->getServiceOrderItem(), null, null, '4.5',
+            \App\Enum\Production\CalculationMethod::FIXED, 1, [], 'Lona de prueba QA', 'm²',
+        );
+        $usage->assignExecutionContext($plan, $execution, []);
+        $usage->recordActual('5', '0.5', \App\Enum\Inventory\QuantitySource::MEASURED, $operator, 'CAPTURA_MANUAL', 'Recorte de prueba.');
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $em->persist($execution);
+        $em->persist($usage);
+        $em->flush();
+
+        $this->browser->loginUser($operator);
+        $this->browser->request('GET', '/admin/impresion/operaciones/'.$plan->getId());
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode(), 'El consumo registrado debe renderizarse.');
+        $html = (string) $this->browser->getResponse()->getContent();
+        self::assertStringContainsString('Lona de prueba QA', $html);
+        self::assertStringContainsString('Intento 1', $html);
+        $this->assertNoCommercialData($html, 'printing material history');
+    }
+
+    private function createMaterialTestPlan(User $operator, string $code = 'QA-LAMINADO'): ServiceOrderOperationPlan
+    {
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $area = (new OperationArea())->setCode($code === 'IMP-IMPRESION' ? 'IMPRESION' : 'QA-MATERIAL')->setName('Acabados QA');
+        $operation = (new Operation())->setOperationArea($area)->setCode($code)->setName('Operación material QA');
+        $plan = (new ServiceOrderOperationPlan())->setSequenceNumber(1)->setOperation($operation)
+            ->setCreatedBy($this->fixtures['user'])
+            ->setOperationSnapshot(['code' => $code, 'name' => 'Operación material QA', 'area_name' => 'Acabados QA'])
+            ->assignOperator($operator);
+        $item = $this->serviceOrder->getItems()->first();
+        self::assertInstanceOf(ServiceOrderItem::class, $item);
+        $item->beginDesignReview()->markReadyForPrint();
+        $item->addOperationPlan($plan);
+        $this->serviceOrder->setCommitmentDate(new \DateTimeImmutable('2026-10-16'))->markPlanned($this->fixtures['user']);
+        $em->persist($area);
+        $em->persist($operation);
+        $em->flush();
+        return $plan;
     }
 
     /** @param list<string> $codes */

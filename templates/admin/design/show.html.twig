@@ -25,7 +25,7 @@
                     <div class="pf-card__body">
                         <dl class="row mb-0">
                             <dt class="col-sm-4">Estado</dt><dd class="col-sm-8"><span class="pf-status-badge pf-status-badge--{{ item.designStatus.badgeTone }}">{{ item.designStatus.label }}</span></dd>
-                            <dt class="col-sm-4">Cantidad</dt><dd class="col-sm-8">{{ item.quantity }}</dd>
+                            <dt class="col-sm-4">Cantidad</dt><dd class="col-sm-8">{{ item.quantity|number_format(6, '.', ',')|trim('0', 'right')|trim('.', 'right') }} {{ item.commercialItemSnapshot.measurement_unit.code|default('') }}</dd>
                             <dt class="col-sm-4">Archivo del cliente</dt>
                             <dd class="col-sm-8">
                                 {% if hasClientOriginal %}
@@ -34,7 +34,7 @@
                                     <span class="text-muted">No se proporcionó archivo; Diseño debe preparar el arte.</span>
                                 {% endif %}
                             </dd>
-                            <dt class="col-sm-4">Solicitud del cliente</dt><dd class="col-sm-8">{{ source.status ?? 'Sin información adicional' }}</dd>
+                            <dt class="col-sm-4">Solicitud del cliente</dt><dd class="col-sm-8">{{ source.status|default('') == 'DESIGN_PREPARATION_REQUIRED' ? 'Se requiere preparar el diseño' : (source.status|default('') == 'CLIENT_FILE_RECEIVED' ? 'Archivo recibido para revisión' : 'Sin información adicional') }}</dd>
                         </dl>
                         {% if item.requestDetailsSnapshot.notes ?? false %}<p class="mb-0 mt-3"><strong>Notas:</strong> {{ item.requestDetailsSnapshot.notes }}</p>{% endif %}
                         {% if item.productionSpecificationsSnapshot is not empty %}
@@ -63,7 +63,15 @@
             </div>
 
             <div class="col-xl-5">
-                {% if canReview and item.designStatus.value != 'IN_REVIEW' and item.designStatus.value != 'BLOCKED' %}
+                {% if canReview and not item.serviceOrder.isPlanned %}
+                    <section class="pf-card mb-4">
+                        <div class="pf-card__body">
+                            <h2 class="pf-card__title">Pendiente de planificación</h2>
+                            <p class="mb-2">Producción debe completar la ruta, los equipos y la agenda antes de iniciar la revisión de Diseño.</p>
+                            {% if is_granted('service_orders.view') %}<a class="btn pf-button pf-button--secondary" href="{{ path('admin_service_orders_show', {id: item.serviceOrder.id}) }}">Ver pendientes de la orden</a>{% endif %}
+                        </div>
+                    </section>
+                {% elseif canReview and item.designStatus.value != 'IN_REVIEW' and item.designStatus.value != 'BLOCKED' %}
                     <section class="pf-card mb-4">
                         <div class="pf-card__body">
                             <form method="post" action="{{ path('admin_design_start_review', {id: item.id}) }}">

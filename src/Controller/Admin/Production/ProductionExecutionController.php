@@ -7,6 +7,7 @@ namespace App\Controller\Admin\Production;
 use App\Application\Production\ProductionExecutionCommand;
 use App\Application\Production\ProductionExecutionManager;
 use App\Application\Production\ProductionIncidentManager;
+use App\Application\Production\ProductionMaterialUsageManager;
 use App\Application\Production\PrintingManager;
 use App\Entity\Orders\ServiceOrderOperationPlan;
 use App\Entity\Production\ProductionOperationExecution;

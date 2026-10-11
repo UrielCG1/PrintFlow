@@ -226,6 +226,7 @@ class ProductionMaterialUsage
     public function getPostedQuantity(): ?string { return $this->postedQuantity; }
     public function getWasteQuantity(): ?string { return $this->wasteQuantity; }
     public function getQuantitySource(): QuantitySource { return $this->quantitySource; }
+    public function getMeasuredAt(): ?\DateTimeImmutable { return $this->measuredAt; }
     /** @return array<string, mixed>|null */ public function getMaterialSnapshot(): ?array { return $this->materialSnapshot; }
 
     private static function decimalOrNull(?string $value, string $field): ?string

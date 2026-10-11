@@ -39,7 +39,7 @@
                         </div>
                         <div class="pf-card__body">
                             <div class="row g-3 mb-3">
-                                <div class="col-md-3"><span class="small text-body-secondary d-block">Cantidad</span><strong>{{ item.quantity }} unidades</strong></div>
+                                <div class="col-md-3"><span class="small text-body-secondary d-block">Cantidad contratada</span><strong>{{ item.quantity|number_format(6, '.', ',')|trim('0', 'right')|trim('.', 'right') }} {{ item.commercialItemSnapshot.measurement_unit.code|default('') }}</strong></div>
                                 <div class="col-md-3"><span class="small text-body-secondary d-block">Equipo</span><strong>{{ plan.equipment ? (plan.equipmentSnapshot.name|default(plan.equipment.name)) : 'Sin asignar' }}</strong></div>
                                 <div class="col-md-3"><span class="small text-body-secondary d-block">Estimación / real</span><strong>{{ plan.estimatedMinutes is not null ? plan.estimatedMinutes ~ ' / ' ~ (plan.actualMinutes is not null ? plan.actualMinutes : '—') ~ ' min' : 'Sin estimación' }}</strong></div>
                                 <div class="col-md-3"><span class="small text-body-secondary d-block">Responsable</span><strong>{{ plan.assignedOperator ? plan.assignedOperator.fullName : 'Sin asignar' }}</strong></div>

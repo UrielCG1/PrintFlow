@@ -31,7 +31,7 @@
                         {% for item in items %}
                             {% set source = item.sourceFileSnapshot ?? {} %}
                             <tr>
-                                <td>
+                                <td class="text-nowrap">
                                     <strong class="pf-table__primary">{{ item.serviceOrder.folio }}</strong>
                                     <span class="d-block text-muted small">{{ item.trackingCode }}</span>
                                 </td>

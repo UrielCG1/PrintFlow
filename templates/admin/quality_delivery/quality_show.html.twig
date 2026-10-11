@@ -11,7 +11,7 @@
         <section class="pf-card mb-4"><div class="pf-card__header"><h2 class="pf-card__title">Partidas y operaciones</h2></div><div class="pf-card__body d-flex flex-column gap-3">
             {% for item in order.items %}
                 <article class="border rounded p-3">
-                    <div class="d-flex justify-content-between flex-wrap gap-2"><div><span class="small text-body-secondary">Partida {{ item.displayLineNumber }} · {{ item.trackingCode }}</span><h3 class="h5 mb-1">{{ item.commercialItemSnapshot.name|default(item.commercialItem.name) }}</h3><span class="small">{{ item.quantity }} unidades</span></div><span class="pf-status-badge pf-status-badge--{{ item.designStatus.badgeTone }}">{{ item.designStatus.label }}</span></div>
+                    <div class="d-flex justify-content-between flex-wrap gap-2"><div><span class="small text-body-secondary">Partida {{ item.displayLineNumber }} · {{ item.trackingCode }}</span><h3 class="h5 mb-1">{{ item.commercialItemSnapshot.name|default(item.commercialItem.name) }}</h3><span class="small">{{ item.quantity|number_format(6, '.', ',')|trim('0', 'right')|trim('.', 'right') }} {{ item.commercialItemSnapshot.measurement_unit.code|default('') }}</span></div><span class="pf-status-badge pf-status-badge--{{ item.designStatus.badgeTone }}">{{ item.designStatus.label }}</span></div>
                     <div class="table-responsive mt-3"><table class="pf-table"><thead><tr><th>Operación</th><th>Equipo</th><th>Tiempo</th><th>Último intento</th><th>Calidad</th></tr></thead><tbody>
                         {% for plan in item.activeOperationPlans %}
                             {% set latest = plan.latestExecution %}
