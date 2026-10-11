@@ -7,7 +7,7 @@
 {% block app_breadcrumb %}Operación / Órdenes de servicio / Detalle{% endblock %}
 
 {% block app_content %}
-    <section class="pf-page__content">
+    <section class="pf-page__content service-order-page">
         <header class="pf-page-header">
             <div class="pf-page-header__content">
                 <p class="pf-page-header__eyebrow">Operación / Órdenes de servicio</p>
@@ -77,8 +77,11 @@
                         {% endif %}
                         <span class="d-block text-muted small mt-1">{{ productionForecast.order.risk_cause }}</span>
                         {% if canManageCommitment %}
-                            <details class="mt-3">
-                                <summary>{{ serviceOrder.commitmentDate ? 'Cambiar fecha compromiso' : 'Confirmar fecha compromiso' }}</summary>
+                            <details class="service-order-disclosure service-order-disclosure--primary mt-3">
+                                <summary>
+                                    <span class="service-order-disclosure__label"><i class="bi bi-calendar-check" aria-hidden="true"></i> {{ serviceOrder.commitmentDate ? 'Cambiar fecha compromiso' : 'Confirmar fecha compromiso' }}</span>
+                                    <span class="service-order-disclosure__hint">Ventas define el plazo prometido</span>
+                                </summary>
                                 {{ form_start(planningForm, {action: path('admin_service_orders_update_planning', {id: serviceOrder.id}), method: 'POST', attr: {class: 'pf-form mt-2'}}) }}
                                     {{ form_errors(planningForm) }}
                                     {{ form_row(planningForm.commitmentDate) }}
@@ -133,8 +136,11 @@
                     <p class="pf-card__description">Evidencia copiada al momento de crear la orden.</p>
                 </header>
                 <div class="pf-card__body">
-                    <details>
-                        <summary>Ver evidencia de aceptación de la cotización</summary>
+                    <details class="service-order-disclosure">
+                        <summary>
+                            <span class="service-order-disclosure__label"><i class="bi bi-file-earmark-check" aria-hidden="true"></i> Consultar evidencia de aceptación</span>
+                            <span class="service-order-disclosure__hint">Cotización, canal y observaciones</span>
+                        </summary>
                     <dl class="row mb-0">
                         <dt class="col-sm-3">Cotización</dt>
                         <dd class="col-sm-9">
@@ -194,8 +200,8 @@
                     {% if canPlan and planningProgress.auto_actions > 0 %}
                         <form method="post" action="{{ path('admin_service_orders_prepare_automatically', {id: serviceOrder.id}) }}">
                             <input type="hidden" name="_token" value="{{ csrf_token('service-order-auto-prepare-' ~ serviceOrder.id) }}">
-                            <button type="submit" class="btn pf-button pf-button--secondary">Completar {{ planningProgress.auto_actions }} paso(s) automático(s)</button>
-                            <span class="d-block text-muted small mt-1">Usa una máquina compatible única y calcula cargas derivadas de medidas.</span>
+                            <button type="submit" class="btn pf-button pf-button--secondary">Aplicar sugerencias automáticas ({{ planningProgress.auto_actions }})</button>
+                            <span class="d-block text-muted small mt-1">Asigna máquinas compatibles únicas y calcula cargas que se obtienen de las medidas.</span>
                         </form>
                     {% endif %}
                 </div>
@@ -209,7 +215,7 @@
             <div class="pf-card__body d-flex flex-column gap-4">
                 {% for item in itemsForDisplay %}
                     {% set plans = operationPlansByItem[item.id]|default([]) %}
-                    <article class="border rounded p-3">
+                    <article class="service-order-work-item">
                         <header class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
                             <div>
                                 <span class="text-muted small">Partida {{ item.displayLineNumber }} · Rastreo {{ item.trackingCode }}</span>
@@ -246,8 +252,11 @@
                         </header>
 
                         {% if canManagePriority %}
-                            <details class="mb-3">
-                                <summary>Cambiar prioridad de esta partida</summary>
+                            <details class="service-order-disclosure service-order-disclosure--action mb-3">
+                                <summary>
+                                    <span class="service-order-disclosure__label"><i class="bi bi-flag" aria-hidden="true"></i> Cambiar prioridad</span>
+                                    <span class="service-order-disclosure__hint">Revisar el impacto antes de aplicar</span>
+                                </summary>
                                 <form method="post" action="{{ path('admin_service_orders_preview_item_priority', {id: serviceOrder.id, item: item.id}) }}" class="pf-form border rounded p-3 mt-2">
                                     <input type="hidden" name="_token" value="{{ csrf_token('production-item-priority-' ~ serviceOrder.id ~ '-' ~ item.id) }}">
                                     <div class="row g-2 align-items-end">
@@ -330,8 +339,8 @@
                                                             <span class="d-block text-warning small">Requiere tiempo manual justificado.</span>
                                                         {% endif %}
                                                         {% if planReservations is empty %}
-                                                            <details class="mt-2">
-                                                                <summary>Cambiar máquina</summary>
+                                                            <details class="service-order-disclosure service-order-disclosure--compact mt-2">
+                                                                <summary><span class="service-order-disclosure__label">Reasignar máquina</span></summary>
                                                                 {{ form_start(equipmentForms[plan.id], {action: path('admin_service_orders_assign_item_operation_equipment', {id: serviceOrder.id, plan: plan.id}), method: 'POST', attr: {class: 'pf-form mt-2'}}) }}
                                                                     {{ form_errors(equipmentForms[plan.id]) }}
                                                                     {{ form_widget(equipmentForms[plan.id].equipment, {attr: {class: 'form-select form-select-sm mb-2'}}) }}
@@ -361,8 +370,8 @@
                                             </td>
                                             {% if canPlan %}
                                                 <td class="pf-table__actions-cell">
-                                                <details>
-                                                    <summary>Más</summary>
+                                                <details class="service-order-disclosure service-order-disclosure--compact">
+                                                    <summary><span class="service-order-disclosure__label">Acciones de la operación</span></summary>
                                                     <form
                                                         method="post"
                                                         action="{{ path('admin_service_orders_remove_item_operation', {id: serviceOrder.id, plan: plan.id}) }}"
@@ -407,8 +416,8 @@
                                                             {% endfor %}
                                                         </div>
                                                         {% if (canReprogramSchedule and scheduleAdjustablePlans[plan.id]|default(false)) or plan.schedulePinned %}
-                                                            <details>
-                                                                <summary>Opciones de agenda</summary>
+                                                            <details class="service-order-disclosure service-order-disclosure--compact">
+                                                                <summary><span class="service-order-disclosure__label">Protección de agenda</span></summary>
                                                                 {% if canReprogramSchedule and scheduleAdjustablePlans[plan.id]|default(false) %}
                                                                     <form method="post" action="{{ path('admin_service_orders_set_operation_schedule_pin', {id: serviceOrder.id, plan: plan.id}) }}" class="mt-2">
                                                                         <input type="hidden" name="_token" value="{{ csrf_token('production-schedule-pin-' ~ plan.id) }}">
@@ -442,8 +451,11 @@
                                                             {% else %}
                                                                 <p class="small text-warning mb-0">La capacidad de esta máquina necesita revisión. Usa la estimación manual si ya conoces el tiempo.</p>
                                                             {% endif %}
-                                                            <details class="mt-2">
-                                                                <summary>Registrar tiempo manual (excepción)</summary>
+                                                            <details class="service-order-disclosure service-order-disclosure--compact mt-2">
+                                                                <summary>
+                                                                    <span class="service-order-disclosure__label">Capturar tiempo manual</span>
+                                                                    <span class="service-order-disclosure__hint">Solo cuando no se pueda calcular</span>
+                                                                </summary>
                                                                 <form method="post" action="{{ path('admin_service_orders_estimate_item_operation', {id: serviceOrder.id, plan: plan.id}) }}" class="pf-form mt-2">
                                                                     <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-estimate-' ~ plan.id) }}">
                                                                     {% if requiredLoadUnitByPlan[plan.id]|default(null) %}<input type="hidden" name="load_unit" value="{{ requiredLoadUnitByPlan[plan.id].value }}">{% endif %}
@@ -456,8 +468,8 @@
                                                             </details>
                                                         {% endif %}
                                                     {% elseif canPlan and planReservations is empty and plan.estimatedMinutes and plan.equipment %}
-                                                        <details class="mt-2">
-                                                            <summary>Editar estimación</summary>
+                                                        <details class="service-order-disclosure service-order-disclosure--compact mt-2">
+                                                            <summary><span class="service-order-disclosure__label">Ajustar estimación</span></summary>
                                                             <form method="post" action="{{ path('admin_service_orders_estimate_item_operation', {id: serviceOrder.id, plan: plan.id}) }}" class="pf-form mt-2">
                                                                 <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-estimate-' ~ plan.id) }}">
                                                                 {% if requiredLoadUnitByPlan[plan.id]|default(null) %}<input type="hidden" name="load_unit" value="{{ requiredLoadUnitByPlan[plan.id].value }}">{% endif %}
@@ -471,8 +483,8 @@
                                                         </details>
                                                     {% endif %}
                                                     {% if planReservations|length > 0 %}
-                                                        <details>
-                                                            <summary>Opciones del trabajo reservado</summary>
+                                                        <details class="service-order-disclosure service-order-disclosure--compact">
+                                                            <summary><span class="service-order-disclosure__label">Operador y tiempo real</span></summary>
                                                             <form method="post" action="{{ path('admin_service_orders_assign_item_operation_operator', {id: serviceOrder.id, plan: plan.id}) }}" class="d-flex flex-wrap gap-2 align-items-center mt-2">
                                                                 <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-operator-' ~ plan.id) }}">
                                                                 <label class="form-label mb-0" for="operator-{{ plan.id }}">Operador (opcional)</label>
@@ -505,8 +517,11 @@
                         </div>
 
                         {% if canPlan %}
-                            <details>
-                                <summary class="fw-semibold">Agregar operación a esta partida</summary>
+                            <details class="service-order-disclosure service-order-disclosure--action">
+                                <summary>
+                                    <span class="service-order-disclosure__label"><i class="bi bi-plus-circle" aria-hidden="true"></i> Agregar paso de producción</span>
+                                    <span class="service-order-disclosure__hint">Añadir una operación a la ruta</span>
+                                </summary>
                                 <div class="pt-3">
                                     {{ form_start(itemOperationForms[item.id], {action: path('admin_service_orders_add_item_operation', {id: serviceOrder.id, item: item.id}), method: 'POST', attr: {class: 'pf-form'}}) }}
                                         {{ form_errors(itemOperationForms[item.id]) }}
@@ -518,8 +533,11 @@
                                 </div>
                             </details>
 
-                            <details class="mt-3">
-                                <summary class="fw-semibold">Corregir medidas de producción</summary>
+                            <details class="service-order-disclosure service-order-disclosure--action mt-2">
+                                <summary>
+                                    <span class="service-order-disclosure__label"><i class="bi bi-rulers" aria-hidden="true"></i> Ajustar medidas de fabricación</span>
+                                    <span class="service-order-disclosure__hint">Solo cambia los datos de producción</span>
+                                </summary>
                                 <div class="pt-3">
                                     <p class="small text-muted">Captura solo las medidas que cambian; deja las demás vacías. La cotización aceptada y sus importes no se modifican.</p>
                                     <form method="post" action="{{ path('admin_service_orders_correct_item_specifications', {id: serviceOrder.id, item: item.id}) }}" class="pf-form">
@@ -535,8 +553,11 @@
                             </details>
 
                             {% if splitEligibleItems[item.id]|default(false) %}
-                                <details class="mt-3">
-                                    <summary class="fw-semibold">Dividir esta partida</summary>
+                                <details class="service-order-disclosure service-order-disclosure--action mt-2">
+                                    <summary>
+                                        <span class="service-order-disclosure__label"><i class="bi bi-diagram-2" aria-hidden="true"></i> Dividir cantidad en partidas</span>
+                                        <span class="service-order-disclosure__hint">Para fabricar o entregar por separado</span>
+                                    </summary>
                                     <div class="pt-3">
                                         <p class="small text-muted">Las nuevas partidas reemplazan este renglón en la orden. Captura una cantidad por línea; su suma debe coincidir con la cantidad contratada. El sistema distribuye el importe al centavo y conserva el total de la orden.</p>
                                         <form method="post" action="{{ path('admin_service_orders_split_item', {id: serviceOrder.id, item: item.id}) }}" class="pf-form">
