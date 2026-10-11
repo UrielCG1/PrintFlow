@@ -1,4 +1,7 @@
 {% set current_navigation = active_navigation|default('dashboard') %}
+{% set canSeeDailyOperations = is_granted('service_orders.view') or (is_granted('production.view') and is_granted('production.design.review')) or (is_granted('production.view') and is_granted('production.execute')) or is_granted('quality.review') or is_granted('delivery.confirm') or is_granted('delivery.ship') %}
+{% set canSeeWorkshopSetup = is_granted('production_routes.manage') or is_granted('production_calendar.manage') or is_granted('equipment.view') or is_granted('operations.view') or is_granted('operation_areas.view') %}
+{% set canSeeMaterials = is_granted('suppliers.view') or is_granted('materials.view') or is_granted('material_categories.view') %}
 
 <aside
     id="pf-app-sidebar"
@@ -119,7 +122,7 @@
             </a>
         {% endif %}
 
-        {% if is_granted('clients.view') or is_granted('quotations.view') or is_granted('service_orders.view') %}
+        {% if is_granted('clients.view') or is_granted('quotations.view') %}
             <p class="pf-sidebar__section">Comercial</p>
 
             {% if is_granted('clients.view') %}
@@ -146,21 +149,150 @@
                 </a>
             {% endif %}
 
-            {% if is_granted('service_orders.view') %}
-                <a
-                    href="{{ path('admin_service_orders_index') }}"
-                    class="pf-sidebar__link {{ current_navigation == 'service_orders' ? 'is-active' : '' }}"
-                    {% if current_navigation == 'service_orders' %}aria-current="page"{% endif %}
-                    data-action="ui--sidebar#close"
-                >
-                    <i class="bi bi-clipboard-check" aria-hidden="true"></i>
-                    <span>Órdenes de servicio</span>
-                </a>
-            {% endif %}
         {% endif %}
 
-        {% if is_granted('suppliers.view') or is_granted('materials.view') or is_granted('material_categories.view') or is_granted('operations.view') or is_granted('operation_areas.view') or is_granted('production_routes.manage') or is_granted('production_calendar.manage') or is_granted('production.view') or is_granted('quality.review') or is_granted('delivery.confirm') or is_granted('delivery.ship') %}
+        {% if canSeeDailyOperations or canSeeWorkshopSetup or canSeeMaterials %}
             <p class="pf-sidebar__section">Operación</p>
+
+            {% if canSeeDailyOperations %}
+                <p class="pf-sidebar__subsection">Trabajo diario</p>
+
+                {% if is_granted('service_orders.view') %}
+                    <a
+                        href="{{ path('admin_service_orders_index') }}"
+                        class="pf-sidebar__link {{ current_navigation == 'service_orders' ? 'is-active' : '' }}"
+                        {% if current_navigation == 'service_orders' %}aria-current="page"{% endif %}
+                        data-action="ui--sidebar#close"
+                    >
+                        <i class="bi bi-clipboard-check" aria-hidden="true"></i>
+                        <span>Órdenes de servicio</span>
+                    </a>
+                {% endif %}
+
+                {% if is_granted('production.view') and is_granted('production.design.review') %}
+                    <a
+                        href="{{ path('admin_design_index') }}"
+                        class="pf-sidebar__link {{ current_navigation == 'design' ? 'is-active' : '' }}"
+                        {% if current_navigation == 'design' %}aria-current="page"{% endif %}
+                        data-action="ui--sidebar#close"
+                    >
+                        <i class="bi bi-palette" aria-hidden="true"></i>
+                        <span>Diseño</span>
+                    </a>
+                {% endif %}
+
+                {% if is_granted('production.view') and is_granted('production.execute') %}
+                    <a
+                        href="{{ path('admin_printing_index') }}"
+                        class="pf-sidebar__link {{ current_navigation == 'printing' ? 'is-active' : '' }}"
+                        {% if current_navigation == 'printing' %}aria-current="page"{% endif %}
+                        data-action="ui--sidebar#close"
+                    >
+                        <i class="bi bi-printer" aria-hidden="true"></i>
+                        <span>Impresión</span>
+                    </a>
+                    <a
+                        href="{{ path('admin_production_execution_index') }}"
+                        class="pf-sidebar__link {{ current_navigation == 'production_execution' ? 'is-active' : '' }}"
+                        {% if current_navigation == 'production_execution' %}aria-current="page"{% endif %}
+                        data-action="ui--sidebar#close"
+                    >
+                        <i class="bi bi-play-circle" aria-hidden="true"></i>
+                        <span>Ejecución</span>
+                    </a>
+                {% endif %}
+
+                {% if is_granted('quality.review') %}
+                    <a
+                        href="{{ path('admin_production_quality_delivery_quality_index') }}"
+                        class="pf-sidebar__link {{ current_navigation == 'quality' ? 'is-active' : '' }}"
+                        {% if current_navigation == 'quality' %}aria-current="page"{% endif %}
+                        data-action="ui--sidebar#close"
+                    >
+                        <i class="bi bi-clipboard2-check" aria-hidden="true"></i>
+                        <span>Calidad</span>
+                    </a>
+                {% endif %}
+
+                {% if is_granted('delivery.confirm') or is_granted('delivery.ship') %}
+                    <a
+                        href="{{ path('admin_production_quality_delivery_delivery_index') }}"
+                        class="pf-sidebar__link {{ current_navigation == 'delivery' ? 'is-active' : '' }}"
+                        {% if current_navigation == 'delivery' %}aria-current="page"{% endif %}
+                        data-action="ui--sidebar#close"
+                    >
+                        <i class="bi bi-box-seam" aria-hidden="true"></i>
+                        <span>Entregas</span>
+                    </a>
+                {% endif %}
+            {% endif %}
+
+            {% if canSeeWorkshopSetup %}
+            <p class="pf-sidebar__subsection">Planificación del taller</p>
+
+            {% if is_granted('production_routes.manage') %}
+                <a
+                    href="{{ path('admin_production_routes_index') }}"
+                    class="pf-sidebar__link {{ current_navigation == 'production_routes' ? 'is-active' : '' }}"
+                    {% if current_navigation == 'production_routes' %}aria-current="page"{% endif %}
+                    data-action="ui--sidebar#close"
+                >
+                    <i class="bi bi-signpost-split" aria-hidden="true"></i>
+                    <span>Rutas de producción</span>
+                </a>
+            {% endif %}
+
+            {% if is_granted('production_calendar.manage') %}
+                <a
+                    href="{{ path('admin_production_calendar_index') }}"
+                    class="pf-sidebar__link {{ current_navigation == 'production_calendar' ? 'is-active' : '' }}"
+                    {% if current_navigation == 'production_calendar' %}aria-current="page"{% endif %}
+                    data-action="ui--sidebar#close"
+                >
+                    <i class="bi bi-calendar-week" aria-hidden="true"></i>
+                    <span>Jornada de producción</span>
+                </a>
+            {% endif %}
+
+            {% if is_granted('equipment.view') %}
+                <a
+                    href="{{ path('admin_equipment_index') }}"
+                    class="pf-sidebar__link {{ current_navigation == 'equipment' ? 'is-active' : '' }}"
+                    {% if current_navigation == 'equipment' %}aria-current="page"{% endif %}
+                    data-action="ui--sidebar#close"
+                >
+                    <i class="bi bi-tools" aria-hidden="true"></i>
+                    <span>Equipos</span>
+                </a>
+            {% endif %}
+
+            {% if is_granted('operations.view') %}
+                <a
+                    href="{{ path('admin_operations_index') }}"
+                    class="pf-sidebar__link {{ current_navigation == 'operations' ? 'is-active' : '' }}"
+                    {% if current_navigation == 'operations' %}aria-current="page"{% endif %}
+                    data-action="ui--sidebar#close"
+                >
+                    <i class="bi bi-diagram-3" aria-hidden="true"></i>
+                    <span>Operaciones</span>
+                </a>
+            {% endif %}
+
+            {% if is_granted('operation_areas.view') %}
+                <a
+                    href="{{ path('admin_operation_areas_index') }}"
+                    class="pf-sidebar__link {{ current_navigation == 'operation_areas' ? 'is-active' : '' }}"
+                    {% if current_navigation == 'operation_areas' %}aria-current="page"{% endif %}
+                    data-action="ui--sidebar#close"
+                >
+                    <i class="bi bi-diagram-2" aria-hidden="true"></i>
+                    <span>Áreas operativas</span>
+                </a>
+            {% endif %}
+            {% endif %}
+
+            {% if canSeeMaterials %}
+            <p class="pf-sidebar__subsection">Materiales y proveedores</p>
 
             {% if is_granted('suppliers.view') %}
                 <a
@@ -197,116 +329,6 @@
                     <span>Categorías de materiales</span>
                 </a>
             {% endif %}
-            {% if is_granted('operations.view') %}
-                <a
-                    href="{{ path('admin_operations_index') }}"
-                    class="pf-sidebar__link {{ current_navigation == 'operations' ? 'is-active' : '' }}"
-                    {% if current_navigation == 'operations' %}aria-current="page"{% endif %}
-                    data-action="ui--sidebar#close"
-                >
-                    <i class="bi bi-diagram-3" aria-hidden="true"></i>
-                    <span>Operaciones</span>
-                </a>
-            {% endif %}
-
-            {% if is_granted('production_routes.manage') %}
-                <a
-                    href="{{ path('admin_production_routes_index') }}"
-                    class="pf-sidebar__link {{ current_navigation == 'production_routes' ? 'is-active' : '' }}"
-                    {% if current_navigation == 'production_routes' %}aria-current="page"{% endif %}
-                    data-action="ui--sidebar#close"
-                >
-                    <i class="bi bi-signpost-split" aria-hidden="true"></i>
-                    <span>Rutas de producción</span>
-                </a>
-            {% endif %}
-
-            {% if is_granted('production_calendar.manage') %}
-                <a
-                    href="{{ path('admin_production_calendar_index') }}"
-                    class="pf-sidebar__link {{ current_navigation == 'production_calendar' ? 'is-active' : '' }}"
-                    {% if current_navigation == 'production_calendar' %}aria-current="page"{% endif %}
-                    data-action="ui--sidebar#close"
-                >
-                    <i class="bi bi-calendar-week" aria-hidden="true"></i>
-                    <span>Jornada de producción</span>
-                </a>
-            {% endif %}
-
-            {% if is_granted('operation_areas.view') %}
-                <a
-                    href="{{ path('admin_operation_areas_index') }}"
-                    class="pf-sidebar__link {{ current_navigation == 'operation_areas' ? 'is-active' : '' }}"
-                    {% if current_navigation == 'operation_areas' %}aria-current="page"{% endif %}
-                    data-action="ui--sidebar#close"
-                >
-                    <i class="bi bi-diagram-2" aria-hidden="true"></i>
-                    <span>Áreas operativas</span>
-                </a>
-            {% endif %}
-
-            {% if is_granted('equipment.view') %}
-                <a
-                    href="{{ path('admin_equipment_index') }}"
-                    class="pf-sidebar__link {{ current_navigation == 'equipment' ? 'is-active' : '' }}"
-                    {% if current_navigation == 'equipment' %}aria-current="page"{% endif %}
-                    data-action="ui--sidebar#close"
-                >
-                    <i class="bi bi-tools" aria-hidden="true"></i>
-                    <span>Equipos</span>
-                </a>
-            {% endif %}
-
-            {% if is_granted('production.view') %}
-                <a
-                    href="{{ path('admin_design_index') }}"
-                    class="pf-sidebar__link {{ current_navigation == 'design' ? 'is-active' : '' }}"
-                    {% if current_navigation == 'design' %}aria-current="page"{% endif %}
-                    data-action="ui--sidebar#close"
-                >
-                    <i class="bi bi-palette" aria-hidden="true"></i>
-                    <span>Diseño</span>
-                </a>
-                <a
-                    href="{{ path('admin_printing_index') }}"
-                    class="pf-sidebar__link {{ current_navigation == 'printing' ? 'is-active' : '' }}"
-                    {% if current_navigation == 'printing' %}aria-current="page"{% endif %}
-                    data-action="ui--sidebar#close"
-                >
-                    <i class="bi bi-printer" aria-hidden="true"></i>
-                    <span>Impresión</span>
-                </a>
-                <a
-                    href="{{ path('admin_production_execution_index') }}"
-                    class="pf-sidebar__link {{ current_navigation == 'production_execution' ? 'is-active' : '' }}"
-                    {% if current_navigation == 'production_execution' %}aria-current="page"{% endif %}
-                    data-action="ui--sidebar#close"
-                >
-                    <i class="bi bi-play-circle" aria-hidden="true"></i>
-                    <span>Ejecución</span>
-                </a>
-            {% endif %}
-            {% if is_granted('quality.review') %}
-                <a
-                    href="{{ path('admin_production_quality_delivery_quality_index') }}"
-                    class="pf-sidebar__link {{ current_navigation == 'quality' ? 'is-active' : '' }}"
-                    {% if current_navigation == 'quality' %}aria-current="page"{% endif %}
-                    data-action="ui--sidebar#close"
-                >
-                    <i class="bi bi-clipboard2-check" aria-hidden="true"></i>
-                    <span>Calidad</span>
-                </a>
-            {% endif %}
-            {% if is_granted('delivery.confirm') or is_granted('delivery.ship') %}
-                <a
-                    href="{{ path('admin_production_quality_delivery_delivery_index') }}"
-                    class="pf-sidebar__link {{ current_navigation == 'delivery' ? 'is-active' : '' }}"
-                    {% if current_navigation == 'delivery' %}aria-current="page"{% endif %}
-                    data-action="ui--sidebar#close"
-                >
-                    <i class="bi bi-box-seam" aria-hidden="true"></i>
-                    <span>Entregas</span>
-                </a>
             {% endif %}
         {% endif %}
 

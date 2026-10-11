@@ -753,6 +753,52 @@ final class ServiceOrderController extends AbstractController
 
             return $byRoot !== 0 ? $byRoot : ($left->getSplitPosition() ?? 0) <=> ($right->getSplitPosition() ?? 0);
         });
+        $designItems = [];
+        foreach ($allPlans as $plan) {
+            if ($plan->getOperation()->getCode() === 'PRE-DISENO') {
+                $designItems[(int) $plan->getServiceOrderItem()->getId()] = $plan->getServiceOrderItem();
+            }
+        }
+        $designRequired = $designItems !== [];
+        $designPendingItems = count(array_filter(
+            $designItems,
+            static fn (ServiceOrderItem $item): bool => $item->getDesignStatus()->value !== 'READY_FOR_PRINT',
+        ));
+        $designComplete = !$designRequired || $designPendingItems === 0;
+        $productionStatus = $serviceOrder->getProductionStatus()->value;
+        $deliveryStatus = $serviceOrder->getDeliveryStatus()->value;
+        $planningComplete = $serviceOrder->isPlanned();
+        $productionComplete = in_array($productionStatus, ['WAITING_QUALITY', 'PRODUCTION_COMPLETED'], true);
+        $qualityComplete = $productionStatus === 'PRODUCTION_COMPLETED';
+        $deliveryComplete = $deliveryStatus === 'DELIVERED';
+        $completedOrderStages = (int) $planningComplete
+            + (int) ($designRequired && $designComplete)
+            + (int) $productionComplete
+            + (int) $qualityComplete
+            + (int) $deliveryComplete;
+        $trackedOrderStages = $designRequired ? 5 : 4;
+        $currentOrderStage = match (true) {
+            $productionStatus === 'CANCELLED' => 'cancelled',
+            !$planningComplete => 'planning',
+            !$designComplete => 'design',
+            in_array($productionStatus, ['WAITING_DESIGN', 'IN_PRODUCTION'], true) => 'production',
+            in_array($productionStatus, ['WAITING_QUALITY', 'QUALITY_REWORK'], true) => 'quality',
+            $productionStatus === 'PRODUCTION_COMPLETED' && !$deliveryComplete => 'delivery',
+            default => 'complete',
+        };
+        $orderProgress = [
+            'percent' => (int) round($completedOrderStages / $trackedOrderStages * 100),
+            'current_stage' => $currentOrderStage,
+            'design_required' => $designRequired,
+            'design_pending_items' => $designPendingItems,
+            'stages' => [
+                'planning' => $planningComplete,
+                'design' => $designComplete,
+                'production' => $productionComplete,
+                'quality' => $qualityComplete,
+                'delivery' => $deliveryComplete,
+            ],
+        ];
         $planningForm = null;
         $itemOperationForms = [];
         $equipmentForms = [];
@@ -876,6 +922,7 @@ final class ServiceOrderController extends AbstractController
         return $this->render('admin/service_orders/show.html.twig', [
             'serviceOrder' => $serviceOrder,
             'productionForecast' => $productionForecast,
+            'orderProgress' => $orderProgress,
             'planningProgress' => $planningProgress,
             'planningHasIssues' => $planningHasIssues,
             'canReserveFullPlan' => $canReserveFullPlan,

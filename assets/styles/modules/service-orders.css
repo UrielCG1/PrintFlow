@@ -167,6 +167,158 @@
     transition: width 220ms ease;
 }
 
+.service-order-page .service-order-journey {
+    border-color: rgba(var(--pf-primary-rgb), 0.24);
+}
+
+.service-order-journey__heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.service-order-journey__eyebrow {
+    margin: 0 0 0.2rem;
+    color: var(--pf-text-muted);
+    font-size: var(--pf-font-size-label-sm);
+    font-weight: var(--pf-font-weight-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.service-order-journey__title {
+    margin: 0;
+    color: var(--pf-on-primary-fixed);
+    font-size: var(--pf-font-size-title-md);
+    font-weight: var(--pf-font-weight-semibold);
+}
+
+.service-order-journey__percent {
+    color: var(--pf-on-primary-fixed);
+    font-size: 1.5rem;
+    font-weight: var(--pf-font-weight-bold);
+}
+
+.service-order-page .service-order-journey__bar {
+    height: 0.5rem;
+    margin-top: 0.9rem;
+}
+
+.service-order-journey__steps {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.65rem;
+    margin: 1.25rem 0;
+    padding: 0;
+    list-style: none;
+}
+
+.service-order-journey__step {
+    display: flex;
+    min-width: 0;
+    min-height: 5rem;
+    align-items: flex-start;
+    gap: 0.65rem;
+    padding: 0.75rem;
+    background: var(--pf-surface-container-lowest);
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-md);
+}
+
+.service-order-journey__step.is-complete {
+    border-color: rgba(var(--pf-primary-rgb), 0.28);
+    background: rgba(var(--pf-primary-container-rgb), 0.16);
+}
+
+.service-order-journey__step.is-current {
+    border-color: var(--pf-primary);
+    box-shadow: 0 0 0 2px rgba(var(--pf-primary-rgb), 0.12);
+}
+
+.service-order-journey__icon {
+    display: inline-grid;
+    width: 1.8rem;
+    height: 1.8rem;
+    flex: 0 0 1.8rem;
+    place-items: center;
+    color: var(--pf-outline);
+    background: var(--pf-surface-container);
+    border-radius: 50%;
+}
+
+.service-order-journey__step.is-complete .service-order-journey__icon {
+    color: var(--pf-on-primary-container);
+    background: rgba(var(--pf-primary-container-rgb), 0.75);
+}
+
+.service-order-journey__step.is-current .service-order-journey__icon {
+    color: var(--pf-on-primary-container);
+    background: rgba(var(--pf-primary-container-rgb), 0.75);
+}
+
+.service-order-journey__copy {
+    display: grid;
+    min-width: 0;
+    gap: 0.1rem;
+}
+
+.service-order-journey__copy strong {
+    color: var(--pf-on-surface);
+    font-size: var(--pf-font-size-body-sm);
+}
+
+.service-order-journey__copy > span {
+    color: var(--pf-text-muted);
+    font-size: var(--pf-font-size-label-sm);
+}
+
+.service-order-journey__step.is-current .service-order-journey__copy > span {
+    color: var(--pf-primary);
+    font-weight: var(--pf-font-weight-semibold);
+}
+
+.service-order-journey__copy small {
+    overflow: hidden;
+    color: var(--pf-text-muted);
+    font-size: var(--pf-font-size-label-sm);
+    text-overflow: ellipsis;
+}
+
+.service-order-journey__next {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem 1rem;
+    background: var(--pf-surface-container-low);
+    border-radius: var(--pf-radius-md);
+}
+
+.service-order-journey__next strong {
+    display: block;
+    color: var(--pf-on-surface);
+}
+
+.service-order-journey__next p {
+    margin: 0.2rem 0 0;
+    color: var(--pf-text-muted);
+    font-size: var(--pf-font-size-body-sm);
+}
+
+.service-order-journey__action {
+    display: flex;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+}
+
+.service-order-journey__owner {
+    color: var(--pf-text-muted);
+    font-size: var(--pf-font-size-body-sm);
+    font-weight: var(--pf-font-weight-semibold);
+    text-align: right;
+}
+
 .service-order-page .pf-table-responsive {
     border: 1px solid var(--pf-border-color);
     border-radius: var(--pf-radius-md);
@@ -187,6 +339,29 @@
 
     .service-order-page .service-order-disclosure__hint {
         display: none;
+    }
+
+    .service-order-journey__steps {
+        grid-template-columns: 1fr;
+    }
+
+    .service-order-journey__step {
+        min-height: 0;
+        align-items: center;
+    }
+
+    .service-order-journey__next {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .service-order-journey__action {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .service-order-journey__owner {
+        text-align: left;
     }
 }
 

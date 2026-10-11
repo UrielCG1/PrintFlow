@@ -36,6 +36,109 @@
             </div>
         </header>
 
+        {% set orderStages = [
+            {key: 'planning', label: 'Planificación', icon: 'bi-calendar2-check', detail: 'Ruta, equipo, tiempo y agenda'},
+            {key: 'design', label: 'Diseño', icon: 'bi-palette', detail: not orderProgress.design_required ? 'No aplica a esta ruta' : (orderProgress.design_pending_items > 0 ? orderProgress.design_pending_items ~ ' partida(s) por liberar' : 'Diseños liberados')},
+            {key: 'production', label: 'Producción', icon: 'bi-printer', detail: 'Ejecución de operaciones'},
+            {key: 'quality', label: 'Calidad', icon: 'bi-clipboard2-check', detail: serviceOrder.productionStatus.value == 'QUALITY_REWORK' ? 'Retrabajo solicitado' : 'Inspección y liberación'},
+            {key: 'delivery', label: 'Entrega', icon: 'bi-box-seam', detail: serviceOrder.deliveryStatus.label}
+        ] %}
+        <section class="pf-card service-order-journey mb-4" aria-labelledby="service-order-journey-title">
+            <div class="pf-card__body">
+                <div class="service-order-journey__heading">
+                    <div>
+                        <p class="service-order-journey__eyebrow">Seguimiento</p>
+                        <h2 id="service-order-journey-title" class="service-order-journey__title">Progreso de la orden</h2>
+                    </div>
+                    <strong class="service-order-journey__percent">{{ orderProgress.percent }}%</strong>
+                </div>
+                <div class="progress service-order-journey__bar" role="progressbar" aria-label="Progreso de la orden" aria-valuenow="{{ orderProgress.percent }}" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-bar" style="width: {{ orderProgress.percent }}%"></div>
+                </div>
+
+                <ol class="service-order-journey__steps" aria-label="Etapas de la orden">
+                    {% for stage in orderStages %}
+                        {% set stageComplete = orderProgress.stages[stage.key] %}
+                        {% set stageCurrent = orderProgress.current_stage == stage.key %}
+                        {% set stageClass = stageComplete ? 'is-complete' : (stageCurrent ? 'is-current' : 'is-pending') %}
+                        <li class="service-order-journey__step {{ stageClass }}"{% if stageCurrent %} aria-current="step"{% endif %}>
+                            <span class="service-order-journey__icon"><i class="bi {{ stageComplete ? 'bi-check-lg' : stage.icon }}" aria-hidden="true"></i></span>
+                            <span class="service-order-journey__copy">
+                                <strong>{{ stage.label }}</strong>
+                                <span>{{ stage.key == 'design' and not orderProgress.design_required ? 'No requerida' : (stageComplete ? 'Completada' : (stageCurrent ? 'En curso' : 'Pendiente')) }}</span>
+                                <small>{{ stage.detail }}</small>
+                            </span>
+                        </li>
+                    {% endfor %}
+                </ol>
+
+                <div class="service-order-journey__next">
+                    <div>
+                        <span class="service-order-journey__eyebrow">Siguiente paso</span>
+                        {% if orderProgress.current_stage == 'planning' %}
+                            <strong>Completar la planificación</strong>
+                            <p>Confirmar la fecha y dejar las operaciones listas para el taller.</p>
+                        {% elseif orderProgress.current_stage == 'design' %}
+                            <strong>Revisar y liberar el diseño</strong>
+                            <p>{{ orderProgress.design_pending_items }} partida(s) todavía requieren atención de Diseño.</p>
+                        {% elseif orderProgress.current_stage == 'production' %}
+                            <strong>Continuar la producción</strong>
+                            <p>Registrar el avance de las operaciones y sus incidencias.</p>
+                        {% elseif orderProgress.current_stage == 'quality' %}
+                            <strong>{{ serviceOrder.productionStatus.value == 'QUALITY_REWORK' ? 'Atender el retrabajo' : 'Inspeccionar el producto' }}</strong>
+                            <p>{{ serviceOrder.productionStatus.value == 'QUALITY_REWORK' ? 'Calidad solicitó una corrección antes de liberar la orden.' : 'Calidad debe revisar y liberar los trabajos terminados.' }}</p>
+                        {% elseif orderProgress.current_stage == 'delivery' %}
+                            <strong>Preparar y confirmar la entrega</strong>
+                            <p>Revisar la modalidad de entrega y registrar su avance.</p>
+                        {% elseif orderProgress.current_stage == 'cancelled' %}
+                            <strong>Producción cancelada</strong>
+                            <p>El seguimiento del trabajo se detuvo al cancelar la orden.</p>
+                        {% else %}
+                            <strong>Orden entregada</strong>
+                            <p>El recorrido de producción y entrega está completo.</p>
+                        {% endif %}
+                    </div>
+                    <div class="service-order-journey__action">
+                        {% if orderProgress.current_stage == 'planning' %}
+                            {% if canPlan %}
+                                <a href="#planning-section" class="btn pf-button pf-button--secondary">Ir a planificación</a>
+                            {% elseif canManageCommitment and not serviceOrder.commitmentDate %}
+                                <a href="#commitment-date-control" class="btn pf-button pf-button--secondary">Confirmar fecha</a>
+                            {% elseif canManageCommitment %}
+                                <a href="#commitment-date-control" class="btn pf-button pf-button--secondary">Revisar fecha</a>
+                            {% else %}
+                                <span class="service-order-journey__owner">Siguiente responsable: Ventas y Producción</span>
+                            {% endif %}
+                        {% elseif orderProgress.current_stage == 'design' %}
+                            {% if is_granted('production.view') and is_granted('production.design.review') %}
+                                <a href="{{ path('admin_design_index') }}" class="btn pf-button pf-button--secondary">Abrir Diseño</a>
+                            {% else %}
+                                <span class="service-order-journey__owner">Siguiente responsable: Diseño</span>
+                            {% endif %}
+                        {% elseif orderProgress.current_stage == 'production' %}
+                            {% if is_granted('production.view') and is_granted('production.execute') %}
+                                <a href="{{ path('admin_production_execution_index') }}" class="btn pf-button pf-button--secondary">Abrir Ejecución</a>
+                            {% else %}
+                                <span class="service-order-journey__owner">Siguiente responsable: Producción</span>
+                            {% endif %}
+                        {% elseif orderProgress.current_stage == 'quality' %}
+                            {% if is_granted('quality.review') %}
+                                <a href="{{ path('admin_production_quality_delivery_quality_index') }}" class="btn pf-button pf-button--secondary">Abrir Calidad</a>
+                            {% else %}
+                                <span class="service-order-journey__owner">Siguiente responsable: Calidad</span>
+                            {% endif %}
+                        {% elseif orderProgress.current_stage == 'delivery' %}
+                            {% if is_granted('delivery.confirm') or is_granted('delivery.ship') %}
+                                <a href="{{ path('admin_production_quality_delivery_delivery_index') }}" class="btn pf-button pf-button--secondary">Abrir Entregas</a>
+                            {% else %}
+                                <span class="service-order-journey__owner">Siguiente responsable: Ventas y Entregas</span>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <div class="row g-4 mb-4">
             {% if is_granted('service_orders.view_commercial') %}
                 <div class="col-12 col-md-4">
@@ -77,7 +180,7 @@
                         {% endif %}
                         <span class="d-block text-muted small mt-1">{{ productionForecast.order.risk_cause }}</span>
                         {% if canManageCommitment %}
-                            <details class="service-order-disclosure service-order-disclosure--primary mt-3">
+                            <details id="commitment-date-control" class="service-order-disclosure service-order-disclosure--primary mt-3">
                                 <summary>
                                     <span class="service-order-disclosure__label"><i class="bi bi-calendar-check" aria-hidden="true"></i> {{ serviceOrder.commitmentDate ? 'Cambiar fecha compromiso' : 'Confirmar fecha compromiso' }}</span>
                                     <span class="service-order-disclosure__hint">Ventas define el plazo prometido</span>
@@ -174,7 +277,7 @@
             </section>
         {% endif %}
 
-        <section class="pf-card mb-4">
+        <section id="planning-section" class="pf-card mb-4">
             <header class="pf-card__header">
                 <h2 class="pf-card__title">Planificación operativa</h2>
                 <p class="pf-card__description">La ruta de cada producto ya está copiada. Completa los datos pendientes y el sistema calculará y reservará lo que pueda con la información disponible.</p>
@@ -186,8 +289,8 @@
             <div class="pf-card__body border-bottom">
                 <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
                     <div class="flex-grow-1">
-                        <strong>Avance de la orden</strong>
-                        <div class="progress mt-2" role="progressbar" aria-label="Avance de planificación" aria-valuenow="{{ progressPercent }}" aria-valuemin="0" aria-valuemax="100">
+                        <strong>Preparación de la planificación</strong>
+                        <div class="progress mt-2" role="progressbar" aria-label="Preparación de planificación" aria-valuenow="{{ progressPercent }}" aria-valuemin="0" aria-valuemax="100">
                             <div class="progress-bar" style="width: {{ progressPercent }}%"></div>
                         </div>
                         <p class="mb-0 mt-2 small text-muted">
