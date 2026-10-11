@@ -81,4 +81,19 @@ final class ServiceOrderOperationPlanRepository extends ServiceEntityRepository
 
         return $plan;
     }
+
+    public function findPreviousActivePlan(ServiceOrderOperationPlan $plan): ?ServiceOrderOperationPlan
+    {
+        /** @var ServiceOrderOperationPlan|null $previous */
+        $previous = $this->createQueryBuilder('previous')
+            ->andWhere('previous.serviceOrderItem = :item')
+            ->andWhere('previous.isActive = true')
+            ->andWhere('previous.sequenceNumber < :sequence')
+            ->setParameter('item', $plan->getServiceOrderItem())
+            ->setParameter('sequence', $plan->getSequenceNumber())
+            ->orderBy('previous.sequenceNumber', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()->getOneOrNullResult();
+        return $previous;
+    }
 }

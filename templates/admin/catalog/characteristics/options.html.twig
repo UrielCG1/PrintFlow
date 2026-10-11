@@ -20,7 +20,7 @@
                 {% if activeOptions|length > 1 %}
                     <a href="{{ path('admin_catalog_characteristics_options_order', {id: characteristic.id}) }}" class="btn pf-button pf-button--secondary"><i class="bi bi-arrow-down-up" aria-hidden="true"></i><span>Ordenar opciones</span></a>
                 {% endif %}
-                <a href="{{ path('admin_catalog_characteristics_option_new', {id: characteristic.id}) }}" class="btn pf-button pf-button--primary"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Nueva opción</span></a>
+                <a href="{{ path('admin_catalog_characteristics_option_new', {id: characteristic.id}) }}" class="btn pf-button pf-button--primary"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Agregar opciones</span></a>
             </div>
         {% endif %}
     </header>

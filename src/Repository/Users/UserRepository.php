@@ -52,6 +52,21 @@ final class UserRepository extends ServiceEntityRepository implements PasswordUp
             ->getSingleScalarResult();
     }
 
+    /** @return list<User> */
+    public function findActiveProductionOperators(): array
+    {
+        /** @var list<User> $users */
+        $users = $this->createQueryBuilder('user')
+            ->innerJoin('user.assignedRoles', 'role')
+            ->andWhere('user.isActive = true')
+            ->andWhere('user.deletedAt IS NULL')
+            ->andWhere('role.code = :operatorRole')
+            ->setParameter('operatorRole', 'ROLE_OPERATOR')
+            ->orderBy('user.fullName', 'ASC')
+            ->getQuery()->getResult();
+        return $users;
+    }
+
     public function paginateForAdministration(
         ?string $search,
         int $page,

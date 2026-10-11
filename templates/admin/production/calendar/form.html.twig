@@ -1,0 +1,29 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}{{ pageTitle }} | OoxCorp{% endblock %}
+{% block app_navigation_active %}production_calendar{% endblock %}
+{% block app_breadcrumb %}Operación / Producción / Jornada / {{ pageTitle }}{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page__content">
+        <header class="pf-page-header"><div class="pf-page-header__content"><h1 class="pf-page-header__title">{{ pageTitle }}</h1></div></header>
+        <section class="pf-card">
+            {% form_theme form 'form/printflow_theme.html.twig' %}
+            {{ form_start(form, {attr: {class: 'pf-form pf-card__body'}}) }}
+                {{ form_errors(form) }}
+                <div class="row g-3">
+                    <div class="col-md-6">{{ form_row(form.type) }}</div>
+                    <div class="col-md-6">{{ form_row(form.equipment) }}</div>
+                    <div class="col-md-6">{{ form_row(form.startsAt) }}</div>
+                    <div class="col-md-6">{{ form_row(form.endsAt) }}</div>
+                    <div class="col-12">{{ form_row(form.reason) }}</div>
+                </div>
+                <p class="small text-muted">Los feriados se aplican al día completo indicado. Mantenimiento y avería bloquean la máquina durante el intervalo. Horas extra autorizan trabajo fuera de la jornada base y respetan los bloqueos.</p>
+                <div class="pf-form-actions">
+                    <a href="{{ path('admin_production_calendar_index') }}" class="btn pf-button pf-button--secondary">Cancelar</a>
+                    <button type="submit" class="btn pf-button pf-button--primary">Guardar excepción</button>
+                </div>
+            {{ form_end(form) }}
+        </section>
+    </div>
+{% endblock %}

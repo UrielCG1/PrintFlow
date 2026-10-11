@@ -108,6 +108,14 @@ final class EquipmentController extends AbstractController
         $data->serialNumber = $equipment->getSerialNumber();
         $data->usableWidthCm = $equipment->getUsableWidthCm();
         $data->technicalCapacity = $equipment->getTechnicalCapacity();
+        $data->capacityUnit = $equipment->getCapacityUnit();
+        $data->capacityRate = $equipment->getCapacityRate();
+        $data->setupMinutes = $equipment->getSetupMinutes();
+        $data->cleanupMinutes = $equipment->getCleanupMinutes();
+        $data->efficiencyPercent = $equipment->getEfficiencyPercent();
+        $data->capacityValidFrom = $equipment->getCapacityValidFrom()?->format('Y-m-d');
+        $data->capacityValidUntil = $equipment->getCapacityValidUntil()?->format('Y-m-d');
+        $data->capacityValidated = $equipment->getCapacityValidatedAt() !== null;
         $data->colorConfiguration = $equipment->getColorConfiguration();
         $data->observations = $equipment->getObservations();
 

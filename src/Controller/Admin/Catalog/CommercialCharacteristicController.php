@@ -6,6 +6,7 @@ namespace App\Controller\Admin\Catalog;
 
 use App\Application\Catalog\CommercialCharacteristicData;
 use App\Application\Catalog\CommercialCharacteristicManager;
+use App\Application\Catalog\CommercialCharacteristicOptionBatchData;
 use App\Application\Catalog\CommercialCharacteristicOptionData;
 use App\Application\Catalog\CommercialCharacteristicTechnicalContract;
 use App\Entity\Catalog\CommercialCharacteristic;
@@ -13,6 +14,7 @@ use App\Entity\Catalog\CommercialCharacteristicOption;
 use App\Entity\Users\User;
 use App\Enum\Catalog\CommercialCharacteristicInputType;
 use App\Enum\Catalog\CommercialItemType;
+use App\Form\Admin\Catalog\CommercialCharacteristicOptionBatchType;
 use App\Form\Admin\Catalog\CommercialCharacteristicOptionType;
 use App\Form\Admin\Catalog\CommercialCharacteristicType;
 use App\Repository\Catalog\CommercialCharacteristicOptionRepository;
@@ -361,19 +363,24 @@ final class CommercialCharacteristicController extends AbstractController
         $this->denyAccessUnlessGranted('catalog.characteristics.manage');
         $this->assertSupportsOptions($characteristic);
 
-        $data = new CommercialCharacteristicOptionData();
-        $data->characteristic = $characteristic;
-        $form = $this->createForm(CommercialCharacteristicOptionType::class, $data);
+        $data = new CommercialCharacteristicOptionBatchData();
+        $firstOption = new CommercialCharacteristicOptionData();
+        $firstOption->characteristic = $characteristic;
+        $data->options[] = $firstOption;
+        $form = $this->createForm(CommercialCharacteristicOptionBatchType::class, $data, [
+            'characteristic' => $characteristic,
+        ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             try {
-                $manager->createOption($characteristic, $data, $this->getActor());
-                $this->addFlash('success', 'Opción registrada correctamente.');
+                $count = count($data->options);
+                $manager->createOptions($characteristic, $data->options, $this->getActor());
+                $this->addFlash('success', sprintf('%d %s correctamente.', $count, $count === 1 ? 'opción registrada' : 'opciones registradas'));
 
                 return $this->redirectToRoute('admin_catalog_characteristics_options', ['id' => $characteristic->getId()]);
             } catch (UniqueConstraintViolationException) {
-                $form->addError(new FormError('Ya existe otra opción con ese código o nombre dentro de la característica.'));
+                $form->addError(new FormError('Ya existe una opción con alguno de estos códigos o nombres dentro de la característica. Revisa los renglones e inténtalo de nuevo.'));
             }
         }
 

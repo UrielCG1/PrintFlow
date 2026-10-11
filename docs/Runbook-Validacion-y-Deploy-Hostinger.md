@@ -1,8 +1,8 @@
 # PrintFlow — comandos de validación y despliegue en Hostinger
 
 **Fecha:** 10 de octubre de 2026
-**Estado:** comandos preparados; no se ejecutaron en Hostinger.
-**Alcance:** cerrar verificaciones de la Fase 0 y describir el despliegue controlado de Symfony en producción.
+**Estado:** Uriel reporta que la Fase 1 ya está desplegada y funciona en producción. La Fase 2 aún no se ha desplegado; los comandos al final se actualizaron para esa liberación.
+**Alcance:** cerrar verificaciones pendientes de Fase 0 y documentar el despliegue controlado de Symfony, sin respaldos.
 
 Este repositorio contiene cambios locales sin publicar. Antes de desplegar, revisar y aprobar el conjunto de cambios, conservar los cambios de otras personas, y publicar un commit identificado. No desplegar el árbol de trabajo local directamente.
 
@@ -201,7 +201,7 @@ git diff --cached --check
 git diff --cached --stat
 git diff --cached
 # Después de revisar que solo estén los archivos de la entrega aprobada:
-git commit -m "Implementa rutas de producción por producto y partida"
+git commit -m "Agrega estimación y reservas de producción"
 git push origin main
 git rev-parse HEAD
 ```
@@ -253,7 +253,7 @@ php bin/console doctrine:migrations:status --env=prod --no-debug
 php bin/console doctrine:schema:validate --env=prod --no-debug
 ```
 
-Verificar que `doctrine:migrations:status` termine en la última versión del commit desplegado. El error `discount_breakdown` solo queda resuelto en producción cuando está desplegado el código que mapea la columna y también está aplicada `Version20261003010000`; no inferirlo del estado local. Las migraciones de Fase 1 incluidas en esta entrega son `Version20261010130000` y `Version20261010140000` y deben aparecer en el *dry run* si aún están pendientes en la base de Hostinger.
+Verificar que `doctrine:migrations:status` termine en la última versión del commit desplegado. El error `discount_breakdown` solo queda resuelto en producción cuando está desplegado el código que mapea la columna y también está aplicada `Version20261003010000`; no inferirlo del estado local. Para el commit de Fase 2, el *dry run* debe incluir `Version20261010150000` si esa versión todavía no está aplicada. Las migraciones anteriores de Fase 1 (`Version20261010130000` y `Version20261010140000`) solo aparecerán si siguen pendientes en la base destino.
 
 El repositorio no tiene un comando de mantenimiento de Symfony configurado; no usar `bin/console down`. Programar el cambio en una ventana de bajo tráfico. No usar `chmod -R 777`; resolver cualquier permiso de `var/cache` y `var/log` con el propietario/grupo de PHP asignado por Hostinger.
 

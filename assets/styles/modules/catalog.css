@@ -797,6 +797,47 @@
     margin-top: var(--pf-space-xl);
 }
 
+.pf-catalog-option-entries {
+    display: grid;
+    gap: var(--pf-space-md);
+}
+
+.pf-catalog-option-entry {
+    padding: var(--pf-space-lg);
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-md);
+    background: var(--pf-surface);
+}
+
+.pf-catalog-option-entry__header,
+.pf-catalog-option-entry__header > div {
+    display: flex;
+    align-items: center;
+    gap: var(--pf-space-sm);
+}
+
+.pf-catalog-option-entry__header {
+    justify-content: space-between;
+    margin-bottom: var(--pf-space-md);
+}
+
+.pf-catalog-option-entry__number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.75rem;
+    height: 1.75rem;
+    padding: 0 0.3rem;
+    border-radius: 50%;
+    background: rgba(var(--pf-primary-rgb), 0.1);
+    color: var(--pf-primary);
+    font-weight: var(--pf-font-weight-bold);
+}
+
+.pf-catalog-option-add {
+    margin-top: var(--pf-space-md);
+}
+
 .pf-catalog-conversion-example {
     margin-top: var(--pf-space-md);
 }

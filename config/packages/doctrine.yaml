@@ -1,6 +1,8 @@
 doctrine:
     dbal:
         url: '%env(DATABASE_URL)%'
+        types:
+            utc_datetime_immutable: App\Doctrine\Type\UtcDateTimeImmutableType
 
         # Tabla técnica administrada por migración y DBAL, no por el ORM.
         schema_filter: '~^(?!(?:quotation|service_order)_folio_sequences$).*~'

@@ -129,4 +129,14 @@ final class EquipmentRepository extends ServiceEntityRepository
 
         return $equipment;
     }
+
+    /** @return list<Equipment> */
+    public function findAllForCalendarException(): array
+    {
+        /** @var list<Equipment> $equipment */
+        $equipment = $this->createQueryBuilder('equipment')
+            ->orderBy('equipment.name', 'ASC')
+            ->getQuery()->getResult();
+        return $equipment;
+    }
 }

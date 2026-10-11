@@ -117,7 +117,7 @@
         <section class="pf-card mb-4">
             <header class="pf-card__header">
                 <h2 class="pf-card__title">Planificación operativa</h2>
-                <p class="pf-card__description">La ruta publicada del Producto se copia automáticamente a cada partida. Puedes ajustar operaciones y equipos antes de planificar; todavía no se calculan tiempos, capacidad ni materiales.</p>
+                <p class="pf-card__description">La ruta publicada del Producto se copia automáticamente a cada partida. Asigna equipo, estima la carga física y reserva los tramos de jornada; el tiempo calculado siempre conserva la capacidad usada como referencia.</p>
             </header>
 
             {% if canPlan %}
@@ -210,6 +210,11 @@
                                                         {{ form_widget(equipmentForms[plan.id].equipment, {attr: {class: 'form-select form-select-sm mb-2'}}) }}
                                                         <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Guardar equipo</button>
                                                     {{ form_end(equipmentForms[plan.id]) }}
+                                                    {% if plan.equipment and plan.equipment.capacityUnit %}
+                                                        <span class="d-block text-muted small mt-1">{{ plan.equipment.capacityRate }} {{ plan.equipment.capacityUnit.label }}{% if plan.equipment.capacityValidatedAt %} · validada {{ plan.equipment.capacityValidatedAt|date('d/m/Y') }}{% else %} · pendiente de validar{% endif %}</span>
+                                                    {% elseif plan.equipment %}
+                                                        <span class="d-block text-warning small mt-1">Sin rendimiento numérico estructurado</span>
+                                                    {% endif %}
                                                 {% elseif plan.equipment %}
                                                     <strong>{{ plan.equipmentSnapshot.name ?? plan.equipment.name }}</strong>
                                                     <span class="d-block text-muted small">{{ plan.equipmentSnapshot.code ?? plan.equipment.code }}</span>
@@ -235,6 +240,81 @@
                                                     </form>
                                                 </td>
                                             {% endif %}
+                                        </tr>
+                                        {% set planReservations = reservationsByPlan[plan.id]|default([]) %}
+                                        <tr class="table-light">
+                                            <td colspan="{{ canPlan ? (plans|length > 1 ? 6 : 5) : 4 }}">
+                                                <div class="d-flex flex-column gap-2">
+                                                    <div>
+                                                        {% if plan.estimateKind %}
+                                                            <strong>Estimación {{ plan.estimateKind.value == 'manual' ? 'manual' : 'calculada' }}:</strong>
+                                                            {{ plan.estimatedMinutes }} min
+                                                            {% if plan.estimatedLoadValue and plan.estimatedLoadUnit %} · Carga {{ plan.estimatedLoadValue }} {{ plan.estimatedLoadUnit.label }}{% endif %}
+                                                            {% if plan.estimateKind.value == 'manual' %}<span class="text-muted"> · {{ plan.manualEstimateReason }}</span>{% endif %}
+                                                            {% if plan.actualMinutes is not null %}
+                                                                <span class="ms-2"><strong>Real:</strong> {{ plan.actualMinutes }} min · Diferencia: {{ plan.actualMinutes - plan.estimatedMinutes }} min</span>
+                                                            {% endif %}
+                                                        {% else %}
+                                                            <span class="text-muted">Sin estimación guardada.</span>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% if planReservations|length > 0 %}
+                                                        <div>
+                                                            <strong>Reservas:</strong>
+                                                            {% for reservation in planReservations %}
+                                                                <span class="badge text-bg-light border">{{ reservation.startsAt|date('d/m H:i', 'America/Mexico_City') }}–{{ reservation.endsAt|date('d/m H:i', 'America/Mexico_City') }} · {{ reservation.equipment.code }}</span>
+                                                            {% endfor %}
+                                                        </div>
+                                                    {% endif %}
+                                                    {% if canPlan %}
+                                                        <form method="post" action="{{ path('admin_service_orders_estimate_item_operation', {id: serviceOrder.id, plan: plan.id}) }}" class="pf-form">
+                                                            <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-estimate-' ~ plan.id) }}">
+                                                            <div class="row g-2 align-items-end">
+                                                                <div class="col-md-2">
+                                                                    <label class="form-label" for="load-unit-{{ plan.id }}">Unidad física</label>
+                                                                    <select class="form-select form-select-sm" id="load-unit-{{ plan.id }}" name="load_unit">
+                                                                        <option value="">De la máquina</option>
+                                                                        {% for unit in productionLoadUnits %}
+                                                                            <option value="{{ unit.value }}"{% if plan.estimatedLoadUnit == unit %} selected{% elseif plan.estimatedLoadUnit is null and plan.equipment and plan.equipment.capacityUnit and plan.equipment.capacityUnit.loadUnit == unit %} selected{% endif %}>{{ unit.label }}</option>
+                                                                        {% endfor %}
+                                                                    </select>
+                                                                </div>
+                                                                <div class="col-md-2"><label class="form-label" for="load-{{ plan.id }}">Carga física</label><input class="form-control form-control-sm" id="load-{{ plan.id }}" name="load" inputmode="decimal" value="{{ plan.estimatedLoadValue ?? '' }}" placeholder="Vacío = m² por dimensiones"></div>
+                                                                <div class="col-md-2"><label class="form-label" for="manual-minutes-{{ plan.id }}">Minutos manuales</label><input class="form-control form-control-sm" id="manual-minutes-{{ plan.id }}" name="manual_minutes" inputmode="numeric" placeholder="Solo excepción"></div>
+                                                                <div class="col-md-4"><label class="form-label" for="estimate-reason-{{ plan.id }}">Motivo / datos de apoyo</label><input class="form-control form-control-sm" id="estimate-reason-{{ plan.id }}" name="reason" maxlength="500" placeholder="Obligatorio para minutos manuales"></div>
+                                                                <div class="col-md-2"><button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Guardar estimación</button></div>
+                                                            </div>
+                                                        </form>
+                                                        {% if planReservations|length == 0 and plan.estimatedMinutes and plan.equipment %}
+                                                            <form method="post" action="{{ path('admin_service_orders_reserve_item_operation', {id: serviceOrder.id, plan: plan.id}) }}">
+                                                                <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-reserve-' ~ plan.id) }}">
+                                                                <button type="submit" class="btn pf-button pf-button--primary pf-button--sm">Reservar máquina y jornada</button>
+                                                            </form>
+                                                        {% endif %}
+                                                        {% if planReservations|length > 0 %}
+                                                            <form method="post" action="{{ path('admin_service_orders_assign_item_operation_operator', {id: serviceOrder.id, plan: plan.id}) }}" class="d-flex gap-2 align-items-center">
+                                                                <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-operator-' ~ plan.id) }}">
+                                                                <label class="form-label mb-0" for="operator-{{ plan.id }}">Operador</label>
+                                                                <select class="form-select form-select-sm" id="operator-{{ plan.id }}" name="operator_id">
+                                                                    <option value="">Sin asignar</option>
+                                                                    {% for operator in productionOperators %}<option value="{{ operator.id }}"{% if plan.assignedOperator and plan.assignedOperator.id == operator.id %} selected{% endif %}>{{ operator.fullName }}</option>{% endfor %}
+                                                                </select>
+                                                                <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Guardar</button>
+                                                            </form>
+                                                        {% endif %}
+                                                        {% if planReservations|length > 0 %}
+                                                            <form method="post" action="{{ path('admin_service_orders_record_item_operation_actual_time', {id: serviceOrder.id, plan: plan.id}) }}" class="d-flex flex-wrap gap-2 align-items-end">
+                                                                <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-actual-' ~ plan.id) }}">
+                                                                <div><label class="form-label mb-1" for="actual-minutes-{{ plan.id }}">Tiempo real (min)</label><input class="form-control form-control-sm" id="actual-minutes-{{ plan.id }}" name="actual_minutes" type="number" min="0" required value="{{ plan.actualMinutes ?? '' }}"></div>
+                                                                <div class="flex-grow-1"><label class="form-label mb-1" for="actual-note-{{ plan.id }}">Nota de medición</label><input class="form-control form-control-sm" id="actual-note-{{ plan.id }}" name="actual_note" maxlength="500" required value="{{ plan.actualNote ?? '' }}"></div>
+                                                                <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Registrar real</button>
+                                                            </form>
+                                                        {% endif %}
+                                                    {% elseif plan.assignedOperator %}
+                                                        <span><strong>Operador:</strong> {{ plan.assignedOperator.fullName }}</span>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
                                         </tr>
                                     {% else %}
                                         <tr>
@@ -298,7 +378,7 @@
 
             {% if canPlan %}
                 <footer class="pf-card__body border-top d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                    <p class="mb-0 text-muted small">Para planificar se requiere fecha compromiso y al menos una operación activa en cada partida. El equipo sigue siendo opcional.</p>
+                    <p class="mb-0 text-muted small">Cada operación activa necesita equipo, estimación y reserva sin solapes; las etapas de una partida respetan su secuencia.{% if is_granted('production_calendar.manage') %} Configura feriados, mantenimiento u horas extra en <a href="{{ path('admin_production_calendar_index') }}">jornada de producción</a>.{% endif %}</p>
                     <form
                         method="post"
                         action="{{ path('admin_service_orders_mark_planned', {id: serviceOrder.id}) }}"

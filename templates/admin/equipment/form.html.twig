@@ -10,7 +10,7 @@
             <div class="pf-page-header__content">
                 <h1 class="pf-page-header__title">{{ pageTitle }}</h1>
                 <p class="pf-page-header__description">
-                    Registra datos técnicos consultables del equipo. La planificación de capacidad y mantenimiento se modelarán después.
+                    Registra ficha técnica y, cuando exista medición del taller, rendimiento numérico validado para estimar producción.
                 </p>
             </div>
         </div>
@@ -36,7 +36,7 @@
                 <section class="pf-form-section">
                     <h2 class="pf-form-section__title">Ficha técnica</h2>
                     <p class="pf-form-section__description">
-                        Estos datos documentan el equipo; no se usarán para calcular automáticamente tiempos, costos ni disponibilidad.
+                        La capacidad textual permanece como referencia histórica. Solo el rendimiento numérico validado se usa para estimar tiempo de máquina.
                     </p>
 
                     <div class="row g-3">
@@ -45,6 +45,14 @@
                         <div class="col-md-4 pf-form-field">{{ form_row(form.serialNumber) }}</div>
                         <div class="col-md-4 pf-form-field">{{ form_row(form.usableWidthCm) }}</div>
                         <div class="col-md-4 pf-form-field">{{ form_row(form.technicalCapacity) }}</div>
+                        <div class="col-md-4 pf-form-field">{{ form_row(form.capacityUnit) }}</div>
+                        <div class="col-md-4 pf-form-field">{{ form_row(form.capacityRate) }}</div>
+                        <div class="col-md-4 pf-form-field">{{ form_row(form.setupMinutes) }}</div>
+                        <div class="col-md-4 pf-form-field">{{ form_row(form.cleanupMinutes) }}</div>
+                        <div class="col-md-4 pf-form-field">{{ form_row(form.efficiencyPercent) }}</div>
+                        <div class="col-md-4 pf-form-field">{{ form_row(form.capacityValidFrom) }}</div>
+                        <div class="col-md-4 pf-form-field">{{ form_row(form.capacityValidUntil) }}</div>
+                        <div class="col-md-8 pf-form-field">{{ form_row(form.capacityValidated) }}</div>
                         <div class="col-md-4 pf-form-field">{{ form_row(form.colorConfiguration) }}</div>
                     </div>
                 </section>

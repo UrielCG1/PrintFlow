@@ -159,7 +159,7 @@
             {% endif %}
         {% endif %}
 
-        {% if is_granted('suppliers.view') or is_granted('materials.view') or is_granted('material_categories.view') or is_granted('operations.view') or is_granted('operation_areas.view') or is_granted('production_routes.manage') %}
+        {% if is_granted('suppliers.view') or is_granted('materials.view') or is_granted('material_categories.view') or is_granted('operations.view') or is_granted('operation_areas.view') or is_granted('production_routes.manage') or is_granted('production_calendar.manage') %}
             <p class="pf-sidebar__section">Operación</p>
 
             {% if is_granted('suppliers.view') %}
@@ -218,6 +218,18 @@
                 >
                     <i class="bi bi-signpost-split" aria-hidden="true"></i>
                     <span>Rutas de producción</span>
+                </a>
+            {% endif %}
+
+            {% if is_granted('production_calendar.manage') %}
+                <a
+                    href="{{ path('admin_production_calendar_index') }}"
+                    class="pf-sidebar__link {{ current_navigation == 'production_calendar' ? 'is-active' : '' }}"
+                    {% if current_navigation == 'production_calendar' %}aria-current="page"{% endif %}
+                    data-action="ui--sidebar#close"
+                >
+                    <i class="bi bi-calendar-week" aria-hidden="true"></i>
+                    <span>Jornada de producción</span>
                 </a>
             {% endif %}
 

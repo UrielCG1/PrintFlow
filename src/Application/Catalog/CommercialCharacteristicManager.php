@@ -7,6 +7,7 @@ namespace App\Application\Catalog;
 use App\Entity\Catalog\CommercialCharacteristic;
 use App\Entity\Catalog\CommercialCharacteristicOption;
 use App\Entity\Users\User;
+use App\Enum\Catalog\CommercialCharacteristicInputType;
 use App\Repository\Catalog\CommercialCharacteristicOptionRepository;
 use App\Repository\Catalog\CommercialCharacteristicRepository;
 use App\Repository\Catalog\CommercialItemCharacteristicRepository;
@@ -29,6 +30,9 @@ final class CommercialCharacteristicManager
     {
         return $this->entityManager->wrapInTransaction(function () use ($data, $actor): CommercialCharacteristic {
             $characteristic = new CommercialCharacteristic();
+            if ($data->inputType !== CommercialCharacteristicInputType::DECIMAL) {
+                $data->unitLabel = null;
+            }
             if ($data->displayOrder <= 0) {
                 $data->displayOrder = $this->characteristicRepository->nextDisplayOrder();
             }
@@ -81,6 +85,12 @@ final class CommercialCharacteristicManager
             }
 
             $oldValues = $this->characteristicSnapshot($characteristic);
+            if (
+                $data->inputType !== $characteristic->getInputType()
+                && $data->inputType !== CommercialCharacteristicInputType::DECIMAL
+            ) {
+                $data->unitLabel = null;
+            }
             $data->displayOrder = $characteristic->getDisplayOrder();
             $this->applyCharacteristicData($characteristic, $data);
             $newValues = $this->characteristicSnapshot($characteristic);
@@ -133,34 +143,54 @@ final class CommercialCharacteristicManager
         CommercialCharacteristicOptionData $data,
         User $actor,
     ): CommercialCharacteristicOption {
+        return $this->createOptions($characteristic, [$data], $actor)[0];
+    }
+
+    /**
+     * @param list<CommercialCharacteristicOptionData> $dataList
+     * @return list<CommercialCharacteristicOption>
+     */
+    public function createOptions(CommercialCharacteristic $characteristic, array $dataList, User $actor): array
+    {
         $this->assertSupportsOptions($characteristic);
+        if ($dataList === []) {
+            throw new \InvalidArgumentException('Agrega al menos una opción.');
+        }
 
-        return $this->entityManager->wrapInTransaction(function () use ($characteristic, $data, $actor): CommercialCharacteristicOption {
-            if ($data->characteristic !== $characteristic) {
-                throw new \LogicException('La opción no corresponde a la característica seleccionada.');
+        return $this->entityManager->wrapInTransaction(function () use ($characteristic, $dataList, $actor): array {
+            $nextOrder = $this->optionRepository->nextDisplayOrder($characteristic);
+            $options = [];
+
+            foreach ($dataList as $data) {
+                if ($data->characteristic !== $characteristic) {
+                    throw new \LogicException('La opción no corresponde a la característica seleccionada.');
+                }
+
+                if ($data->displayOrder <= 0) {
+                    $data->displayOrder = $nextOrder;
+                }
+                $nextOrder = max($nextOrder, $data->displayOrder) + 10;
+
+                $option = new CommercialCharacteristicOption();
+                $this->applyOptionData($option, $data, $characteristic);
+                $this->entityManager->persist($option);
+                $options[] = $option;
             }
 
-            if ($data->displayOrder <= 0) {
-                $data->displayOrder = $this->optionRepository->nextDisplayOrder($characteristic);
+            $this->entityManager->flush();
+            foreach ($options as $option) {
+                $this->auditLogger->record(
+                    $actor,
+                    'commercial_characteristic_option.created',
+                    'commercial_characteristic_option',
+                    $option->getId(),
+                    null,
+                    $this->optionSnapshot($option),
+                );
             }
-
-            $option = new CommercialCharacteristicOption();
-            $this->applyOptionData($option, $data, $characteristic);
-
-            $this->entityManager->persist($option);
             $this->entityManager->flush();
 
-            $this->auditLogger->record(
-                $actor,
-                'commercial_characteristic_option.created',
-                'commercial_characteristic_option',
-                $option->getId(),
-                null,
-                $this->optionSnapshot($option),
-            );
-            $this->entityManager->flush();
-
-            return $option;
+            return $options;
         });
     }
 

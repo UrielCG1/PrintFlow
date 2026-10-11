@@ -6,7 +6,11 @@ namespace App\Form\Admin\Equipment;
 
 use App\Application\Equipment\EquipmentData;
 use App\Entity\Operations\Operation;
+use App\Enum\Equipment\ProductionCapacityUnit;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+use Symfony\Component\Form\Extension\Core\Type\EnumType;
+use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -94,11 +98,53 @@ final class EquipmentType extends AbstractType
             ->add('technicalCapacity', TextType::class, [
                 'label' => 'Capacidad técnica',
                 'required' => false,
-                'help' => 'Regístrala como referencia, por ejemplo: 15 m²/h o 50 cm/s. No genera tiempos ni costos.',
+                'help' => 'Referencia histórica. No se convierte en rendimiento ni se usa para estimar.',
                 'attr' => [
                     'maxlength' => 120,
                     'autocomplete' => 'off',
                 ],
+            ])
+            ->add('capacityUnit', EnumType::class, [
+                'class' => ProductionCapacityUnit::class,
+                'label' => 'Unidad de rendimiento estructurado',
+                'required' => false,
+                'placeholder' => 'Sin validar / no estimable',
+                'choice_label' => static fn (ProductionCapacityUnit $unit): string => $unit->label(),
+                'help' => 'Selecciona solo después de medir la máquina. Para corte se captura trayectoria en cm, no piezas.',
+            ])
+            ->add('capacityRate', TextType::class, [
+                'label' => 'Rendimiento medido',
+                'required' => false,
+                'attr' => ['inputmode' => 'decimal', 'placeholder' => 'Ejemplo: 15'],
+            ])
+            ->add('setupMinutes', IntegerType::class, [
+                'label' => 'Preparación (minutos por trabajo)',
+                'required' => false,
+                'help' => 'Tiempo de preparación agregado una vez por operación.',
+            ])
+            ->add('cleanupMinutes', IntegerType::class, [
+                'label' => 'Limpieza / cierre (minutos por trabajo)',
+                'required' => false,
+            ])
+            ->add('efficiencyPercent', TextType::class, [
+                'label' => 'Eficiencia observada (%)',
+                'required' => false,
+                'attr' => ['inputmode' => 'decimal', 'placeholder' => '100'],
+            ])
+            ->add('capacityValidFrom', TextType::class, [
+                'label' => 'Rendimiento válido desde',
+                'required' => false,
+                'attr' => ['type' => 'date'],
+            ])
+            ->add('capacityValidUntil', TextType::class, [
+                'label' => 'Rendimiento válido hasta',
+                'required' => false,
+                'attr' => ['type' => 'date'],
+            ])
+            ->add('capacityValidated', CheckboxType::class, [
+                'label' => 'Confirmo que estos datos fueron medidos y validados en el taller',
+                'required' => false,
+                'help' => 'Al guardar se registra mi usuario y la fecha. Si no se confirma, el equipo seguirá sin estimación automática.',
             ])
             ->add('colorConfiguration', TextType::class, [
                 'label' => 'Configuración de colores',

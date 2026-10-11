@@ -15,6 +15,7 @@ use App\Entity\Quotations\Quotation;
 use App\Entity\Quotations\QuotationItem;
 use App\Entity\Users\User;
 use App\Enum\Quotations\QuotationStatus;
+use App\Enum\Orders\ProductionEstimateKind;
 use App\Repository\Orders\ServiceOrderOperationPlanRepository;
 use App\Repository\Orders\ServiceOrderRepository;
 use App\Service\Audit\AuditLogger;
@@ -173,6 +174,13 @@ final class ServiceOrderManager
                 throw new \DomainException('La suma de cantidades debe coincidir exactamente con la cantidad contratada.');
             }
 
+            $activePlans = $this->operationPlanRepository->findActiveForItemForUpdate($item);
+            foreach ($activePlans as $activePlan) {
+                if ($activePlan->getEstimatedMinutes() !== null || $activePlan->hasActiveReservations()) {
+                    throw new \DomainException('Retira las estimaciones y reservas antes de dividir esta partida.');
+                }
+            }
+
             $oldValues = $this->splitSnapshot($item);
             $subtotals = $this->allocateSplitSubtotals($item->getLineSubtotal(), $quantities);
             $maxLineNumber = max(array_map(
@@ -186,7 +194,6 @@ final class ServiceOrderManager
                 ->setLineSubtotal($subtotals[0]);
             $rows = [$item];
 
-            $activePlans = $this->operationPlanRepository->findActiveForItemForUpdate($item);
             foreach (array_slice($quantities, 1, null, true) as $position => $quantity) {
                 $child = (new ServiceOrderItem())
                     ->setCommercialItem($item->getCommercialItem())
@@ -258,6 +265,23 @@ final class ServiceOrderManager
 
             $reason = $this->validateChangeReason($reason);
             $oldSpecifications = $item->getProductionSpecificationsSnapshot();
+            $plansBeforeCorrection = $this->operationPlanRepository->findActiveForItemForUpdate($item);
+            $estimatesBeforeCorrection = [];
+            foreach ($plansBeforeCorrection as $plan) {
+                if ($plan->hasActiveReservations()) {
+                    throw new \DomainException('No puedes corregir medidas después de reservar una operación.');
+                }
+                if ($plan->getEstimatedMinutes() !== null) {
+                    $estimatesBeforeCorrection[] = [
+                        'plan_id' => $plan->getId(),
+                        'kind' => $plan->getEstimateKind()?->value,
+                        'load_value' => $plan->getEstimatedLoadValue(),
+                        'load_unit' => $plan->getEstimatedLoadUnit()?->value,
+                        'minutes' => $plan->getEstimatedMinutes(),
+                        'snapshot' => $plan->getEstimateSnapshot(),
+                    ];
+                }
+            }
             $updates = [];
             foreach (['finished_width_cm' => $finishedWidthCm, 'finished_height_cm' => $finishedHeightCm] as $key => $value) {
                 if (trim((string) $value) !== '') {
@@ -311,18 +335,25 @@ final class ServiceOrderManager
             ];
 
             $item->setProductionSpecificationsSnapshot($newSpecifications);
+            foreach ($plansBeforeCorrection as $plan) {
+                $plan->clearEstimate();
+            }
             $item->setPlanningIssue(self::PRODUCTION_ROUTE_REVIEW_ISSUE);
             $this->auditLogger->record(
                 actor: $actor,
                 action: 'service_order.item_production_specifications_corrected',
                 entityType: 'service_order_item',
                 entityId: $item->getId(),
-                oldValues: ['production_specifications' => $oldSpecifications],
+                oldValues: [
+                    'production_specifications' => $oldSpecifications,
+                    'operation_estimates_invalidated' => $estimatesBeforeCorrection,
+                ],
                 newValues: [
                     'production_specifications' => $newSpecifications,
                     'reason' => $reason,
                     'quotation_specifications_unchanged' => true,
                     'commercial_amounts_unchanged' => true,
+                    'estimate_recalculation_required' => $estimatesBeforeCorrection !== [],
                 ],
             );
             $this->entityManager->flush();
@@ -448,6 +479,9 @@ final class ServiceOrderManager
             if (!$plan->isActive()) {
                 throw new \DomainException('No puedes asignar equipo a una operación retirada de la ruta.');
             }
+            if ($plan->hasActiveReservations()) {
+                throw new \DomainException('No puedes cambiar el equipo después de crear reservas.');
+            }
 
             $operation = $this->lockOperation($plan->getOperation());
             $this->assertOperationAvailableForPlanning($operation);
@@ -459,7 +493,12 @@ final class ServiceOrderManager
             }
 
             $oldValues = $this->operationPlanSnapshot($plan);
+            $oldEquipmentId = $plan->getEquipment()?->getId();
+            $oldEstimateKind = $plan->getEstimateKind();
             $plan->setEquipment($equipment, $equipment !== null ? $this->equipmentSnapshot($equipment) : null);
+            if ($plan->getEquipment()?->getId() !== $oldEquipmentId && $oldEstimateKind === ProductionEstimateKind::CALCULATED) {
+                $plan->clearEstimate();
+            }
             $newValues = $this->operationPlanSnapshot($plan);
 
             if ($oldValues === $newValues) {
@@ -492,6 +531,9 @@ final class ServiceOrderManager
             if (!$plan->isActive()) {
                 throw new \DomainException('La operación ya no está activa en esta ruta.');
             }
+            if ($plan->getEstimatedMinutes() !== null || $plan->hasActiveReservations()) {
+                throw new \DomainException('No puedes retirar una operación con estimación o reserva; primero resuelve su planificación.');
+            }
 
             $oldValues = $this->operationPlanSnapshot($plan);
             $plan->deactivate($actor);
@@ -522,6 +564,11 @@ final class ServiceOrderManager
             $this->lockAndAssertOrderItem($serviceOrder, $serviceOrderItem);
 
             $plans = $this->operationPlanRepository->findActiveForItemForUpdate($serviceOrderItem);
+            foreach ($plans as $plan) {
+                if ($plan->hasActiveReservations()) {
+                    throw new \DomainException('No puedes cambiar la secuencia después de reservar una máquina.');
+                }
+            }
             $movedPlan = $this->findPlan($plans, $movedId);
             if ($movedPlan === null) {
                 throw new \DomainException('La operación que intentas reordenar ya no está disponible en esta partida.');
@@ -607,10 +654,18 @@ final class ServiceOrderManager
                     }
                     $operation = $this->lockOperation($plan->getOperation());
                     $this->assertOperationAvailableForPlanning($operation);
-                    if ($plan->getEquipment() !== null) {
-                        $equipment = $plan->getEquipment();
-                        $this->entityManager->lock($equipment, LockMode::PESSIMISTIC_WRITE);
-                        $this->assertEquipmentAvailableForOperation($equipment, $operation);
+                    $equipment = $plan->getEquipment();
+                    if ($equipment === null) {
+                        throw new \DomainException(sprintf('La operación %s de la partida %d no tiene máquina asignada.', $plan->getOperationSnapshot()['name'] ?? $operation->getName(), $serviceOrderItem->getLineNumber()));
+                    }
+                    $this->entityManager->lock($equipment, LockMode::PESSIMISTIC_WRITE);
+                    $this->assertEquipmentAvailableForOperation($equipment, $operation);
+                    if ($plan->getEstimatedMinutes() === null || !$plan->hasActiveReservations()) {
+                        throw new \DomainException(sprintf(
+                            'La operación %s de la partida %d necesita estimación y reserva de máquina antes de marcar la orden como planificada.',
+                            $plan->getOperationSnapshot()['name'] ?? $operation->getName(),
+                            $serviceOrderItem->getLineNumber(),
+                        ));
                     }
                 }
             }
@@ -862,6 +917,10 @@ final class ServiceOrderManager
             'line_number' => $plan->getServiceOrderItem()->getLineNumber(),
             'operation' => $plan->getOperationSnapshot(),
             'equipment' => $plan->getEquipmentSnapshot(),
+            'estimate_kind' => $plan->getEstimateKind()?->value,
+            'estimated_load_value' => $plan->getEstimatedLoadValue(),
+            'estimated_load_unit' => $plan->getEstimatedLoadUnit()?->value,
+            'estimated_minutes' => $plan->getEstimatedMinutes(),
             'sequence_number' => $plan->getSequenceNumber(),
             'is_active' => $plan->isActive(),
             'deactivated_at' => $plan->getDeactivatedAt()?->format(\DATE_ATOM),

@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Form\Admin\Catalog;
 
 use App\Application\Catalog\CommercialCharacteristicOptionData;
+use App\Entity\Catalog\CommercialCharacteristic;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\FormInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 final class CommercialCharacteristicOptionType extends AbstractType
@@ -35,7 +37,15 @@ final class CommercialCharacteristicOptionType extends AbstractType
         $resolver->setDefaults([
             'data_class' => CommercialCharacteristicOptionData::class,
             'lock_code' => false,
+            'characteristic' => null,
+            'empty_data' => static function (FormInterface $form): CommercialCharacteristicOptionData {
+                $data = new CommercialCharacteristicOptionData();
+                $data->characteristic = $form->getConfig()->getOption('characteristic');
+
+                return $data;
+            },
         ]);
         $resolver->setAllowedTypes('lock_code', 'bool');
+        $resolver->setAllowedTypes('characteristic', ['null', CommercialCharacteristic::class]);
     }
 }

@@ -1,0 +1,50 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Jornada de producción | OoxCorp{% endblock %}
+{% block app_navigation_active %}production_calendar{% endblock %}
+{% block app_breadcrumb %}Operación / Producción / Jornada{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page__content">
+        <header class="pf-page-header">
+            <div class="pf-page-header__content">
+                <h1 class="pf-page-header__title">Jornada de producción</h1>
+                <p class="pf-page-header__description">Jornada base: lunes a viernes, 08:00–18:00, hora de Ciudad de México. Los cambios quedan asociados al usuario y al motivo.</p>
+            </div>
+            <div class="pf-page-header__actions">
+                <a class="btn pf-button pf-button--primary" href="{{ path('admin_production_calendar_new') }}">Registrar excepción</a>
+            </div>
+        </header>
+
+        <section class="pf-card">
+            <div class="pf-table-responsive">
+                <table class="pf-table">
+                    <thead><tr><th>Tipo</th><th>Máquina</th><th>Desde</th><th>Hasta</th><th>Motivo / autorización</th><th>Registró</th><th>Estado</th><th></th></tr></thead>
+                    <tbody>
+                    {% for exception in exceptions %}
+                        <tr>
+                            <td>{{ exception.type.label }}</td>
+                            <td>{{ exception.equipment ? exception.equipment.code ~ ' — ' ~ exception.equipment.name : 'Toda la planta' }}</td>
+                            <td>{{ exception.startsAt|date('d/m/Y H:i', 'America/Mexico_City') }}</td>
+                            <td>{{ exception.endsAt|date('d/m/Y H:i', 'America/Mexico_City') }}</td>
+                            <td>{{ exception.reason }}</td>
+                            <td>{{ exception.createdBy.fullName }}</td>
+                            <td>{{ exception.active ? 'Activa' : 'Desactivada' }}</td>
+                            <td>
+                                {% if exception.active %}
+                                    <form method="post" action="{{ path('admin_production_calendar_deactivate', {id: exception.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('production-calendar-exception-deactivate-' ~ exception.id) }}">
+                                        <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Desactivar</button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="8" class="pf-table__empty">No hay excepciones registradas.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+{% endblock %}

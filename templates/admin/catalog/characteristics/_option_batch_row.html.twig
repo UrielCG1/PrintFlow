@@ -1,0 +1,7 @@
+<div class="pf-catalog-option-entry" data-ui--characteristic-options-batch-target="item">
+    <div class="pf-catalog-option-entry__header">
+        <div><span class="pf-catalog-option-entry__number" data-option-number>{{ number }}</span><strong>Opción <span data-option-title>{{ number }}</span></strong></div>
+        <button type="button" class="btn pf-button pf-button--secondary pf-button--sm" data-action="ui--characteristic-options-batch#remove" data-option-remove aria-label="Quitar opción {{ number }}"><i class="bi bi-trash" aria-hidden="true"></i><span>Quitar</span></button>
+    </div>
+    <div class="row g-3"><div class="col-lg-7">{{ form_row(entry.name) }}</div><div class="col-lg-5">{{ form_row(entry.code) }}</div></div>
+</div>

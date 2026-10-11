@@ -42,9 +42,9 @@
 
             <section class="pf-form-section">
                 <div class="pf-form-section__header"><h2 class="pf-form-section__title">Captura</h2><p class="pf-form-section__description">Determina qué control verá el usuario y cómo debe interpretar el valor.</p></div>
-                <div class="row g-3">
-                    <div class="col-lg-6">{{ form_row(form.inputType) }}</div>
-                    <div class="col-lg-6">{{ form_row(form.unitLabel) }}</div>
+                <div class="row g-3" data-controller="ui--characteristic-unit">
+                    <div class="col-lg-6" data-ui--characteristic-unit-target="type" data-action="change->ui--characteristic-unit#update">{{ form_row(form.inputType) }}</div>
+                    <div class="col-lg-6" data-ui--characteristic-unit-target="unit" {% if form.inputType.vars.value != 'DECIMAL' %}hidden{% endif %}>{{ form_row(form.unitLabel) }}</div>
                 </div>
             </section>
 

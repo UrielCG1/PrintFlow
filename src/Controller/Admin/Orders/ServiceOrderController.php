@@ -8,11 +8,13 @@ use App\Application\Orders\ServiceOrderItemOperationData;
 use App\Application\Orders\ServiceOrderItemOperationEquipmentData;
 use App\Application\Orders\ServiceOrderManager;
 use App\Application\Orders\ServiceOrderPlanningData;
+use App\Application\Production\ProductionPlanManager;
 use App\Entity\Orders\ServiceOrder;
 use App\Entity\Orders\ServiceOrderItem;
 use App\Entity\Orders\ServiceOrderOperationPlan;
 use App\Entity\Quotations\Quotation;
 use App\Entity\Users\User;
+use App\Enum\Equipment\ProductionLoadUnit;
 use App\Form\Admin\Orders\ServiceOrderItemOperationEquipmentType;
 use App\Form\Admin\Orders\ServiceOrderItemOperationType;
 use App\Form\Admin\Orders\ServiceOrderPlanningType;
@@ -20,6 +22,8 @@ use App\Repository\Equipment\EquipmentRepository;
 use App\Repository\Operations\OperationRepository;
 use App\Repository\Orders\ServiceOrderOperationPlanRepository;
 use App\Repository\Orders\ServiceOrderRepository;
+use App\Repository\Production\ProductionReservationRepository;
+use App\Repository\Users\UserRepository;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormFactoryInterface;
@@ -175,6 +179,117 @@ final class ServiceOrderController extends AbstractController
             $this->addFlash('error', $exception->getMessage());
         }
 
+        return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+    }
+
+    #[Route('/{id}/operaciones/{plan}/estimacion', name: 'estimate_item_operation', requirements: ['id' => '\\d+', 'plan' => '\\d+'], methods: ['POST'])]
+    public function estimateItemOperation(
+        Request $request,
+        ServiceOrder $serviceOrder,
+        ServiceOrderOperationPlan $plan,
+        ProductionPlanManager $productionPlanManager,
+    ): Response {
+        $this->denyAccessUnlessGranted('service_orders.plan');
+        $this->assertPlanRouteOrder($serviceOrder, $plan);
+        if (!$this->isCsrfTokenValid('service-order-operation-estimate-'.$plan->getId(), $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('La solicitud no es válida.');
+        }
+        $unitValue = $request->request->getString('load_unit');
+        $unit = $unitValue === '' ? null : ProductionLoadUnit::tryFrom($unitValue);
+        if ($unitValue !== '' && $unit === null) {
+            $this->addFlash('error', 'La unidad de carga no es válida.');
+            return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+        }
+        try {
+            $productionPlanManager->estimate(
+                $plan,
+                $request->request->getString('load'),
+                $unit,
+                $request->request->getString('manual_minutes'),
+                $request->request->getString('reason'),
+                $this->authenticatedUser(),
+            );
+            $this->addFlash('success', 'La estimación de la operación quedó guardada.');
+        } catch (\DomainException|\InvalidArgumentException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        }
+        return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+    }
+
+    #[Route('/{id}/operaciones/{plan}/reservar', name: 'reserve_item_operation', requirements: ['id' => '\\d+', 'plan' => '\\d+'], methods: ['POST'])]
+    public function reserveItemOperation(
+        Request $request,
+        ServiceOrder $serviceOrder,
+        ServiceOrderOperationPlan $plan,
+        ProductionPlanManager $productionPlanManager,
+    ): Response {
+        $this->denyAccessUnlessGranted('service_orders.plan');
+        $this->assertPlanRouteOrder($serviceOrder, $plan);
+        if (!$this->isCsrfTokenValid('service-order-operation-reserve-'.$plan->getId(), $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('La solicitud no es válida.');
+        }
+        try {
+            $segments = $productionPlanManager->reserve($plan, $this->authenticatedUser());
+            $this->addFlash('success', sprintf('Máquina reservada en %d tramo(s) de jornada.', count($segments)));
+        } catch (\DomainException|\InvalidArgumentException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        }
+        return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+    }
+
+    #[Route('/{id}/operaciones/{plan}/operador', name: 'assign_item_operation_operator', requirements: ['id' => '\\d+', 'plan' => '\\d+'], methods: ['POST'])]
+    public function assignItemOperationOperator(
+        Request $request,
+        ServiceOrder $serviceOrder,
+        ServiceOrderOperationPlan $plan,
+        UserRepository $userRepository,
+        ProductionPlanManager $productionPlanManager,
+    ): Response {
+        $this->denyAccessUnlessGranted('service_orders.plan');
+        $this->assertPlanRouteOrder($serviceOrder, $plan);
+        if (!$this->isCsrfTokenValid('service-order-operation-operator-'.$plan->getId(), $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('La solicitud no es válida.');
+        }
+        $operatorId = $request->request->getString('operator_id');
+        try {
+            $operator = null;
+            if ($operatorId !== '') {
+                if (preg_match('/^[1-9]\d*$/D', $operatorId) !== 1) {
+                    throw new \DomainException('El operador seleccionado no es válido.');
+                }
+                $operator = $userRepository->find((int) $operatorId);
+                if (!$operator instanceof User) {
+                    throw new \DomainException('El operador seleccionado no existe.');
+                }
+            }
+            $productionPlanManager->assignOperator($plan, $operator, $this->authenticatedUser());
+            $this->addFlash('success', 'La asignación de operador quedó guardada.');
+        } catch (\DomainException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        }
+        return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+    }
+
+    #[Route('/{id}/operaciones/{plan}/tiempo-real', name: 'record_item_operation_actual_time', requirements: ['id' => '\\d+', 'plan' => '\\d+'], methods: ['POST'])]
+    public function recordItemOperationActualTime(
+        Request $request,
+        ServiceOrder $serviceOrder,
+        ServiceOrderOperationPlan $plan,
+        ProductionPlanManager $productionPlanManager,
+    ): Response {
+        $this->denyAccessUnlessGranted('service_orders.plan');
+        $this->assertPlanRouteOrder($serviceOrder, $plan);
+        if (!$this->isCsrfTokenValid('service-order-operation-actual-'.$plan->getId(), $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('La solicitud no es válida.');
+        }
+        $minutes = filter_var($request->request->getString('actual_minutes'), FILTER_VALIDATE_INT);
+        try {
+            if ($minutes === false) { throw new \DomainException('Captura los minutos reales como entero.'); }
+            $productionPlanManager->recordActualMinutes($plan, $minutes, $request->request->getString('actual_note'), $this->authenticatedUser());
+            $this->addFlash('success', 'El tiempo real quedó registrado.');
+        } catch (\DomainException|\InvalidArgumentException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        }
         return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
     }
 
@@ -362,12 +477,18 @@ final class ServiceOrderController extends AbstractController
         OperationRepository $operationRepository,
         EquipmentRepository $equipmentRepository,
         ServiceOrderOperationPlanRepository $operationPlanRepository,
+        ProductionReservationRepository $reservationRepository,
+        UserRepository $userRepository,
     ): Response {
         $this->denyAccessUnlessGranted('service_orders.view');
 
         $plansByItem = [];
         foreach ($operationPlanRepository->findActiveForServiceOrder($serviceOrder) as $plan) {
             $plansByItem[(int) $plan->getServiceOrderItem()->getId()][] = $plan;
+        }
+        $reservationsByPlan = [];
+        foreach ($reservationRepository->findActiveForServiceOrder($serviceOrder) as $reservation) {
+            $reservationsByPlan[(int) $reservation->getPlan()->getId()][] = $reservation;
         }
 
         $canPlan = $serviceOrder->isPendingPlanning() && $this->isGranted('service_orders.plan');
@@ -434,6 +555,10 @@ final class ServiceOrderController extends AbstractController
             'itemOperationForms' => $itemOperationForms,
             'equipmentForms' => $equipmentForms,
             'operationPlansByItem' => $plansByItem,
+            'reservationsByPlan' => $reservationsByPlan,
+            'productionOperators' => $canPlan ? $userRepository->findActiveProductionOperators() : [],
+            'productionLoadUnits' => ProductionLoadUnit::cases(),
+            'canManageProductionPlanning' => $this->isGranted('service_orders.plan'),
             'splitEligibleItems' => $splitEligibleItems,
             'productionDimensions' => $productionDimensions,
         ]);
@@ -538,5 +663,12 @@ final class ServiceOrderController extends AbstractController
         }
 
         return $user;
+    }
+
+    private function assertPlanRouteOrder(ServiceOrder $order, ServiceOrderOperationPlan $plan): void
+    {
+        if ($plan->getServiceOrderItem()->getServiceOrder()->getId() !== $order->getId()) {
+            throw $this->createNotFoundException();
+        }
     }
 }

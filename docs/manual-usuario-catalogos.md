@@ -124,9 +124,9 @@ Las características globales se crean una sola vez y pueden reutilizarse en var
 **Para crear una característica:**
 
 1. Pulsa **Nueva característica**.
-2. Escribe un **Código técnico** único, de hasta 60 caracteres, con letras, números y guion bajo; un **Nombre visible** único, de hasta 100; el **Tipo de captura**; y, si aporta contexto, una **Unidad visible** de hasta 20 caracteres.
+2. Escribe un **Código técnico** único, de hasta 60 caracteres, con letras, números y guion bajo; un **Nombre visible** único, de hasta 100; y el **Tipo de captura**. Si eliges **Número decimal**, puedes agregar una **Unidad visible** de hasta 20 caracteres.
 3. Pulsa **Crear característica**. En su pantalla **Configurar**, revisa el tipo y la unidad.
-4. Si elegiste **Lista de opciones**, entra en **Opciones → Nueva opción**. Para cada valor registra **Código técnico** único dentro de esa característica y **Nombre visible**. Usa **Ordenar opciones** cuando quieras controlar su presentación.
+4. Si elegiste **Lista de opciones**, entra en **Opciones → Agregar opciones**. Captura el **Código técnico** único y el **Nombre visible** de cada valor; usa **Agregar otra opción** para incluir varios renglones y guárdalos juntos. Usa **Ordenar opciones** cuando quieras controlar su presentación.
 5. En la pestaña **Productos**, comprueba en qué Productos se usa. El listado permite abrir cada configuración relacionada.
 
 **Ejemplo:** crea la característica `ACABADO` con nombre **Acabado** y tipo **Lista de opciones**; añade `MATE` (**Mate**) y `BRILLANTE` (**Brillante**). No necesitas repetir esas opciones al crear otro Producto: allí seleccionarás cuáles admite.
