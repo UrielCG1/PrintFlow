@@ -1,6 +1,6 @@
 # PrintFlow — FSD de producción y trazabilidad
 
-**Versión:** 1.1 · **Fecha:** 10 de octubre de 2026 · **Estado:** reglas funcionales acordadas con Uriel; diseño técnico sujeto a verificación de la base de cada entorno.
+**Versión:** 1.2 · **Fecha:** 11 de octubre de 2026 · **Estado:** reglas funcionales acordadas con Uriel; diseño técnico sujeto a verificación de la base de cada entorno.
 
 ## 1. Propósito y alcance
 
@@ -34,7 +34,7 @@ Esta tabla describe código inspeccionado. No confirma migraciones aplicadas, co
 | Excepciones de datos | La orden se crea aunque falte ruta, medida o rendimiento; la partida indica «requiere planificación/estimación» y una causa. No se inventan horas ni fechas. |
 | Máquina y persona | Al crear la orden se propone y reserva máquina compatible cuando los datos lo permiten. El operador se asigna después por jefe de Producción o Administrador. |
 | Jornada base | Lunes a viernes de 08:00 a 18:00, sin pausa fija. Sábado, domingo y horario nocturno están excluidos por defecto; jefe o Administrador pueden autorizar una jornada extraordinaria concreta, con motivo. |
-| Promesa de entrega | Se calcula fin de producción y se sugieren tres días **laborales** adicionales. Ventas, jefe de Producción y Administrador pueden ajustar la fecha pactada, con motivo y alerta de riesgo. |
+| Promesa de entrega | Se calcula fin de producción y se sugieren tres días **laborales** adicionales. La primera fecha pactada puede confirmarse sin motivo; cambiar o quitar una fecha guardada requiere motivo y alerta de riesgo. |
 | Prioridad | Normal por defecto, Alta y Urgente. Urgente y cambios de prioridad requieren motivo. El desplazamiento de reservas futuras requiere vista previa y confirmación; un proceso activo no se interrumpe automáticamente. |
 | Visibilidad | Operadores ven todos los trabajos de producción y solo datos operativos. Solo pueden ejecutar pasos asignados a ellos. Jefe y Administrador pueden reasignar. |
 | Entrega | «Producción terminada» y «Entregado al cliente» son hitos separados. Ventas confirma la entrega. |
@@ -71,6 +71,16 @@ Implementar permisos separados para configurar ruta/capacidad, planificar, repro
 
 El estado operativo de orden es distinto del estado comercial de cotización. Los estados actuales `PENDING_PLANNING` y `PLANNED` deben ampliarse o complementarse mediante migración nueva, sin reescribir las anteriores.
 
+### 5.1 Flujo de planificación en la interfaz
+
+- La orden muestra avance por máquina, tiempo, agenda y fecha compromiso. Las acciones disponibles indican cuántos datos faltan y se habilitan solo cuando sus requisitos están satisfechos.
+- Una única máquina compatible aparece como recomendación y se puede asignar con la preparación automática de la orden. Si hay varias, Producción elige; si no hay ninguna, se presenta esa causa.
+- Con máquina y capacidad validadas, el sistema calcula automáticamente las unidades físicas que pueda inferir con seguridad. Si no tiene dimensión suficiente, solicita únicamente la carga necesaria: m² reales, metros lineales del acomodo o cm de trayectoria vectorial. No deriva longitud de corte de las piezas.
+- Las estimaciones manuales, el cambio de prioridad, el ajuste de agenda, la reasignación, el registro de tiempo real, la corrección técnica, la división y el retiro de pasos son excepciones o mantenimiento y permanecen en secciones plegadas hasta que se soliciten.
+- La reserva principal se ejecuta para toda la orden como una operación coordinada: prevalidación y escritura transaccional, etapas en secuencia y sin solapes. Si algún paso no puede reservarse, la acción completa se revierte. Los trabajos que ya tienen reserva se conservan al completar reservas pendientes.
+- La primera fecha compromiso puede asignarse sin motivo. Si se modifica o elimina una fecha ya guardada, se exige motivo y queda auditoría. La fecha sugerida se precarga como propuesta, nunca se confirma por sí sola.
+- La orden solo se puede cerrar como planificada después de reservar todos sus pasos y confirmar una fecha compromiso. Personal operativo sigue viendo la ruta de solo lectura y no recibe importes.
+
 ## 6. Rutas, variantes y estimación
 
 Una ruta base es una ayuda de mantenimiento, no una ruta copiada en vivo. Cada Producto publica una versión concreta con secuencia, operación de catálogo, condición de inclusión, obligatoriedad, equipo preferido y alternativas compatibles. En la ficha actual cada equipo tiene una operación primaria; varias máquinas registradas para la misma operación son las alternativas. La capacidad textual queda como referencia. La capacidad estructurada guarda unidad, rendimiento, ancho útil, preparación, limpieza, eficiencia, vigencia, usuario validador e instante de validación. Sin confirmación de medición, la máquina puede asignarse para una estimación manual justificada, pero no calcular tiempo automáticamente. En v1 una operación aparece como máximo una vez en la ruta inicial de una partida, por la restricción única actual; el retrabajo es un nuevo intento de ejecución. Si negocio necesita repetir formalmente una operación en la ruta inicial, se revisará esa restricción antes de publicar tal ruta.
@@ -103,6 +113,7 @@ El pronóstico de cada partida es el fin de su último paso requerido. El de la 
 - **Jefe/Administrador:** misma vista diaria, selección de fecha y filtros por máquina, área, operación, estado, prioridad, responsable, orden, Producto y riesgo. Incluye semana horizontal con máquinas como filas, ocupación por jornada, horas disponibles/reservadas/ejecutadas/libres y trabajos con riesgo. Puede abrir vista previa y confirmar reprogramaciones.
 - **Tablero y lista:** trabajos pendientes, en proceso, bloqueados y en riesgo; búsqueda por folio y Producto, filtros persistibles y enlaces a detalle.
 - **Detalle operativo:** partida y especificación técnica, archivo autorizado, ruta congelada, etapa actual, siguiente destino, equipo, persona, estimación frente a tiempo real, materiales manuales, incidencias y eventos. Las secciones comerciales son otra proyección y requieren sus permisos propios.
+- **Detalle de planificación de la orden:** avance y pendientes primero; sugerencia de máquina y estimaciones seguras; una acción coordinada para reservar la orden. Los motivos, ajustes, correcciones y controles de seguimiento se muestran bajo demanda. La vista comercial y los importes siguen sujetos a `service_orders.view_commercial`.
 
 Se usará **DayPilot Lite**, Apache 2.0, disponible para uso comercial. Su calendario libre ofrece recursos como columnas en vista diaria y su Scheduler libre ofrece recursos como filas en línea temporal semanal. La jerarquía día × máquina en columnas y ciertas funciones avanzadas son Pro; no se incluyen. Integrarlo como activo local de AssetMapper y controlador Stimulus, sin CDN en producción. El endpoint de eventos recibe rango y filtros autorizados, devuelve únicamente campos operativos y representa cada segmento por separado. Arrastrar o redimensionar, si se habilita para jefe/Administrador, solicita vista previa y confirmación al servidor. La UI nunca decide solapes ni fecha de entrega.
 

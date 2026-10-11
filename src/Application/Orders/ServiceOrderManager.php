@@ -18,6 +18,7 @@ use App\Enum\Quotations\QuotationStatus;
 use App\Enum\Orders\ProductionEstimateKind;
 use App\Repository\Orders\ServiceOrderOperationPlanRepository;
 use App\Repository\Orders\ServiceOrderRepository;
+use App\Application\Production\ProductionScheduleLock;
 use App\Service\Audit\AuditLogger;
 use App\Service\Orders\ServiceOrderFolioGenerator;
 use Doctrine\DBAL\LockMode;
@@ -34,6 +35,7 @@ final class ServiceOrderManager
         private readonly ServiceOrderFolioGenerator $folioGenerator,
         private readonly AuditLogger $auditLogger,
         private readonly ProductionRouteApplicator $productionRouteApplicator,
+        private readonly ProductionScheduleLock $scheduleLock,
     ) {
     }
 
@@ -117,29 +119,38 @@ final class ServiceOrderManager
         ServiceOrderPlanningData $data,
         User $actor,
     ): void {
-        $this->entityManager->wrapInTransaction(function () use ($serviceOrder, $data, $actor): void {
-            $this->lockServiceOrder($serviceOrder);
-            $this->assertPendingPlanning($serviceOrder);
+        $scheduleLockAcquired = $this->scheduleLock->acquire();
+        try {
+            $this->entityManager->wrapInTransaction(function () use ($serviceOrder, $data, $actor): void {
+                $this->lockServiceOrder($serviceOrder);
+                $commitmentDate = $this->normalizeCommitmentDate($data->commitmentDate);
+                $oldValues = $this->planningSnapshot($serviceOrder);
+                if ($serviceOrder->getCommitmentDate()?->format('Y-m-d') === $commitmentDate?->format('Y-m-d')) {
+                    return;
+                }
 
-            $commitmentDate = $this->normalizeCommitmentDate($data->commitmentDate);
-            $oldValues = $this->planningSnapshot($serviceOrder);
-            $serviceOrder->setCommitmentDate($commitmentDate);
-            $newValues = $this->planningSnapshot($serviceOrder);
+                $providedReason = trim($data->reason);
+                $reason = $serviceOrder->getCommitmentDate() !== null || $providedReason !== ''
+                    ? $this->validateChangeReason($providedReason)
+                    : null;
+                $serviceOrder
+                    ->setCommitmentDate($commitmentDate)
+                    ->setCommitmentReason($reason);
+                $newValues = $this->planningSnapshot($serviceOrder);
 
-            if ($oldValues === $newValues) {
-                return;
-            }
-
-            $this->auditLogger->record(
-                actor: $actor,
-                action: 'service_order.commitment_date_updated',
-                entityType: 'service_order',
-                entityId: $serviceOrder->getId(),
-                oldValues: $oldValues,
-                newValues: $newValues,
-            );
-            $this->entityManager->flush();
-        });
+                $this->auditLogger->record(
+                    actor: $actor,
+                    action: 'service_order.commitment_date_updated',
+                    entityType: 'service_order',
+                    entityId: $serviceOrder->getId(),
+                    oldValues: $oldValues,
+                    newValues: $newValues,
+                );
+                $this->entityManager->flush();
+            });
+        } finally {
+            $this->scheduleLock->release($scheduleLockAcquired);
+        }
     }
 
     /** @return list<ServiceOrderItem> Newly visible order rows, including the retained first child. */
@@ -208,6 +219,7 @@ final class ServiceOrderManager
                     ->setSpecificationSchemaVersion($item->getSpecificationSchemaVersion())
                     ->setRoute($item->getRouteVersion(), $item->getRouteSnapshot())
                     ->setPlanningIssue($item->getPlanningIssue())
+                    ->setPriority($item->getPriority())
                     ->setSplitParentItem($item)
                     ->setSplitPosition($position + 1);
                 $serviceOrder->addItem($child);
@@ -960,6 +972,7 @@ final class ServiceOrderManager
             'folio' => $serviceOrder->getFolio(),
             'status' => $serviceOrder->getStatus()->value,
             'commitment_date' => $serviceOrder->getCommitmentDate()?->format('Y-m-d'),
+            'commitment_reason' => $serviceOrder->getCommitmentReason(),
             'planned_at' => $serviceOrder->getPlannedAt()?->format(\DATE_ATOM),
             'planned_by_user_id' => $serviceOrder->getPlannedBy()?->getId(),
         ];

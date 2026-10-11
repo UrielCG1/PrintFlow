@@ -90,6 +90,9 @@ class ServiceOrder
     #[ORM\Column(name: 'commitment_date', type: Types::DATE_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $commitmentDate = null;
 
+    #[ORM\Column(name: 'commitment_reason', length: 500, nullable: true)]
+    private ?string $commitmentReason = null;
+
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(name: 'planned_by_user_id', nullable: true, onDelete: 'RESTRICT')]
     private ?User $plannedBy = null;
@@ -369,6 +372,19 @@ class ServiceOrder
     public function setCommitmentDate(?\DateTimeImmutable $commitmentDate): self
     {
         $this->commitmentDate = $commitmentDate;
+
+        return $this;
+    }
+
+    public function getCommitmentReason(): ?string
+    {
+        return $this->commitmentReason;
+    }
+
+    public function setCommitmentReason(?string $reason): self
+    {
+        $reason = trim((string) $reason);
+        $this->commitmentReason = $reason !== '' ? mb_substr($reason, 0, 500) : null;
 
         return $this;
     }

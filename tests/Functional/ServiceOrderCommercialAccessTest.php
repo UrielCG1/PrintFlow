@@ -46,7 +46,10 @@ final class ServiceOrderCommercialAccessTest extends TestCase
         $this->createUserWithPermissions('qa-production', 'ROLE_PRODUCTION', [
             'service_orders.view',
             'service_orders.plan',
+            'service_orders.commitment.manage',
             'production_routes.manage',
+            'production.priority.manage',
+            'production.schedule.reprogram',
         ]);
         $this->createUserWithPermissions('qa-operator', 'ROLE_OPERATOR', [
             'service_orders.view',
@@ -54,6 +57,7 @@ final class ServiceOrderCommercialAccessTest extends TestCase
         $this->createUserWithPermissions('qa-sales', 'ROLE_SALES', [
             'service_orders.view',
             'service_orders.view_commercial',
+            'service_orders.commitment.manage',
             'quotations.view',
             'quotations.create',
             'quotations.download_pdf',
@@ -95,6 +99,126 @@ final class ServiceOrderCommercialAccessTest extends TestCase
         $this->browser->request('GET', '/admin/produccion/rutas');
         self::assertSame(200, $this->browser->getResponse()->getStatusCode());
         $this->assertNoCommercialData((string) $this->browser->getResponse()->getContent(), 'production routes');
+    }
+
+    public function testOperatorCannotChangeCommitmentOrPriorityAndProductionPreviewHasNoCommercialAmounts(): void
+    {
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $item = $this->serviceOrder->getItems()->first();
+        self::assertInstanceOf(ServiceOrderItem::class, $item);
+        $operator = $em->getRepository(User::class)->findOneBy(['username' => 'qa-operator']);
+        self::assertInstanceOf(User::class, $operator);
+        $this->browser->loginUser($operator);
+
+        foreach ([
+            '/admin/ordenes-servicio/'.$this->serviceOrder->getId().'/planificacion',
+            '/admin/ordenes-servicio/'.$this->serviceOrder->getId().'/partidas/'.$item->getId().'/prioridad/vista-previa',
+        ] as $path) {
+            $this->browser->request('POST', $path);
+            self::assertSame(403, $this->browser->getResponse()->getStatusCode(), $path);
+            $this->assertNoCommercialData((string) $this->browser->getResponse()->getContent(), $path);
+        }
+
+        $production = $em->getRepository(User::class)->findOneBy(['username' => 'qa-production']);
+        self::assertInstanceOf(User::class, $production);
+        $this->browser->loginUser($production);
+        $this->browser->request('GET', '/admin/ordenes-servicio/'.$this->serviceOrder->getId());
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        $tokenSelector = sprintf(
+            'form[action="/admin/ordenes-servicio/%d/partidas/%d/prioridad/vista-previa"] input[name="_token"]',
+            $this->serviceOrder->getId(),
+            $item->getId(),
+        );
+        $csrf = $this->browser->getCrawler()->filter($tokenSelector)->attr('value');
+        self::assertNotEmpty($csrf);
+        $this->browser->request(
+            'POST',
+            '/admin/ordenes-servicio/'.$this->serviceOrder->getId().'/partidas/'.$item->getId().'/prioridad/vista-previa',
+            ['_token' => $csrf, 'priority' => 'high', 'reason' => 'Pedido de prueba prioritaria'],
+        );
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        self::assertStringContainsString('Revisar cambio a prioridad Alta', (string) $this->browser->getResponse()->getContent());
+        $this->assertNoCommercialData((string) $this->browser->getResponse()->getContent(), 'priority preview');
+    }
+
+    public function testOrderCannotBeFinalizedWhenItsRouteIsMissing(): void
+    {
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $production = $em->getRepository(User::class)->findOneBy(['username' => 'qa-production']);
+        self::assertInstanceOf(User::class, $production);
+        $this->browser->loginUser($production);
+
+        $this->browser->request('GET', '/admin/ordenes-servicio/'.$this->serviceOrder->getId());
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        $html = (string) $this->browser->getResponse()->getContent();
+        self::assertStringContainsString('Avance de la orden', $html);
+        self::assertStringNotContainsString('Reservar todas las operaciones', $html);
+        self::assertStringNotContainsString('Marcar como planificada', $html);
+        $this->assertNoCommercialData($html, 'unplanned order without route');
+    }
+
+    public function testInitialCommitmentNeedsNoReasonButChangesRequireOne(): void
+    {
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $production = $em->getRepository(User::class)->findOneBy(['username' => 'qa-production']);
+        self::assertInstanceOf(User::class, $production);
+        $this->browser->loginUser($production);
+
+        $this->browser->request('GET', '/admin/ordenes-servicio/'.$this->serviceOrder->getId());
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        $planningFormSelector = sprintf(
+            'form[action="/admin/ordenes-servicio/%d/planificacion"]',
+            $this->serviceOrder->getId(),
+        );
+        $form = $this->browser->getCrawler()->filter($planningFormSelector)->form();
+        $form['service_order_planning[commitmentDate]'] = '2026-10-16';
+        $form['service_order_planning[reason]'] = '';
+        $this->browser->submit($form);
+        self::assertSame(302, $this->browser->getResponse()->getStatusCode());
+        $this->browser->followRedirect();
+        self::assertStringContainsString('Fecha compromiso actualizada correctamente.', (string) $this->browser->getResponse()->getContent());
+
+        $currentEntityManager = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $savedOrder = $currentEntityManager->getRepository(ServiceOrder::class)->find($this->serviceOrder->getId());
+        self::assertInstanceOf(ServiceOrder::class, $savedOrder);
+        self::assertSame('2026-10-16', $savedOrder->getCommitmentDate()?->format('Y-m-d'));
+        self::assertNull($savedOrder->getCommitmentReason());
+
+        $this->browser->request('GET', '/admin/ordenes-servicio/'.$this->serviceOrder->getId());
+        $form = $this->browser->getCrawler()->filter($planningFormSelector)->form();
+        $form['service_order_planning[commitmentDate]'] = '2026-10-17';
+        $form['service_order_planning[reason]'] = '';
+        $this->browser->submit($form);
+        self::assertSame(302, $this->browser->getResponse()->getStatusCode());
+        $this->browser->followRedirect();
+        self::assertStringContainsString(
+            'Indica el motivo del cambio (de 5 a 500 caracteres).',
+            (string) $this->browser->getResponse()->getContent(),
+        );
+
+        $currentEntityManager = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $savedOrder = $currentEntityManager->getRepository(ServiceOrder::class)->find($this->serviceOrder->getId());
+        self::assertInstanceOf(ServiceOrder::class, $savedOrder);
+        self::assertSame('2026-10-16', $savedOrder->getCommitmentDate()?->format('Y-m-d'));
+        self::assertNull($savedOrder->getCommitmentReason());
+
+        $this->browser->request('GET', '/admin/ordenes-servicio/'.$this->serviceOrder->getId());
+        $form = $this->browser->getCrawler()->filter($planningFormSelector)->form();
+        $form['service_order_planning[commitmentDate]'] = '2026-10-17';
+        $form['service_order_planning[reason]'] = 'Confirmación de fecha solicitada por el cliente';
+        $this->browser->submit($form);
+        self::assertSame(302, $this->browser->getResponse()->getStatusCode());
+        $this->browser->followRedirect();
+        self::assertStringContainsString(
+            'Fecha compromiso actualizada correctamente.',
+            (string) $this->browser->getResponse()->getContent(),
+        );
+
+        $currentEntityManager = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $savedOrder = $currentEntityManager->getRepository(ServiceOrder::class)->find($this->serviceOrder->getId());
+        self::assertInstanceOf(ServiceOrder::class, $savedOrder);
+        self::assertSame('2026-10-17', $savedOrder->getCommitmentDate()?->format('Y-m-d'));
+        self::assertSame('Confirmación de fecha solicitada por el cliente', $savedOrder->getCommitmentReason());
     }
 
     private function assertOperationalAccessWithoutCommercialData(string $username): void

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Production;
 
 use App\Entity\Orders\ServiceOrderOperationPlan;
+use App\Entity\Orders\ServiceOrder;
 use App\Entity\Production\ProductionReservation;
 use App\Entity\Users\User;
 use App\Enum\Equipment\ProductionLoadUnit;
@@ -27,6 +28,7 @@ final class ProductionPlanManager
         private readonly ProductionTimeEstimator $estimator,
         private readonly ProductionLoadResolver $loadResolver,
         private readonly ProductionScheduleCalculator $scheduleCalculator,
+        private readonly ProductionScheduleLock $scheduleLock,
         private readonly AuditLogger $auditLogger,
     ) {
     }
@@ -119,112 +121,167 @@ final class ProductionPlanManager
     /** @return list<ProductionReservation> */
     public function reserve(ServiceOrderOperationPlan $plan, User $actor): array
     {
-        return $this->entityManager->wrapInTransaction(function () use ($plan, $actor): array {
-            $order = $plan->getServiceOrderItem()->getServiceOrder();
-            $this->entityManager->lock($order, LockMode::PESSIMISTIC_WRITE);
-            $this->assertPendingPlanning($order);
-            $this->entityManager->lock($plan, LockMode::PESSIMISTIC_WRITE);
-            $this->assertPlanBelongsToOrder($order, $plan);
-            $this->assertActivePlan($plan);
+        $scheduleLockAcquired = $this->scheduleLock->acquire();
+        try {
+            return $this->entityManager->wrapInTransaction(fn (): array => $this->reserveWithinTransaction($plan, $actor));
+        } finally {
+            $this->scheduleLock->release($scheduleLockAcquired);
+        }
+    }
 
-            if ($plan->getBlockedReason() !== null) {
-                throw new \DomainException('La operación tiene un bloqueo y no puede reservarse todavía.');
-            }
-            if ($plan->getEstimatedMinutes() === null || $plan->getEstimateKind() === null) {
-                throw new \DomainException('Guarda primero una estimación calculada o manual.');
-            }
-            if ($this->reservationRepository->findActiveForPlan($plan) !== []) {
-                throw new \DomainException('Esta operación ya tiene una reserva activa.');
-            }
-
-            $equipment = $plan->getEquipment();
-            if ($equipment === null) {
-                throw new \DomainException('Asigna una máquina compatible antes de reservar.');
-            }
-            $id = $equipment->getId();
-            if ($id === null) { throw new \LogicException('El equipo no tiene identificador.'); }
-            $this->entityManager->getConnection()->fetchOne('SELECT id FROM equipment WHERE id = ? FOR UPDATE', [$id]);
-            $this->assertCompatibleMachine($plan, $equipment);
-
-            $now = new \DateTimeImmutable('now', new \DateTimeZone('America/Mexico_City'));
-            $startAfter = $now;
-            $previous = $this->planRepository->findPreviousActivePlan($plan);
-            if ($previous !== null) {
-                if ($previous->getBlockedReason() !== null) {
-                    throw new \DomainException('La operación anterior está bloqueada; resuélvela antes de reservar esta etapa.');
+    /** @return array{operations: int, segments: int} */
+    public function reserveServiceOrder(ServiceOrder $serviceOrder, User $actor): array
+    {
+        $scheduleLockAcquired = $this->scheduleLock->acquire();
+        try {
+            return $this->entityManager->wrapInTransaction(function () use ($serviceOrder, $actor): array {
+                $this->entityManager->lock($serviceOrder, LockMode::PESSIMISTIC_WRITE);
+                $this->assertPendingPlanning($serviceOrder);
+                $plans = $this->planRepository->findActiveForServiceOrder($serviceOrder);
+                if ($plans === []) {
+                    throw new \DomainException('La orden no tiene operaciones activas para reservar.');
                 }
-                $previousReservations = $this->reservationRepository->findActiveForPlan($previous);
-                if ($previousReservations === []) {
-                    throw new \DomainException('Reserva primero la operación anterior de esta partida.');
-                }
-                $last = $previousReservations[array_key_last($previousReservations)];
-                $startAfter = $last->getEndsAt()->setTimezone(new \DateTimeZone('America/Mexico_City'));
-            }
 
-            $horizonEnd = $startAfter->modify('+730 days');
-            $busy = array_map(static fn (ProductionReservation $reservation): array => [
-                'start' => $reservation->getStartsAt(),
-                'end' => $reservation->getEndsAt(),
-            ], $this->reservationRepository->findActiveForEquipmentBetween($equipment, $startAfter, $horizonEnd));
-            $exceptions = array_map(static fn ($exception): array => [
-                'type' => $exception->getType(),
-                'start' => $exception->getStartsAt(),
-                'end' => $exception->getEndsAt(),
-            ], $this->exceptionRepository->findActiveForEquipmentBetween($equipment, $startAfter, $horizonEnd));
-            $segments = $this->scheduleCalculator->segments($startAfter, $plan->getEstimatedMinutes(), $busy, $exceptions);
-
-            if ($plan->getEstimateKind() === ProductionEstimateKind::CALCULATED) {
-                $capacity = $plan->getEstimateSnapshot() ?? [];
-                if (
-                    ($capacity['equipment_id'] ?? null) !== $equipment->getId()
-                    || ($capacity['capacity_unit'] ?? null) !== $equipment->getCapacityUnit()?->value
-                    || ($capacity['capacity_rate'] ?? null) !== $equipment->getCapacityRate()
-                    || ($capacity['setup_minutes'] ?? null) !== $equipment->getSetupMinutes()
-                    || ($capacity['cleanup_minutes'] ?? null) !== $equipment->getCleanupMinutes()
-                    || ($capacity['efficiency_percent'] ?? null) !== $equipment->getEfficiencyPercent()
-                    || ($capacity['usable_width_cm'] ?? null) !== $equipment->getUsableWidthCm()
-                ) {
-                    throw new \DomainException('La capacidad de la máquina cambió después del cálculo. Actualiza la estimación antes de reservar.');
-                }
-                foreach ($segments as $segment) {
-                    if (!$equipment->hasValidatedCapacityAt($segment['start']) || !$equipment->hasValidatedCapacityAt($segment['end']->modify('-1 second'))) {
-                        throw new \DomainException('La capacidad del equipo no cubre toda la vigencia de la reserva; actualiza la estimación.');
+                foreach ($serviceOrder->getItems() as $item) {
+                    if ($item->getPlanningIssue() !== null) {
+                        throw new \DomainException(sprintf('La partida %s requiere revisión antes de reservar: %s', $item->getDisplayLineNumber(), $item->getPlanningIssue()));
                     }
                 }
+                foreach ($plans as $plan) {
+                    $this->assertActivePlan($plan);
+                    if ($plan->getEquipment() === null) {
+                        throw new \DomainException(sprintf('Falta seleccionar máquina para %s · partida %s.', $plan->getOperationSnapshot()['name'] ?? $plan->getOperation()->getName(), $plan->getServiceOrderItem()->getDisplayLineNumber()));
+                    }
+                    if ($plan->getEstimatedMinutes() === null || $plan->getEstimateKind() === null) {
+                        throw new \DomainException(sprintf('Falta estimar %s · partida %s.', $plan->getOperationSnapshot()['name'] ?? $plan->getOperation()->getName(), $plan->getServiceOrderItem()->getDisplayLineNumber()));
+                    }
+                }
+
+                $reservedOperations = 0;
+                $segments = 0;
+                foreach ($plans as $plan) {
+                    if ($this->reservationRepository->findActiveForPlan($plan) !== []) {
+                        continue;
+                    }
+                    $rows = $this->reserveWithinTransaction($plan, $actor);
+                    ++$reservedOperations;
+                    $segments += count($rows);
+                }
+
+                return ['operations' => $reservedOperations, 'segments' => $segments];
+            });
+        } finally {
+            $this->scheduleLock->release($scheduleLockAcquired);
+        }
+    }
+
+    /** @return list<ProductionReservation> */
+    private function reserveWithinTransaction(ServiceOrderOperationPlan $plan, User $actor): array
+    {
+        $order = $plan->getServiceOrderItem()->getServiceOrder();
+        $this->entityManager->lock($order, LockMode::PESSIMISTIC_WRITE);
+        $this->assertPendingPlanning($order);
+        $this->entityManager->lock($plan, LockMode::PESSIMISTIC_WRITE);
+        $this->assertPlanBelongsToOrder($order, $plan);
+        $this->assertActivePlan($plan);
+
+        if ($plan->getBlockedReason() !== null) {
+            throw new \DomainException('La operación tiene un bloqueo y no puede reservarse todavía.');
+        }
+        if ($plan->getEstimatedMinutes() === null || $plan->getEstimateKind() === null) {
+            throw new \DomainException('Guarda primero una estimación calculada o manual.');
+        }
+        if ($this->reservationRepository->findActiveForPlan($plan) !== []) {
+            throw new \DomainException('Esta operación ya tiene una reserva activa.');
+        }
+
+        $equipment = $plan->getEquipment();
+        if ($equipment === null) {
+            throw new \DomainException('Asigna una máquina compatible antes de reservar.');
+        }
+        $id = $equipment->getId();
+        if ($id === null) { throw new \LogicException('El equipo no tiene identificador.'); }
+        $this->entityManager->getConnection()->fetchOne('SELECT id FROM equipment WHERE id = ? FOR UPDATE', [$id]);
+        $this->assertCompatibleMachine($plan, $equipment);
+
+        $now = new \DateTimeImmutable('now', new \DateTimeZone('America/Mexico_City'));
+        $startAfter = $now;
+        $previous = $this->planRepository->findPreviousActivePlan($plan);
+        if ($previous !== null) {
+            if ($previous->getBlockedReason() !== null) {
+                throw new \DomainException('La operación anterior está bloqueada; resuélvela antes de reservar esta etapa.');
             }
-
-            $rows = [];
-            foreach ($segments as $index => $segment) {
-                $reservation = (new ProductionReservation())
-                    ->setPlan($plan)
-                    ->setEquipment($equipment)
-                    ->setCreatedBy($actor)
-                    ->setSegmentNumber($index + 1)
-                    ->setStartsAt($segment['start'])
-                    ->setEndsAt($segment['end']);
-                $this->entityManager->persist($reservation);
-                $plan->addReservation($reservation);
-                $rows[] = $reservation;
+            $previousReservations = $this->reservationRepository->findActiveForPlan($previous);
+            if ($previousReservations === []) {
+                throw new \DomainException('Reserva primero la operación anterior de esta partida.');
             }
+            $last = $previousReservations[array_key_last($previousReservations)];
+            $startAfter = $last->getEndsAt()->setTimezone(new \DateTimeZone('America/Mexico_City'));
+        }
 
-            $this->auditLogger->record(
-                actor: $actor,
-                action: 'production.machine_reserved',
-                entityType: 'service_order_operation_plan',
-                entityId: $plan->getId(),
-                oldValues: null,
-                newValues: [
-                    'equipment_id' => $equipment->getId(),
-                    'segments' => array_map(static fn (ProductionReservation $row): array => [
-                        'start' => $row->getStartsAt()->setTimezone(new \DateTimeZone('America/Mexico_City'))->format(\DATE_ATOM),
-                        'end' => $row->getEndsAt()->setTimezone(new \DateTimeZone('America/Mexico_City'))->format(\DATE_ATOM),
-                    ], $rows),
-                ],
-            );
-            $this->entityManager->flush();
+        $horizonEnd = $startAfter->modify('+730 days');
+        $busy = array_map(static fn (ProductionReservation $reservation): array => [
+            'start' => $reservation->getStartsAt(),
+            'end' => $reservation->getEndsAt(),
+        ], $this->reservationRepository->findActiveForEquipmentBetween($equipment, $startAfter, $horizonEnd));
+        $exceptions = array_map(static fn ($exception): array => [
+            'type' => $exception->getType(),
+            'start' => $exception->getStartsAt(),
+            'end' => $exception->getEndsAt(),
+        ], $this->exceptionRepository->findActiveForEquipmentBetween($equipment, $startAfter, $horizonEnd));
+        $segments = $this->scheduleCalculator->segments($startAfter, $plan->getEstimatedMinutes(), $busy, $exceptions);
 
-            return $rows;
-        });
+        if ($plan->getEstimateKind() === ProductionEstimateKind::CALCULATED) {
+            $capacity = $plan->getEstimateSnapshot() ?? [];
+            if (
+                ($capacity['equipment_id'] ?? null) !== $equipment->getId()
+                || ($capacity['capacity_unit'] ?? null) !== $equipment->getCapacityUnit()?->value
+                || ($capacity['capacity_rate'] ?? null) !== $equipment->getCapacityRate()
+                || ($capacity['setup_minutes'] ?? null) !== $equipment->getSetupMinutes()
+                || ($capacity['cleanup_minutes'] ?? null) !== $equipment->getCleanupMinutes()
+                || ($capacity['efficiency_percent'] ?? null) !== $equipment->getEfficiencyPercent()
+                || ($capacity['usable_width_cm'] ?? null) !== $equipment->getUsableWidthCm()
+            ) {
+                throw new \DomainException('La capacidad de la máquina cambió después del cálculo. Actualiza la estimación antes de reservar.');
+            }
+            foreach ($segments as $segment) {
+                if (!$equipment->hasValidatedCapacityAt($segment['start']) || !$equipment->hasValidatedCapacityAt($segment['end']->modify('-1 second'))) {
+                    throw new \DomainException('La capacidad del equipo no cubre toda la vigencia de la reserva; actualiza la estimación.');
+                }
+            }
+        }
+
+        $rows = [];
+        foreach ($segments as $index => $segment) {
+            $reservation = (new ProductionReservation())
+                ->setPlan($plan)
+                ->setEquipment($equipment)
+                ->setCreatedBy($actor)
+                ->setSegmentNumber($index + 1)
+                ->setStartsAt($segment['start'])
+                ->setEndsAt($segment['end']);
+            $this->entityManager->persist($reservation);
+            $plan->addReservation($reservation);
+            $rows[] = $reservation;
+        }
+
+        $this->auditLogger->record(
+            actor: $actor,
+            action: 'production.machine_reserved',
+            entityType: 'service_order_operation_plan',
+            entityId: $plan->getId(),
+            oldValues: null,
+            newValues: [
+                'equipment_id' => $equipment->getId(),
+                'segments' => array_map(static fn (ProductionReservation $row): array => [
+                    'start' => $row->getStartsAt()->setTimezone(new \DateTimeZone('America/Mexico_City'))->format(\DATE_ATOM),
+                    'end' => $row->getEndsAt()->setTimezone(new \DateTimeZone('America/Mexico_City'))->format(\DATE_ATOM),
+                ], $rows),
+            ],
+        );
+        $this->entityManager->flush();
+
+        return $rows;
     }
 
     public function assignOperator(ServiceOrderOperationPlan $plan, ?User $operator, User $actor): void

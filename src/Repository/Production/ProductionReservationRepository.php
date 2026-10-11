@@ -62,6 +62,31 @@ final class ProductionReservationRepository extends ServiceEntityRepository
     }
 
     /** @return list<ProductionReservation> */
+    public function findPinnedOverlapping(\DateTimeImmutable $start, \DateTimeImmutable $end, ?Equipment $equipment = null): array
+    {
+        $utc = new \DateTimeZone('UTC');
+        $start = $start->setTimezone($utc);
+        $end = $end->setTimezone($utc);
+
+        $query = $this->createQueryBuilder('reservation')
+            ->innerJoin('reservation.plan', 'plan')
+            ->andWhere('plan.isSchedulePinned = true')
+            ->andWhere('reservation.isActive = true')
+            ->andWhere('reservation.startsAt < :end AND reservation.endsAt > :start')
+            ->setParameter('start', $start)
+            ->setParameter('end', $end)
+            ->orderBy('reservation.startsAt', 'ASC');
+        if ($equipment !== null) {
+            $query->andWhere('reservation.equipment = :equipment')->setParameter('equipment', $equipment);
+        }
+
+        /** @var list<ProductionReservation> $rows */
+        $rows = $query->getQuery()->getResult();
+
+        return $rows;
+    }
+
+    /** @return list<ProductionReservation> */
     public function findActiveForPlan(ServiceOrderOperationPlan $plan): array
     {
         /** @var list<ProductionReservation> $rows */
@@ -98,6 +123,32 @@ final class ProductionReservationRepository extends ServiceEntityRepository
             ->setParameter('order', $order)
             ->orderBy('reservation.startsAt', 'ASC')
             ->getQuery()->getResult();
+        return $rows;
+    }
+
+    /** @return list<ProductionReservation> */
+    public function findActiveForProductionQueue(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    {
+        $utc = new \DateTimeZone('UTC');
+        $start = $start->setTimezone($utc);
+        $end = $end->setTimezone($utc);
+
+        /** @var list<ProductionReservation> $rows */
+        $rows = $this->createQueryBuilder('reservation')
+            ->distinct()
+            ->innerJoin('reservation.plan', 'plan')
+            ->innerJoin('plan.serviceOrderItem', 'item')
+            ->innerJoin('item.serviceOrder', 'serviceOrder')
+            ->leftJoin('plan.equipment', 'equipment')
+            ->addSelect('plan', 'item', 'serviceOrder', 'equipment')
+            ->andWhere('reservation.isActive = true')
+            ->andWhere('reservation.startsAt < :end AND reservation.endsAt > :start')
+            ->setParameter('start', $start)
+            ->setParameter('end', $end)
+            ->orderBy('reservation.startsAt', 'ASC')
+            ->addOrderBy('reservation.id', 'ASC')
+            ->getQuery()->getResult();
+
         return $rows;
     }
 

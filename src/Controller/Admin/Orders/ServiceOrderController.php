@@ -8,12 +8,16 @@ use App\Application\Orders\ServiceOrderItemOperationData;
 use App\Application\Orders\ServiceOrderItemOperationEquipmentData;
 use App\Application\Orders\ServiceOrderManager;
 use App\Application\Orders\ServiceOrderPlanningData;
+use App\Application\Production\ProductionCommitmentForecaster;
+use App\Application\Production\ProductionLoadResolver;
 use App\Application\Production\ProductionPlanManager;
+use App\Application\Production\ProductionPriorityRescheduler;
 use App\Entity\Orders\ServiceOrder;
 use App\Entity\Orders\ServiceOrderItem;
 use App\Entity\Orders\ServiceOrderOperationPlan;
 use App\Entity\Quotations\Quotation;
 use App\Entity\Users\User;
+use App\Enum\Orders\ProductionPriority;
 use App\Enum\Equipment\ProductionLoadUnit;
 use App\Form\Admin\Orders\ServiceOrderItemOperationEquipmentType;
 use App\Form\Admin\Orders\ServiceOrderItemOperationType;
@@ -97,7 +101,7 @@ final class ServiceOrderController extends AbstractController
         ServiceOrder $serviceOrder,
         ServiceOrderManager $serviceOrderManager,
     ): Response {
-        $this->denyAccessUnlessGranted('service_orders.plan');
+        $this->denyAccessUnlessGranted('service_orders.commitment.manage');
 
         $data = $this->planningData($serviceOrder);
         $form = $this->createPlanningForm($data, $serviceOrder);
@@ -112,6 +116,234 @@ final class ServiceOrderController extends AbstractController
         try {
             $serviceOrderManager->updatePlanning($serviceOrder, $data, $this->authenticatedUser());
             $this->addFlash('success', 'Fecha compromiso actualizada correctamente.');
+        } catch (\DomainException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        }
+
+        return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+    }
+
+    #[Route('/{id}/preparar-automaticamente', name: 'prepare_automatically', requirements: ['id' => '\\d+'], methods: ['POST'])]
+    public function prepareAutomatically(
+        Request $request,
+        ServiceOrder $serviceOrder,
+        ServiceOrderManager $serviceOrderManager,
+        ProductionPlanManager $productionPlanManager,
+        ServiceOrderOperationPlanRepository $operationPlanRepository,
+        EquipmentRepository $equipmentRepository,
+        ProductionLoadResolver $loadResolver,
+    ): Response {
+        $this->denyAccessUnlessGranted('service_orders.plan');
+        if (!$this->isCsrfTokenValid('service-order-auto-prepare-'.$serviceOrder->getId(), $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('La solicitud no es válida.');
+        }
+        if (!$serviceOrder->isPendingPlanning()) {
+            throw $this->createAccessDeniedException('La orden ya no está pendiente de planificación.');
+        }
+
+        $equipmentAssigned = 0;
+        $estimatesCalculated = 0;
+        $pending = [];
+        $now = new \DateTimeImmutable('now', new \DateTimeZone('America/Mexico_City'));
+        foreach ($operationPlanRepository->findActiveForServiceOrder($serviceOrder) as $plan) {
+            $item = $plan->getServiceOrderItem();
+            $label = sprintf('%s · partida %s', $plan->getOperationSnapshot()['name'] ?? $plan->getOperation()->getName(), $item->getDisplayLineNumber());
+            if ($item->getPlanningIssue() !== null || $plan->getBlockedReason() !== null) {
+                $pending[] = $label.': requiere revisión antes de planificar.';
+                continue;
+            }
+
+            if ($plan->getEquipment() === null) {
+                $choices = $equipmentRepository->findAvailableForFutureExecution($plan->getOperation());
+                if (count($choices) === 1) {
+                    $data = new ServiceOrderItemOperationEquipmentData();
+                    $data->equipment = $choices[0];
+                    try {
+                        $serviceOrderManager->assignEquipmentToOperation($serviceOrder, $plan, $data, $this->authenticatedUser());
+                        ++$equipmentAssigned;
+                    } catch (\DomainException $exception) {
+                        $pending[] = $label.': '.$exception->getMessage();
+                    }
+                } else {
+                    $pending[] = $label.($choices === [] ? ': no hay máquina compatible disponible.' : ': elige una de las máquinas compatibles.');
+                    continue;
+                }
+            }
+
+            if ($plan->getEstimatedMinutes() !== null) {
+                continue;
+            }
+
+            $equipment = $plan->getEquipment();
+            $unit = $equipment?->getCapacityUnit()?->loadUnit();
+            $load = $unit !== null ? $loadResolver->automaticLoad($item, $unit) : null;
+            if ($equipment !== null && $unit !== null && $load !== null && $equipment->hasValidatedCapacityAt($now)) {
+                try {
+                    $productionPlanManager->estimate($plan, null, $unit, null, '', $this->authenticatedUser());
+                    ++$estimatesCalculated;
+                } catch (\DomainException|\InvalidArgumentException $exception) {
+                    $pending[] = $label.': '.$exception->getMessage();
+                }
+                continue;
+            }
+
+            if ($unit === ProductionLoadUnit::CUT_CENTIMETERS) {
+                $pending[] = $label.': captura la trayectoria real de corte en cm.';
+            } elseif ($unit === ProductionLoadUnit::LINEAR_METERS) {
+                $pending[] = $label.': captura los metros lineales reales según el acomodo.';
+            } elseif ($unit === ProductionLoadUnit::SQUARE_METERS && $load === null) {
+                $pending[] = $label.': faltan dimensiones válidas o la carga física en m².';
+            } else {
+                $pending[] = $label.': la máquina requiere validar capacidad o capturar minutos manuales justificados.';
+            }
+        }
+
+        if ($equipmentAssigned > 0 || $estimatesCalculated > 0) {
+            $this->addFlash('success', sprintf('Preparación automática: %d máquina(s) asignada(s) y %d estimación(es) calculada(s).', $equipmentAssigned, $estimatesCalculated));
+        }
+        foreach (array_unique($pending) as $message) {
+            $this->addFlash('warning', $message);
+        }
+        if ($equipmentAssigned === 0 && $estimatesCalculated === 0 && $pending === []) {
+            $this->addFlash('info', 'La orden ya no tiene datos automáticos pendientes.');
+        }
+
+        return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+    }
+
+    #[Route('/{id}/reservar-plan-completo', name: 'reserve_full_plan', requirements: ['id' => '\\d+'], methods: ['POST'])]
+    public function reserveFullPlan(
+        Request $request,
+        ServiceOrder $serviceOrder,
+        ProductionPlanManager $productionPlanManager,
+    ): Response {
+        $this->denyAccessUnlessGranted('service_orders.plan');
+        if (!$this->isCsrfTokenValid('service-order-reserve-full-plan-'.$serviceOrder->getId(), $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('La solicitud no es válida.');
+        }
+
+        try {
+            $result = $productionPlanManager->reserveServiceOrder($serviceOrder, $this->authenticatedUser());
+            $this->addFlash('success', sprintf('Agenda completa: %d operación(es) reservada(s) en %d tramo(s).', $result['operations'], $result['segments']));
+        } catch (\DomainException|\InvalidArgumentException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        }
+
+        return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+    }
+
+    #[Route('/{id}/partidas/{item}/prioridad/vista-previa', name: 'preview_item_priority', requirements: ['id' => '\\d+', 'item' => '\\d+'], methods: ['POST'])]
+    public function previewItemPriority(
+        Request $request,
+        ServiceOrder $serviceOrder,
+        ServiceOrderItem $item,
+        ProductionPriorityRescheduler $rescheduler,
+    ): Response {
+        $this->denyAccessUnlessGranted('production.priority.manage');
+        $this->assertItemRouteOrder($serviceOrder, $item);
+        if (!$this->isCsrfTokenValid('production-item-priority-'.$serviceOrder->getId().'-'.$item->getId(), $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('La solicitud no es válida.');
+        }
+
+        $priority = ProductionPriority::tryFrom($request->request->getString('priority'));
+        if ($priority === null) {
+            $this->addFlash('error', 'Selecciona una prioridad válida.');
+            return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+        }
+
+        try {
+            $reason = $request->request->getString('reason');
+            $preview = $rescheduler->previewPriorityChange($item, $priority, $reason);
+            $nonce = bin2hex(random_bytes(32));
+            $request->getSession()->set($this->priorityPreviewSessionKey($serviceOrder, $item), [
+                'nonce' => $nonce,
+                'priority' => $priority->value,
+                'reason' => trim($reason),
+                'fingerprint' => $preview['fingerprint'],
+                'expires_at' => time() + 900,
+            ]);
+
+            return $this->render('admin/service_orders/priority_preview.html.twig', [
+                'serviceOrder' => $serviceOrder,
+                'item' => $item,
+                'priority' => $priority,
+                'reason' => trim($reason),
+                'previewNonce' => $nonce,
+                'expiresAt' => time() + 900,
+                'changes' => $preview['changes'],
+                'risks' => $preview['risks'],
+            ]);
+        } catch (\DomainException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        }
+
+        return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+    }
+
+    #[Route('/{id}/partidas/{item}/prioridad/confirmar', name: 'confirm_item_priority', requirements: ['id' => '\\d+', 'item' => '\\d+'], methods: ['POST'])]
+    public function confirmItemPriority(
+        Request $request,
+        ServiceOrder $serviceOrder,
+        ServiceOrderItem $item,
+        ProductionPriorityRescheduler $rescheduler,
+    ): Response {
+        $this->denyAccessUnlessGranted('production.priority.manage');
+        $this->assertItemRouteOrder($serviceOrder, $item);
+
+        $key = $this->priorityPreviewSessionKey($serviceOrder, $item);
+        $preview = $request->getSession()->get($key);
+        $nonce = $request->request->getString('preview_nonce');
+        if (!is_array($preview)
+            || !isset($preview['nonce'], $preview['priority'], $preview['reason'], $preview['fingerprint'], $preview['expires_at'])
+            || !is_string($nonce)
+            || !hash_equals((string) $preview['nonce'], $nonce)
+            || (int) $preview['expires_at'] < time()
+            || !$this->isCsrfTokenValid('production-priority-confirm-'.$nonce, $request->request->getString('_token'))
+        ) {
+            $request->getSession()->remove($key);
+            $this->addFlash('warning', 'La vista previa venció o ya fue utilizada. Calcula de nuevo el impacto.');
+            return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+        }
+
+        try {
+            $priority = ProductionPriority::tryFrom((string) $preview['priority']);
+            if ($priority === null) {
+                throw new \DomainException('La prioridad de la vista previa ya no es válida.');
+            }
+            $result = $rescheduler->confirmPriorityChange(
+                $item,
+                $priority,
+                (string) $preview['reason'],
+                (string) $preview['fingerprint'],
+                $this->authenticatedUser(),
+            );
+            $request->getSession()->remove($key);
+            $this->addFlash('success', sprintf('Prioridad actualizada. Se reprogramaron %d operaciones.', $result['changed_plans']));
+        } catch (\DomainException $exception) {
+            $request->getSession()->remove($key);
+            $this->addFlash('warning', $exception->getMessage());
+        }
+
+        return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+    }
+
+    #[Route('/{id}/operaciones/{plan}/fijar-agenda', name: 'set_operation_schedule_pin', requirements: ['id' => '\\d+', 'plan' => '\\d+'], methods: ['POST'])]
+    public function setOperationSchedulePin(
+        Request $request,
+        ServiceOrder $serviceOrder,
+        ServiceOrderOperationPlan $plan,
+        ProductionPriorityRescheduler $rescheduler,
+    ): Response {
+        $this->denyAccessUnlessGranted('production.schedule.reprogram');
+        $this->assertPlanRouteOrder($serviceOrder, $plan);
+        if (!$this->isCsrfTokenValid('production-schedule-pin-'.$plan->getId(), $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('La solicitud no es válida.');
+        }
+
+        try {
+            $pinned = $request->request->getString('pinned') === '1';
+            $rescheduler->setSchedulePinned($plan, $pinned, $this->authenticatedUser());
+            $this->addFlash('success', $pinned ? 'La reserva quedó fija ante reprogramaciones.' : 'La reserva volverá a participar en futuras reprogramaciones.');
         } catch (\DomainException $exception) {
             $this->addFlash('error', $exception->getMessage());
         }
@@ -479,11 +711,14 @@ final class ServiceOrderController extends AbstractController
         ServiceOrderOperationPlanRepository $operationPlanRepository,
         ProductionReservationRepository $reservationRepository,
         UserRepository $userRepository,
+        ProductionCommitmentForecaster $commitmentForecaster,
+        ProductionLoadResolver $loadResolver,
     ): Response {
         $this->denyAccessUnlessGranted('service_orders.view');
 
         $plansByItem = [];
-        foreach ($operationPlanRepository->findActiveForServiceOrder($serviceOrder) as $plan) {
+        $allPlans = $operationPlanRepository->findActiveForServiceOrder($serviceOrder);
+        foreach ($allPlans as $plan) {
             $plansByItem[(int) $plan->getServiceOrderItem()->getId()][] = $plan;
         }
         $reservationsByPlan = [];
@@ -492,6 +727,24 @@ final class ServiceOrderController extends AbstractController
         }
 
         $canPlan = $serviceOrder->isPendingPlanning() && $this->isGranted('service_orders.plan');
+        $canManageCommitment = $this->isGranted('service_orders.commitment.manage');
+        $canManagePriority = $this->isGranted('production.priority.manage');
+        $canReprogramSchedule = $this->isGranted('production.schedule.reprogram');
+        $scheduleAdjustablePlans = [];
+        $now = new \DateTimeImmutable('now', new \DateTimeZone('America/Mexico_City'));
+        foreach ($plansByItem as $plans) {
+            foreach ($plans as $plan) {
+                $reservations = $reservationsByPlan[(int) $plan->getId()] ?? [];
+                $canAdjust = $reservations !== [];
+                foreach ($reservations as $reservation) {
+                    if ($reservation->getStartsAt() <= $now) {
+                        $canAdjust = false;
+                        break;
+                    }
+                }
+                $scheduleAdjustablePlans[(int) $plan->getId()] = $canAdjust;
+            }
+        }
         $itemsForDisplay = $serviceOrder->getItems()->toArray();
         usort($itemsForDisplay, static function (ServiceOrderItem $left, ServiceOrderItem $right): int {
             $leftRoot = $left->getSplitParentItem() ?? $left;
@@ -503,12 +756,36 @@ final class ServiceOrderController extends AbstractController
         $planningForm = null;
         $itemOperationForms = [];
         $equipmentForms = [];
+        $equipmentChoicesByPlan = [];
+        $recommendedEquipmentByPlan = [];
+        $automaticEstimateByPlan = [];
+        $physicalEstimateByPlan = [];
+        $requiredLoadUnitByPlan = [];
         $splitEligibleItems = [];
         $productionDimensions = [];
+        $productionForecast = $commitmentForecaster->forOrder($serviceOrder);
+        $planningProgress = [
+            'operations' => count($allPlans),
+            'with_equipment' => 0,
+            'estimated' => 0,
+            'reserved' => 0,
+            'ready' => 0,
+            'auto_actions' => 0,
+        ];
+        $planningHasIssues = false;
+        foreach ($serviceOrder->getItems() as $item) {
+            if ($item->getPlanningIssue() !== null) {
+                $planningHasIssues = true;
+            }
+        }
 
+        if ($canManageCommitment) {
+            $suggestedDate = $productionForecast['order']['suggested_delivery'] ?? null;
+            $planningForm = $this->createPlanningForm($this->planningData($serviceOrder, $suggestedDate), $serviceOrder)->createView();
+        }
         if ($canPlan) {
-            $planningForm = $this->createPlanningForm($this->planningData($serviceOrder), $serviceOrder)->createView();
             $operations = $operationRepository->findActiveForServiceOrderPlanning();
+            $nowForCapacity = new \DateTimeImmutable('now', new \DateTimeZone('America/Mexico_City'));
 
             foreach ($itemsForDisplay as $item) {
                 $itemOperationForms[(int) $item->getId()] = $this->createItemOperationForm(
@@ -519,14 +796,51 @@ final class ServiceOrderController extends AbstractController
                 )->createView();
 
                 foreach ($plansByItem[(int) $item->getId()] ?? [] as $plan) {
+                    $planId = (int) $plan->getId();
+                    $choices = $this->equipmentChoicesForPlan($plan, $equipmentRepository);
+                    $equipmentChoicesByPlan[$planId] = $choices;
+                    if ($plan->getEquipment() === null && count($choices) === 1) {
+                        $recommendedEquipmentByPlan[$planId] = $choices[0];
+                    }
+
                     $equipmentData = new ServiceOrderItemOperationEquipmentData();
                     $equipmentData->equipment = $plan->getEquipment();
                     $equipmentForms[(int) $plan->getId()] = $this->createEquipmentForm(
                         $equipmentData,
                         $serviceOrder,
                         $plan,
-                        $this->equipmentChoicesForPlan($plan, $equipmentRepository),
+                        $choices,
                     )->createView();
+
+                    $effectiveEquipment = $plan->getEquipment() ?? ($recommendedEquipmentByPlan[$planId] ?? null);
+                    $capacityUnit = $effectiveEquipment?->getCapacityUnit();
+                    $loadUnit = $capacityUnit?->loadUnit();
+                    $automaticLoad = $loadUnit !== null ? $loadResolver->automaticLoad($item, $loadUnit) : null;
+                    $capacityIsValid = $effectiveEquipment?->hasValidatedCapacityAt($nowForCapacity) ?? false;
+                    $physicalEstimateByPlan[$planId] = $effectiveEquipment !== null && $loadUnit !== null && $capacityIsValid;
+                    $automaticEstimateByPlan[$planId] = $plan->getEstimatedMinutes() !== null
+                        || ($effectiveEquipment !== null
+                            && $loadUnit !== null
+                            && $automaticLoad !== null
+                            && $capacityIsValid);
+                    $requiredLoadUnitByPlan[$planId] = $loadUnit;
+
+                    $hasEquipment = $plan->getEquipment() !== null;
+                    $hasEstimate = $plan->getEstimatedMinutes() !== null && $plan->getEstimateKind() !== null;
+                    $hasReservation = ($reservationsByPlan[$planId] ?? []) !== [];
+                    if ($hasEquipment) { ++$planningProgress['with_equipment']; }
+                    if ($hasEstimate) { ++$planningProgress['estimated']; }
+                    if ($hasReservation) { ++$planningProgress['reserved']; }
+                    if ($hasEquipment && $hasEstimate && $hasReservation && $plan->getBlockedReason() === null && $item->getPlanningIssue() === null) {
+                        ++$planningProgress['ready'];
+                    }
+                    if ($plan->getBlockedReason() !== null || $item->getPlanningIssue() !== null) {
+                        $planningHasIssues = true;
+                    }
+                    if ((!$hasEquipment && count($choices) === 1)
+                        || (!$hasEstimate && $effectiveEquipment !== null && $automaticEstimateByPlan[$planId])) {
+                        ++$planningProgress['auto_actions'];
+                    }
                 }
 
                 $productionDimensions[(int) $item->getId()] = [
@@ -547,13 +861,40 @@ final class ServiceOrderController extends AbstractController
             }
         }
 
+        $allPlansReadyToReserve = $planningProgress['operations'] > 0
+            && $planningProgress['with_equipment'] === $planningProgress['operations']
+            && $planningProgress['estimated'] === $planningProgress['operations']
+            && !$planningHasIssues;
+        $allPlansReserved = $planningProgress['operations'] > 0
+            && $planningProgress['reserved'] === $planningProgress['operations'];
+        $canReserveFullPlan = $canPlan && $allPlansReadyToReserve && !$allPlansReserved;
+        $canMarkPlanned = $canPlan
+            && $allPlansReadyToReserve
+            && $allPlansReserved
+            && $serviceOrder->getCommitmentDate() !== null;
+
         return $this->render('admin/service_orders/show.html.twig', [
             'serviceOrder' => $serviceOrder,
+            'productionForecast' => $productionForecast,
+            'planningProgress' => $planningProgress,
+            'planningHasIssues' => $planningHasIssues,
+            'canReserveFullPlan' => $canReserveFullPlan,
+            'canMarkPlanned' => $canMarkPlanned,
             'canPlan' => $canPlan,
+            'canManageCommitment' => $canManageCommitment,
+            'canManagePriority' => $canManagePriority,
+            'canReprogramSchedule' => $canReprogramSchedule,
+            'scheduleAdjustablePlans' => $scheduleAdjustablePlans,
+            'productionPriorities' => ProductionPriority::cases(),
             'itemsForDisplay' => $itemsForDisplay,
             'planningForm' => $planningForm,
             'itemOperationForms' => $itemOperationForms,
             'equipmentForms' => $equipmentForms,
+            'equipmentChoicesByPlan' => $equipmentChoicesByPlan,
+            'recommendedEquipmentByPlan' => $recommendedEquipmentByPlan,
+            'automaticEstimateByPlan' => $automaticEstimateByPlan,
+            'physicalEstimateByPlan' => $physicalEstimateByPlan,
+            'requiredLoadUnitByPlan' => $requiredLoadUnitByPlan,
             'operationPlansByItem' => $plansByItem,
             'reservationsByPlan' => $reservationsByPlan,
             'productionOperators' => $canPlan ? $userRepository->findActiveProductionOperators() : [],
@@ -575,10 +916,11 @@ final class ServiceOrderController extends AbstractController
         return is_scalar($candidate) && trim((string) $candidate) !== '' ? (string) $candidate : null;
     }
 
-    private function planningData(ServiceOrder $serviceOrder): ServiceOrderPlanningData
+    private function planningData(ServiceOrder $serviceOrder, ?\DateTimeImmutable $suggestedDate = null): ServiceOrderPlanningData
     {
         $data = new ServiceOrderPlanningData();
-        $data->commitmentDate = $serviceOrder->getCommitmentDate()?->format('Y-m-d');
+        $data->commitmentDate = ($serviceOrder->getCommitmentDate() ?? $suggestedDate)?->format('Y-m-d');
+        $data->reason = $serviceOrder->getCommitmentReason() ?? '';
 
         return $data;
     }
@@ -670,5 +1012,17 @@ final class ServiceOrderController extends AbstractController
         if ($plan->getServiceOrderItem()->getServiceOrder()->getId() !== $order->getId()) {
             throw $this->createNotFoundException();
         }
+    }
+
+    private function assertItemRouteOrder(ServiceOrder $order, ServiceOrderItem $item): void
+    {
+        if ($item->getServiceOrder()->getId() !== $order->getId()) {
+            throw $this->createNotFoundException();
+        }
+    }
+
+    private function priorityPreviewSessionKey(ServiceOrder $order, ServiceOrderItem $item): string
+    {
+        return sprintf('production_priority_preview_%d_%d', $order->getId(), $item->getId());
     }
 }

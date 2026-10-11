@@ -7,6 +7,7 @@ namespace App\Entity\Orders;
 use App\Entity\Catalog\CommercialItem;
 use App\Entity\Production\CommercialItemRouteVersion;
 use App\Entity\Quotations\QuotationItem;
+use App\Enum\Orders\ProductionPriority;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
@@ -19,6 +20,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_service_order_items_split_parent_position', fields: ['splitParentItem', 'splitPosition'])]
 #[ORM\Index(name: 'idx_service_order_items_commercial_item', columns: ['commercial_item_id'])]
 #[ORM\Index(name: 'idx_service_order_items_route_version', columns: ['route_version_id'])]
+#[ORM\Index(name: 'idx_service_order_items_priority', columns: ['priority'])]
 class ServiceOrderItem
 {
     #[ORM\Id]
@@ -86,6 +88,9 @@ class ServiceOrderItem
 
     #[ORM\Column(name: 'planning_issue', length: 255, nullable: true)]
     private ?string $planningIssue = null;
+
+    #[ORM\Column(length: 12, enumType: ProductionPriority::class, options: ['default' => 'normal'])]
+    private ProductionPriority $priority = ProductionPriority::NORMAL;
 
     #[ORM\Column(name: 'created_at', type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
@@ -352,6 +357,18 @@ class ServiceOrderItem
     {
         $planningIssue = trim((string) $planningIssue);
         $this->planningIssue = $planningIssue !== '' ? mb_substr($planningIssue, 0, 255) : null;
+
+        return $this;
+    }
+
+    public function getPriority(): ProductionPriority
+    {
+        return $this->priority;
+    }
+
+    public function setPriority(ProductionPriority $priority): self
+    {
+        $this->priority = $priority;
 
         return $this;
     }

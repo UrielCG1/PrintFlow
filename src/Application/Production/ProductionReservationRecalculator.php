@@ -60,7 +60,9 @@ final class ProductionReservationRecalculator
         $reservations = $this->reservationRepository->findActiveForEquipmentBetween($equipment, $now, $horizon);
         $candidatePlans = [];
         foreach ($reservations as $reservation) {
-            if ($reservation->getStartsAt() > $now && $reservation->getEndsAt() > $changedStart) {
+            if (!$reservation->getPlan()->isSchedulePinned()
+                && $reservation->getStartsAt() > $now
+                && $reservation->getEndsAt() > $changedStart) {
                 $candidatePlans[(int) $reservation->getPlan()->getId()] = $reservation->getPlan();
             }
         }

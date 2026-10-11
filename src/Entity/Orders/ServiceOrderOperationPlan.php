@@ -31,6 +31,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_service_order_plan_operator', columns: ['operator_user_id'])]
 #[ORM\Index(name: 'idx_service_order_plan_estimated_by', columns: ['estimated_by_user_id'])]
 #[ORM\Index(name: 'idx_service_order_plan_actual_by', columns: ['actual_by_user_id'])]
+#[ORM\Index(name: 'idx_service_order_plan_pinned_active', columns: ['is_schedule_pinned', 'is_active'])]
 #[ORM\HasLifecycleCallbacks]
 class ServiceOrderOperationPlan
 {
@@ -64,6 +65,9 @@ class ServiceOrderOperationPlan
 
     #[ORM\Column(name: 'is_active', options: ['default' => true])]
     private bool $isActive = true;
+
+    #[ORM\Column(name: 'is_schedule_pinned', options: ['default' => false])]
+    private bool $isSchedulePinned = false;
 
     /** @var array<string, mixed> */
     #[ORM\Column(name: 'operation_snapshot', type: Types::JSON)]
@@ -320,6 +324,18 @@ class ServiceOrderOperationPlan
     public function isActive(): bool
     {
         return $this->isActive;
+    }
+
+    public function isSchedulePinned(): bool
+    {
+        return $this->isSchedulePinned;
+    }
+
+    public function setSchedulePinned(bool $pinned): self
+    {
+        $this->isSchedulePinned = $pinned;
+
+        return $this;
     }
 
     /** @return array<string, mixed> */

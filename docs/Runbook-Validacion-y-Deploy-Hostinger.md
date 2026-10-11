@@ -1,7 +1,7 @@
 # PrintFlow — comandos de validación y despliegue en Hostinger
 
 **Fecha:** 10 de octubre de 2026
-**Estado:** Uriel reporta que la Fase 1 ya está desplegada y funciona en producción. La Fase 2 aún no se ha desplegado; los comandos al final se actualizaron para esa liberación.
+**Estado:** Uriel reporta que las Fases 1 y 2 están desplegadas y funcionan en producción. La implementación local de Fase 3 agrega `Version20261010160000` y ajustes UX de planificación; las pruebas funcionales y unitarias locales ya pasaron. Antes de desplegar, aún hay que revisar el dry run en Hostinger y validar en MySQL la reserva concurrente y atómica.
 **Alcance:** cerrar verificaciones pendientes de Fase 0 y documentar el despliegue controlado de Symfony, sin respaldos.
 
 Este repositorio contiene cambios locales sin publicar. Antes de desplegar, revisar y aprobar el conjunto de cambios, conservar los cambios de otras personas, y publicar un commit identificado. No desplegar el árbol de trabajo local directamente.
@@ -11,6 +11,8 @@ Este repositorio contiene cambios locales sin publicar. Antes de desplegar, revi
 La salida compartida por Uriel confirma Composer `2.9.0`, PHP CLI `8.2.34` y requisitos de dependencias no-dev correctos. Los scripts `cache:clear`, `assets:install` e `importmap:install` terminaron con `[OK]`. El estado de Doctrine reportó 40 migraciones aplicadas, 41 disponibles y una pendiente: `Version20261010120000`. El `--dry-run` simuló esa migración y terminó `[OK]`; **no la aplicó**.
 
 El mismo comando informó la base `u692972268_printflow_dev`; aunque el usuario la describió como producción, confirmar en hPanel que sea la base conectada al sitio productivo antes de cualquier escritura. `doctrine:schema:validate` encontró mappings válidos, pero el esquema no está sincronizado con esos mappings. La migración pendiente solo agrega/relaciona permisos y no corrige diferencias estructurales, por lo que hace falta identificar el SQL de esas diferencias antes de continuar.
+
+Este diagnóstico inicial quedó superado por comprobaciones posteriores de Uriel: confirmó que esa base es la de producción y compartió `doctrine:migrations:status` en `44/44`, última y actual `Version20261010150000`, sin versiones nuevas pendientes. También confirmó que el esquema está bien. No repetir la revisión antigua de `schema:update --dump-sql` como condición para liberar Fase 3; revisar la migración nueva con `migrations:status`, `migrations:list` y `migrate --dry-run`.
 
 El `--dump-sql` posterior no propone borrar tablas o columnas, pero sí quitar tres claves foráneas y ocho índices, incluido `uniq_volume_review_attempt`. Esos objetos aparecen en migraciones históricas y varios protegen integridad o consultas; por tanto ese volcado **no es una lista de cambios aprobados**. El desglose y la evidencia del código están en la sección siguiente. No se ejecutó el SQL.
 
@@ -88,6 +90,21 @@ composer check-platform-reqs
 Los dos comandos de Composer requieren que `composer` esté instalado localmente. Si una extensión no carga, `php --ini` muestra qué `php.ini` usa el CLI; verificar también que `extension_dir` contenga `pdo_sqlite.dll`. No sustituir el test aislado por uno que apunte a la base configurada en `.env.local`.
 
 El SHA de `git rev-parse HEAD` solo es candidato de despliegue si `git status --porcelain` está vacío, el commit ya fue revisado y se publicó al remoto. No tomar el `HEAD` actual si contiene trabajo sin commit.
+
+Para repetir las pruebas nuevas de Fase 3 desde la consola local normal:
+
+```powershell
+Set-Location C:\PrintFlow
+& C:\tools\php82\php.exe -l src\Application\Production\ProductionPriorityRescheduler.php
+& C:\tools\php82\php.exe -l src\Controller\Admin\Orders\ServiceOrderController.php
+& C:\tools\php82\php.exe -l migrations\Version20261010160000.php
+& C:\tools\php82\php.exe -d extension=pdo_sqlite vendor/bin/phpunit --configuration phpunit.dist.xml tests/Unit/Application/Production/ProductionCommitmentAnalyzerTest.php tests/Unit/Application/Production/ProductionScheduleCalculatorTest.php --do-not-cache-result
+& C:\tools\php82\php.exe -d extension=pdo_sqlite vendor/bin/phpunit --configuration phpunit.dist.xml tests/Functional/ServiceOrderCommercialAccessTest.php --do-not-cache-result
+& C:\tools\php82\php.exe bin/console lint:container --env=test
+& C:\tools\php82\php.exe bin/console lint:twig templates/admin/service_orders --env=test
+```
+
+En la sesión de revisión del 11 de octubre se ejecutaron la suite de unidad de Producción (**17 pruebas, 25 aserciones**) y `ServiceOrderCommercialAccessTest` (**9 pruebas, 347 aserciones**); ambas pasaron. También pasaron `lint:twig` para el detalle de órdenes y `php -l` para los PHP modificados. El sandbox inicial no podía leer `tests/bootstrap.php` ni `.env`; las pruebas se repitieron con acceso local normal. Para `lint:twig` se proporcionó `DATABASE_URL=sqlite:///:memory:` solo al proceso de test; no se modificó `.env` ni se consultó una base productiva. Sigue pendiente la prueba concurrente contra MySQL.
 
 Resultado local del 10 de octubre: `ServiceOrderCommercialAccessTest.php` pasó con `pdo_sqlite` (**6 pruebas, 277 aserciones**) y `ProductionRouteApplicatorTest.php` pasó (**3 pruebas, 16 aserciones**). También pasaron `lint:container`, Twig para las **101 plantillas**, y sintaxis PHP para los **30 archivos PHP** de la Fase 1. Doctrine cargó 72 entidades y las migraciones quedaron en **43 de 43**, última `Version20261010140000`. `schema:update --dump-sql` ya no propone eliminar el índice de partidas divididas; todavía muestra diferencias históricas de tipos/defaults e índices del módulo de descuentos. No ejecutar ese SQL ni `schema:update --force`. Una ejecución inicial desde el entorno de auditoría no podía abrir `.env` ni `tests/bootstrap.php`; la validación final se repitió con acceso local normal al PHP.
 
@@ -201,7 +218,7 @@ git diff --cached --check
 git diff --cached --stat
 git diff --cached
 # Después de revisar que solo estén los archivos de la entrega aprobada:
-git commit -m "Agrega estimación y reservas de producción"
+git commit -m "Agrega prioridades y compromisos de producción"
 git push origin main
 git rev-parse HEAD
 ```
@@ -238,7 +255,6 @@ APP_ENV=prod APP_DEBUG=0 "$COMPOSER_CMD" check-platform-reqs --no-dev
 php bin/console doctrine:migrations:status --env=prod --no-debug
 php bin/console doctrine:migrations:list --env=prod --no-debug
 php bin/console doctrine:schema:validate --env=prod --no-debug
-php bin/console doctrine:schema:update --dump-sql --env=prod --no-debug
 php bin/console doctrine:migrations:migrate --dry-run --env=prod --no-debug
 ```
 
@@ -253,7 +269,7 @@ php bin/console doctrine:migrations:status --env=prod --no-debug
 php bin/console doctrine:schema:validate --env=prod --no-debug
 ```
 
-Verificar que `doctrine:migrations:status` termine en la última versión del commit desplegado. El error `discount_breakdown` solo queda resuelto en producción cuando está desplegado el código que mapea la columna y también está aplicada `Version20261003010000`; no inferirlo del estado local. Para el commit de Fase 2, el *dry run* debe incluir `Version20261010150000` si esa versión todavía no está aplicada. Las migraciones anteriores de Fase 1 (`Version20261010130000` y `Version20261010140000`) solo aparecerán si siguen pendientes en la base destino.
+Verificar que `doctrine:migrations:status` termine en la última versión del commit desplegado. El error `discount_breakdown` solo queda resuelto en producción cuando está desplegado el código que mapea la columna y también está aplicada `Version20261003010000`; no inferirlo del estado local. La base productiva confirmada está actualmente en `Version20261010150000`. Para liberar Fase 3, el *dry run* debe mostrar únicamente `Version20261010160000` como pendiente; si muestra cualquier otra versión, revisar y detenerse antes de migrar.
 
 El repositorio no tiene un comando de mantenimiento de Symfony configurado; no usar `bin/console down`. Programar el cambio en una ventana de bajo tráfico. No usar `chmod -R 777`; resolver cualquier permiso de `var/cache` y `var/log` con el propietario/grupo de PHP asignado por Hostinger.
 

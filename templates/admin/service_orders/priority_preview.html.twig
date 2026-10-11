@@ -1,0 +1,94 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Vista previa de reprogramación | {{ serviceOrder.folio }}{% endblock %}
+{% block app_navigation_active %}service_orders{% endblock %}
+{% block app_breadcrumb %}Operación / Órdenes de servicio / Vista previa de prioridad{% endblock %}
+
+{% block app_content %}
+    <section class="pf-page__content">
+        <header class="pf-page-header">
+            <div class="pf-page-header__content">
+                <p class="pf-page-header__eyebrow">{{ serviceOrder.folio }} · Partida {{ item.displayLineNumber }}</p>
+                <h1 class="pf-page-header__title">Revisar cambio a prioridad {{ priority.label }}</h1>
+                <p class="pf-page-header__description">{{ item.commercialItemSnapshot.name ?? item.commercialItem.name }} · {{ item.quantity }} unidades · Motivo: {{ reason }}</p>
+            </div>
+            <div class="pf-page-header__actions">
+                <a href="{{ path('admin_service_orders_show', {id: serviceOrder.id}) }}" class="btn pf-button pf-button--secondary">Cancelar</a>
+            </div>
+        </header>
+
+        <section class="pf-card mb-4">
+            <header class="pf-card__header">
+                <h2 class="pf-card__title">Operaciones que cambiarían de horario</h2>
+                <p class="pf-card__description">La simulación respeta operaciones iniciadas, reservas fijadas, jornada laboral y bloqueos de máquina. La confirmación vuelve a validar la agenda antes de guardar.</p>
+            </header>
+            <div class="pf-card__body">
+                {% if changes is empty %}
+                    <p class="alert alert-info mb-0">El cambio no mueve horarios reservados. La nueva prioridad se aplicará al ordenar futuros trabajos.</p>
+                {% else %}
+                    <div class="pf-table-responsive">
+                        <table class="pf-table">
+                            <thead><tr><th>Orden / partida</th><th>Operación</th><th>Máquina</th><th>Horario actual</th><th>Horario propuesto</th></tr></thead>
+                            <tbody>
+                                {% for change in changes %}
+                                    <tr>
+                                        <td>{{ change.order_folio }} · {{ change.line_number }}</td>
+                                        <td>{{ change.operation }}</td>
+                                        <td>{{ change.machine ?? 'Equipo sin código' }}</td>
+                                        <td>
+                                            {% for segment in change.old_segments %}
+                                                <span class="d-block">{{ segment.start|date('d/m/Y H:i', 'America/Mexico_City') }}–{{ segment.end|date('d/m H:i', 'America/Mexico_City') }}</span>
+                                            {% endfor %}
+                                        </td>
+                                        <td>
+                                            {% for segment in change.new_segments %}
+                                                <span class="d-block">{{ segment.start|date('d/m/Y H:i', 'America/Mexico_City') }}–{{ segment.end|date('d/m H:i', 'America/Mexico_City') }}</span>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="pf-card mb-4">
+            <header class="pf-card__header"><h2 class="pf-card__title">Riesgo de entrega</h2></header>
+            <div class="pf-card__body">
+                {% if risks is empty %}
+                    <p class="text-muted mb-0">No hay pronósticos completos para comparar.</p>
+                {% else %}
+                    <div class="pf-table-responsive">
+                        <table class="pf-table">
+                            <thead><tr><th>Orden</th><th>Compromiso</th><th>Fin antes → después</th><th>Entrega sugerida</th><th>Riesgo antes → después</th><th>Holgura después</th><th>Causa</th></tr></thead>
+                            <tbody>
+                                {% for risk in risks %}
+                                    <tr>
+                                        <td>{{ risk.order_folio }}</td>
+                                        <td>{{ risk.commitment_date ? risk.commitment_date|date('d/m/Y') : 'Sin compromiso' }}</td>
+                                        <td>{{ risk.before_finish ? risk.before_finish|date('d/m/Y H:i', 'America/Mexico_City') : 'Sin pronóstico' }}<span class="d-block">→ {{ risk.after_finish ? risk.after_finish|date('d/m/Y H:i', 'America/Mexico_City') : 'Sin pronóstico' }}</span></td>
+                                        <td>{{ risk.suggested_delivery ? risk.suggested_delivery|date('d/m/Y') : 'Sin pronóstico' }}</td>
+                                        <td><span class="badge text-bg-{{ risk.before_risk.tone }}">{{ risk.before_risk.label }}</span><span class="d-block mt-1">→ <span class="badge text-bg-{{ risk.after_risk.tone }}">{{ risk.after_risk.label }}</span></span></td>
+                                        <td>{{ risk.after_slack_business_days is not null ? risk.after_slack_business_days ~ ' día(s) laborable(s)' : '—' }}</td>
+                                        <td>{{ risk.after_cause }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <footer class="d-flex flex-column flex-md-row justify-content-end gap-2">
+            <a href="{{ path('admin_service_orders_show', {id: serviceOrder.id}) }}" class="btn pf-button pf-button--secondary">Cancelar</a>
+            <form method="post" action="{{ path('admin_service_orders_confirm_item_priority', {id: serviceOrder.id, item: item.id}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('production-priority-confirm-' ~ previewNonce) }}">
+                <input type="hidden" name="preview_nonce" value="{{ previewNonce }}">
+                <button type="submit" class="btn pf-button pf-button--primary">Confirmar prioridad y reprogramar</button>
+            </form>
+        </footer>
+    </section>
+{% endblock %}

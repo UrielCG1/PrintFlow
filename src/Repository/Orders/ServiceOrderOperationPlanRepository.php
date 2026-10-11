@@ -88,6 +88,7 @@ final class ServiceOrderOperationPlanRepository extends ServiceEntityRepository
         $previous = $this->createQueryBuilder('previous')
             ->andWhere('previous.serviceOrderItem = :item')
             ->andWhere('previous.isActive = true')
+            ->andWhere('(previous.conditionApplied IS NULL OR previous.conditionApplied = true)')
             ->andWhere('previous.sequenceNumber < :sequence')
             ->setParameter('item', $plan->getServiceOrderItem())
             ->setParameter('sequence', $plan->getSequenceNumber())

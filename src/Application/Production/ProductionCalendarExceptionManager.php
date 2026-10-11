@@ -20,6 +20,7 @@ final class ProductionCalendarExceptionManager
         private readonly ProductionReservationRecalculator $reservationRecalculator,
         private readonly \App\Repository\Production\ProductionReservationRepository $reservationRepository,
         private readonly EquipmentRepository $equipmentRepository,
+        private readonly ProductionScheduleLock $scheduleLock,
     )
     {
     }
@@ -51,12 +52,17 @@ final class ProductionCalendarExceptionManager
             throw new \DomainException('El intervalo debe ser positivo y no puede exceder un año.');
         }
 
-        return $this->entityManager->wrapInTransaction(function () use ($data, $actor, $start, $end, $reason): ProductionCalendarException {
+        $scheduleLockAcquired = $this->scheduleLock->acquire();
+        try {
+            return $this->entityManager->wrapInTransaction(function () use ($data, $actor, $start, $end, $reason): ProductionCalendarException {
             $this->lockAffectedEquipment($data->equipment);
             if ($data->type !== ProductionCalendarExceptionType::OVERTIME) {
                 $now = new \DateTimeImmutable('now', new \DateTimeZone('America/Mexico_City'));
                 if ($this->reservationRepository->findInProgressOverlapping($start, $end, $now, $data->equipment) !== []) {
                     throw new \DomainException('No se puede bloquear una máquina mientras tiene una reserva en curso; registra el bloqueo después de que termine el segmento activo.');
+                }
+                if ($this->reservationRepository->findPinnedOverlapping($start, $end, $data->equipment) !== []) {
+                    throw new \DomainException('Hay una reserva futura fijada que cruza ese bloqueo; libera la reserva o elige otro intervalo.');
                 }
             }
 
@@ -84,13 +90,18 @@ final class ProductionCalendarExceptionManager
             );
             $this->entityManager->flush();
             $this->reservationRecalculator->recalculate($exception->getEquipment(), $start, $actor);
-            return $exception;
-        });
+                return $exception;
+            });
+        } finally {
+            $this->scheduleLock->release($scheduleLockAcquired);
+        }
     }
 
     public function deactivate(ProductionCalendarException $exception, User $actor): void
     {
-        $this->entityManager->wrapInTransaction(function () use ($exception, $actor): void {
+        $scheduleLockAcquired = $this->scheduleLock->acquire();
+        try {
+            $this->entityManager->wrapInTransaction(function () use ($exception, $actor): void {
             $this->entityManager->lock($exception, LockMode::PESSIMISTIC_WRITE);
             if (!$exception->isActive()) { return; }
             $equipment = $exception->getEquipment();
@@ -105,8 +116,11 @@ final class ProductionCalendarExceptionManager
                 newValues: ['type' => $exception->getType()->value, 'reason' => $exception->getReason()],
             );
             $this->entityManager->flush();
-            $this->reservationRecalculator->recalculate($equipment, $changedStart, $actor);
-        });
+                $this->reservationRecalculator->recalculate($equipment, $changedStart, $actor);
+            });
+        } finally {
+            $this->scheduleLock->release($scheduleLockAcquired);
+        }
     }
 
     private function lockAffectedEquipment(?\App\Entity\Equipment\Equipment $equipment): void

@@ -33,4 +33,26 @@ final class ProductionCalendarExceptionRepository extends ServiceEntityRepositor
             ->getQuery()->getResult();
         return $rows;
     }
+
+    /** @return list<ProductionCalendarException> */
+    public function findGlobalHolidaysBetween(\DateTimeImmutable $start, \DateTimeImmutable $end): array
+    {
+        $utc = new \DateTimeZone('UTC');
+        $start = $start->setTimezone($utc);
+        $end = $end->setTimezone($utc);
+
+        /** @var list<ProductionCalendarException> $rows */
+        $rows = $this->createQueryBuilder('exception')
+            ->andWhere('exception.isActive = true')
+            ->andWhere('exception.equipment IS NULL')
+            ->andWhere('exception.type = :holiday')
+            ->andWhere('exception.startsAt < :end AND exception.endsAt > :start')
+            ->setParameter('holiday', \App\Enum\Production\ProductionCalendarExceptionType::HOLIDAY)
+            ->setParameter('start', $start)
+            ->setParameter('end', $end)
+            ->orderBy('exception.startsAt', 'ASC')
+            ->getQuery()->getResult();
+
+        return $rows;
+    }
 }

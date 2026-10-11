@@ -65,7 +65,30 @@
                             <strong>{{ serviceOrder.commitmentDate|date('d/m/Y') }}</strong>
                         {% else %}
                             <strong>Por asignar</strong>
-                            <span class="d-block text-muted small mt-2">Se define durante la planificación.</span>
+                            <span class="d-block text-muted small mt-2">Ventas debe confirmar la fecha de entrega.</span>
+                        {% endif %}
+                        {% set orderRiskIcon = productionForecast.order.risk.value == 'late' ? 'bi-exclamation-triangle-fill' : (productionForecast.order.risk.value == 'tight' ? 'bi-clock-history' : (productionForecast.order.risk.value == 'on_track' ? 'bi-check-circle-fill' : 'bi-question-circle')) %}
+                        <span class="badge text-bg-{{ productionForecast.order.risk_tone }} mt-2"><i class="bi {{ orderRiskIcon }}" aria-hidden="true"></i> {{ productionForecast.order.risk_label }}</span>
+                        {% if productionForecast.order.production_finish %}
+                            <span class="d-block text-muted small mt-2">Fin de producción previsto: {{ productionForecast.order.production_finish|date('d/m/Y H:i', 'America/Mexico_City') }}</span>
+                            <span class="d-block text-muted small">Entrega sugerida con margen: {{ productionForecast.order.suggested_delivery|date('d/m/Y') }}</span>
+                        {% endif %}
+                        <span class="d-block text-muted small mt-1">{{ productionForecast.order.risk_cause }}</span>
+                        {% if canManageCommitment %}
+                            <details class="mt-3">
+                                <summary>{{ serviceOrder.commitmentDate ? 'Cambiar fecha compromiso' : 'Confirmar fecha compromiso' }}</summary>
+                                {{ form_start(planningForm, {action: path('admin_service_orders_update_planning', {id: serviceOrder.id}), method: 'POST', attr: {class: 'pf-form mt-2'}}) }}
+                                    {{ form_errors(planningForm) }}
+                                    {{ form_row(planningForm.commitmentDate) }}
+                                    {% if serviceOrder.commitmentDate %}
+                                        {{ form_row(planningForm.reason, {help: 'Obligatorio al cambiar o quitar una fecha ya acordada.'}) }}
+                                    {% else %}
+                                        <p class="form-text">La primera fecha se puede confirmar sin motivo. Si hay una sugerencia, aparece precargada.</p>
+                                        {{ form_widget(planningForm.reason, {attr: {style: 'display:none'}}) }}
+                                    {% endif %}
+                                    <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Guardar fecha</button>
+                                {{ form_end(planningForm) }}
+                            </details>
                         {% endif %}
                         {% if serviceOrder.plannedAt %}
                             <span class="d-block text-muted small mt-2">Planificada {{ serviceOrder.plannedAt|date('d/m/Y H:i', 'America/Mexico_City') }}{% if serviceOrder.plannedBy %} por {{ serviceOrder.plannedBy.fullName }}{% endif %}</span>
@@ -82,6 +105,8 @@
                     <p class="pf-card__description">Evidencia copiada al momento de crear la orden.</p>
                 </header>
                 <div class="pf-card__body">
+                    <details>
+                        <summary>Ver evidencia de aceptación de la cotización</summary>
                     <dl class="row mb-0">
                         <dt class="col-sm-3">Cotización</dt>
                         <dd class="col-sm-9">
@@ -110,6 +135,7 @@
                             <dd class="col-sm-9" style="white-space: pre-line;">{{ serviceOrder.quotationSnapshot.acceptance_evidence_reference }}</dd>
                         {% endif %}
                     </dl>
+                    </details>
                 </div>
             </section>
         {% endif %}
@@ -117,24 +143,38 @@
         <section class="pf-card mb-4">
             <header class="pf-card__header">
                 <h2 class="pf-card__title">Planificación operativa</h2>
-                <p class="pf-card__description">La ruta publicada del Producto se copia automáticamente a cada partida. Asigna equipo, estima la carga física y reserva los tramos de jornada; el tiempo calculado siempre conserva la capacidad usada como referencia.</p>
+                <p class="pf-card__description">La ruta de cada producto ya está copiada. Completa los datos pendientes y el sistema calculará y reservará lo que pueda con la información disponible.</p>
             </header>
 
-            {% if canPlan %}
-                <div class="pf-card__body border-bottom">
-                    {{ form_start(planningForm, {action: path('admin_service_orders_update_planning', {id: serviceOrder.id}), method: 'POST', attr: {class: 'pf-form'}}) }}
-                        {{ form_errors(planningForm) }}
-                        <div class="row g-3 align-items-end">
-                            <div class="col-md-6 col-lg-4">{{ form_row(planningForm.commitmentDate) }}</div>
-                            <div class="col-md-6 col-lg-8">
-                                <button type="submit" class="btn pf-button pf-button--secondary">Guardar fecha compromiso</button>
-                            </div>
+            {% set totalPlanningSteps = planningProgress.operations * 3 + 1 %}
+            {% set completedPlanningSteps = planningProgress.with_equipment + planningProgress.estimated + planningProgress.reserved + (serviceOrder.commitmentDate ? 1 : 0) %}
+            {% set progressPercent = totalPlanningSteps > 0 ? ((completedPlanningSteps / totalPlanningSteps) * 100)|round : 0 %}
+            <div class="pf-card__body border-bottom">
+                <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
+                    <div class="flex-grow-1">
+                        <strong>Avance de la orden</strong>
+                        <div class="progress mt-2" role="progressbar" aria-label="Avance de planificación" aria-valuenow="{{ progressPercent }}" aria-valuemin="0" aria-valuemax="100">
+                            <div class="progress-bar" style="width: {{ progressPercent }}%"></div>
                         </div>
-                    {{ form_end(planningForm) }}
+                        <p class="mb-0 mt-2 small text-muted">
+                            Máquina {{ planningProgress.with_equipment }}/{{ planningProgress.operations }} ·
+                            tiempo {{ planningProgress.estimated }}/{{ planningProgress.operations }} ·
+                            agenda {{ planningProgress.reserved }}/{{ planningProgress.operations }} ·
+                            fecha {{ serviceOrder.commitmentDate ? 'confirmada' : 'pendiente' }}
+                        </p>
+                    </div>
+                    {% if canPlan and planningProgress.auto_actions > 0 %}
+                        <form method="post" action="{{ path('admin_service_orders_prepare_automatically', {id: serviceOrder.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('service-order-auto-prepare-' ~ serviceOrder.id) }}">
+                            <button type="submit" class="btn pf-button pf-button--secondary">Completar {{ planningProgress.auto_actions }} paso(s) automático(s)</button>
+                            <span class="d-block text-muted small mt-1">Usa una máquina compatible única y calcula cargas derivadas de medidas.</span>
+                        </form>
+                    {% endif %}
                 </div>
-            {% elseif serviceOrder.isPlanned %}
+            </div>
+            {% if serviceOrder.isPlanned and not canPlan %}
                 <div class="pf-card__body border-bottom small text-muted">
-                    La ruta quedó bloqueada al marcar la orden como planificada. La ejecución de etapas se habilitará en la siguiente subfase.
+                    La ruta quedó bloqueada al marcar la orden como planificada. Las fechas compromiso pueden seguir ajustándose con motivo.
                 </div>
             {% endif %}
 
@@ -153,9 +193,44 @@
                                 {% if item.routeVersion %}
                                     <span class="d-block text-muted small mt-1">Ruta aplicada: {{ item.routeVersion.nameSnapshot }} v{{ item.routeVersion.versionNumber }}</span>
                                 {% endif %}
+                                {% set itemForecast = productionForecast.items[item.id]|default(null) %}
+                                <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
+                                    <span class="badge {{ item.priority.value == 'urgent' ? 'text-bg-primary' : (item.priority.value == 'high' ? 'text-bg-info' : 'text-bg-light text-dark border') }}"><i class="bi {{ item.priority.value == 'urgent' ? 'bi-lightning-charge-fill' : (item.priority.value == 'high' ? 'bi-arrow-up-circle-fill' : 'bi-dash-circle') }}" aria-hidden="true"></i> Prioridad {{ item.priority.label }}</span>
+                                    {% if itemForecast %}
+                                        {% set itemRiskIcon = itemForecast.risk.value == 'late' ? 'bi-exclamation-triangle-fill' : (itemForecast.risk.value == 'tight' ? 'bi-clock-history' : (itemForecast.risk.value == 'on_track' ? 'bi-check-circle-fill' : 'bi-question-circle')) %}
+                                        <span class="badge text-bg-{{ itemForecast.risk_tone }}"><i class="bi {{ itemRiskIcon }}" aria-hidden="true"></i> {{ itemForecast.risk_label }}</span>
+                                    {% endif %}
+                                    {% if itemForecast and itemForecast.production_finish %}<span class="text-muted small">Fin previsto {{ itemForecast.production_finish|date('d/m/Y H:i', 'America/Mexico_City') }}</span>{% endif %}
+                                </div>
                             </div>
                             <span class="text-muted small">{{ plans|length }} {{ plans|length == 1 ? 'operación' : 'operaciones' }} activas</span>
                         </header>
+
+                        {% if canManagePriority %}
+                            <details class="mb-3">
+                                <summary>Cambiar prioridad de esta partida</summary>
+                                <form method="post" action="{{ path('admin_service_orders_preview_item_priority', {id: serviceOrder.id, item: item.id}) }}" class="pf-form border rounded p-3 mt-2">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('production-item-priority-' ~ serviceOrder.id ~ '-' ~ item.id) }}">
+                                    <div class="row g-2 align-items-end">
+                                        <div class="col-md-3">
+                                            <label class="form-label" for="priority-{{ item.id }}">Nueva prioridad</label>
+                                            <select class="form-select" id="priority-{{ item.id }}" name="priority" required>
+                                                {% for option in productionPriorities %}
+                                                    <option value="{{ option.value }}"{% if item.priority == option %} selected{% endif %}>{{ option.label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label" for="priority-reason-{{ item.id }}">Motivo del cambio</label>
+                                            <input class="form-control" id="priority-reason-{{ item.id }}" name="reason" minlength="5" maxlength="500" required>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <button type="submit" class="btn pf-button pf-button--secondary">Revisar impacto</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </details>
+                        {% endif %}
 
                         {% if item.productionSpecificationsSnapshot._production_adjustment|default(null) %}
                             <div class="alert alert-warning py-2" role="status">Las medidas de producción fueron corregidas después de aplicar la ruta. Revisa las operaciones y confirma la ruta antes de planificar. Las medidas cotizadas y sus importes permanecen intactos.</div>
@@ -205,15 +280,38 @@
                                             <td>{{ plan.operationSnapshot.area_name ?? plan.operation.operationArea.name }}</td>
                                             <td>
                                                 {% if canPlan %}
-                                                    {{ form_start(equipmentForms[plan.id], {action: path('admin_service_orders_assign_item_operation_equipment', {id: serviceOrder.id, plan: plan.id}), method: 'POST', attr: {class: 'pf-form'}}) }}
-                                                        {{ form_errors(equipmentForms[plan.id]) }}
-                                                        {{ form_widget(equipmentForms[plan.id].equipment, {attr: {class: 'form-select form-select-sm mb-2'}}) }}
-                                                        <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Guardar equipo</button>
-                                                    {{ form_end(equipmentForms[plan.id]) }}
-                                                    {% if plan.equipment and plan.equipment.capacityUnit %}
-                                                        <span class="d-block text-muted small mt-1">{{ plan.equipment.capacityRate }} {{ plan.equipment.capacityUnit.label }}{% if plan.equipment.capacityValidatedAt %} · validada {{ plan.equipment.capacityValidatedAt|date('d/m/Y') }}{% else %} · pendiente de validar{% endif %}</span>
-                                                    {% elseif plan.equipment %}
-                                                        <span class="d-block text-warning small mt-1">Sin rendimiento numérico estructurado</span>
+                                                    {% set planReservations = reservationsByPlan[plan.id]|default([]) %}
+                                                    {% set planChoices = equipmentChoicesByPlan[plan.id]|default([]) %}
+                                                    {% if plan.equipment %}
+                                                        <strong>{{ plan.equipmentSnapshot.name ?? plan.equipment.name }}</strong>
+                                                        <span class="d-block text-muted small">{{ plan.equipment.code }}</span>
+                                                        {% if plan.equipment.capacityUnit %}
+                                                            <span class="d-block text-muted small">{{ plan.equipment.capacityRate }} {{ plan.equipment.capacityUnit.label }}{% if plan.equipment.capacityValidatedAt %} · capacidad validada{% else %} · capacidad por validar{% endif %}</span>
+                                                        {% else %}
+                                                            <span class="d-block text-warning small">Requiere tiempo manual justificado.</span>
+                                                        {% endif %}
+                                                        {% if planReservations is empty %}
+                                                            <details class="mt-2">
+                                                                <summary>Cambiar máquina</summary>
+                                                                {{ form_start(equipmentForms[plan.id], {action: path('admin_service_orders_assign_item_operation_equipment', {id: serviceOrder.id, plan: plan.id}), method: 'POST', attr: {class: 'pf-form mt-2'}}) }}
+                                                                    {{ form_errors(equipmentForms[plan.id]) }}
+                                                                    {{ form_widget(equipmentForms[plan.id].equipment, {attr: {class: 'form-select form-select-sm mb-2'}}) }}
+                                                                    <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Guardar máquina</button>
+                                                                {{ form_end(equipmentForms[plan.id]) }}
+                                                            </details>
+                                                        {% endif %}
+                                                    {% elseif recommendedEquipmentByPlan[plan.id]|default(null) %}
+                                                        <strong>Recomendada: {{ recommendedEquipmentByPlan[plan.id].name }}</strong>
+                                                        <span class="d-block text-muted small">{{ recommendedEquipmentByPlan[plan.id].code }} · única máquina compatible disponible</span>
+                                                    {% elseif planChoices is empty %}
+                                                        <span class="text-warning">No hay máquina compatible disponible.</span>
+                                                    {% else %}
+                                                        <span class="d-block text-muted small mb-1">Elige una máquina compatible</span>
+                                                        {{ form_start(equipmentForms[plan.id], {action: path('admin_service_orders_assign_item_operation_equipment', {id: serviceOrder.id, plan: plan.id}), method: 'POST', attr: {class: 'pf-form'}}) }}
+                                                            {{ form_errors(equipmentForms[plan.id]) }}
+                                                            {{ form_widget(equipmentForms[plan.id].equipment, {attr: {class: 'form-select form-select-sm mb-2'}}) }}
+                                                            <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Guardar máquina</button>
+                                                        {{ form_end(equipmentForms[plan.id]) }}
                                                     {% endif %}
                                                 {% elseif plan.equipment %}
                                                     <strong>{{ plan.equipmentSnapshot.name ?? plan.equipment.name }}</strong>
@@ -224,9 +322,12 @@
                                             </td>
                                             {% if canPlan %}
                                                 <td class="pf-table__actions-cell">
+                                                <details>
+                                                    <summary>Más</summary>
                                                     <form
                                                         method="post"
                                                         action="{{ path('admin_service_orders_remove_item_operation', {id: serviceOrder.id, plan: plan.id}) }}"
+                                                        class="mt-2"
                                                         data-controller="ui--confirm-action"
                                                         data-action="submit->ui--confirm-action#submit"
                                                         data-ui--confirm-action-title-value="¿Retirar operación?"
@@ -236,8 +337,9 @@
                                                         data-ui--confirm-action-icon-value="warning"
                                                     >
                                                         <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-remove-' ~ plan.id) }}">
-                                                        <button type="submit" class="btn pf-button pf-button--danger pf-button--sm">Retirar</button>
+                                                        <button type="submit" class="btn pf-button pf-button--danger pf-button--sm">Retirar operación</button>
                                                     </form>
+                                                </details>
                                                 </td>
                                             {% endif %}
                                         </tr>
@@ -255,7 +357,7 @@
                                                                 <span class="ms-2"><strong>Real:</strong> {{ plan.actualMinutes }} min · Diferencia: {{ plan.actualMinutes - plan.estimatedMinutes }} min</span>
                                                             {% endif %}
                                                         {% else %}
-                                                            <span class="text-muted">Sin estimación guardada.</span>
+                                                            <span class="text-warning">Falta calcular el tiempo.</span>
                                                         {% endif %}
                                                     </div>
                                                     {% if planReservations|length > 0 %}
@@ -265,52 +367,90 @@
                                                                 <span class="badge text-bg-light border">{{ reservation.startsAt|date('d/m H:i', 'America/Mexico_City') }}–{{ reservation.endsAt|date('d/m H:i', 'America/Mexico_City') }} · {{ reservation.equipment.code }}</span>
                                                             {% endfor %}
                                                         </div>
-                                                    {% endif %}
-                                                    {% if canPlan %}
-                                                        <form method="post" action="{{ path('admin_service_orders_estimate_item_operation', {id: serviceOrder.id, plan: plan.id}) }}" class="pf-form">
-                                                            <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-estimate-' ~ plan.id) }}">
-                                                            <div class="row g-2 align-items-end">
-                                                                <div class="col-md-2">
-                                                                    <label class="form-label" for="load-unit-{{ plan.id }}">Unidad física</label>
-                                                                    <select class="form-select form-select-sm" id="load-unit-{{ plan.id }}" name="load_unit">
-                                                                        <option value="">De la máquina</option>
-                                                                        {% for unit in productionLoadUnits %}
-                                                                            <option value="{{ unit.value }}"{% if plan.estimatedLoadUnit == unit %} selected{% elseif plan.estimatedLoadUnit is null and plan.equipment and plan.equipment.capacityUnit and plan.equipment.capacityUnit.loadUnit == unit %} selected{% endif %}>{{ unit.label }}</option>
-                                                                        {% endfor %}
-                                                                    </select>
-                                                                </div>
-                                                                <div class="col-md-2"><label class="form-label" for="load-{{ plan.id }}">Carga física</label><input class="form-control form-control-sm" id="load-{{ plan.id }}" name="load" inputmode="decimal" value="{{ plan.estimatedLoadValue ?? '' }}" placeholder="Vacío = m² por dimensiones"></div>
-                                                                <div class="col-md-2"><label class="form-label" for="manual-minutes-{{ plan.id }}">Minutos manuales</label><input class="form-control form-control-sm" id="manual-minutes-{{ plan.id }}" name="manual_minutes" inputmode="numeric" placeholder="Solo excepción"></div>
-                                                                <div class="col-md-4"><label class="form-label" for="estimate-reason-{{ plan.id }}">Motivo / datos de apoyo</label><input class="form-control form-control-sm" id="estimate-reason-{{ plan.id }}" name="reason" maxlength="500" placeholder="Obligatorio para minutos manuales"></div>
-                                                                <div class="col-md-2"><button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Guardar estimación</button></div>
-                                                            </div>
-                                                        </form>
-                                                        {% if planReservations|length == 0 and plan.estimatedMinutes and plan.equipment %}
-                                                            <form method="post" action="{{ path('admin_service_orders_reserve_item_operation', {id: serviceOrder.id, plan: plan.id}) }}">
-                                                                <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-reserve-' ~ plan.id) }}">
-                                                                <button type="submit" class="btn pf-button pf-button--primary pf-button--sm">Reservar máquina y jornada</button>
-                                                            </form>
+                                                        {% if (canReprogramSchedule and scheduleAdjustablePlans[plan.id]|default(false)) or plan.schedulePinned %}
+                                                            <details>
+                                                                <summary>Opciones de agenda</summary>
+                                                                {% if canReprogramSchedule and scheduleAdjustablePlans[plan.id]|default(false) %}
+                                                                    <form method="post" action="{{ path('admin_service_orders_set_operation_schedule_pin', {id: serviceOrder.id, plan: plan.id}) }}" class="mt-2">
+                                                                        <input type="hidden" name="_token" value="{{ csrf_token('production-schedule-pin-' ~ plan.id) }}">
+                                                                        <input type="hidden" name="pinned" value="{{ plan.schedulePinned ? '0' : '1' }}">
+                                                                        <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">{{ plan.schedulePinned ? 'Desfijar de la agenda' : 'Fijar en la agenda' }}</button>
+                                                                    </form>
+                                                                {% elseif plan.schedulePinned %}
+                                                                    <span class="badge text-bg-secondary">Reserva protegida ante reprogramaciones</span>
+                                                                {% endif %}
+                                                            </details>
                                                         {% endif %}
-                                                        {% if planReservations|length > 0 %}
-                                                            <form method="post" action="{{ path('admin_service_orders_assign_item_operation_operator', {id: serviceOrder.id, plan: plan.id}) }}" class="d-flex gap-2 align-items-center">
+                                                    {% endif %}
+                                                    {% if canPlan and planReservations is empty and not plan.estimateKind %}
+                                                        {% if not plan.equipment %}
+                                                            <p class="mb-0 small text-muted">Primero asigna la máquina compatible.</p>
+                                                        {% elseif not plan.estimateKind %}
+                                                            {% if automaticEstimateByPlan[plan.id]|default(false) %}
+                                                                <p class="mb-0 small text-muted">El tiempo se calcula automáticamente con las medidas del producto.</p>
+                                                            {% elseif physicalEstimateByPlan[plan.id]|default(false) %}
+                                                                {% set requiredLoadUnit = requiredLoadUnitByPlan[plan.id] %}
+                                                                <form method="post" action="{{ path('admin_service_orders_estimate_item_operation', {id: serviceOrder.id, plan: plan.id}) }}" class="pf-form">
+                                                                    <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-estimate-' ~ plan.id) }}">
+                                                                    <input type="hidden" name="load_unit" value="{{ requiredLoadUnit.value }}">
+                                                                    <label class="form-label" for="load-{{ plan.id }}">Captura {{ requiredLoadUnit.label }} reales para calcular el tiempo</label>
+                                                                    <div class="d-flex flex-wrap gap-2 align-items-end">
+                                                                        <input class="form-control form-control-sm" style="max-width: 260px" id="load-{{ plan.id }}" name="load" inputmode="decimal" required value="{{ plan.estimatedLoadValue ?? '' }}" placeholder="Cantidad física">
+                                                                        <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Calcular tiempo</button>
+                                                                    </div>
+                                                                </form>
+                                                                {% if requiredLoadUnit.value == 'cut_cm' %}<p class="form-text mb-0">Usa la trayectoria real del vector; no se deduce de la cantidad de piezas.</p>{% elseif requiredLoadUnit.value == 'linear_m' %}<p class="form-text mb-0">Usa los metros reales del material según el acomodo.</p>{% endif %}
+                                                            {% else %}
+                                                                <p class="small text-warning mb-0">La capacidad de esta máquina necesita revisión. Usa la estimación manual si ya conoces el tiempo.</p>
+                                                            {% endif %}
+                                                            <details class="mt-2">
+                                                                <summary>Registrar tiempo manual (excepción)</summary>
+                                                                <form method="post" action="{{ path('admin_service_orders_estimate_item_operation', {id: serviceOrder.id, plan: plan.id}) }}" class="pf-form mt-2">
+                                                                    <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-estimate-' ~ plan.id) }}">
+                                                                    {% if requiredLoadUnitByPlan[plan.id]|default(null) %}<input type="hidden" name="load_unit" value="{{ requiredLoadUnitByPlan[plan.id].value }}">{% endif %}
+                                                                    <div class="d-flex flex-wrap gap-2 align-items-end">
+                                                                        <div><label class="form-label" for="manual-minutes-{{ plan.id }}">Tiempo estimado (minutos)</label><input class="form-control form-control-sm" id="manual-minutes-{{ plan.id }}" name="manual_minutes" type="number" min="1" max="999999" required></div>
+                                                                        <div class="flex-grow-1"><label class="form-label" for="estimate-reason-{{ plan.id }}">Motivo o dato de apoyo</label><input class="form-control form-control-sm" id="estimate-reason-{{ plan.id }}" name="reason" minlength="5" maxlength="500" required></div>
+                                                                        <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Guardar tiempo manual</button>
+                                                                    </div>
+                                                                </form>
+                                                            </details>
+                                                        {% endif %}
+                                                    {% elseif canPlan and planReservations is empty and plan.estimatedMinutes and plan.equipment %}
+                                                        <details class="mt-2">
+                                                            <summary>Editar estimación</summary>
+                                                            <form method="post" action="{{ path('admin_service_orders_estimate_item_operation', {id: serviceOrder.id, plan: plan.id}) }}" class="pf-form mt-2">
+                                                                <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-estimate-' ~ plan.id) }}">
+                                                                {% if requiredLoadUnitByPlan[plan.id]|default(null) %}<input type="hidden" name="load_unit" value="{{ requiredLoadUnitByPlan[plan.id].value }}">{% endif %}
+                                                                <div class="d-flex flex-wrap gap-2 align-items-end">
+                                                                    <div><label class="form-label" for="edit-load-{{ plan.id }}">Carga física ({{ plan.estimatedLoadUnit ? plan.estimatedLoadUnit.label : (requiredLoadUnitByPlan[plan.id] ? requiredLoadUnitByPlan[plan.id].label : 'opcional') }})</label><input class="form-control form-control-sm" id="edit-load-{{ plan.id }}" name="load" inputmode="decimal" value="{{ plan.estimatedLoadValue ?? '' }}"></div>
+                                                                    <div><label class="form-label" for="edit-minutes-{{ plan.id }}">Minutos manuales (opcional)</label><input class="form-control form-control-sm" id="edit-minutes-{{ plan.id }}" name="manual_minutes" type="number" min="1" max="999999"></div>
+                                                                    <div class="flex-grow-1"><label class="form-label" for="edit-reason-{{ plan.id }}">Motivo si usas tiempo manual</label><input class="form-control form-control-sm" id="edit-reason-{{ plan.id }}" name="reason" minlength="5" maxlength="500"></div>
+                                                                    <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Actualizar tiempo</button>
+                                                                </div>
+                                                            </form>
+                                                        </details>
+                                                    {% endif %}
+                                                    {% if planReservations|length > 0 %}
+                                                        <details>
+                                                            <summary>Opciones del trabajo reservado</summary>
+                                                            <form method="post" action="{{ path('admin_service_orders_assign_item_operation_operator', {id: serviceOrder.id, plan: plan.id}) }}" class="d-flex flex-wrap gap-2 align-items-center mt-2">
                                                                 <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-operator-' ~ plan.id) }}">
-                                                                <label class="form-label mb-0" for="operator-{{ plan.id }}">Operador</label>
-                                                                <select class="form-select form-select-sm" id="operator-{{ plan.id }}" name="operator_id">
+                                                                <label class="form-label mb-0" for="operator-{{ plan.id }}">Operador (opcional)</label>
+                                                                <select class="form-select form-select-sm" style="max-width: 280px" id="operator-{{ plan.id }}" name="operator_id">
                                                                     <option value="">Sin asignar</option>
                                                                     {% for operator in productionOperators %}<option value="{{ operator.id }}"{% if plan.assignedOperator and plan.assignedOperator.id == operator.id %} selected{% endif %}>{{ operator.fullName }}</option>{% endfor %}
                                                                 </select>
-                                                                <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Guardar</button>
+                                                                <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Guardar operador</button>
                                                             </form>
-                                                        {% endif %}
-                                                        {% if planReservations|length > 0 %}
-                                                            <form method="post" action="{{ path('admin_service_orders_record_item_operation_actual_time', {id: serviceOrder.id, plan: plan.id}) }}" class="d-flex flex-wrap gap-2 align-items-end">
+                                                            <form method="post" action="{{ path('admin_service_orders_record_item_operation_actual_time', {id: serviceOrder.id, plan: plan.id}) }}" class="d-flex flex-wrap gap-2 align-items-end mt-2">
                                                                 <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-actual-' ~ plan.id) }}">
                                                                 <div><label class="form-label mb-1" for="actual-minutes-{{ plan.id }}">Tiempo real (min)</label><input class="form-control form-control-sm" id="actual-minutes-{{ plan.id }}" name="actual_minutes" type="number" min="0" required value="{{ plan.actualMinutes ?? '' }}"></div>
                                                                 <div class="flex-grow-1"><label class="form-label mb-1" for="actual-note-{{ plan.id }}">Nota de medición</label><input class="form-control form-control-sm" id="actual-note-{{ plan.id }}" name="actual_note" maxlength="500" required value="{{ plan.actualNote ?? '' }}"></div>
                                                                 <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Registrar real</button>
                                                             </form>
-                                                        {% endif %}
-                                                    {% elseif plan.assignedOperator %}
+                                                        </details>
+                                                    {% elseif not canPlan and plan.assignedOperator %}
                                                         <span><strong>Operador:</strong> {{ plan.assignedOperator.fullName }}</span>
                                                     {% endif %}
                                                 </div>
@@ -378,21 +518,47 @@
 
             {% if canPlan %}
                 <footer class="pf-card__body border-top d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                    <p class="mb-0 text-muted small">Cada operación activa necesita equipo, estimación y reserva sin solapes; las etapas de una partida respetan su secuencia.{% if is_granted('production_calendar.manage') %} Configura feriados, mantenimiento u horas extra en <a href="{{ path('admin_production_calendar_index') }}">jornada de producción</a>.{% endif %}</p>
-                    <form
-                        method="post"
-                        action="{{ path('admin_service_orders_mark_planned', {id: serviceOrder.id}) }}"
-                        data-controller="ui--confirm-action"
-                        data-action="submit->ui--confirm-action#submit"
-                        data-ui--confirm-action-title-value="¿Marcar orden como planificada?"
-                        data-ui--confirm-action-text-value="La ruta, fecha y equipos quedarán bloqueados para preservar la trazabilidad antes de iniciar ejecución."
-                        data-ui--confirm-action-confirm-button-text-value="Sí, marcar planificada"
-                        data-ui--confirm-action-cancel-button-text-value="Cancelar"
-                        data-ui--confirm-action-icon-value="question"
-                    >
-                        <input type="hidden" name="_token" value="{{ csrf_token('service-order-mark-planned-' ~ serviceOrder.id) }}">
-                        <button type="submit" class="btn pf-button pf-button--primary">Marcar como planificada</button>
-                    </form>
+                    <div>
+                        <p class="mb-1 text-muted small">Las operaciones se reservan respetando su secuencia y evitando cruces en cada máquina.{% if is_granted('production_calendar.manage') %} Ajusta turnos y excepciones en <a href="{{ path('admin_production_calendar_index') }}">jornada de producción</a>.{% endif %}</p>
+                        {% if planningProgress.operations > 0 and planningProgress.reserved == planningProgress.operations and not serviceOrder.commitmentDate %}
+                            <p class="mb-0 small">La agenda está lista. Confirma la fecha compromiso en el resumen de la orden para cerrar la planificación.</p>
+                        {% elseif planningHasIssues %}
+                            <p class="mb-0 small text-warning">Resuelve las partidas u operaciones marcadas antes de reservar la orden.</p>
+                        {% elseif planningProgress.operations > 0 and planningProgress.ready < planningProgress.operations %}
+                            <p class="mb-0 small">{{ planningProgress.operations - planningProgress.ready }} operación(es) todavía necesitan datos o reserva.</p>
+                        {% endif %}
+                    </div>
+                    {% if canReserveFullPlan %}
+                        <form
+                            method="post"
+                            action="{{ path('admin_service_orders_reserve_full_plan', {id: serviceOrder.id}) }}"
+                            data-controller="ui--confirm-action"
+                            data-action="submit->ui--confirm-action#submit"
+                            data-ui--confirm-action-title-value="¿Reservar la agenda de toda la orden?"
+                            data-ui--confirm-action-text-value="El sistema reservará las operaciones en secuencia y sin solapes. Si algún tramo no puede asignarse, no se guardará ninguna reserva de esta acción."
+                            data-ui--confirm-action-confirm-button-text-value="Reservar orden"
+                            data-ui--confirm-action-cancel-button-text-value="Revisar datos"
+                            data-ui--confirm-action-icon-value="question"
+                        >
+                            <input type="hidden" name="_token" value="{{ csrf_token('service-order-reserve-full-plan-' ~ serviceOrder.id) }}">
+                            <button type="submit" class="btn pf-button pf-button--primary">Reservar todas las operaciones</button>
+                        </form>
+                    {% elseif canMarkPlanned %}
+                        <form
+                            method="post"
+                            action="{{ path('admin_service_orders_mark_planned', {id: serviceOrder.id}) }}"
+                            data-controller="ui--confirm-action"
+                            data-action="submit->ui--confirm-action#submit"
+                            data-ui--confirm-action-title-value="¿Confirmar planificación de la orden?"
+                            data-ui--confirm-action-text-value="La ruta, fecha y equipos quedarán bloqueados para conservar su trazabilidad antes de iniciar ejecución."
+                            data-ui--confirm-action-confirm-button-text-value="Sí, confirmar"
+                            data-ui--confirm-action-cancel-button-text-value="Revisar orden"
+                            data-ui--confirm-action-icon-value="question"
+                        >
+                            <input type="hidden" name="_token" value="{{ csrf_token('service-order-mark-planned-' ~ serviceOrder.id) }}">
+                            <button type="submit" class="btn pf-button pf-button--primary">Confirmar planificación</button>
+                        </form>
+                    {% endif %}
                 </footer>
             {% endif %}
         </section>
