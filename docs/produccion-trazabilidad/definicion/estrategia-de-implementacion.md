@@ -1,7 +1,8 @@
 # PrintFlow — Estrategia de implementación de trazabilidad
 
-**Versión:** 1.0
+**Versión:** 1.1
 **Fecha:** 10 de octubre de 2026
+**Actualizado:** 11 de octubre de 2026 · aclaración del plan operativo y revisión obligatoria de Diseño.
 **Estado:** documento de diseño inicial; las decisiones posteriores registradas en el roadmap y la guía operativa prevalecen cuando lo actualizan.
 **Alcance del entregable:** estrategia documental. No implica que todos los módulos, migraciones, escáneres o notificaciones descritos ya estén implementados.
 
@@ -167,11 +168,13 @@ Evitar un único campo que intente expresar simultáneamente todos estos concept
 
 | Eje | Estados propuestos | Regla |
 | --- | --- | --- |
-| Planificación | PENDING_PLANNING, PLANNED, preservados inicialmente en el enum actual. | Tener un plan no significa haber fabricado. |
+| Plan operativo | PENDING_PLANNING, PLANNED, preservados inicialmente en el enum actual. | PENDING_PLANNING significa que la orden ya fue creada y espera completar su plan de taller. PLANNED significa que Producción confirmó ruta, equipos, estimaciones y reservas después de registrar Ventas la fecha compromiso; habilita Diseño, pero no significa que se haya fabricado ni que el arte esté aprobado. |
 | Producción | WAITING_DESIGN, IN_PRODUCTION, WAITING_QUALITY, QUALITY_REWORK, PRODUCTION_COMPLETED, CANCELLED. | Estado resumido calculado desde partidas e incidencias, salvo la liberación humana de calidad y la cancelación autorizada. |
 | Entrega | NOT_READY, READY_FOR_PICKUP, READY_FOR_SHIPMENT, SHIPPED, DELIVERED. | READY depende de producción liberada; SHIPPED solo para domicilio; DELIVERED exige confirmación. |
 
 Bloqueos, riesgo de retraso, prioridad y falta de datos son atributos separados; no se pierde esa información al cambiar de estado. Con partidas en áreas distintas, el resumen debe mostrar «En producción — Diseño 1, Impresión 2, Acabados 1», en lugar de atribuir toda la orden a un área única.
+
+**Uso de los términos en el flujo vigente:** aceptar la cotización crea la orden y aplica los snapshots de ruta por partida; no confirma la agenda. Ventas establece la fecha compromiso comercial. Producción usa «Confirmar planificación» cuando cada operación activa tiene equipo compatible, estimación y reserva, y no existen bloqueos. Esa confirmación registra quién/cuándo, cambia `PENDING_PLANNING` a `PLANNED` y permite iniciar Diseño. Diseño revisa todas las partidas, incluso si se recibió un archivo terminado del cliente; su autorización del arte es una acción distinta y posterior.
 
 ### 4.4. Estado de partida, paso e intento
 
@@ -201,9 +204,9 @@ Antes de emitir, comprobar:
 5. Contacto solicitante y condiciones comerciales válidas.
 6. Modalidad y destino de entrega, permitiendo un pendiente visible cuando aún falte definición.
 
-Al crear la orden se congelan folios, cliente/contacto, modalidad/destino, partidas, petición original depurada, especificaciones revisadas, ruta aplicada y referencias de archivos. La orden existente puede crearse aunque falten datos de planificación; tales partidas entran a Diseño bloqueadas o pendientes de preparación, sin reservas ni fechas inventadas.
+Al crear la orden se congelan folios, cliente/contacto, modalidad/destino, partidas, petición original depurada, especificaciones revisadas, ruta aplicada y referencias de archivos. La orden puede crearse aunque falten datos del plan de taller, sin reservas ni fechas inventadas. Las partidas quedan visibles para seguimiento y revisión; Diseño puede iniciar su paso solamente cuando Producción confirme la planificación.
 
-**Salida:** orden única; todas las partidas visibles en Diseño y en la vista global de Producción, con responsable pendiente o asignado. La aceptación y la creación permanecen como eventos distintos, aunque se agrupen en una acción de interfaz.
+**Salida:** orden única; todas las partidas visibles en las bandejas operativas correspondientes. La aceptación y la creación permanecen como eventos distintos, aunque se agrupen en una acción de interfaz. Diseño siempre es el primer paso de la ruta y queda pendiente hasta confirmar el plan operativo.
 
 ### 5.2. Diseño: archivo autorizado y referencia obligatoria
 
@@ -215,12 +218,12 @@ Existen dos caminos válidos:
 
 | Situación | Archivo autorizado para imprimir | Evidencia obligatoria |
 | --- | --- | --- |
-| Original correcto | La versión exacta del archivo aportado por el cliente se marca viable para impresión. | Validación interna, referencia al original y captura de cómo debe quedar el trabajo. No se exige otra subida del archivo de impresión. |
-| Archivo requiere ajustes o debe crearse | Diseño incorpora una nueva versión preparada para impresión. | Validación interna de esa versión, archivo nuevo, captura e instrucciones pertinentes. |
+| Original correcto | La versión exacta del archivo aportado por el cliente se marca viable para impresión. | Validación interna, referencia al original y captura con el Producto de referencia. No se exige otra subida del archivo de impresión. |
+| Archivo requiere ajustes o debe crearse | Diseño incorpora una nueva versión preparada para impresión. | Validación interna de esa versión, archivo nuevo y captura con el Producto de referencia; instrucciones pertinentes cuando hagan falta. |
 
-Revisar dimensiones, orientación, distribución/paneles, resolución o formato aplicable, sangrados y requisitos del equipo/material. Los criterios concretos se parametrizan por Producto y tecnología; no se aplica una única regla técnica a todos los trabajos.
+Revisar dimensiones, orientación, distribución/paneles, resolución o formato aplicable, sangrados y requisitos del equipo/material. Los criterios concretos se parametrizan por Producto y tecnología; no se aplica una única regla técnica a todos los trabajos. La revisión aplica tanto a originales del cliente como a archivos preparados internamente.
 
-Para finalizar el paso se requiere: archivo autorizado existente, versión/hash fijados, captura obligatoria, validación interna y especificaciones suficientes para el siguiente paso. Las instrucciones adicionales son opcionales; la captura no lo es. Si hay varios archivos necesarios para una partida, la liberación fija el conjunto completo y su orden de uso.
+Para finalizar el paso se requiere: archivo autorizado existente, versión/hash fijados, captura obligatoria con el Producto de referencia, validación interna y especificaciones suficientes para el siguiente paso. Las instrucciones adicionales son opcionales; la captura no lo es. Si hay varios archivos necesarios para una partida, la liberación fija el conjunto completo y su orden de uso.
 
 Un cambio de archivo autorizado genera nueva versión y revisión. Si Impresión ya empezó, no se sustituye el archivo que ve el operador sin bloquear el trabajo y tramitar la incidencia/retrabajo. La autorización de una versión no se hereda a otra.
 
@@ -602,11 +605,11 @@ Reutilizar `AuditLogger` para acciones de aplicación y añadir eventos operativ
 
 La trazabilidad solicitada se integra con la planificación del FSD; no reemplaza una ruta publicada por un estado capturado libremente.
 
-- Ruta base reutilizable, publicada por Producto de `CommercialItem`, con snapshot inmutable en la partida. En este alcance todas incluyen entrada a Diseño, aunque la tarea sea únicamente validar el archivo original.
+- Ruta base reutilizable, publicada por Producto de `CommercialItem`, con snapshot inmutable en la partida. Todas las rutas publicadas comienzan con `PRE-DISENO` obligatorio, aunque Diseño únicamente tenga que validar y liberar el archivo original del cliente. Las operaciones posteriores pueden variar según el Producto.
 - Ruta inicial operativa: Diseño → Impresión → Acabados/empaque. Acabados puede contener varias operaciones secuenciales. No omitir áreas por decisión libre del operador.
 - Si algún Producto no requiere impresión u otra área, su recorrido alternativo y punto de identificación deben definirse expresamente antes de habilitarlo. No inferir una excepción que contradiga el flujo confirmado.
 - Proponer máquina compatible cuando existan datos fiables; asignación de operador posterior por jefe/Administrador.
-- Si falta archivo requerido, ruta, carga o rendimiento, informar causa y no reservar pasos dependientes. Diseño puede preparar el archivo pendiente antes de completar la estimación.
+- Si falta ruta, carga o rendimiento, informar causa y no reservar pasos dependientes. La partida no comienza Diseño hasta que el plan operativo sea confirmado; después Diseño prepara o corrige el arte faltante antes de liberar la siguiente operación.
 - Jornada base lunes a viernes, 08:00–18:00, sin pausa fija; feriados, mantenimiento y excepciones extraordinarias autorizadas según FSD.
 - Duraciones por unidad física real; ancho, distribución y velocidad validados. No usar m² facturados como área física sin comprobación ni fichas textuales como rendimiento estructurado.
 - Segmentar reservas entre jornadas; impedir solapes de máquina en servidor. El tiempo real de intentos permite calibrar estimaciones futuras.

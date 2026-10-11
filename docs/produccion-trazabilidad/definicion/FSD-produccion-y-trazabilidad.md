@@ -1,12 +1,12 @@
 # PrintFlow — FSD de producción y trazabilidad
 
-**Versión:** 1.2 · **Fecha:** 11 de octubre de 2026 · **Estado:** especificación funcional base; aplicar las decisiones posteriores resumidas en el índice y el roadmap.
+**Versión:** 1.3 · **Fecha:** 11 de octubre de 2026 · **Estado:** especificación funcional base; aplicar las decisiones posteriores resumidas en el índice y el roadmap.
 
-> **Precedencia y vigencia:** este FSD conserva los requisitos de la etapa inicial. Cuando una decisión posterior difiere, prevalecen el [roadmap y sus actualizaciones](../roadmap/fases-y-historias.md) y la [guía operativa vigente](../operacion/guia-operativa-planificacion-a-entrega.md). Entre las precisiones posteriores: Ventas confirma «Entregado»; la revisión de Diseño se habilita por permiso sin requerir asignación de operador; la pausa libera la máquina y actualiza la agenda; el correo automático al cliente sigue pospuesto.
+> **Precedencia y vigencia:** este FSD conserva los requisitos de la etapa inicial. Cuando una decisión posterior difiere, prevalecen el [roadmap y sus actualizaciones](../roadmap/fases-y-historias.md) y la [guía operativa vigente](../operacion/guia-operativa-planificacion-a-entrega.md). Entre las precisiones posteriores: aceptar una cotización crea la orden pendiente de plan operativo; Producción confirma ese plan después de completar y reservar sus operaciones; todas las partidas pasan por revisión obligatoria de Diseño aunque el cliente envíe un archivo; Ventas confirma «Entregado»; la pausa libera la máquina y actualiza la agenda; el correo automático al cliente sigue pospuesto.
 
 ## 1. Propósito y alcance
 
-Planear y seguir la fabricación de cada partida de una orden de servicio derivada de una cotización aceptada. Al crear la orden, PrintFlow aplica la ruta publicada del Producto cotizado, estima carga y duración, propone una máquina compatible y reserva huecos laborables. Producción ve el trabajo y registra su avance sin recibir precios ni importes comerciales. El jefe de Producción y el Administrador gestionan excepciones, agenda, prioridades e incidencias. Ventas pacta y confirma la entrega.
+Planear y seguir la fabricación de cada partida de una orden de servicio derivada de una cotización aceptada. Al crear la orden, PrintFlow aplica y conserva la ruta publicada del Producto cotizado. Después, durante la planificación operativa, Producción completa los datos pendientes, estima duración, asigna máquinas compatibles y reserva huecos laborables. Producción ve el trabajo y registra su avance sin recibir precios ni importes comerciales. El jefe de Producción y el Administrador gestionan excepciones, agenda, prioridades e incidencias. Ventas confirma la fecha compromiso y la entrega.
 
 Quedan fuera de esta entrega el control de existencias, reservas o descuentos de inventario, compras y alertas de stock. Los descuentos de cotización ya existen y no forman parte de este módulo. El correo al cliente al finalizar queda como acción manual o integración posterior; ninguna transición enviará correo automáticamente en la primera versión.
 
@@ -15,7 +15,7 @@ Quedan fuera de esta entrega el control de existencias, reservas o descuentos de
 | Capacidad actual | Evidencia | Implicación |
 | --- | --- | --- |
 | Orden única desde cotización aceptada | `src/Application/Orders/ServiceOrderManager.php::createFromAcceptedQuotation`, `src/Controller/Admin/Orders/ServiceOrderController.php`, tablas `service_orders` y `service_order_items` | La aceptación habilita un POST posterior para crear la orden. Extender ese caso de uso, sin crear otro flujo. Ya hay bloqueo de cotización, transacción, folio y restricciones únicas. |
-| Partidas y ruta manual | `ServiceOrderItem`, `ServiceOrderOperationPlan`, `Version20260810220000.php` | Conservar estas entidades y sus snapshots. Hoy operación, orden y equipo se capturan manualmente y la ruta se cierra al marcar la orden planificada. |
+| Partidas y ruta automática | `ServiceOrderItem`, `ServiceOrderOperationPlan`, `ServiceOrderManager::createFromAcceptedQuotation`, `ProductionRouteApplicator` | La orden nueva copia la ruta publicada aplicable a cada partida y conserva snapshots. La planificación posterior completa equipos, tiempos y reservas; `ServiceOrderManager::markPlanned` valida esos datos y registra la confirmación. |
 | Producto del cotizador | `src/Entity/Catalog/CommercialItem.php` y FK de `QuotationItem`/`ServiceOrderItem` | La ruta de esta etapa pertenece a `CommercialItem`, que es el Producto utilizado realmente por la cotización. `src/Entity/Products/Product.php` y `products` existen, pero no están conectados a este flujo; no crear una segunda ruta allí. |
 | Catálogos de operación/equipo | `OperationArea`, `Operation`, `Equipment`, `EquipmentRepository` | Existe operación primaria por equipo y filtro de activos. `technical_capacity` es texto; el ancho útil es numérico. Disponibilidad de catálogo no equivale a hueco libre. |
 | Interfaz y seguridad | Twig, AssetMapper, Stimulus, `PermissionVoter`, `role_permissions` | Los permisos se validan en servidor. No hay FullCalendar, Scheduler ni licencia detectada en el repositorio. |
@@ -32,9 +32,9 @@ Esta tabla describe código inspeccionado. No confirma migraciones aplicadas, co
 | Corrección técnica | Producción puede corregir ancho/alto terminado antes de planificar, con motivo. Se conserva el snapshot original de cotización; la corrección vive en el snapshot técnico de producción y no recalcula precios. La ruta se marca pendiente de revisión explícita antes de planificar. |
 | Rutas | Rutas base reutilizables se asignan a varios Productos; cada Producto publica su configuración y variantes técnicas. La versión aplicada se congela en el trabajo. |
 | Secuencia | Los pasos son secuenciales en la primera versión. Los datos deben admitir dependencias futuras sin activar paralelismo ahora. |
-| Arte del cliente | Si el cliente aporta archivo, se omite Diseño, pero permanece revisión técnica de archivo/preprensa. Si falta el archivo requerido, ese paso queda bloqueado y no se reservan los siguientes. |
+| Diseño y arte del cliente | Todas las partidas pasan por Diseño como primera operación obligatoria. Diseño revisa el archivo y las dimensiones; si el original del cliente es apto, lo autoriza y adjunta una captura con el Producto de referencia; si requiere ajustes o falta, prepara el archivo para impresión y adjunta esa captura. La siguiente operación no inicia hasta que Diseño libera la partida. |
 | Excepciones de datos | La orden se crea aunque falte ruta, medida o rendimiento; la partida indica «requiere planificación/estimación» y una causa. No se inventan horas ni fechas. |
-| Máquina y persona | Al crear la orden se propone y reserva máquina compatible cuando los datos lo permiten. El operador se asigna después por jefe de Producción o Administrador. |
+| Máquina y persona | Durante la planificación operativa se propone/asigna una máquina compatible y se reserva cuando los datos lo permiten. El operador se asigna después por jefe de Producción o Administrador; la revisión inicial de Diseño no requiere asignación individual. |
 | Jornada base | Lunes a viernes de 08:00 a 18:00, sin pausa fija. Sábado, domingo y horario nocturno están excluidos por defecto; jefe o Administrador pueden autorizar una jornada extraordinaria concreta, con motivo. |
 | Promesa de entrega | Se calcula fin de producción y se sugieren tres días **laborales** adicionales. La primera fecha pactada puede confirmarse sin motivo; cambiar o quitar una fecha guardada requiere motivo y alerta de riesgo. |
 | Prioridad | Normal por defecto, Alta y Urgente. Urgente y cambios de prioridad requieren motivo. El desplazamiento de reservas futuras requiere vista previa y confirmación; un proceso activo no se interrumpe automáticamente. |
@@ -63,9 +63,9 @@ Implementar permisos separados para configurar ruta/capacidad, planificar, repro
 
 ## 5. Flujo funcional
 
-1. **Configurar Producto.** El jefe o Administrador asigna una ruta base reutilizable al `CommercialItem`, ajusta condiciones simples (`archivo del cliente`, `impresión`, `laminado`, `corte`, entre otras verificadas) y publica una versión. Una ruta publicada debe ser inequívoca para las características de una partida. Publicar otra versión no modifica órdenes existentes.
-2. **Crear orden.** El POST existente desde cotización aceptada crea la orden y copia las partidas una sola vez dentro de la misma transacción. Por cada partida genera trabajo e identificador estable basado en el folio actual y número de partida, aplica snapshot técnico y de ruta, crea pasos en `ServiceOrderOperationPlan` o extensión del mismo agregado, y estima. Los importes comerciales permanecen en la orden, fuera de la proyección operativa.
-3. **Planear.** Si todos los datos requeridos están presentes, el jefe asigna una máquina compatible, calcula o justifica la duración y reserva huecos laborables en orden de ruta. La máquina se puede reservar sin operador; el jefe asigna a la persona después. Si falta archivo, ruta, carga física o capacidad validada, se informa la causa y no se crea pronóstico ficticio.
+1. **Configurar Producto.** El jefe o Administrador asigna una ruta base reutilizable al `CommercialItem`, ajusta sus operaciones posteriores a Diseño y variantes técnicas, y publica una versión. Toda ruta publicada inicia con `PRE-DISENO` obligatorio; las rutas pueden diferir después de esa revisión según el Producto. Una ruta publicada debe ser inequívoca para las características de una partida. Publicar otra versión no modifica órdenes existentes.
+2. **Crear orden.** El POST existente desde cotización aceptada crea una sola orden y copia las partidas dentro de la misma transacción. Por cada partida aplica snapshot técnico y de ruta y crea pasos en `ServiceOrderOperationPlan`. El resultado queda en `PENDING_PLANNING` (pendiente de completar el plan operativo); todavía no significa que las máquinas estén reservadas ni que la fabricación haya comenzado. Los importes comerciales permanecen en la orden, fuera de la proyección operativa.
+3. **Completar el plan operativo.** Ventas registra la fecha compromiso acordada con el cliente. Producción revisa la ruta copiada, asigna máquina compatible, calcula o justifica duración y reserva todos los pasos activos en secuencia dentro de la jornada. La máquina se reserva sin exigir operador; el jefe asigna a la persona después cuando corresponda. Si falta ruta, carga física, capacidad validada, estimación o compatibilidad, se informa la causa y no se inventa un pronóstico.
 4. **Revisar.** Jefe/Administrador ve excepciones, asigna persona, corrige medidas técnicas con motivo, introduce estimación manual justificada cuando corresponda y confirma ajustes. Una corrección conserva el snapshot de cotización, exige revisar y confirmar la ruta y no recalcula importes. Una división conserva la cantidad y el subtotal comercial mediante filas hijas visibles para Ventas. Ventas puede ajustar la promesa al pactarla; se muestra el riesgo calculado.
 5. **Ejecutar.** El operador asignado pasa el paso por `Pendiente → Listo → En curso → Completado`, con `Pausado` y `Bloqueado` cuando aplique. Cada transición guarda actor, instante UTC, estado anterior/nuevo y motivo cuando corresponda. Al completarse se habilita el paso siguiente. Se conserva tiempo real y se recalcula pronóstico.
 6. **Calidad y retrabajo.** Si falla calidad, jefe/Administrador abre un nuevo intento o retrabajo vinculado al paso original, con motivo. Los intentos y eventos anteriores permanecen. Un paso ejecutado no se borra para corregir una ruta.
@@ -75,7 +75,19 @@ El estado operativo de orden es distinto del estado comercial de cotización. Lo
 
 **Excepción para Diseño:** el paso obligatorio inicial `PRE-DISENO` no requiere asignación individual como Operador. Puede iniciarlo y autorizar sus archivos cualquier usuario activo con permiso `production.design.review`; se registra como responsable de ese intento. La asignación de operador permanece disponible para las demás operaciones.
 
-### 5.1 Flujo de planificación en la interfaz
+### 5.1. Qué significa confirmar el plan operativo
+
+La aceptación de la cotización y la confirmación del plan operativo son acciones distintas, aunque ambas ocurran al inicio del recorrido:
+
+| Momento | Qué ocurre | Estado / responsable |
+| --- | --- | --- |
+| Se acepta la cotización y se crea la orden | PrintFlow crea la orden, copia sus partidas y aplica a cada una la versión de ruta publicada para el Producto. | `PENDING_PLANNING`: la orden existe y espera completar la planificación operativa. La creación no confirma fecha, máquina ni agenda. |
+| Ventas confirma la fecha compromiso | Registra la fecha acordada con el cliente; cualquier cambio posterior conserva motivo e historial según las reglas vigentes. | La fecha comercial queda establecida por Ventas. Esto por sí solo no confirma la agenda de taller. |
+| Producción confirma el plan operativo | El servidor valida fecha compromiso, ruta sin incidencias, al menos una operación activa por partida, equipo compatible, estimación y reserva activa para cada operación. Registra actor y fecha de confirmación. | `PLANNED`: la orden puede iniciar la operación de Diseño. No significa que ya se fabricó ni que Diseño haya aprobado el archivo. |
+
+Por lo tanto, **«Confirmar planificación» confirma que el trabajo tiene una ruta ejecutable y una agenda reservada**, no que se esté creando la orden, autorizando el arte, iniciando la producción o confirmando la entrega. La operación de Diseño `PRE-DISENO` comienza después de esta confirmación y sigue siendo un control obligatorio independiente.
+
+### 5.2. Flujo de planificación en la interfaz
 
 - La orden muestra avance por máquina, tiempo, agenda y fecha compromiso. Las acciones disponibles indican cuántos datos faltan y se habilitan solo cuando sus requisitos están satisfechos.
 - Una única máquina compatible aparece como recomendación y se puede asignar con la preparación automática de la orden. Si hay varias, Producción elige; si no hay ninguna, se presenta esa causa.

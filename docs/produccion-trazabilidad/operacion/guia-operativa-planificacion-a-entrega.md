@@ -4,11 +4,33 @@
 
 Esta guía describe el flujo disponible en la aplicación para una orden de servicio creada desde una cotización aceptada. Está organizada por rol y por el orden en que debe avanzar el trabajo. Los nombres de los estados entre paréntesis son los que usa el sistema.
 
+## Qué quiere decir «planificar»
+
+La cotización aceptada ya genera la orden y copia la ruta operativa de cada partida. La orden queda en **Pendiente de planificación** (`PENDING_PLANNING`): significa que falta completar el plan del taller, no que falte crear la orden.
+
+**Confirmar planificación** es el paso posterior de Producción. Confirma que cada partida tiene una ruta válida y sin bloqueos, que todas sus operaciones activas tienen una máquina compatible, duración estimada y reserva de agenda, y que Ventas ya registró la fecha compromiso. El sistema guarda quién confirmó y cuándo, cambia la orden a `PLANNED` y permite iniciar Diseño. No confirma el archivo de impresión ni significa que el trabajo ya se fabricó. Ventas confirma por separado la fecha compromiso; Diseño autoriza el arte más adelante.
+
+```mermaid
+flowchart LR
+    A[Cotización aceptada] --> B[Orden creada<br/>PENDING_PLANNING]
+    B --> C[Ventas registra fecha compromiso]
+    C --> D[Producción completa rutas, máquinas,<br/>estimaciones y reservas]
+    D --> E{¿Plan completo y sin bloqueos?}
+    E -- No --> D
+    E -- Sí --> F[Confirmar plan<br/>PLANNED]
+    F --> G[Diseño revisa cada partida<br/>PRE-DISENO obligatorio]
+    G --> H{¿Arte listo para imprimir?}
+    H -- No --> I[Preparar o corregir arte]
+    I --> J[Captura de referencia y liberación]
+    H -- Sí --> J
+    J --> K[Iniciar la siguiente operación]
+```
+
 ## Vista rápida
 
-1. **Ventas** revisa la orden y confirma la fecha compromiso.
-2. **Producción** verifica la ruta de cada partida, asigna máquinas, estima tiempos y reserva la agenda; después confirma la planificación.
-3. **Diseño** revisa la primera etapa de cada partida y libera el archivo correcto para impresión.
+1. **Ventas** revisa la orden creada desde la cotización aceptada y registra la fecha compromiso acordada con el cliente.
+2. **Producción** revisa la ruta copiada para cada partida, completa máquinas, estimaciones y reservas; después confirma el plan operativo.
+3. **Diseño** revisa todas las partidas, valida el archivo y las dimensiones aunque el cliente haya enviado un original, y libera el archivo correcto para impresión.
 4. **Impresión y Producción** ejecutan las operaciones respetando la secuencia, registran pausas e incidencias y completan el trabajo.
 5. **Calidad** libera la producción o devuelve una operación para retrabajo.
 6. **Ventas** confirma si el cliente recogerá o recibirá un envío.
@@ -16,7 +38,7 @@ Esta guía describe el flujo disponible en la aplicación para una orden de serv
 
 ## Cómo se muestra el progreso y la navegación
 
-El detalle de la orden presenta cinco etapas —**Planificación, Diseño, Producción, Calidad y Entrega**— en una secuencia horizontal. Cada etapa marca si está pendiente, en curso o completa; el encabezado resume el estado actual y el detalle indica qué falta. Durante producción se muestra cuántas operaciones ya terminaron. La vista conserva los datos comerciales detrás de `service_orders.view_commercial`; el progreso operativo no los requiere.
+El detalle de la orden presenta cinco etapas —**Planificación, Diseño, Producción, Calidad y Entrega**— en una secuencia horizontal. La etapa **Planificación** corresponde al plan operativo posterior a crear la orden: fecha compromiso, ruta, máquinas, estimaciones y agenda. Cada etapa marca si está pendiente, en curso o completa; el encabezado resume el estado actual y el detalle indica qué falta. Durante producción se muestra cuántas operaciones ya terminaron. La vista conserva los datos comerciales detrás de `service_orders.view_commercial`; el progreso operativo no los requiere.
 
 El menú **Operación** se agrupa por intención y solo muestra enlaces que el perfil puede usar:
 
@@ -76,9 +98,9 @@ flowchart LR
 
 **Dónde:** `Órdenes de servicio` → abrir la orden.
 
-1. Confirma que el cliente, las partidas, las cantidades, las características y los archivos de origen correspondan a la cotización aceptada.
+1. La aceptación ya creó esta orden. Comprueba que cliente, partidas, cantidades, características y archivos de origen copiados correspondan a la cotización aceptada.
 2. Revisa el pronóstico que aparece en la orden. Si todavía no hay tiempos o agenda, el sistema indicará que falta planificar; aún no es una fecha de producción confiable.
-3. Confirma la fecha compromiso y escribe el motivo requerido. La recomendación del sistema considera **tres días laborables de margen** después del fin pronosticado, descontando fines de semana y días festivos globales configurados. Ventas confirma la fecha ofrecida al cliente según el compromiso comercial y la prioridad.
+3. Registra la fecha compromiso que Ventas acordó con el cliente. La primera fecha no requiere motivo; si cambias o eliminas una fecha ya guardada, escribe el motivo requerido. La recomendación del sistema considera **tres días laborables de margen** después del fin pronosticado, descontando fines de semana y días festivos globales configurados. Ventas confirma la fecha ofrecida al cliente según el compromiso comercial y la prioridad.
 4. Guarda la fecha antes de que Producción marque la orden como planificada. Si se modifica después, indica el motivo del cambio para conservar el historial.
 
 **Resultado esperado:** fecha compromiso visible y pronóstico con riesgo calculado cuando exista una agenda completa.
@@ -95,9 +117,9 @@ flowchart LR
    - Si faltan datos fiables o la máquina no tiene capacidad validada, captura minutos manuales y explica el dato que respalda la estimación.
 4. Usa **Preparar automáticamente** para completar asignaciones únicas y cálculos posibles; revisa los avisos de lo que quedó pendiente.
 5. Usa **Reservar agenda completa**. El sistema coloca las operaciones en secuencia, sin cruces en una misma máquina, dentro de la jornada configurada de **lunes a viernes, 08:00–18:00**. Una operación puede ocupar varios tramos o días.
-6. Atiende los bloqueos y vuelve a reservar si hace falta. Confirma **Planificación** solo cuando todas las partidas tengan ruta activa, máquina, tiempo estimado y reserva, y la orden tenga fecha compromiso.
+6. Atiende los bloqueos y vuelve a reservar si hace falta. Usa **Confirmar planificación** solo cuando todas las partidas tengan ruta activa, máquina, tiempo estimado y reserva, y Ventas haya registrado la fecha compromiso.
 
-La confirmación deja la ruta de la orden bloqueada para preservar su trazabilidad. Si después hace falta cambiar la prioridad, Producción puede revisar el impacto y reprogramar trabajo futuro con el permiso correspondiente. Una operación que ya está activa no se interrumpe para adelantar otra.
+La confirmación cambia el estado a `PLANNED`, registra actor y fecha, y cierra la preparación inicial de rutas, equipos, estimaciones y reservas para que Diseño pueda comenzar. No significa que la orden ya esté producida ni que el archivo esté aprobado. Si después hace falta cambiar la prioridad, Producción puede revisar el impacto y reprogramar trabajo futuro con el permiso correspondiente. Una operación que ya está activa no se interrumpe para adelantar otra.
 
 **Resultado esperado:** orden planificada; Diseño puede iniciar la primera operación de la ruta.
 
@@ -105,14 +127,14 @@ La confirmación deja la ruta de la orden bloqueada para preservar su trazabilid
 
 **Dónde:** menú **Diseño** → cola → abrir la partida pendiente.
 
-1. Comprueba las instrucciones y descarga el archivo de origen del cliente si existe.
+1. Comprueba las instrucciones y descarga el archivo de origen del cliente si existe. Diseño debe revisar cada partida y validar que el original corresponda al Producto y a sus dimensiones; recibir un archivo no equivale a aprobarlo.
 2. Inicia la revisión. No es necesario asignar la diseñadora como operadora: el acceso para revisar depende del permiso de Diseño.
 3. Continúa por una de estas dos opciones:
-   - **El archivo del cliente sirve para imprimir:** autoriza el original y adjunta una captura del diseño final como referencia.
-   - **Hace falta preparar o corregir el arte:** adjunta el archivo listo para impresión y la captura de referencia; agrega instrucciones útiles para Impresión.
+   - **El archivo del cliente sirve para imprimir:** autoriza el original después de validar medidas y preparación, y adjunta la captura con el Producto de referencia.
+   - **Hace falta preparar o corregir el arte:** adjunta el archivo listo para impresión y la captura con el Producto de referencia; agrega instrucciones útiles para Impresión.
 4. Autoriza la liberación cuando el archivo adjunto sea exactamente el que debe producirse.
 
-La implementación vigente exige que todas las rutas comiencen con `PRE-DISENO`, incluso si el cliente envió el arte. En ese caso Diseño valida el original y deja evidencia de la revisión; si no se proporcionó archivo, prepara el arte. La liberación completa la operación y habilita la siguiente etapa.
+Todas las rutas nuevas comienzan con `PRE-DISENO` obligatorio, aunque el cliente envíe un archivo. Las rutas reutilizables pueden variar en sus operaciones posteriores a Diseño según las necesidades de cada Producto. Si falta el archivo o no cumple dimensiones, Diseño prepara o corrige el arte; si ya está listo, valida y autoriza ese original. En ambos casos la liberación adjunta la captura con el Producto de referencia y habilita la siguiente operación.
 
 **Resultado esperado:** arte liberado y referencia disponible para Impresión.
 
@@ -214,7 +236,7 @@ stateDiagram-v2
 |---|---|
 | “Falta estimar y reservar” o no aparece pronóstico | Producción verifica máquina compatible, capacidad, carga, minutos y reserva en agenda. |
 | “No hay máquina compatible” | Producción revisa las áreas y equipos del catálogo o solicita el ajuste del catálogo al Administrador. |
-| No se puede confirmar planificación | Debe existir fecha compromiso y cada partida requiere ruta activa sin bloqueos; cada operación necesita equipo, estimación y reserva. |
+| No se puede confirmar planificación | La orden ya fue creada; falta completar el plan operativo. Debe existir fecha compromiso y cada partida requiere ruta activa sin bloqueos; cada operación necesita equipo compatible, estimación y reserva. |
 | Diseño no puede iniciar | Confirma que la orden esté planificada y que Diseño sea la primera etapa activa de esa partida; revisa `production.design.review`. |
 | Impresión no puede comenzar | Confirma liberación de Diseño, requisitos de equipo/material, escaneos válidos, secuencia disponible y `production.execute`. |
 | No se puede reanudar | Resuelve primero la incidencia y revisa si la máquina está libre y si la reserva puede reprogramarse. |
@@ -225,7 +247,7 @@ stateDiagram-v2
 ## Límites actuales del flujo
 
 - El sistema pronostica con base en estimaciones y reservas; la fecha compromiso la confirma Ventas. La recomendación añade tres días laborables de margen, pero el criterio comercial final sigue siendo de Ventas.
-- La especificación funcional contempla omitir Diseño cuando el cliente proporciona arte. La política implementada todavía exige `PRE-DISENO` como primera etapa. Hasta que se ajuste, procesa el archivo del cliente mediante la revisión de Diseño; no configures una ruta sin esa etapa esperando que el sistema la acepte.
+- Diseño es una etapa obligatoria para todas las partidas. El archivo del cliente se revisa y autoriza allí; las rutas por Producto pueden cambiar después de `PRE-DISENO`, que debe permanecer como primer paso obligatorio.
 - El calendario operativo es lunes a viernes de 08:00 a 18:00, en la zona `America/Mexico_City`; considera también las excepciones y días festivos configurados.
 - El ajuste de prioridad y los retrabajos mantienen evidencia de auditoría; el cambio de prioridad desplaza trabajo futuro tras revisar su impacto y no interrumpe una operación activa.
 - Los importes comerciales son visibles para Ventas y perfiles autorizados; las cuentas operativas deben trabajar con información de producción sin importes finales.
@@ -240,6 +262,8 @@ Controladores que respaldan los pasos descritos:
 - `src/Controller/Admin/Production/PrintingController.php`
 - `src/Controller/Admin/Production/ProductionExecutionController.php`
 - `src/Controller/Admin/Production/QualityDeliveryController.php`
+- `src/Application/Orders/ProductionRoutePolicy.php` y `src/Application/Production/CommercialItemRoutePublisher.php` — validan que las rutas publicadas inicien con Diseño obligatorio.
+- `src/Application/Production/DesignReviewManager.php` — controla la revisión y liberación del arte después de planificar la orden.
 
 Servicios que validan planificación, pronóstico, ejecución, calidad y reprogramación:
 

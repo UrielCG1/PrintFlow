@@ -5,7 +5,7 @@
 
 ## Qué cubre el módulo
 
-PrintFlow crea una orden desde una cotización aceptada. Cada partida recibe su ruta operativa y un snapshot de sus datos. El sistema conserva por separado los datos comerciales y la vista de trabajo que usan los perfiles de producción. Planificación, producción y entrega son estados relacionados, pero independientes.
+Aceptar una cotización crea la orden y aplica a cada partida su ruta publicada. La orden queda en `PENDING_PLANNING` hasta que Ventas registre la fecha compromiso y Producción valide equipo, estimación y reservas de todas las operaciones activas; esa confirmación la cambia a `PLANNED` y habilita el inicio de Diseño. Diseño revisa cada partida aunque el cliente haya entregado un archivo. El sistema conserva por separado los datos comerciales y la vista de trabajo que usan los perfiles de producción. Planificación, producción y entrega son estados relacionados, pero independientes.
 
 El sistema ya contempla rutas de producción, estimaciones, reservas, compromisos, prioridad por partida, Diseño y archivos protegidos, ejecución por intentos, pausas e incidencias, revisión de Calidad, modalidad y confirmación de entrega. La interfaz de detalle presenta el avance por etapas y acciones pendientes. El menú de Operación se agrupó en trabajo diario, planificación del taller y materiales/proveedores, según permisos.
 
@@ -14,7 +14,7 @@ El sistema ya contempla rutas de producción, estimaciones, reservas, compromiso
 | Área | Estado documentado | Pendiente principal |
 | --- | --- | --- |
 | Seguridad comercial en órdenes | Separación por permiso y pruebas funcionales locales registradas. | Mantener regresión para HTML, JSON, PDF, descargas, exportaciones y accesos directos a medida que aparezcan salidas nuevas. |
-| Ruta automática y snapshot por partida | Implementados con los catálogos actuales; las partidas divididas sustituyen la fila y conservan el total comercial. | Conservar la regresión desde cotización aceptada hasta la orden y la ruta aplicada. |
+| Ruta automática y snapshot por partida | Implementados con los catálogos actuales; toda ruta nueva inicia con `PRE-DISENO` obligatorio. Diseño revisa el original del cliente o prepara/corrige el arte y adjunta referencia. Las partidas divididas sustituyen la fila y conservan el total comercial. | Conservar la regresión desde cotización aceptada hasta la orden y la ruta aplicada. |
 | Estimación y agenda | Unidades físicas, carga manual auditada, jornada, excepciones y reservas sin solapes forman parte de la implementación. | Ejecutar la validación de concurrencia en MySQL/MariaDB y comprobar capacidades reales de equipos antes de usarlas para comprometer fechas. |
 | Compromisos y prioridades | Fecha sugerida, riesgo, motivo de cambios, vista previa de desplazamientos y reprogramación implementados. Se corrigió la conversión de fecha observada en el endpoint productivo. | Confirmar con evidencia que el flujo corregido funciona en la base productiva y probar competencia/solapes en MySQL. |
 | Diseño y archivos | Bandeja, revisión, autorización de arte y almacenamiento protegido implementados. La revisión no requiere asignación de operador; se controla por `production.design.review`. | Probar con el perfil de Diseño y verificar el ciclo de archivo original, arte preparado, captura y liberación en los datos reales que correspondan. |

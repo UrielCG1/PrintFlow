@@ -20,8 +20,8 @@ Los archivos de `implementacion/` son registros cronológicos de entregas. Sus n
 
 ## Decisiones vigentes resumidas
 
-- La orden nace de la cotización aceptada y cada partida conserva su propio trabajo, ruta, evidencia y avance.
-- Las rutas de las órdenes nuevas comienzan en Diseño (`PRE-DISENO`). Revisar el arte no exige asignar una persona como operadora; el permiso `production.design.review` habilita la acción.
+- La cotización aceptada crea la orden y aplica la ruta por partida; la orden queda pendiente del plan operativo (`PENDING_PLANNING`). Ventas registra la fecha compromiso. Producción confirma el plan cuando todas las operaciones activas tienen ruta válida, máquina, estimación y reserva (`PLANNED`).
+- Toda partida pasa primero por Diseño (`PRE-DISENO`), incluso si el cliente envió un archivo: Diseño valida medidas y preparación, autoriza el arte y adjunta referencia visual. Las rutas pueden variar en los pasos posteriores. Revisar el arte no exige asignar una persona como operadora; el permiso `production.design.review` habilita la acción.
 - Ventas confirma la fecha compromiso, define la modalidad y confirma la entrega. Calidad/Entregas revisa y libera Producción y registra el envío a domicilio.
 - Una pausa libera la máquina; el sistema recalcula el pronóstico y la agenda relacionada. No desplaza una operación que ya está en curso ni una reserva fijada sin la revisión prevista.
 - El personal operativo recibe datos de trabajo y trazabilidad, no importes comerciales. Los cambios de interfaz actuales añaden avance por etapas y agrupan el menú de Operación por tarea.

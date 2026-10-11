@@ -1,10 +1,20 @@
 # PrintFlow — historias de usuario y fases de desarrollo de producción
 
-**Versión:** 1.2 · **Fecha:** 11 de octubre de 2026 · **Fuente funcional:** [FSD de producción y trazabilidad](../definicion/FSD-produccion-y-trazabilidad.md).
+**Versión:** 1.3 · **Fecha:** 11 de octubre de 2026 · **Fuente funcional:** [FSD de producción y trazabilidad](../definicion/FSD-produccion-y-trazabilidad.md).
 
 > **Estado y precedencia:** esta es la secuencia de fases del producto. Los documentos fechados de `implementacion/` son registros históricos y su numeración no corresponde a estas fases. Las decisiones incorporadas después del FSD se reflejan aquí y en la [guía operativa](../operacion/guia-operativa-planificacion-a-entrega.md). El [estado actual](../estado-actual.md) separa código local, evidencia de pruebas y datos de producción.
 
 Este backlog implementa las reglas acordadas sin reconstruir cotizaciones, descuentos u órdenes en otra arquitectura. Cada historia se cierra con evidencia de prueba; la fase anterior es dependencia de la siguiente cuando comparte datos o permisos. Las estimaciones de esfuerzo se asignarán tras verificar esquema, datos y despliegue reales.
+
+## Definiciones de flujo vigentes
+
+- **Crear la orden** ocurre a partir de la cotización aceptada. PrintFlow copia cada partida y la ruta publicada para el Producto. La orden queda en `PENDING_PLANNING`; ya existe, pero su plan operativo aún no está confirmado.
+- **Confirmar la fecha compromiso** corresponde a Ventas: guarda la fecha acordada con el cliente. No confirma por sí misma que la agenda del taller esté reservada.
+- **Confirmar planificación** corresponde a Producción después de revisar todas las partidas. Exige fecha compromiso, ruta sin incidencias, máquina compatible, duración y reserva para cada operación activa. Registra actor/fecha, cambia la orden a `PLANNED` y habilita el inicio de Diseño. No significa que comenzó la fabricación ni que se aprobó el arte.
+- **Diseño siempre revisa cada partida.** Aunque el cliente entregue un archivo, Diseño valida que sea imprimible y corresponda a las dimensiones; lo autoriza y adjunta la captura con el Producto de referencia. Si hace falta corregir o preparar el arte, Diseño deja también la versión final lista para impresión. La ruta publicada de cada Producto debe comenzar con `PRE-DISENO` obligatorio; puede cambiar los pasos posteriores según el producto.
+- **Rutas de producción** son configuraciones reutilizables aplicadas por Producto. La ruta y sus operaciones se copian a la partida al crear la orden; actualizar una ruta publicada no cambia órdenes ya creadas.
+
+La interfaz actual puede llamar a esta etapa simplemente «Planificación». Al explicar el flujo, especificar «plan operativo» ayuda a distinguirlo de la creación de la orden y de la fecha comercial acordada.
 
 ## Principios de entrega
 
@@ -39,7 +49,7 @@ Este backlog implementa las reglas acordadas sin reconstruir cotizaciones, descu
 | ID | Historia | Criterio de terminado |
 | --- | --- | --- |
 | PF-P1-01 | Como jefe/Administrador, quiero definir rutas base reutilizables y asignarlas a varios Productos. | Se configuran secuencia, operación activa, condición, obligatoriedad y variantes sencillas; cada Producto publica una versión inequívoca. Un Producto puede ajustar su configuración sin alterar otros. |
-| PF-P1-02 | Como jefe/Administrador, quiero que cada partida llegue a la revisión de Diseño sin asignar a la diseñadora como operadora. | La ruta inicial pasa por `PRE-DISENO`; el perfil con `production.design.review` puede validar el archivo aportado o cargar arte preparado y una captura de referencia. La siguiente etapa queda bloqueada hasta liberar Diseño. |
+| PF-P1-02 | Como jefe/Administrador, quiero que cada partida llegue a la revisión de Diseño sin asignar a la diseñadora como operadora. | La ruta inicial pasa por `PRE-DISENO`; el perfil con `production.design.review` valida el archivo aportado o carga arte preparado. En ambos casos adjunta una captura de referencia. La siguiente etapa queda bloqueada hasta liberar Diseño. |
 | PF-P1-03 | Como sistema, quiero generar un trabajo y sus pasos por cada `ServiceOrderItem` al crear la orden. | El caso de uso existente genera ruta y snapshot en su transacción; doble clic/concurrencia no duplican orden, trabajo ni planes. Folio y vínculos históricos permanecen. |
 | PF-P1-04 | Como jefe, quiero identificar partidas sin ruta o datos completos sin inventar un plan. | La orden se crea y el trabajo muestra causa de «requiere planificación/estimación»; no hay reserva ni pronóstico ficticio. |
 | PF-P1-05 | Como jefe, quiero corregir medidas técnicas y dividir una partida cuando producción lo requiera. | Corrección/división solo durante planificación, con permiso, CSRF y motivo; la cotización queda intacta; las hijas sustituyen la fila para Ventas, conservan cantidad/subtotal total y FK original única; revisión de ruta requerida tras corregir medidas. |
