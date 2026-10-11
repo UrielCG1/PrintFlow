@@ -721,6 +721,27 @@ final class ServiceOrderController extends AbstractController
         foreach ($allPlans as $plan) {
             $plansByItem[(int) $plan->getServiceOrderItem()->getId()][] = $plan;
         }
+        $completedOperations = 0;
+        $operationStates = [];
+        foreach ($allPlans as $plan) {
+            $latestExecution = $plan->getLatestExecution();
+            $isDesignOperation = ($plan->getOperationSnapshot()['code'] ?? $plan->getOperation()->getCode()) === 'PRE-DISENO';
+            $isComplete = $isDesignOperation
+                ? $plan->getServiceOrderItem()->getDesignStatus()->value === 'READY_FOR_PRINT'
+                : $plan->hasCompletedLatestExecution();
+            if ($isComplete) {
+                ++$completedOperations;
+            }
+            $operationStates[(int) $plan->getId()] = match (true) {
+                $isComplete => 'complete',
+                $latestExecution?->getStatus()->value === 'IN_PROGRESS' => 'active',
+                $latestExecution?->getStatus()->value === 'PAUSED' => 'paused',
+                $plan->getBlockedReason() !== null => 'blocked',
+                $plan->getEquipment() === null => 'equipment',
+                $plan->getEstimatedMinutes() === null => 'estimate',
+                default => 'scheduled',
+            };
+        }
         $reservationsByPlan = [];
         foreach ($reservationRepository->findActiveForServiceOrder($serviceOrder) as $reservation) {
             $reservationsByPlan[(int) $reservation->getPlan()->getId()][] = $reservation;
@@ -791,6 +812,8 @@ final class ServiceOrderController extends AbstractController
             'current_stage' => $currentOrderStage,
             'design_required' => $designRequired,
             'design_pending_items' => $designPendingItems,
+            'completed_operations' => $completedOperations,
+            'total_operations' => count($allPlans),
             'stages' => [
                 'planning' => $planningComplete,
                 'design' => $designComplete,
@@ -821,6 +844,21 @@ final class ServiceOrderController extends AbstractController
         $planningHasIssues = false;
         foreach ($serviceOrder->getItems() as $item) {
             if ($item->getPlanningIssue() !== null) {
+                $planningHasIssues = true;
+            }
+        }
+        foreach ($allPlans as $plan) {
+            $planId = (int) $plan->getId();
+            $hasEquipment = $plan->getEquipment() !== null;
+            $hasEstimate = $plan->getEstimatedMinutes() !== null && $plan->getEstimateKind() !== null;
+            $hasReservation = ($reservationsByPlan[$planId] ?? []) !== [];
+            if ($hasEquipment) { ++$planningProgress['with_equipment']; }
+            if ($hasEstimate) { ++$planningProgress['estimated']; }
+            if ($hasReservation) { ++$planningProgress['reserved']; }
+            if ($hasEquipment && $hasEstimate && $hasReservation && $plan->getBlockedReason() === null && $plan->getServiceOrderItem()->getPlanningIssue() === null) {
+                ++$planningProgress['ready'];
+            }
+            if ($plan->getBlockedReason() !== null) {
                 $planningHasIssues = true;
             }
         }
@@ -873,16 +911,6 @@ final class ServiceOrderController extends AbstractController
 
                     $hasEquipment = $plan->getEquipment() !== null;
                     $hasEstimate = $plan->getEstimatedMinutes() !== null && $plan->getEstimateKind() !== null;
-                    $hasReservation = ($reservationsByPlan[$planId] ?? []) !== [];
-                    if ($hasEquipment) { ++$planningProgress['with_equipment']; }
-                    if ($hasEstimate) { ++$planningProgress['estimated']; }
-                    if ($hasReservation) { ++$planningProgress['reserved']; }
-                    if ($hasEquipment && $hasEstimate && $hasReservation && $plan->getBlockedReason() === null && $item->getPlanningIssue() === null) {
-                        ++$planningProgress['ready'];
-                    }
-                    if ($plan->getBlockedReason() !== null || $item->getPlanningIssue() !== null) {
-                        $planningHasIssues = true;
-                    }
                     if ((!$hasEquipment && count($choices) === 1)
                         || (!$hasEstimate && $effectiveEquipment !== null && $automaticEstimateByPlan[$planId])) {
                         ++$planningProgress['auto_actions'];
@@ -924,6 +952,7 @@ final class ServiceOrderController extends AbstractController
             'productionForecast' => $productionForecast,
             'orderProgress' => $orderProgress,
             'planningProgress' => $planningProgress,
+            'operationStates' => $operationStates,
             'planningHasIssues' => $planningHasIssues,
             'canReserveFullPlan' => $canReserveFullPlan,
             'canMarkPlanned' => $canMarkPlanned,

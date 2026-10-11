@@ -638,7 +638,7 @@ final class ServiceOrderCommercialAccessTest extends TestCase
         $this->browser->request('GET', '/admin/ordenes-servicio/'.$this->serviceOrder->getId());
         self::assertSame(200, $this->browser->getResponse()->getStatusCode());
         $html = (string) $this->browser->getResponse()->getContent();
-        self::assertStringContainsString('Avance de la orden', $html);
+        self::assertStringContainsString('Progreso de la orden', $html);
         self::assertStringNotContainsString('Reservar todas las operaciones', $html);
         self::assertStringNotContainsString('Marcar como planificada', $html);
         $this->assertNoCommercialData($html, 'unplanned order without route');

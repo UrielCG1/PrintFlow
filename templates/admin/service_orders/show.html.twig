@@ -26,9 +26,20 @@
                 </p>
             </div>
             <div class="pf-page-header__actions">
-                <span class="pf-status-badge pf-status-badge--{{ serviceOrder.status.badgeTone }}">{{ serviceOrder.status.label }}</span>
-                <span class="pf-status-badge pf-status-badge--{{ serviceOrder.productionStatus.badgeTone }}">{{ serviceOrder.productionStatus.label }}</span>
-                <span class="pf-status-badge pf-status-badge--{{ serviceOrder.deliveryStatus.badgeTone }}">{{ serviceOrder.deliveryStatus.label }}</span>
+                <div class="service-order-header-fact">
+                    <i class="bi bi-calendar3" aria-hidden="true"></i>
+                    <span><small>Fecha compromiso</small><strong>{{ serviceOrder.commitmentDate ? serviceOrder.commitmentDate|date('d/m/Y') : 'Por confirmar' }}</strong></span>
+                </div>
+                <div class="service-order-header-fact service-order-header-fact--{{ productionForecast.order.risk_tone }}">
+                    <i class="bi {{ productionForecast.order.risk.value == 'late' ? 'bi-exclamation-triangle' : (productionForecast.order.risk.value == 'on_track' ? 'bi-clock' : 'bi-exclamation-circle') }}" aria-hidden="true"></i>
+                    <span><small>Pronóstico</small><strong>{{ productionForecast.order.risk_label }}</strong></span>
+                </div>
+                {% if is_granted('service_orders.view_commercial') %}
+                    <div class="service-order-header-fact service-order-header-fact--amount">
+                        <i class="bi bi-receipt" aria-hidden="true"></i>
+                        <span><small>Total contratado</small><strong>${{ serviceOrder.total|number_format(2, '.', ',') }} {{ serviceOrder.currency }}</strong></span>
+                    </div>
+                {% endif %}
                 <a href="{{ path('admin_service_orders_index') }}" class="btn pf-button pf-button--secondary">
                     <i class="bi bi-arrow-left" aria-hidden="true"></i>
                     Volver
@@ -37,53 +48,62 @@
         </header>
 
         {% set orderStages = [
-            {key: 'planning', label: 'Planificación', icon: 'bi-calendar2-check', detail: 'Ruta, equipo, tiempo y agenda'},
-            {key: 'design', label: 'Diseño', icon: 'bi-palette', detail: not orderProgress.design_required ? 'No aplica a esta ruta' : (orderProgress.design_pending_items > 0 ? orderProgress.design_pending_items ~ ' partida(s) por liberar' : 'Diseños liberados')},
-            {key: 'production', label: 'Producción', icon: 'bi-printer', detail: 'Ejecución de operaciones'},
-            {key: 'quality', label: 'Calidad', icon: 'bi-clipboard2-check', detail: serviceOrder.productionStatus.value == 'QUALITY_REWORK' ? 'Retrabajo solicitado' : 'Inspección y liberación'},
-            {key: 'delivery', label: 'Entrega', icon: 'bi-box-seam', detail: serviceOrder.deliveryStatus.label}
+            {key: 'planning', label: 'Planificación'},
+            {key: 'design', label: 'Diseño'},
+            {key: 'production', label: 'Producción'},
+            {key: 'quality', label: 'Calidad'},
+            {key: 'delivery', label: 'Entrega'}
         ] %}
         <section class="pf-card service-order-journey mb-4" aria-labelledby="service-order-journey-title">
             <div class="pf-card__body">
                 <div class="service-order-journey__heading">
-                    <div>
-                        <p class="service-order-journey__eyebrow">Seguimiento</p>
-                        <h2 id="service-order-journey-title" class="service-order-journey__title">Progreso de la orden</h2>
-                    </div>
-                    <strong class="service-order-journey__percent">{{ orderProgress.percent }}%</strong>
-                </div>
-                <div class="progress service-order-journey__bar" role="progressbar" aria-label="Progreso de la orden" aria-valuenow="{{ orderProgress.percent }}" aria-valuemin="0" aria-valuemax="100">
-                    <div class="progress-bar" style="width: {{ orderProgress.percent }}%"></div>
+                    <h2 id="service-order-journey-title" class="service-order-journey__title">Progreso de la orden</h2>
+                    <span class="visually-hidden">{{ orderProgress.percent }}% completado</span>
                 </div>
 
-                <ol class="service-order-journey__steps" aria-label="Etapas de la orden">
+                {% set journeyLine = orderProgress.current_stage == 'planning' ? 0 : (orderProgress.current_stage == 'design' ? 20 : (orderProgress.current_stage == 'production' ? 40 : (orderProgress.current_stage == 'quality' ? 60 : 80))) %}
+                <ol class="service-order-journey__steps" style="--journey-progress: {{ journeyLine }}%" aria-label="Etapas de la orden">
                     {% for stage in orderStages %}
                         {% set stageComplete = orderProgress.stages[stage.key] %}
                         {% set stageCurrent = orderProgress.current_stage == stage.key %}
                         {% set stageClass = stageComplete ? 'is-complete' : (stageCurrent ? 'is-current' : 'is-pending') %}
                         <li class="service-order-journey__step {{ stageClass }}"{% if stageCurrent %} aria-current="step"{% endif %}>
-                            <span class="service-order-journey__icon"><i class="bi {{ stageComplete ? 'bi-check-lg' : stage.icon }}" aria-hidden="true"></i></span>
+                            <span class="service-order-journey__icon">{{ stageComplete ? '✓' : loop.index }}</span>
                             <span class="service-order-journey__copy">
                                 <strong>{{ stage.label }}</strong>
-                                <span>{{ stage.key == 'design' and not orderProgress.design_required ? 'No requerida' : (stageComplete ? 'Completada' : (stageCurrent ? 'En curso' : 'Pendiente')) }}</span>
-                                <small>{{ stage.detail }}</small>
+                                <span>{{ stage.key == 'design' and not orderProgress.design_required ? 'No requerida' : (stageComplete ? 'Completada' : (stageCurrent ? (stage.key == 'production' and orderProgress.total_operations > 0 ? orderProgress.completed_operations ~ '/' ~ orderProgress.total_operations ~ ' operaciones' : 'En curso') : 'Pendiente')) }}</span>
                             </span>
                         </li>
                     {% endfor %}
                 </ol>
 
+                <div class="service-order-journey__status">
+                    <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                    {% if orderProgress.current_stage == 'planning' %}
+                        <strong>{{ serviceOrder.commitmentDate ? 'Preparación de planificación' : 'Fecha y agenda pendientes' }}</strong>
+                        <span>· {{ planningProgress.ready }}/{{ planningProgress.operations }} operaciones listas</span>
+                    {% elseif orderProgress.current_stage == 'production' %}
+                        <strong>Producción en proceso</strong>
+                        <span>· {{ orderProgress.completed_operations }} de {{ orderProgress.total_operations }} operaciones completadas</span>
+                    {% else %}
+                        <strong>{{ serviceOrder.productionStatus.label }}</strong>
+                        <span>· {{ orderProgress.completed_operations }} de {{ orderProgress.total_operations }} operaciones completadas</span>
+                    {% endif %}
+                </div>
+
                 <div class="service-order-journey__next">
+                    <i class="bi bi-lightning-charge service-order-journey__next-icon" aria-hidden="true"></i>
                     <div>
-                        <span class="service-order-journey__eyebrow">Siguiente paso</span>
+                        <span class="service-order-journey__eyebrow">Siguiente acción</span>
                         {% if orderProgress.current_stage == 'planning' %}
-                            <strong>Completar la planificación</strong>
-                            <p>Confirmar la fecha y dejar las operaciones listas para el taller.</p>
+                            <strong>Completar planificación</strong>
+                            <p>Faltan datos o agenda en {{ planningProgress.operations - planningProgress.ready }} operación(es).</p>
                         {% elseif orderProgress.current_stage == 'design' %}
                             <strong>Revisar y liberar el diseño</strong>
                             <p>{{ orderProgress.design_pending_items }} partida(s) todavía requieren atención de Diseño.</p>
                         {% elseif orderProgress.current_stage == 'production' %}
-                            <strong>Continuar la producción</strong>
-                            <p>Registrar el avance de las operaciones y sus incidencias.</p>
+                            <strong>Continuar producción</strong>
+                            <p>{{ orderProgress.completed_operations }}/{{ orderProgress.total_operations }} operaciones completadas. Registra el avance del trabajo actual.</p>
                         {% elseif orderProgress.current_stage == 'quality' %}
                             <strong>{{ serviceOrder.productionStatus.value == 'QUALITY_REWORK' ? 'Atender el retrabajo' : 'Inspeccionar el producto' }}</strong>
                             <p>{{ serviceOrder.productionStatus.value == 'QUALITY_REWORK' ? 'Calidad solicitó una corrección antes de liberar la orden.' : 'Calidad debe revisar y liberar los trabajos terminados.' }}</p>
@@ -101,9 +121,9 @@
                     <div class="service-order-journey__action">
                         {% if orderProgress.current_stage == 'planning' %}
                             {% if canPlan %}
-                                <a href="#planning-section" class="btn pf-button pf-button--secondary">Ir a planificación</a>
+                                <a href="#planning-section" class="btn pf-button pf-button--primary">Completar planificación <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
                             {% elseif canManageCommitment and not serviceOrder.commitmentDate %}
-                                <a href="#commitment-date-control" class="btn pf-button pf-button--secondary">Confirmar fecha</a>
+                                <a href="#commitment-date-control" class="btn pf-button pf-button--primary">Confirmar fecha <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
                             {% elseif canManageCommitment %}
                                 <a href="#commitment-date-control" class="btn pf-button pf-button--secondary">Revisar fecha</a>
                             {% else %}
@@ -111,13 +131,13 @@
                             {% endif %}
                         {% elseif orderProgress.current_stage == 'design' %}
                             {% if is_granted('production.view') and is_granted('production.design.review') %}
-                                <a href="{{ path('admin_design_index') }}" class="btn pf-button pf-button--secondary">Abrir Diseño</a>
+                                <a href="{{ path('admin_design_index') }}" class="btn pf-button pf-button--primary">Abrir Diseño <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
                             {% else %}
                                 <span class="service-order-journey__owner">Siguiente responsable: Diseño</span>
                             {% endif %}
                         {% elseif orderProgress.current_stage == 'production' %}
                             {% if is_granted('production.view') and is_granted('production.execute') %}
-                                <a href="{{ path('admin_production_execution_index') }}" class="btn pf-button pf-button--secondary">Abrir Ejecución</a>
+                                <a href="{{ path('admin_production_execution_index') }}" class="btn pf-button pf-button--primary">Abrir operación <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
                             {% else %}
                                 <span class="service-order-journey__owner">Siguiente responsable: Producción</span>
                             {% endif %}
@@ -136,49 +156,23 @@
                         {% endif %}
                     </div>
                 </div>
+                <div class="service-order-overview">
+                    <div class="service-order-overview__fact"><small>Cliente</small><strong>{{ serviceOrder.clientSnapshot.legal_name ?? serviceOrder.clientSnapshot.business_name ?? 'No especificado' }}</strong>{% if is_granted('service_orders.view_commercial') and (serviceOrder.clientSnapshot.tax_id ?? false) %}<span>RFC: {{ serviceOrder.clientSnapshot.tax_id }}</span>{% endif %}</div>
+                    <div class="service-order-overview__fact"><small>Modalidad de entrega</small><strong>{{ serviceOrder.fulfillmentMethod.label }}</strong>{% if serviceOrder.deliveryPreparationIssue %}<span>{{ serviceOrder.deliveryPreparationIssue }}</span>{% endif %}</div>
+                    <div class="service-order-overview__fact"><small>Contacto de entrega</small><strong>{{ serviceOrder.deliveryContactSnapshot.name|default('Dato histórico no disponible') }}</strong><span>{{ serviceOrder.deliveryContactSnapshot.email|default('') }}{% if serviceOrder.deliveryContactSnapshot.email|default(null) and serviceOrder.deliveryContactSnapshot.phone|default(null) %} · {% endif %}{{ serviceOrder.deliveryContactSnapshot.phone|default('') }}</span></div>
+                </div>
             </div>
         </section>
 
-        <div class="row g-4 mb-4">
-            {% if is_granted('service_orders.view_commercial') %}
-                <div class="col-12 col-md-4">
-                    <section class="pf-card h-100">
-                        <div class="pf-card__body">
-                            <span class="text-muted small d-block mb-1">Total contratado</span>
-                            <strong class="fs-3">${{ serviceOrder.total|number_format(2, '.', ',') }} {{ serviceOrder.currency }}</strong>
-                            <span class="d-block text-muted small mt-2">IVA: ${{ serviceOrder.taxAmount|number_format(2, '.', ',') }}</span>
-                        </div>
-                    </section>
-                </div>
-            {% endif %}
-            <div class="col-12 col-md-4">
-                <section class="pf-card h-100">
-                    <div class="pf-card__body">
-                        <span class="text-muted small d-block mb-1">Cliente</span>
-                        <strong>{{ serviceOrder.clientSnapshot.legal_name ?? serviceOrder.clientSnapshot.business_name ?? 'No especificado' }}</strong>
-                        {% if is_granted('service_orders.view_commercial') and (serviceOrder.clientSnapshot.tax_id ?? false) %}
-                            <span class="d-block text-muted small mt-2">RFC: {{ serviceOrder.clientSnapshot.tax_id }}</span>
-                        {% endif %}
-                    </div>
-                </section>
+        <div class="service-order-quick-tools mb-4">
+            <div class="service-order-quick-tools__forecast">
+                <strong>Pronóstico de entrega</strong>
+                <span>{{ productionForecast.order.risk_cause }}</span>
+                {% if productionForecast.order.production_finish %}<span>Fin de producción previsto: {{ productionForecast.order.production_finish|date('d/m/Y H:i', 'America/Mexico_City') }} · Entrega sugerida: {{ productionForecast.order.suggested_delivery|date('d/m/Y') }}</span>{% endif %}
+                {% if serviceOrder.plannedAt %}<span>Planificada {{ serviceOrder.plannedAt|date('d/m/Y H:i', 'America/Mexico_City') }}{% if serviceOrder.plannedBy %} por {{ serviceOrder.plannedBy.fullName }}{% endif %}</span>{% endif %}
             </div>
-            <div class="col-12 col-md-4">
-                <section class="pf-card h-100">
-                    <div class="pf-card__body">
-                        <span class="text-muted small d-block mb-1">Fecha compromiso</span>
-                        {% if serviceOrder.commitmentDate %}
-                            <strong>{{ serviceOrder.commitmentDate|date('d/m/Y') }}</strong>
-                        {% else %}
-                            <strong>Por asignar</strong>
-                            <span class="d-block text-muted small mt-2">Ventas debe confirmar la fecha de entrega.</span>
-                        {% endif %}
-                        {% set orderRiskIcon = productionForecast.order.risk.value == 'late' ? 'bi-exclamation-triangle-fill' : (productionForecast.order.risk.value == 'tight' ? 'bi-clock-history' : (productionForecast.order.risk.value == 'on_track' ? 'bi-check-circle-fill' : 'bi-question-circle')) %}
-                        <span class="badge text-bg-{{ productionForecast.order.risk_tone }} mt-2"><i class="bi {{ orderRiskIcon }}" aria-hidden="true"></i> {{ productionForecast.order.risk_label }}</span>
-                        {% if productionForecast.order.production_finish %}
-                            <span class="d-block text-muted small mt-2">Fin de producción previsto: {{ productionForecast.order.production_finish|date('d/m/Y H:i', 'America/Mexico_City') }}</span>
-                            <span class="d-block text-muted small">Entrega sugerida con margen: {{ productionForecast.order.suggested_delivery|date('d/m/Y') }}</span>
-                        {% endif %}
-                        <span class="d-block text-muted small mt-1">{{ productionForecast.order.risk_cause }}</span>
+        </div>
+        <div class="service-order-commitment">
                         {% if canManageCommitment %}
                             <details id="commitment-date-control" class="service-order-disclosure service-order-disclosure--primary mt-3">
                                 <summary>
@@ -198,42 +192,10 @@
                                 {{ form_end(planningForm) }}
                             </details>
                         {% endif %}
-                        {% if serviceOrder.plannedAt %}
-                            <span class="d-block text-muted small mt-2">Planificada {{ serviceOrder.plannedAt|date('d/m/Y H:i', 'America/Mexico_City') }}{% if serviceOrder.plannedBy %} por {{ serviceOrder.plannedBy.fullName }}{% endif %}</span>
-                        {% endif %}
-                    </div>
-                </section>
-            </div>
         </div>
 
-        <section class="pf-card mb-4">
-            <div class="pf-card__body">
-                <div class="row g-3">
-                    <div class="col-12 col-md-4">
-                        <span class="text-muted small d-block mb-1">Modalidad de entrega</span>
-                        <strong>{{ serviceOrder.fulfillmentMethod.label }}</strong>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <span class="text-muted small d-block mb-1">Contacto de entrega</span>
-                        <strong>{{ serviceOrder.deliveryContactSnapshot.name|default('Dato histórico no disponible') }}</strong>
-                        {% if serviceOrder.deliveryContactSnapshot.email|default(null) or serviceOrder.deliveryContactSnapshot.phone|default(null) %}
-                            <span class="d-block text-muted small mt-1">{{ serviceOrder.deliveryContactSnapshot.email|default('') }}{% if serviceOrder.deliveryContactSnapshot.email|default(null) and serviceOrder.deliveryContactSnapshot.phone|default(null) %} · {% endif %}{{ serviceOrder.deliveryContactSnapshot.phone|default('') }}</span>
-                        {% endif %}
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <span class="text-muted small d-block mb-1">Preparación de entrega</span>
-                        {% if serviceOrder.deliveryPreparationIssue %}
-                            <span class="text-warning-emphasis">{{ serviceOrder.deliveryPreparationIssue }}</span>
-                        {% else %}
-                            <span class="text-success-emphasis">Datos completos para la modalidad seleccionada.</span>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </section>
-
         {% if is_granted('service_orders.view_commercial') %}
-            <section class="pf-card mb-4">
+            <section class="pf-card service-order-provenance mb-4">
                 <header class="pf-card__header">
                     <h2 class="pf-card__title">Origen comercial</h2>
                     <p class="pf-card__description">Evidencia copiada al momento de crear la orden.</p>
@@ -279,41 +241,24 @@
 
         <section id="planning-section" class="pf-card mb-4">
             <header class="pf-card__header">
-                <h2 class="pf-card__title">Planificación operativa</h2>
-                <p class="pf-card__description">La ruta de cada producto ya está copiada. Completa los datos pendientes y el sistema calculará y reservará lo que pueda con la información disponible.</p>
+                <div>
+                    <h2 class="pf-card__title">Partidas y plan de producción</h2>
+                    <p class="pf-card__subtitle">Secuencia de operaciones y estado de planificación por partida.</p>
+                </div>
             </header>
 
-            {% set totalPlanningSteps = planningProgress.operations * 3 + 1 %}
-            {% set completedPlanningSteps = planningProgress.with_equipment + planningProgress.estimated + planningProgress.reserved + (serviceOrder.commitmentDate ? 1 : 0) %}
-            {% set progressPercent = totalPlanningSteps > 0 ? ((completedPlanningSteps / totalPlanningSteps) * 100)|round : 0 %}
-            <div class="pf-card__body border-bottom">
+            {% if canPlan and planningProgress.auto_actions > 0 %}<div class="pf-card__body border-bottom service-order-auto-action">
                 <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
                     <div class="flex-grow-1">
-                        <strong>Preparación de la planificación</strong>
-                        <div class="progress mt-2" role="progressbar" aria-label="Preparación de planificación" aria-valuenow="{{ progressPercent }}" aria-valuemin="0" aria-valuemax="100">
-                            <div class="progress-bar" style="width: {{ progressPercent }}%"></div>
-                        </div>
-                        <p class="mb-0 mt-2 small text-muted">
-                            Máquina {{ planningProgress.with_equipment }}/{{ planningProgress.operations }} ·
-                            tiempo {{ planningProgress.estimated }}/{{ planningProgress.operations }} ·
-                            agenda {{ planningProgress.reserved }}/{{ planningProgress.operations }} ·
-                            fecha {{ serviceOrder.commitmentDate ? 'confirmada' : 'pendiente' }}
-                        </p>
+                        <strong>Completar datos disponibles</strong>
+                        <p class="mb-0 small text-muted">El sistema puede asignar equipos compatibles únicos y calcular tiempos a partir de las medidas existentes.</p>
                     </div>
-                    {% if canPlan and planningProgress.auto_actions > 0 %}
                         <form method="post" action="{{ path('admin_service_orders_prepare_automatically', {id: serviceOrder.id}) }}">
                             <input type="hidden" name="_token" value="{{ csrf_token('service-order-auto-prepare-' ~ serviceOrder.id) }}">
-                            <button type="submit" class="btn pf-button pf-button--secondary">Aplicar sugerencias automáticas ({{ planningProgress.auto_actions }})</button>
-                            <span class="d-block text-muted small mt-1">Asigna máquinas compatibles únicas y calcula cargas que se obtienen de las medidas.</span>
+                            <button type="submit" class="btn pf-button pf-button--primary">Aplicar {{ planningProgress.auto_actions }} sugerencia(s)</button>
                         </form>
-                    {% endif %}
                 </div>
-            </div>
-            {% if serviceOrder.isPlanned and not canPlan %}
-                <div class="pf-card__body border-bottom small text-muted">
-                    La ruta quedó bloqueada al marcar la orden como planificada. Las fechas compromiso pueden seguir ajustándose con motivo.
-                </div>
-            {% endif %}
+            </div>{% endif %}
 
             <div class="pf-card__body d-flex flex-column gap-4">
                 {% for item in itemsForDisplay %}
@@ -321,8 +266,8 @@
                     <article class="service-order-work-item">
                         <header class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
                             <div>
-                                <span class="text-muted small">Partida {{ item.displayLineNumber }} · Rastreo {{ item.trackingCode }}</span>
-                                <h3 class="h6 mb-1">{{ item.commercialItemSnapshot.name ?? item.commercialItem.name }}</h3>
+                                <h3 class="h6 mb-1">Partida {{ item.displayLineNumber }} · {{ item.commercialItemSnapshot.name ?? item.commercialItem.name }}</h3>
+                                <span class="text-muted small">{{ item.trackingCode }}</span>
                                 <span class="text-muted small">{{ item.splitPosition is not null ? 'Cantidad de esta subpartida:' : 'Cantidad contratada:' }} {{ item.quantity }}</span>
                                 {% if item.productionSpecificationsSnapshot.summary|default(item.specificationsSnapshot.summary|default(null)) %}
                                     <span class="d-block text-muted small mt-1">{{ item.productionSpecificationsSnapshot.summary|default(item.specificationsSnapshot.summary) }}</span>
@@ -346,8 +291,8 @@
                                 {% endif %}
                             </div>
                             <div class="d-flex flex-column align-items-md-end gap-2">
-                                <span class="pf-status-badge pf-status-badge--{{ item.designStatus.badgeTone }}">{{ item.designStatus.label }}</span>
-                                <span class="text-muted small">{{ plans|length }} {{ plans|length == 1 ? 'operación' : 'operaciones' }} activas</span>
+                                <span class="pf-status-badge pf-status-badge--{{ itemForecast ? itemForecast.risk_tone : item.designStatus.badgeTone }}">{{ itemForecast ? itemForecast.risk_label : item.designStatus.label }}</span>
+                                <span class="text-muted small">{{ plans|length }} {{ plans|length == 1 ? 'operación' : 'operaciones' }}</span>
                                 {% if is_granted('production.view') %}
                                     <a href="{{ path('admin_design_show', {id: item.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm">Abrir Diseño</a>
                                 {% endif %}
@@ -394,6 +339,30 @@
                             </form>
                         {% endif %}
 
+                        <div class="service-order-route" aria-label="Secuencia de operaciones de la partida {{ item.displayLineNumber }}">
+                            <strong class="service-order-route__heading">Secuencia de operaciones</strong>
+                            <ol class="service-order-route__steps{{ plans|length > 3 ? ' service-order-route__steps--many' : '' }}">
+                                {% for plan in plans %}
+                                    {% set state = operationStates[plan.id]|default('scheduled') %}
+                                    {% set planReservations = reservationsByPlan[plan.id]|default([]) %}
+                                    {% set stateTone = state == 'complete' ? 'complete' : (state in ['active', 'paused'] ? 'active' : ((state in ['equipment', 'estimate', 'blocked'] or planReservations is empty) ? 'attention' : 'scheduled')) %}
+                                    {% set stateLabel = state == 'complete' ? 'Completada' : (state == 'active' ? 'En curso' : (state == 'paused' ? 'Pausada' : (state == 'equipment' ? 'Falta máquina' : (state == 'estimate' ? 'Falta tiempo' : (state == 'blocked' ? 'Bloqueada' : (planReservations is empty ? 'Falta agenda' : 'Programada')))))) %}
+                                    <li class="service-order-route__step service-order-route__step--{{ stateTone }}">
+                                        <span class="service-order-route__number">{{ plan.sequenceNumber }}</span>
+                                        <span class="service-order-route__copy">
+                                            <strong>{{ plan.operationSnapshot.name ?? plan.operation.name }}</strong>
+                                            <span class="service-order-route__state"><i class="bi {{ stateTone == 'complete' ? 'bi-check-circle' : (stateTone == 'attention' ? 'bi-exclamation-triangle' : 'bi-clock') }}" aria-hidden="true"></i> {{ stateLabel }}</span>
+                                            {% if plan.equipment %}<small>{{ plan.equipmentSnapshot.name ?? plan.equipment.name }}</small>{% endif %}
+                                            {% if plan.estimatedMinutes %}<small>{{ plan.estimatedMinutes }} min estimados</small>{% endif %}
+                                        </span>
+                                    </li>
+                                {% else %}
+                                    <li class="service-order-route__empty">Esta partida aún no tiene operaciones.</li>
+                                {% endfor %}
+                            </ol>
+                        </div>
+                        <details class="service-order-plan-details mb-3">
+                            <summary><i class="bi bi-sliders" aria-hidden="true"></i> {{ canPlan ? 'Completar o ajustar planificación' : 'Ver equipo, agenda y tiempos' }} <i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
                         <div class="pf-table-responsive mb-3">
                             <table class="pf-table">
                                 <thead>
@@ -621,6 +590,8 @@
                                 </tbody>
                             </table>
                         </div>
+
+                        </details>
 
                         {% if canPlan %}
                             <details class="service-order-disclosure service-order-disclosure--action">
