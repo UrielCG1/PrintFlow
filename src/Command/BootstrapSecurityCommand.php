@@ -107,6 +107,9 @@ final class BootstrapSecurityCommand extends Command
         'order.download_pdf' => ['orders', 'download_pdf', 'Descargar PDF de orden'],
         'order.send_email' => ['orders', 'send_email', 'Enviar orden por correo'],
 
+        'service_orders.view' => ['service_orders', 'view', 'Consultar órdenes operativas'],
+        'service_orders.view_commercial' => ['service_orders', 'view_commercial', 'Consultar importes comerciales de órdenes'],
+
         'traceability.view' => ['traceability', 'view', 'Consultar trazabilidad'],
         'traceability.assign' => ['traceability', 'assign', 'Asignar etapas de producción'],
         'traceability.update_stage' => ['traceability', 'update_stage', 'Actualizar etapa de producción'],
@@ -131,10 +134,13 @@ final class BootstrapSecurityCommand extends Command
             'order.update',
             'order.download_pdf',
             'order.send_email',
+            'service_orders.view',
+            'service_orders.view_commercial',
         ],
 
         'ROLE_PRODUCTION' => [
             'dashboard.view',
+            'service_orders.view',
             'order.view',
             'order.update',
             'order.change_status',
@@ -147,6 +153,7 @@ final class BootstrapSecurityCommand extends Command
 
         'ROLE_OPERATOR' => [
             'dashboard.view',
+            'service_orders.view',
             'order.view',
             'traceability.view',
             'traceability.update_stage',

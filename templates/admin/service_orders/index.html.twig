@@ -4,16 +4,16 @@
 
 {% block app_navigation_active %}service_orders{% endblock %}
 
-{% block app_breadcrumb %}Comercial / Órdenes de servicio{% endblock %}
+{% block app_breadcrumb %}Operación / Órdenes de servicio{% endblock %}
 
 {% block app_content %}
     <section class="pf-page__content">
         <header class="pf-page-header">
             <div class="pf-page-header__content">
-                <p class="pf-page-header__eyebrow">Comercial</p>
+                <p class="pf-page-header__eyebrow">Operación</p>
                 <h1 class="pf-page-header__title">Órdenes de servicio</h1>
                 <p class="pf-page-header__description">
-                    Órdenes creadas desde cotizaciones aceptadas. Sus partidas e importes permanecen congelados.
+                    Consulta operativa de los trabajos derivados de cotizaciones aceptadas.
                 </p>
             </div>
         </header>
@@ -25,9 +25,13 @@
                         <tr>
                             <th>Folio</th>
                             <th>Cliente</th>
-                            <th>Cotización origen</th>
+                            {% if is_granted('service_orders.view_commercial') %}
+                                <th>Cotización origen</th>
+                            {% endif %}
                             <th>Estado</th>
-                            <th class="pf-table__cell--right">Total</th>
+                            {% if is_granted('service_orders.view_commercial') %}
+                                <th class="pf-table__cell--right">Total</th>
+                            {% endif %}
                             <th>Fecha compromiso</th>
                             <th>Creada</th>
                             <th class="pf-table__actions-cell">Acciones</th>
@@ -39,15 +43,23 @@
                                 <td><strong class="pf-table__primary">{{ serviceOrder.folio }}</strong></td>
                                 <td>
                                     <strong class="d-block pf-table__primary">{{ serviceOrder.clientSnapshot.business_name ?? 'Cliente no disponible' }}</strong>
-                                    {% if serviceOrder.clientSnapshot.tax_id ?? false %}
+                                    {% if is_granted('service_orders.view_commercial') and (serviceOrder.clientSnapshot.tax_id ?? false) %}
                                         <span class="d-block text-muted small">{{ serviceOrder.clientSnapshot.tax_id }}</span>
                                     {% endif %}
                                 </td>
-                                <td>
-                                    <a href="{{ path('admin_quotations_show', {id: serviceOrder.sourceQuotation.id}) }}">{{ serviceOrder.sourceQuotationFolio }}</a>
-                                </td>
+                                {% if is_granted('service_orders.view_commercial') %}
+                                    <td>
+                                        {% if is_granted('quotations.view') %}
+                                            <a href="{{ path('admin_quotations_show', {id: serviceOrder.sourceQuotation.id}) }}">{{ serviceOrder.sourceQuotationFolio }}</a>
+                                        {% else %}
+                                            {{ serviceOrder.sourceQuotationFolio }}
+                                        {% endif %}
+                                    </td>
+                                {% endif %}
                                 <td><span class="pf-status-badge pf-status-badge--{{ serviceOrder.status.badgeTone }}">{{ serviceOrder.status.label }}</span></td>
-                                <td class="pf-table__cell--right pf-table__cell--nowrap fw-semibold">${{ serviceOrder.total|number_format(2, '.', ',') }} {{ serviceOrder.currency }}</td>
+                                {% if is_granted('service_orders.view_commercial') %}
+                                    <td class="pf-table__cell--right pf-table__cell--nowrap fw-semibold">${{ serviceOrder.total|number_format(2, '.', ',') }} {{ serviceOrder.currency }}</td>
+                                {% endif %}
                                 <td>
                                     {% if serviceOrder.commitmentDate %}
                                         {{ serviceOrder.commitmentDate|date('d/m/Y') }}
@@ -65,7 +77,7 @@
                             </tr>
                         {% else %}
                             <tr>
-                                <td colspan="8" class="pf-table__empty">
+                                <td colspan="{{ is_granted('service_orders.view_commercial') ? 8 : 6 }}" class="pf-table__empty">
                                     <div class="pf-table__empty-content">
                                         <i class="bi bi-clipboard-check pf-table__empty-icon" aria-hidden="true"></i>
                                         <strong class="pf-table__empty-title">Aún no hay órdenes de servicio.</strong>
