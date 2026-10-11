@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Application\Orders;
 
+use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
 use App\Entity\Equipment\Equipment;
 use App\Entity\Operations\Operation;
 use App\Entity\Orders\ServiceOrder;
@@ -22,12 +24,15 @@ use Doctrine\ORM\EntityManagerInterface;
 
 final class ServiceOrderManager
 {
+    private const PRODUCTION_ROUTE_REVIEW_ISSUE = 'Las medidas de producción se corrigieron; revisa la ruta y confírmala antes de planificar.';
+
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly ServiceOrderRepository $serviceOrderRepository,
         private readonly ServiceOrderOperationPlanRepository $operationPlanRepository,
         private readonly ServiceOrderFolioGenerator $folioGenerator,
         private readonly AuditLogger $auditLogger,
+        private readonly ProductionRouteApplicator $productionRouteApplicator,
     ) {
     }
 
@@ -84,7 +89,9 @@ final class ServiceOrderManager
                     );
 
                 foreach ($quotation->getItems() as $quotationItem) {
-                    $serviceOrder->addItem($this->copyItem($quotationItem));
+                    $item = $this->copyItem($quotationItem);
+                    $serviceOrder->addItem($item);
+                    $this->productionRouteApplicator->apply($item, $actor);
                 }
 
                 $this->entityManager->persist($serviceOrder);
@@ -134,6 +141,228 @@ final class ServiceOrderManager
         });
     }
 
+    /** @return list<ServiceOrderItem> Newly visible order rows, including the retained first child. */
+    public function splitItem(
+        ServiceOrder $serviceOrder,
+        ServiceOrderItem $item,
+        string $quantityList,
+        string $reason,
+        User $actor,
+    ): array {
+        return $this->entityManager->wrapInTransaction(function () use ($serviceOrder, $item, $quantityList, $reason, $actor): array {
+            $this->lockServiceOrder($serviceOrder);
+            $this->assertPendingPlanning($serviceOrder);
+            $this->lockAndAssertOrderItem($serviceOrder, $item);
+
+            $reason = $this->validateChangeReason($reason);
+            $quantities = $this->parseSplitQuantities($quantityList);
+            if ($item->getSplitPosition() !== null || $item->getSplitParentItem() !== null) {
+                throw new \DomainException('Una partida dividida no se puede volver a dividir en esta fase.');
+            }
+            foreach ($serviceOrder->getItems() as $candidate) {
+                if ($candidate->getSplitParentItem() === $item) {
+                    throw new \DomainException('Esta partida ya fue dividida.');
+                }
+            }
+
+            $quantityTotal = BigDecimal::of('0');
+            foreach ($quantities as $quantity) {
+                $quantityTotal = $quantityTotal->plus($quantity);
+            }
+            if ($quantityTotal->compareTo($item->getQuantity()) !== 0) {
+                throw new \DomainException('La suma de cantidades debe coincidir exactamente con la cantidad contratada.');
+            }
+
+            $oldValues = $this->splitSnapshot($item);
+            $subtotals = $this->allocateSplitSubtotals($item->getLineSubtotal(), $quantities);
+            $maxLineNumber = max(array_map(
+                static fn (ServiceOrderItem $orderItem): int => $orderItem->getLineNumber(),
+                $serviceOrder->getItems()->toArray(),
+            ));
+
+            $item
+                ->setSplitPosition(1)
+                ->setQuantity($quantities[0])
+                ->setLineSubtotal($subtotals[0]);
+            $rows = [$item];
+
+            $activePlans = $this->operationPlanRepository->findActiveForItemForUpdate($item);
+            foreach (array_slice($quantities, 1, null, true) as $position => $quantity) {
+                $child = (new ServiceOrderItem())
+                    ->setCommercialItem($item->getCommercialItem())
+                    ->setLineNumber(++$maxLineNumber)
+                    ->setQuantity($quantity)
+                    ->setUnitPrice($item->getUnitPrice())
+                    ->setLineSubtotal($subtotals[$position])
+                    ->setCommercialItemSnapshot($item->getCommercialItemSnapshot())
+                    ->setPriceRuleSnapshot($item->getPriceRuleSnapshot())
+                    ->setSpecificationsSnapshot($item->getSpecificationsSnapshot())
+                    ->setProductionSpecificationsSnapshot($item->getProductionSpecificationsSnapshot())
+                    ->setSpecificationSchemaVersion($item->getSpecificationSchemaVersion())
+                    ->setRoute($item->getRouteVersion(), $item->getRouteSnapshot())
+                    ->setPlanningIssue($item->getPlanningIssue())
+                    ->setSplitParentItem($item)
+                    ->setSplitPosition($position + 1);
+                $serviceOrder->addItem($child);
+
+                foreach ($activePlans as $activePlan) {
+                    $plan = (new ServiceOrderOperationPlan())
+                        ->setServiceOrderItem($child)
+                        ->setOperation($activePlan->getOperation())
+                        ->setEquipment($activePlan->getEquipment(), $activePlan->getEquipmentSnapshot())
+                        ->setCreatedBy($actor)
+                        ->setSequenceNumber($activePlan->getSequenceNumber())
+                        ->setOperationSnapshot($activePlan->getOperationSnapshot())
+                        ->setRouteStepSnapshot($activePlan->getRouteStepSnapshot())
+                        ->setConditionApplied($activePlan->getConditionApplied())
+                        ->setBlockedReason($activePlan->getBlockedReason());
+                    $child->addOperationPlan($plan);
+                }
+                $rows[] = $child;
+            }
+
+            $this->auditLogger->record(
+                actor: $actor,
+                action: 'service_order.item_split',
+                entityType: 'service_order_item',
+                entityId: $item->getId(),
+                oldValues: $oldValues,
+                newValues: [
+                    'reason' => $reason,
+                    'rows' => array_map(static fn (ServiceOrderItem $row): array => [
+                        'line_number' => $row->getDisplayLineNumber(),
+                        'quantity' => $row->getQuantity(),
+                        'line_subtotal' => $row->getLineSubtotal(),
+                    ], $rows),
+                    'order_total_unchanged' => $serviceOrder->getTotal(),
+                ],
+            );
+            $this->entityManager->flush();
+
+            return $rows;
+        });
+    }
+
+    public function correctProductionSpecifications(
+        ServiceOrder $serviceOrder,
+        ServiceOrderItem $item,
+        ?string $finishedWidthCm,
+        ?string $finishedHeightCm,
+        string $reason,
+        User $actor,
+    ): void {
+        $this->entityManager->wrapInTransaction(function () use ($serviceOrder, $item, $finishedWidthCm, $finishedHeightCm, $reason, $actor): void {
+            $this->lockServiceOrder($serviceOrder);
+            $this->assertPendingPlanning($serviceOrder);
+            $this->lockAndAssertOrderItem($serviceOrder, $item);
+
+            $reason = $this->validateChangeReason($reason);
+            $oldSpecifications = $item->getProductionSpecificationsSnapshot();
+            $updates = [];
+            foreach (['finished_width_cm' => $finishedWidthCm, 'finished_height_cm' => $finishedHeightCm] as $key => $value) {
+                if (trim((string) $value) !== '') {
+                    $normalized = $this->normalizeProductionDimension((string) $value);
+                    $current = $this->snapshotDimension($oldSpecifications, $key);
+                    if ($current === null || BigDecimal::of($current)->compareTo($normalized) !== 0) {
+                        $updates[$key] = $normalized;
+                    }
+                }
+            }
+            if ($updates === []) {
+                throw new \DomainException('Captura al menos una medida distinta de la actual.');
+            }
+
+            $newSpecifications = $oldSpecifications;
+            foreach ($updates as $key => $value) {
+                $newSpecifications[$key] = $value;
+                $characteristicCode = strtoupper($key);
+                if (isset($newSpecifications['values'][$characteristicCode]) && is_array($newSpecifications['values'][$characteristicCode])) {
+                    $newSpecifications['values'][$characteristicCode]['submitted_value'] = $value;
+                }
+                if (isset($newSpecifications['large_format']['values'][$key])) {
+                    $newSpecifications['large_format']['values'][$key] = $value;
+                }
+            }
+
+            $width = $this->snapshotDimension($newSpecifications, 'finished_width_cm');
+            $height = $this->snapshotDimension($newSpecifications, 'finished_height_cm');
+            if ($width !== null && $height !== null) {
+                $area = BigDecimal::of($width)
+                    ->multipliedBy($height)
+                    ->dividedBy('10000', 6, RoundingMode::HalfUp)
+                    ->__toString();
+                if (isset($newSpecifications['large_format']['calculated']) && is_array($newSpecifications['large_format']['calculated'])) {
+                    $newSpecifications['large_format']['calculated']['area_m2'] = $area;
+                }
+                if (isset($newSpecifications['calculated']) && is_array($newSpecifications['calculated']) && array_key_exists('area_m2', $newSpecifications['calculated'])) {
+                    $newSpecifications['calculated']['area_m2'] = $area;
+                }
+                $newSpecifications['summary'] = sprintf('Ancho %s cm x alto %s cm', $width, $height);
+            }
+
+            if ($newSpecifications === $oldSpecifications) {
+                throw new \DomainException('Las medidas capturadas coinciden con las actuales.');
+            }
+
+            $newSpecifications['_production_adjustment'] = [
+                'type' => 'technical_correction',
+                'corrected_at' => (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format(\DATE_ATOM),
+                'corrected_by_user_id' => $actor->getId(),
+            ];
+
+            $item->setProductionSpecificationsSnapshot($newSpecifications);
+            $item->setPlanningIssue(self::PRODUCTION_ROUTE_REVIEW_ISSUE);
+            $this->auditLogger->record(
+                actor: $actor,
+                action: 'service_order.item_production_specifications_corrected',
+                entityType: 'service_order_item',
+                entityId: $item->getId(),
+                oldValues: ['production_specifications' => $oldSpecifications],
+                newValues: [
+                    'production_specifications' => $newSpecifications,
+                    'reason' => $reason,
+                    'quotation_specifications_unchanged' => true,
+                    'commercial_amounts_unchanged' => true,
+                ],
+            );
+            $this->entityManager->flush();
+        });
+    }
+
+    public function confirmProductionRouteReview(
+        ServiceOrder $serviceOrder,
+        ServiceOrderItem $item,
+        User $actor,
+    ): void {
+        $this->entityManager->wrapInTransaction(function () use ($serviceOrder, $item, $actor): void {
+            $this->lockServiceOrder($serviceOrder);
+            $this->assertPendingPlanning($serviceOrder);
+            $this->lockAndAssertOrderItem($serviceOrder, $item);
+
+            if ($item->getPlanningIssue() !== self::PRODUCTION_ROUTE_REVIEW_ISSUE) {
+                throw new \DomainException('Esta partida no tiene una revisión de ruta pendiente.');
+            }
+            $activePlans = $this->operationPlanRepository->findActiveForItemForUpdate($item);
+            if ($item->getRouteVersion() === null || $activePlans === []) {
+                throw new \DomainException('Agrega una ruta válida antes de confirmar su revisión.');
+            }
+
+            $item->setPlanningIssue(null);
+            $this->auditLogger->record(
+                actor: $actor,
+                action: 'service_order.item_production_route_reviewed',
+                entityType: 'service_order_item',
+                entityId: $item->getId(),
+                newValues: [
+                    'line_number' => $item->getDisplayLineNumber(),
+                    'route_version_id' => $item->getRouteVersion()->getId(),
+                    'active_operation_count' => count($activePlans),
+                ],
+            );
+            $this->entityManager->flush();
+        });
+    }
+
     public function addOperationToItem(
         ServiceOrder $serviceOrder,
         ServiceOrderItem $serviceOrderItem,
@@ -164,6 +393,7 @@ final class ServiceOrderManager
                     ->reactivate()
                     ->setSequenceNumber($nextSequence)
                     ->setOperationSnapshot($this->operationSnapshot($operation));
+                $serviceOrderItem->setPlanningIssue(null);
 
                 $this->auditLogger->record(
                     actor: $actor,
@@ -185,6 +415,7 @@ final class ServiceOrderManager
                 ->setSequenceNumber($nextSequence)
                 ->setOperationSnapshot($this->operationSnapshot($operation));
             $serviceOrderItem->addOperationPlan($plan);
+            $serviceOrderItem->setPlanningIssue(null);
 
             $this->entityManager->persist($plan);
             $this->entityManager->flush();
@@ -353,12 +584,27 @@ final class ServiceOrderManager
             }
 
             foreach ($serviceOrder->getItems() as $serviceOrderItem) {
+                if ($serviceOrderItem->getPlanningIssue() !== null) {
+                    throw new \DomainException(sprintf(
+                        'La partida %d requiere revisión: %s',
+                        $serviceOrderItem->getLineNumber(),
+                        $serviceOrderItem->getPlanningIssue(),
+                    ));
+                }
                 $plans = $this->operationPlanRepository->findActiveForItemForUpdate($serviceOrderItem);
                 if ($plans === []) {
                     throw new \DomainException(sprintf('La partida %d debe tener al menos una operación planificada.', $serviceOrderItem->getLineNumber()));
                 }
 
                 foreach ($plans as $plan) {
+                    if ($plan->getBlockedReason() !== null) {
+                        throw new \DomainException(sprintf(
+                            'La operación %s de la partida %d está bloqueada: %s',
+                            $plan->getOperationSnapshot()['name'] ?? $plan->getOperation()->getName(),
+                            $serviceOrderItem->getLineNumber(),
+                            $plan->getBlockedReason(),
+                        ));
+                    }
                     $operation = $this->lockOperation($plan->getOperation());
                     $this->assertOperationAvailableForPlanning($operation);
                     if ($plan->getEquipment() !== null) {
@@ -382,6 +628,124 @@ final class ServiceOrderManager
             );
             $this->entityManager->flush();
         });
+    }
+
+    /** @return list<string> */
+    private function parseSplitQuantities(string $quantityList): array
+    {
+        $entries = preg_split('/[;\r\n]+/', trim($quantityList), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        if (count($entries) < 2 || count($entries) > 20) {
+            throw new \DomainException('Captura entre 2 y 20 cantidades, una por renglón.');
+        }
+
+        $quantities = [];
+        foreach ($entries as $entry) {
+            $value = str_replace(',', '.', trim($entry));
+            if (preg_match('/^(?:0|[1-9]\d{0,11})(?:\.\d{1,6})?$/D', $value) !== 1) {
+                throw new \DomainException('Cada cantidad debe ser positiva y usar hasta 6 decimales.');
+            }
+            $quantity = BigDecimal::of($value);
+            if ($quantity->compareTo('0') <= 0) {
+                throw new \DomainException('Cada cantidad debe ser mayor que cero.');
+            }
+            $quantities[] = $quantity->toScale(6)->__toString();
+        }
+
+        return $quantities;
+    }
+
+    /** @param list<string> $quantities @return list<string> */
+    private function allocateSplitSubtotals(string $lineSubtotal, array $quantities): array
+    {
+        $totalQuantity = array_reduce(
+            $quantities,
+            static fn (BigDecimal $sum, string $quantity): BigDecimal => $sum->plus($quantity),
+            BigDecimal::of('0'),
+        );
+        $total = BigDecimal::of($lineSubtotal)->toScale(2);
+        $allocated = [];
+        $allocatedTotal = BigDecimal::of('0');
+
+        foreach ($quantities as $quantity) {
+            $amount = $total
+                ->multipliedBy($quantity)
+                ->dividedBy($totalQuantity, 2, RoundingMode::HalfUp)
+                ->toScale(2, RoundingMode::HalfUp);
+            $allocated[] = $amount;
+            $allocatedTotal = $allocatedTotal->plus($amount);
+        }
+
+        $residual = $total->minus($allocatedTotal);
+        if ($residual->compareTo('0') >= 0) {
+            $last = count($allocated) - 1;
+            $allocated[$last] = $allocated[$last]->plus($residual);
+        } else {
+            // Independent rounding can exceed the source by a cent per row.
+            // Remove that excess from the last positive allocations so no child
+            // receives a negative amount and the original subtotal is exact.
+            $excess = $residual->abs();
+            for ($index = count($allocated) - 1; $index >= 0 && $excess->compareTo('0') > 0; --$index) {
+                $reduction = $allocated[$index]->compareTo($excess) < 0 ? $allocated[$index] : $excess;
+                $allocated[$index] = $allocated[$index]->minus($reduction);
+                $excess = $excess->minus($reduction);
+            }
+            if ($excess->compareTo('0') > 0) {
+                throw new \DomainException('No fue posible distribuir el importe original entre las partidas hijas.');
+            }
+        }
+
+        return array_map(static fn (BigDecimal $amount): string => $amount->toScale(2)->__toString(), $allocated);
+    }
+
+    private function validateChangeReason(string $reason): string
+    {
+        $reason = trim($reason);
+        if (mb_strlen($reason) < 5 || mb_strlen($reason) > 500) {
+            throw new \DomainException('Indica el motivo del cambio (de 5 a 500 caracteres).');
+        }
+
+        return $reason;
+    }
+
+    private function normalizeProductionDimension(string $value): string
+    {
+        $value = str_replace(',', '.', trim($value));
+        if (preg_match('/^(?:0|[1-9]\d{0,5})(?:\.\d{1,6})?$/D', $value) !== 1) {
+            throw new \DomainException('Las medidas deben ser números positivos en centímetros, con hasta 6 decimales.');
+        }
+
+        $dimension = BigDecimal::of($value);
+        if ($dimension->compareTo('0') <= 0 || $dimension->compareTo('100000') > 0) {
+            throw new \DomainException('Cada medida debe ser mayor que cero y no superar 100,000 cm.');
+        }
+
+        return $dimension->toScale(6)->__toString();
+    }
+
+    /** @param array<string, mixed> $specifications */
+    private function snapshotDimension(array $specifications, string $key): ?string
+    {
+        $code = strtoupper($key);
+        $candidate = $specifications['large_format']['values'][$key]
+            ?? $specifications['values'][$code]['submitted_value']
+            ?? $specifications[$key]
+            ?? null;
+
+        return is_scalar($candidate) && trim((string) $candidate) !== ''
+            ? $this->normalizeProductionDimension((string) $candidate)
+            : null;
+    }
+
+    /** @return array<string, int|string|null> */
+    private function splitSnapshot(ServiceOrderItem $item): array
+    {
+        return [
+            'line_number' => $item->getLineNumber(),
+            'quantity' => $item->getQuantity(),
+            'unit_price' => $item->getUnitPrice(),
+            'line_subtotal' => $item->getLineSubtotal(),
+            'source_quotation_item_id' => $item->getSourceQuotationItem()?->getId(),
+        ];
     }
 
     private function lockServiceOrder(ServiceOrder $serviceOrder): void
@@ -554,6 +918,7 @@ final class ServiceOrderManager
             ->setCommercialItemSnapshot($quotationItem->getCommercialItemSnapshot())
             ->setPriceRuleSnapshot($quotationItem->getPriceRuleSnapshot())
             ->setSpecificationsSnapshot($quotationItem->getSpecificationsSnapshot())
+            ->setProductionSpecificationsSnapshot($quotationItem->getSpecificationsSnapshot())
             ->setSpecificationSchemaVersion($quotationItem->getSpecificationSchemaVersion());
     }
 

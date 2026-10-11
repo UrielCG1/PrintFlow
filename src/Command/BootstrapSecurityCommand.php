@@ -109,6 +109,7 @@ final class BootstrapSecurityCommand extends Command
 
         'service_orders.view' => ['service_orders', 'view', 'Consultar órdenes operativas'],
         'service_orders.view_commercial' => ['service_orders', 'view_commercial', 'Consultar importes comerciales de órdenes'],
+        'production_routes.manage' => ['production_routes', 'manage', 'Configurar rutas de producción'],
 
         'traceability.view' => ['traceability', 'view', 'Consultar trazabilidad'],
         'traceability.assign' => ['traceability', 'assign', 'Asignar etapas de producción'],
@@ -141,6 +142,7 @@ final class BootstrapSecurityCommand extends Command
         'ROLE_PRODUCTION' => [
             'dashboard.view',
             'service_orders.view',
+            'production_routes.manage',
             'order.view',
             'order.update',
             'order.change_status',

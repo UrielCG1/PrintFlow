@@ -7,6 +7,7 @@ namespace App\Tests\Functional;
 use App\Application\Quotations\QuotationData;
 use App\Application\Quotations\QuotationItemData;
 use App\Application\Quotations\QuotationManager;
+use App\Application\Orders\ServiceOrderManager;
 use App\Entity\Orders\ServiceOrder;
 use App\Entity\Orders\ServiceOrderItem;
 use App\Entity\Users\Permission;
@@ -45,6 +46,7 @@ final class ServiceOrderCommercialAccessTest extends TestCase
         $this->createUserWithPermissions('qa-production', 'ROLE_PRODUCTION', [
             'service_orders.view',
             'service_orders.plan',
+            'production_routes.manage',
         ]);
         $this->createUserWithPermissions('qa-operator', 'ROLE_OPERATOR', [
             'service_orders.view',
@@ -75,6 +77,24 @@ final class ServiceOrderCommercialAccessTest extends TestCase
     public function testOperatorCanSeeOperationalOrderButNoCommercialAmountsOrSourceDocuments(): void
     {
         $this->assertOperationalAccessWithoutCommercialData('qa-operator');
+    }
+
+    public function testRouteConfigurationIsLimitedToProductionManagers(): void
+    {
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $operator = $em->getRepository(User::class)->findOneBy(['username' => 'qa-operator']);
+        self::assertInstanceOf(User::class, $operator);
+        $this->browser->loginUser($operator);
+        $this->browser->request('GET', '/admin/produccion/rutas');
+        self::assertSame(403, $this->browser->getResponse()->getStatusCode());
+
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $productionManager = $em->getRepository(User::class)->findOneBy(['username' => 'qa-production']);
+        self::assertInstanceOf(User::class, $productionManager);
+        $this->browser->loginUser($productionManager);
+        $this->browser->request('GET', '/admin/produccion/rutas');
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        $this->assertNoCommercialData((string) $this->browser->getResponse()->getContent(), 'production routes');
     }
 
     private function assertOperationalAccessWithoutCommercialData(string $username): void
@@ -116,6 +136,16 @@ final class ServiceOrderCommercialAccessTest extends TestCase
         );
         self::assertSame(403, $this->browser->getResponse()->getStatusCode());
         $this->assertNoCommercialData((string) $this->browser->getResponse()->getContent(), 'reordenar JSON for '.$username);
+
+        $itemId = $this->serviceOrder->getItems()->first()->getId();
+        foreach ([
+            '/admin/ordenes-servicio/'.$this->serviceOrder->getId().'/partidas/'.$itemId.'/dividir',
+            '/admin/ordenes-servicio/'.$this->serviceOrder->getId().'/partidas/'.$itemId.'/corregir-medidas',
+        ] as $path) {
+            $this->browser->request('POST', $path, ['quantities' => "1\n1", 'finished_width_cm' => '110', 'reason' => 'Prueba de permisos']);
+            self::assertSame(403, $this->browser->getResponse()->getStatusCode(), $path.' for '.$username);
+            $this->assertNoCommercialData((string) $this->browser->getResponse()->getContent(), $path.' for '.$username);
+        }
     }
 
     public function testSalesCanSeeCommercialAmountsOnServiceOrder(): void
@@ -143,6 +173,78 @@ final class ServiceOrderCommercialAccessTest extends TestCase
         );
         self::assertSame(200, $this->browser->getResponse()->getStatusCode());
         self::assertStringContainsString('80.00', (string) $this->browser->getResponse()->getContent());
+    }
+
+    public function testSplitReplacesTheOrderLineAndPreservesQuantityAndOrderTotal(): void
+    {
+        $manager = $this->kernel->getContainer()->get('test.service_container')->get(ServiceOrderManager::class);
+        $original = $this->serviceOrder->getItems()->first();
+        self::assertInstanceOf(ServiceOrderItem::class, $original);
+        $acceptedSource = $original->getSourceQuotationItem();
+        $orderTotal = $this->serviceOrder->getTotal();
+
+        $rows = $manager->splitItem($this->serviceOrder, $original, "1\n1", 'División de QA para probar dos subtrabajos', $this->fixtures['user']);
+
+        self::assertCount(2, $rows);
+        self::assertSame('1.000000', $rows[0]->getQuantity());
+        self::assertSame('1.000000', $rows[1]->getQuantity());
+        self::assertSame('12345.67', $rows[0]->getLineSubtotal());
+        self::assertSame('12345.67', $rows[1]->getLineSubtotal());
+        self::assertSame('1.1', $rows[0]->getDisplayLineNumber());
+        self::assertSame('1.2', $rows[1]->getDisplayLineNumber());
+        self::assertSame($acceptedSource, $rows[0]->getSourceQuotationItem());
+        self::assertNull($rows[1]->getSourceQuotationItem());
+        self::assertSame($rows[0], $rows[1]->getSplitParentItem());
+        self::assertSame($orderTotal, $this->serviceOrder->getTotal());
+        self::assertCount(2, $this->serviceOrder->getItems());
+
+        $sales = $this->kernel->getContainer()->get('doctrine')->getManager()->getRepository(User::class)->findOneBy(['username' => 'qa-sales']);
+        self::assertInstanceOf(User::class, $sales);
+        $this->browser->loginUser($sales);
+        $this->browser->request('GET', '/admin/ordenes-servicio/'.$this->serviceOrder->getId());
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        $salesHtml = (string) $this->browser->getResponse()->getContent();
+        self::assertStringContainsString('1.1', $salesHtml);
+        self::assertStringContainsString('1.2', $salesHtml);
+        self::assertGreaterThanOrEqual(4, substr_count($salesHtml, '12,345.67'));
+
+        $operator = $this->kernel->getContainer()->get('doctrine')->getManager()->getRepository(User::class)->findOneBy(['username' => 'qa-operator']);
+        self::assertInstanceOf(User::class, $operator);
+        $this->browser->loginUser($operator);
+        $this->browser->request('GET', '/admin/ordenes-servicio/'.$this->serviceOrder->getId());
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        $operatorHtml = (string) $this->browser->getResponse()->getContent();
+        self::assertStringContainsString('1.1', $operatorHtml);
+        self::assertStringContainsString('1.2', $operatorHtml);
+        $this->assertNoCommercialData($operatorHtml, 'divided order visible to Operator');
+    }
+
+    public function testProductionCorrectionDoesNotChangeAcceptedQuotationOrCommercialValues(): void
+    {
+        $manager = $this->kernel->getContainer()->get('test.service_container')->get(ServiceOrderManager::class);
+        $item = $this->serviceOrder->getItems()->first();
+        self::assertInstanceOf(ServiceOrderItem::class, $item);
+        $quotedSpecifications = $item->getSpecificationsSnapshot();
+        $unitPrice = $item->getUnitPrice();
+        $lineSubtotal = $item->getLineSubtotal();
+        $orderTotal = $this->serviceOrder->getTotal();
+
+        $manager->correctProductionSpecifications(
+            $this->serviceOrder,
+            $item,
+            '110',
+            null,
+            'Ajuste solicitado al revisar el archivo del cliente',
+            $this->fixtures['user'],
+        );
+
+        self::assertSame($quotedSpecifications, $item->getSpecificationsSnapshot());
+        self::assertSame($unitPrice, $item->getUnitPrice());
+        self::assertSame($lineSubtotal, $item->getLineSubtotal());
+        self::assertSame($orderTotal, $this->serviceOrder->getTotal());
+        self::assertSame('110.000000', $item->getProductionSpecificationsSnapshot()['finished_width_cm']);
+        self::assertSame('technical_correction', $item->getProductionSpecificationsSnapshot()['_production_adjustment']['type']);
+        self::assertSame('Las medidas de producción se corrigieron; revisa la ruta y confírmala antes de planificar.', $item->getPlanningIssue());
     }
 
     /** @param list<string> $codes */
@@ -239,6 +341,11 @@ final class ServiceOrderCommercialAccessTest extends TestCase
             ->setLineSubtotal('24691.34')
             ->setCommercialItemSnapshot(['name' => 'Lona QA', 'code' => 'QA-LONA'])
             ->setSpecificationsSnapshot(['summary' => 'Ancho 100 cm x alto 200 cm'])
+            ->setProductionSpecificationsSnapshot([
+                'summary' => 'Ancho 100 cm x alto 200 cm',
+                'finished_width_cm' => '100',
+                'finished_height_cm' => '200',
+            ])
             ->setSpecificationSchemaVersion(1);
         $order->addItem($item);
         $em->persist($order);

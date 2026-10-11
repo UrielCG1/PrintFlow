@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity\Orders;
 
 use App\Entity\Catalog\CommercialItem;
+use App\Entity\Production\CommercialItemRouteVersion;
 use App\Entity\Quotations\QuotationItem;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -15,7 +16,9 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table(name: 'service_order_items')]
 #[ORM\UniqueConstraint(name: 'uniq_service_order_items_line_number', columns: ['service_order_id', 'line_number'])]
 #[ORM\UniqueConstraint(name: 'uniq_service_order_items_source_quotation_item', columns: ['source_quotation_item_id'])]
+#[ORM\Index(name: 'idx_service_order_items_split_parent_position', fields: ['splitParentItem', 'splitPosition'])]
 #[ORM\Index(name: 'idx_service_order_items_commercial_item', columns: ['commercial_item_id'])]
+#[ORM\Index(name: 'idx_service_order_items_route_version', columns: ['route_version_id'])]
 class ServiceOrderItem
 {
     #[ORM\Id]
@@ -28,8 +31,15 @@ class ServiceOrderItem
     private ServiceOrder $serviceOrder;
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(name: 'source_quotation_item_id', nullable: false, onDelete: 'RESTRICT')]
-    private QuotationItem $sourceQuotationItem;
+    #[ORM\JoinColumn(name: 'source_quotation_item_id', nullable: true, onDelete: 'RESTRICT')]
+    private ?QuotationItem $sourceQuotationItem = null;
+
+    #[ORM\ManyToOne(targetEntity: self::class)]
+    #[ORM\JoinColumn(name: 'split_parent_item_id', nullable: true, onDelete: 'RESTRICT')]
+    private ?self $splitParentItem = null;
+
+    #[ORM\Column(name: 'split_position', nullable: true, options: ['unsigned' => true])]
+    private ?int $splitPosition = null;
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(name: 'commercial_item_id', nullable: false, onDelete: 'RESTRICT')]
@@ -59,8 +69,23 @@ class ServiceOrderItem
     #[ORM\Column(name: 'specifications_snapshot', type: Types::JSON)]
     private array $specificationsSnapshot = [];
 
+    /** @var array<string, mixed> */
+    #[ORM\Column(name: 'production_specifications_snapshot', type: Types::JSON)]
+    private array $productionSpecificationsSnapshot = [];
+
     #[ORM\Column(name: 'specification_schema_version', options: ['unsigned' => true, 'default' => 1])]
     private int $specificationSchemaVersion = 1;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(name: 'route_version_id', nullable: true, onDelete: 'RESTRICT')]
+    private ?CommercialItemRouteVersion $routeVersion = null;
+
+    /** @var array<string, mixed>|null */
+    #[ORM\Column(name: 'route_snapshot', type: Types::JSON, nullable: true)]
+    private ?array $routeSnapshot = null;
+
+    #[ORM\Column(name: 'planning_issue', length: 255, nullable: true)]
+    private ?string $planningIssue = null;
 
     #[ORM\Column(name: 'created_at', type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
@@ -93,7 +118,7 @@ class ServiceOrderItem
         return $this;
     }
 
-    public function getSourceQuotationItem(): QuotationItem
+    public function getSourceQuotationItem(): ?QuotationItem
     {
         return $this->sourceQuotationItem;
     }
@@ -103,6 +128,48 @@ class ServiceOrderItem
         $this->sourceQuotationItem = $sourceQuotationItem;
 
         return $this;
+    }
+
+    public function getSplitParentItem(): ?self
+    {
+        return $this->splitParentItem;
+    }
+
+    public function setSplitParentItem(?self $splitParentItem): self
+    {
+        if ($splitParentItem === $this) {
+            throw new \InvalidArgumentException('Una partida no puede ser hija de sí misma.');
+        }
+
+        $this->splitParentItem = $splitParentItem;
+
+        return $this;
+    }
+
+    public function getSplitPosition(): ?int
+    {
+        return $this->splitPosition;
+    }
+
+    public function setSplitPosition(?int $splitPosition): self
+    {
+        if ($splitPosition !== null && $splitPosition < 1) {
+            throw new \InvalidArgumentException('La posición de la partida dividida debe ser positiva.');
+        }
+
+        $this->splitPosition = $splitPosition;
+
+        return $this;
+    }
+
+    public function getDisplayLineNumber(): string
+    {
+        $root = $this->splitParentItem ?? $this;
+        if ($this->splitPosition === null) {
+            return (string) $this->lineNumber;
+        }
+
+        return $root->getLineNumber().'.'.$this->splitPosition;
     }
 
     public function getCommercialItem(): CommercialItem
@@ -222,6 +289,20 @@ class ServiceOrderItem
         return $this;
     }
 
+    /** @return array<string, mixed> */
+    public function getProductionSpecificationsSnapshot(): array
+    {
+        return $this->productionSpecificationsSnapshot;
+    }
+
+    /** @param array<string, mixed> $productionSpecificationsSnapshot */
+    public function setProductionSpecificationsSnapshot(array $productionSpecificationsSnapshot): self
+    {
+        $this->productionSpecificationsSnapshot = $productionSpecificationsSnapshot;
+
+        return $this;
+    }
+
     public function getSpecificationSchemaVersion(): int
     {
         return $this->specificationSchemaVersion;
@@ -234,6 +315,43 @@ class ServiceOrderItem
         }
 
         $this->specificationSchemaVersion = $specificationSchemaVersion;
+
+        return $this;
+    }
+
+    public function getRouteVersion(): ?CommercialItemRouteVersion
+    {
+        return $this->routeVersion;
+    }
+
+    /** @param array<string, mixed>|null $routeSnapshot */
+    public function setRoute(?CommercialItemRouteVersion $routeVersion, ?array $routeSnapshot): self
+    {
+        if ($routeVersion !== null && $routeVersion->getCommercialItem() !== $this->commercialItem) {
+            throw new \DomainException('La versión de ruta no pertenece al Producto de la partida.');
+        }
+
+        $this->routeVersion = $routeVersion;
+        $this->routeSnapshot = $routeSnapshot;
+
+        return $this;
+    }
+
+    /** @return array<string, mixed>|null */
+    public function getRouteSnapshot(): ?array
+    {
+        return $this->routeSnapshot;
+    }
+
+    public function getPlanningIssue(): ?string
+    {
+        return $this->planningIssue;
+    }
+
+    public function setPlanningIssue(?string $planningIssue): self
+    {
+        $planningIssue = trim((string) $planningIssue);
+        $this->planningIssue = $planningIssue !== '' ? mb_substr($planningIssue, 0, 255) : null;
 
         return $this;
     }

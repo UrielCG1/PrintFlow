@@ -65,6 +65,16 @@ class ServiceOrderOperationPlan
     #[ORM\Column(name: 'equipment_snapshot', type: Types::JSON, nullable: true)]
     private ?array $equipmentSnapshot = null;
 
+    /** @var array<string, mixed>|null */
+    #[ORM\Column(name: 'route_step_snapshot', type: Types::JSON, nullable: true)]
+    private ?array $routeStepSnapshot = null;
+
+    #[ORM\Column(name: 'condition_applied', nullable: true)]
+    private ?bool $conditionApplied = null;
+
+    #[ORM\Column(name: 'blocked_reason', length: 255, nullable: true)]
+    private ?string $blockedReason = null;
+
     #[ORM\Column(name: 'deactivated_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $deactivatedAt = null;
 
@@ -180,6 +190,45 @@ class ServiceOrderOperationPlan
     public function getEquipmentSnapshot(): ?array
     {
         return $this->equipmentSnapshot;
+    }
+
+    /** @return array<string, mixed>|null */
+    public function getRouteStepSnapshot(): ?array
+    {
+        return $this->routeStepSnapshot;
+    }
+
+    /** @param array<string, mixed>|null $snapshot */
+    public function setRouteStepSnapshot(?array $snapshot): self
+    {
+        $this->routeStepSnapshot = $snapshot;
+
+        return $this;
+    }
+
+    public function getConditionApplied(): ?bool
+    {
+        return $this->conditionApplied;
+    }
+
+    public function setConditionApplied(?bool $conditionApplied): self
+    {
+        $this->conditionApplied = $conditionApplied;
+
+        return $this;
+    }
+
+    public function getBlockedReason(): ?string
+    {
+        return $this->blockedReason;
+    }
+
+    public function setBlockedReason(?string $blockedReason): self
+    {
+        $blockedReason = trim((string) $blockedReason);
+        $this->blockedReason = $blockedReason !== '' ? mb_substr($blockedReason, 0, 255) : null;
+
+        return $this;
     }
 
     public function getDeactivatedAt(): ?\DateTimeImmutable

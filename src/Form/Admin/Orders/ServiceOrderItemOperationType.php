@@ -26,7 +26,7 @@ final class ServiceOrderItemOperationType extends AbstractType
             ),
             'placeholder' => 'Selecciona una operación',
             'label' => 'Operación',
-            'help' => 'Solo se muestran operaciones activas de áreas activas. La ruta se define manualmente para esta partida.',
+            'help' => 'La ruta publicada del Producto ya se copió a esta partida; aquí puedes agregar una operación activa como excepción.',
         ]);
     }
 

@@ -159,7 +159,7 @@
             {% endif %}
         {% endif %}
 
-        {% if is_granted('suppliers.view') or is_granted('materials.view') or is_granted('material_categories.view') or is_granted('operations.view') or is_granted('operation_areas.view') %}
+        {% if is_granted('suppliers.view') or is_granted('materials.view') or is_granted('material_categories.view') or is_granted('operations.view') or is_granted('operation_areas.view') or is_granted('production_routes.manage') %}
             <p class="pf-sidebar__section">Operación</p>
 
             {% if is_granted('suppliers.view') %}
@@ -206,6 +206,18 @@
                 >
                     <i class="bi bi-diagram-3" aria-hidden="true"></i>
                     <span>Operaciones</span>
+                </a>
+            {% endif %}
+
+            {% if is_granted('production_routes.manage') %}
+                <a
+                    href="{{ path('admin_production_routes_index') }}"
+                    class="pf-sidebar__link {{ current_navigation == 'production_routes' ? 'is-active' : '' }}"
+                    {% if current_navigation == 'production_routes' %}aria-current="page"{% endif %}
+                    data-action="ui--sidebar#close"
+                >
+                    <i class="bi bi-signpost-split" aria-hidden="true"></i>
+                    <span>Rutas de producción</span>
                 </a>
             {% endif %}
 

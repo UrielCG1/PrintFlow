@@ -1,0 +1,34 @@
+{% extends 'layouts/app.html.twig' %}
+{% block title %}Ruta de {{ item.name }} | OoxCorp{% endblock %}
+{% block app_navigation_active %}production_routes{% endblock %}
+{% block app_breadcrumb %}Operación / Producción / Rutas / {{ item.name }}{% endblock %}
+{% block app_content %}
+<div class="pf-page__content">
+    <header class="pf-page-header"><div class="pf-page-header__content"><p class="pf-page-header__eyebrow">Producto del cotizador · {{ item.code }}</p><h1 class="pf-page-header__title">Ruta de {{ item.name }}</h1><p class="pf-page-header__description">Publicar crea una versión inmutable para nuevas órdenes. No cambia cotizaciones aceptadas, órdenes ni otros Productos que usen la misma ruta base.</p></div></header>
+    {% if currentRoute %}<div class="alert alert-info" role="status">Versión actual: <strong>{{ currentRoute.nameSnapshot }} v{{ currentRoute.versionNumber }}</strong>, publicada {{ currentRoute.publishedAt|date('d/m/Y H:i', 'America/Mexico_City') }}. Guardar publicará una nueva versión.</div>{% endif %}
+    {% if form.sourceTemplate.vars.choices is empty %}<div class="alert alert-warning">Primero crea y activa una ruta base reutilizable.</div>{% endif %}
+    {% if templates is not empty %}
+        <form method="get" class="pf-card p-3 mb-4">
+            <label class="form-label" for="route-base-select">Cargar pasos desde una ruta base</label>
+            <div class="d-flex gap-2"><select class="form-select" id="route-base-select" name="base" required><option value="">Selecciona una ruta base</option>{% for template in templates %}<option value="{{ template.id }}" {% if baseTemplate and baseTemplate.id == template.id %}selected{% endif %}>{{ template.code }} — {{ template.name }}</option>{% endfor %}</select><button class="btn pf-button pf-button--secondary" type="submit">Cargar</button></div>
+            <small class="text-muted mt-2">Cargar solo prellena el formulario; todavía no publica cambios.</small>
+        </form>
+    {% endif %}
+    <section class="pf-card">
+        {{ form_start(form, {attr: {class: 'pf-form pf-card__body', novalidate: 'novalidate'}}) }}
+            {{ form_errors(form) }}
+            {{ form_row(form.sourceTemplate) }}
+            <section class="pf-form-section"><div class="pf-form-section__header"><h2 class="pf-form-section__title">Pasos de esta versión</h2><p class="pf-form-section__description">Puedes ajustar secuencia, condición y obligatoriedad solo para este Producto. Ejemplo: Diseño cuando falta arte; Preprensa cuando se recibe el archivo.</p></div>
+                <div data-controller="ui--form-collection" data-ui--form-collection-index-value="{{ form.steps|length }}" data-ui--form-collection-placeholder-value="__name__">
+                    <div data-ui--form-collection-target="items">
+                        {% for step in form.steps %}<div class="pf-card p-3 mb-3" data-collection-item><div class="row g-3"><div class="col-md-6">{{ form_row(step.operation) }}</div><div class="col-md-6">{{ form_row(step.condition) }}</div><div class="col-md-6">{{ form_row(step.specificationKey) }}</div><div class="col-md-6">{{ form_row(step.specificationValue) }}</div><div class="col-12">{{ form_row(step.isRequired) }}</div></div><button type="button" class="btn btn-outline-danger btn-sm mt-2" data-action="ui--form-collection#remove">Eliminar paso</button></div>{% endfor %}
+                    </div>
+                    <template data-ui--form-collection-target="template"><div class="row g-3"><div class="col-md-6">{{ form_widget(form.steps.vars.prototype.operation) }}</div><div class="col-md-6">{{ form_widget(form.steps.vars.prototype.condition) }}</div><div class="col-md-6">{{ form_widget(form.steps.vars.prototype.specificationKey) }}</div><div class="col-md-6">{{ form_widget(form.steps.vars.prototype.specificationValue) }}</div><div class="col-12">{{ form_widget(form.steps.vars.prototype.isRequired) }}</div></div></template>
+                    <button type="button" class="btn pf-button pf-button--secondary mt-2" data-action="ui--form-collection#add"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Agregar operación</span></button>
+                </div>
+            </section>
+            <div class="pf-form-actions"><a class="btn pf-button pf-button--secondary" href="{{ path('admin_production_routes_index') }}">Cancelar</a><button type="submit" class="btn pf-button pf-button--primary" {% if form.sourceTemplate.vars.choices is empty %}disabled{% endif %}>Publicar nueva versión</button></div>
+        {{ form_end(form) }}
+    </section>
+</div>
+{% endblock %}

@@ -4,6 +4,7 @@ namespace App\Entity\Catalog;
 
 use App\Enum\Catalog\CommercialItemType;
 use App\Enum\Quotations\QuotationItemSpecificationProfile;
+use App\Entity\Production\CommercialItemRouteVersion;
 use App\Repository\Catalog\CommercialItemRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -14,6 +15,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_commercial_items_active_name', columns: ['is_active', 'name'])]
 #[ORM\Index(name: 'idx_commercial_items_category_active', columns: ['category_id', 'is_active'])]
 #[ORM\Index(name: 'idx_commercial_items_unit_active', columns: ['measurement_unit_id', 'is_active'])]
+#[ORM\Index(name: 'idx_commercial_items_current_route_version', columns: ['current_route_version_id'])]
 #[ORM\HasLifecycleCallbacks]
 class CommercialItem
 {
@@ -50,6 +52,10 @@ class CommercialItem
 
     #[ORM\Column(name: 'is_active', options: ['default' => true])]
     private bool $isActive = true;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(name: 'current_route_version_id', nullable: true, onDelete: 'RESTRICT')]
+    private ?CommercialItemRouteVersion $currentRouteVersion = null;
 
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable', options: ['comment' => '(DC2Type:datetime_immutable)'])]
     private \DateTimeImmutable $createdAt;
@@ -183,6 +189,22 @@ class CommercialItem
     public function setIsActive(bool $isActive): self
     {
         $this->isActive = $isActive;
+
+        return $this;
+    }
+
+    public function getCurrentRouteVersion(): ?CommercialItemRouteVersion
+    {
+        return $this->currentRouteVersion;
+    }
+
+    public function setCurrentRouteVersion(?CommercialItemRouteVersion $routeVersion): self
+    {
+        if ($routeVersion !== null && $routeVersion->getCommercialItem() !== $this) {
+            throw new \DomainException('La versión de ruta debe pertenecer al mismo Producto.');
+        }
+
+        $this->currentRouteVersion = $routeVersion;
 
         return $this;
     }

@@ -268,6 +268,94 @@ final class ServiceOrderController extends AbstractController
         return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
     }
 
+    #[Route('/{id}/partidas/{item}/dividir', name: 'split_item', requirements: ['id' => '\\d+', 'item' => '\\d+'], methods: ['POST'])]
+    public function splitItem(
+        Request $request,
+        ServiceOrder $serviceOrder,
+        ServiceOrderItem $item,
+        ServiceOrderManager $serviceOrderManager,
+    ): Response {
+        $this->denyAccessUnlessGranted('service_orders.plan');
+        if (!$this->isCsrfTokenValid(
+            'service-order-item-split-'.$serviceOrder->getId().'-'.$item->getId(),
+            $request->request->getString('_token'),
+        )) {
+            throw $this->createAccessDeniedException('El token de seguridad para dividir la partida no es válido.');
+        }
+
+        try {
+            $rows = $serviceOrderManager->splitItem(
+                $serviceOrder,
+                $item,
+                $request->request->getString('quantities'),
+                $request->request->getString('reason'),
+                $this->authenticatedUser(),
+            );
+            $this->addFlash('success', sprintf('La partida se dividió en %d renglones. El total contratado de la orden se conservó.', count($rows)));
+        } catch (\DomainException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        }
+
+        return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+    }
+
+    #[Route('/{id}/partidas/{item}/corregir-medidas', name: 'correct_item_specifications', requirements: ['id' => '\\d+', 'item' => '\\d+'], methods: ['POST'])]
+    public function correctItemSpecifications(
+        Request $request,
+        ServiceOrder $serviceOrder,
+        ServiceOrderItem $item,
+        ServiceOrderManager $serviceOrderManager,
+    ): Response {
+        $this->denyAccessUnlessGranted('service_orders.plan');
+        if (!$this->isCsrfTokenValid(
+            'service-order-item-specifications-'.$serviceOrder->getId().'-'.$item->getId(),
+            $request->request->getString('_token'),
+        )) {
+            throw $this->createAccessDeniedException('El token de seguridad para corregir las medidas no es válido.');
+        }
+
+        try {
+            $serviceOrderManager->correctProductionSpecifications(
+                $serviceOrder,
+                $item,
+                $request->request->getString('finished_width_cm'),
+                $request->request->getString('finished_height_cm'),
+                $request->request->getString('reason'),
+                $this->authenticatedUser(),
+            );
+            $this->addFlash('success', 'Las medidas de producción se corrigieron. Las medidas cotizadas y los importes quedaron intactos; revisa la ruta antes de planificar.');
+        } catch (\DomainException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        }
+
+        return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+    }
+
+    #[Route('/{id}/partidas/{item}/confirmar-revision-ruta', name: 'confirm_item_route_review', requirements: ['id' => '\\d+', 'item' => '\\d+'], methods: ['POST'])]
+    public function confirmItemRouteReview(
+        Request $request,
+        ServiceOrder $serviceOrder,
+        ServiceOrderItem $item,
+        ServiceOrderManager $serviceOrderManager,
+    ): Response {
+        $this->denyAccessUnlessGranted('service_orders.plan');
+        if (!$this->isCsrfTokenValid(
+            'service-order-item-route-review-'.$serviceOrder->getId().'-'.$item->getId(),
+            $request->request->getString('_token'),
+        )) {
+            throw $this->createAccessDeniedException('El token de seguridad para confirmar la ruta no es válido.');
+        }
+
+        try {
+            $serviceOrderManager->confirmProductionRouteReview($serviceOrder, $item, $this->authenticatedUser());
+            $this->addFlash('success', 'La ruta de producción quedó revisada para esta partida.');
+        } catch (\DomainException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        }
+
+        return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+    }
+
     #[Route('/{id}', name: 'show', requirements: ['id' => '\\d+'], methods: ['GET'])]
     public function show(
         ServiceOrder $serviceOrder,
@@ -283,15 +371,25 @@ final class ServiceOrderController extends AbstractController
         }
 
         $canPlan = $serviceOrder->isPendingPlanning() && $this->isGranted('service_orders.plan');
+        $itemsForDisplay = $serviceOrder->getItems()->toArray();
+        usort($itemsForDisplay, static function (ServiceOrderItem $left, ServiceOrderItem $right): int {
+            $leftRoot = $left->getSplitParentItem() ?? $left;
+            $rightRoot = $right->getSplitParentItem() ?? $right;
+            $byRoot = $leftRoot->getLineNumber() <=> $rightRoot->getLineNumber();
+
+            return $byRoot !== 0 ? $byRoot : ($left->getSplitPosition() ?? 0) <=> ($right->getSplitPosition() ?? 0);
+        });
         $planningForm = null;
         $itemOperationForms = [];
         $equipmentForms = [];
+        $splitEligibleItems = [];
+        $productionDimensions = [];
 
         if ($canPlan) {
             $planningForm = $this->createPlanningForm($this->planningData($serviceOrder), $serviceOrder)->createView();
             $operations = $operationRepository->findActiveForServiceOrderPlanning();
 
-            foreach ($serviceOrder->getItems() as $item) {
+            foreach ($itemsForDisplay as $item) {
                 $itemOperationForms[(int) $item->getId()] = $this->createItemOperationForm(
                     new ServiceOrderItemOperationData(),
                     $serviceOrder,
@@ -309,17 +407,47 @@ final class ServiceOrderController extends AbstractController
                         $this->equipmentChoicesForPlan($plan, $equipmentRepository),
                     )->createView();
                 }
+
+                $productionDimensions[(int) $item->getId()] = [
+                    'finished_width_cm' => $this->snapshotDimension($item->getProductionSpecificationsSnapshot(), 'finished_width_cm'),
+                    'finished_height_cm' => $this->snapshotDimension($item->getProductionSpecificationsSnapshot(), 'finished_height_cm'),
+                ];
+
+                $hasChildren = false;
+                foreach ($itemsForDisplay as $candidate) {
+                    if ($candidate->getSplitParentItem() === $item) {
+                        $hasChildren = true;
+                        break;
+                    }
+                }
+                if ($item->getSplitParentItem() === null && $item->getSplitPosition() === null && !$hasChildren) {
+                    $splitEligibleItems[(int) $item->getId()] = true;
+                }
             }
         }
 
         return $this->render('admin/service_orders/show.html.twig', [
             'serviceOrder' => $serviceOrder,
             'canPlan' => $canPlan,
+            'itemsForDisplay' => $itemsForDisplay,
             'planningForm' => $planningForm,
             'itemOperationForms' => $itemOperationForms,
             'equipmentForms' => $equipmentForms,
             'operationPlansByItem' => $plansByItem,
+            'splitEligibleItems' => $splitEligibleItems,
+            'productionDimensions' => $productionDimensions,
         ]);
+    }
+
+    /** @param array<string, mixed> $snapshot */
+    private function snapshotDimension(array $snapshot, string $key): ?string
+    {
+        $candidate = $snapshot['large_format']['values'][$key]
+            ?? $snapshot['values'][strtoupper($key)]['submitted_value']
+            ?? $snapshot[$key]
+            ?? null;
+
+        return is_scalar($candidate) && trim((string) $candidate) !== '' ? (string) $candidate : null;
     }
 
     private function planningData(ServiceOrder $serviceOrder): ServiceOrderPlanningData

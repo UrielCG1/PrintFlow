@@ -1,0 +1,26 @@
+{% extends 'layouts/app.html.twig' %}
+{% block title %}{{ pageTitle }} | OoxCorp{% endblock %}
+{% block app_navigation_active %}production_routes{% endblock %}
+{% block app_breadcrumb %}Operación / Producción / Rutas / {{ pageTitle }}{% endblock %}
+{% block app_content %}
+<div class="pf-page__content">
+    <header class="pf-page-header"><div class="pf-page-header__content"><p class="pf-page-header__eyebrow">Operación / Producción</p><h1 class="pf-page-header__title">{{ pageTitle }}</h1><p class="pf-page-header__description">Una operación no se repite en la ruta inicial. Puedes omitir Diseño cuando ya hay archivo y condicionar pasos por una característica técnica.</p></div></header>
+    <section class="pf-card">
+        {{ form_start(form, {attr: {class: 'pf-form pf-card__body', novalidate: 'novalidate'}}) }}
+            {{ form_errors(form) }}
+            <section class="pf-form-section"><h2 class="pf-form-section__title">Identificación de la ruta</h2><div class="row g-3"><div class="col-md-4">{{ form_row(form.code) }}</div><div class="col-md-8">{{ form_row(form.name) }}</div><div class="col-12">{{ form_row(form.description) }}</div><div class="col-12">{{ form_row(form.isActive) }}</div></div></section>
+            <section class="pf-form-section">
+                <div class="pf-form-section__header"><h2 class="pf-form-section__title">Secuencia de operaciones</h2><p class="pf-form-section__description">El orden aquí es el orden inicial de producción. Solo se ofrecen operaciones activas.</p></div>
+                <div data-controller="ui--form-collection" data-ui--form-collection-index-value="{{ form.steps|length }}" data-ui--form-collection-placeholder-value="__name__">
+                    <div data-ui--form-collection-target="items">
+                        {% for step in form.steps %}<div class="pf-card p-3 mb-3" data-collection-item><div class="row g-3"><div class="col-md-6">{{ form_row(step.operation) }}</div><div class="col-md-6">{{ form_row(step.condition) }}</div><div class="col-md-6">{{ form_row(step.specificationKey) }}</div><div class="col-md-6">{{ form_row(step.specificationValue) }}</div><div class="col-12">{{ form_row(step.isRequired) }}</div></div><button type="button" class="btn btn-outline-danger btn-sm mt-2" data-action="ui--form-collection#remove">Eliminar paso</button></div>{% endfor %}
+                    </div>
+                    <template data-ui--form-collection-target="template"><div class="row g-3"><div class="col-md-6">{{ form_widget(form.steps.vars.prototype.operation) }}</div><div class="col-md-6">{{ form_widget(form.steps.vars.prototype.condition) }}</div><div class="col-md-6">{{ form_widget(form.steps.vars.prototype.specificationKey) }}</div><div class="col-md-6">{{ form_widget(form.steps.vars.prototype.specificationValue) }}</div><div class="col-12">{{ form_widget(form.steps.vars.prototype.isRequired) }}</div></div></template>
+                    <button type="button" class="btn pf-button pf-button--secondary mt-2" data-action="ui--form-collection#add"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Agregar operación</span></button>
+                </div>
+            </section>
+            <div class="pf-form-actions"><a class="btn pf-button pf-button--secondary" href="{{ path('admin_production_routes_index') }}">Cancelar</a><button type="submit" class="btn pf-button pf-button--primary">Guardar ruta base</button></div>
+        {{ form_end(form) }}
+    </section>
+</div>
+{% endblock %}

@@ -117,7 +117,7 @@
         <section class="pf-card mb-4">
             <header class="pf-card__header">
                 <h2 class="pf-card__title">Planificación operativa</h2>
-                <p class="pf-card__description">La ruta se define manualmente por partida. Las operaciones y equipos se validan contra los catálogos activos; no hay cálculos de capacidad ni consumo de materiales en esta fase.</p>
+                <p class="pf-card__description">La ruta publicada del Producto se copia automáticamente a cada partida. Puedes ajustar operaciones y equipos antes de planificar; todavía no se calculan tiempos, capacidad ni materiales.</p>
             </header>
 
             {% if canPlan %}
@@ -139,20 +139,34 @@
             {% endif %}
 
             <div class="pf-card__body d-flex flex-column gap-4">
-                {% for item in serviceOrder.items %}
+                {% for item in itemsForDisplay %}
                     {% set plans = operationPlansByItem[item.id]|default([]) %}
                     <article class="border rounded p-3">
                         <header class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
                             <div>
-                                <span class="text-muted small">Partida {{ item.lineNumber }}</span>
+                                <span class="text-muted small">Partida {{ item.displayLineNumber }}</span>
                                 <h3 class="h6 mb-1">{{ item.commercialItemSnapshot.name ?? item.commercialItem.name }}</h3>
-                                <span class="text-muted small">Cantidad contratada: {{ item.quantity }}</span>
-                                {% if item.specificationsSnapshot.summary|default(null) %}
-                                    <span class="d-block text-muted small mt-1">{{ item.specificationsSnapshot.summary }}</span>
+                                <span class="text-muted small">{{ item.splitPosition is not null ? 'Cantidad de esta subpartida:' : 'Cantidad contratada:' }} {{ item.quantity }}</span>
+                                {% if item.productionSpecificationsSnapshot.summary|default(item.specificationsSnapshot.summary|default(null)) %}
+                                    <span class="d-block text-muted small mt-1">{{ item.productionSpecificationsSnapshot.summary|default(item.specificationsSnapshot.summary) }}</span>
+                                {% endif %}
+                                {% if item.routeVersion %}
+                                    <span class="d-block text-muted small mt-1">Ruta aplicada: {{ item.routeVersion.nameSnapshot }} v{{ item.routeVersion.versionNumber }}</span>
                                 {% endif %}
                             </div>
                             <span class="text-muted small">{{ plans|length }} {{ plans|length == 1 ? 'operación' : 'operaciones' }} activas</span>
                         </header>
+
+                        {% if item.productionSpecificationsSnapshot._production_adjustment|default(null) %}
+                            <div class="alert alert-warning py-2" role="status">Las medidas de producción fueron corregidas después de aplicar la ruta. Revisa las operaciones y confirma la ruta antes de planificar. Las medidas cotizadas y sus importes permanecen intactos.</div>
+                        {% endif %}
+                        {% if item.planningIssue %}<div class="alert alert-warning py-2" role="status">Requiere planificación: {{ item.planningIssue }}</div>{% endif %}
+                        {% if canPlan and item.planningIssue == 'Las medidas de producción se corrigieron; revisa la ruta y confírmala antes de planificar.' %}
+                            <form method="post" action="{{ path('admin_service_orders_confirm_item_route_review', {id: serviceOrder.id, item: item.id}) }}" class="mb-3">
+                                <input type="hidden" name="_token" value="{{ csrf_token('service-order-item-route-review-' ~ serviceOrder.id ~ '-' ~ item.id) }}">
+                                <button type="submit" class="btn pf-button pf-button--secondary">Confirmar que revisé esta ruta</button>
+                            </form>
+                        {% endif %}
 
                         <div class="pf-table-responsive mb-3">
                             <table class="pf-table">
@@ -186,6 +200,7 @@
                                             <td>
                                                 <strong>{{ plan.operationSnapshot.name ?? plan.operation.name }}</strong>
                                                 <span class="d-block text-muted small">{{ plan.operationSnapshot.code ?? plan.operation.code }}</span>
+                                                {% if plan.blockedReason %}<span class="badge text-bg-warning mt-1">Bloqueada: {{ plan.blockedReason }}</span>{% endif %}
                                             </td>
                                             <td>{{ plan.operationSnapshot.area_name ?? plan.operation.operationArea.name }}</td>
                                             <td>
@@ -243,6 +258,39 @@
                                     {{ form_end(itemOperationForms[item.id]) }}
                                 </div>
                             </details>
+
+                            <details class="mt-3">
+                                <summary class="fw-semibold">Corregir medidas de producción</summary>
+                                <div class="pt-3">
+                                    <p class="small text-muted">Captura solo las medidas que cambian; deja las demás vacías. La cotización aceptada y sus importes no se modifican.</p>
+                                    <form method="post" action="{{ path('admin_service_orders_correct_item_specifications', {id: serviceOrder.id, item: item.id}) }}" class="pf-form">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('service-order-item-specifications-' ~ serviceOrder.id ~ '-' ~ item.id) }}">
+                                        <div class="row g-3 align-items-end">
+                                            <div class="col-md-3"><label class="form-label" for="width-{{ item.id }}">Ancho terminado corregido (cm)</label><input class="form-control" id="width-{{ item.id }}" name="finished_width_cm" inputmode="decimal"></div>
+                                            <div class="col-md-3"><label class="form-label" for="height-{{ item.id }}">Alto terminado corregido (cm)</label><input class="form-control" id="height-{{ item.id }}" name="finished_height_cm" inputmode="decimal"></div>
+                                            <div class="col-md-4"><label class="form-label" for="spec-reason-{{ item.id }}">Motivo</label><input class="form-control" id="spec-reason-{{ item.id }}" name="reason" maxlength="500" required></div>
+                                            <div class="col-md-2"><button type="submit" class="btn pf-button pf-button--secondary">Guardar medidas</button></div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </details>
+
+                            {% if splitEligibleItems[item.id]|default(false) %}
+                                <details class="mt-3">
+                                    <summary class="fw-semibold">Dividir esta partida</summary>
+                                    <div class="pt-3">
+                                        <p class="small text-muted">Las nuevas partidas reemplazan este renglón en la orden. Captura una cantidad por línea; su suma debe coincidir con la cantidad contratada. El sistema distribuye el importe al centavo y conserva el total de la orden.</p>
+                                        <form method="post" action="{{ path('admin_service_orders_split_item', {id: serviceOrder.id, item: item.id}) }}" class="pf-form">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('service-order-item-split-' ~ serviceOrder.id ~ '-' ~ item.id) }}">
+                                            <div class="row g-3 align-items-end">
+                                                <div class="col-md-4"><label class="form-label" for="quantities-{{ item.id }}">Cantidades hijas</label><textarea class="form-control" id="quantities-{{ item.id }}" name="quantities" rows="3" required placeholder="1&#10;1"></textarea><div class="form-text">Una por línea. Puedes usar coma decimal; admite de 2 a 20 renglones.</div></div>
+                                                <div class="col-md-6"><label class="form-label" for="split-reason-{{ item.id }}">Motivo de la división</label><input class="form-control" id="split-reason-{{ item.id }}" name="reason" maxlength="500" required></div>
+                                                <div class="col-md-2"><button type="submit" class="btn pf-button pf-button--secondary">Dividir partida</button></div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </details>
+                            {% endif %}
                         {% endif %}
                     </article>
                 {% endfor %}
@@ -273,7 +321,7 @@
             {% if is_granted('service_orders.view_commercial') %}
                 <header class="pf-card__header">
                     <h2 class="pf-card__title">Partidas e importes contratados</h2>
-                    <p class="pf-card__description">Estas partidas no se editan desde la orden; provienen de la cotización aceptada.</p>
+                    <p class="pf-card__description">Las divisiones sustituyen el renglón original y reparten su cantidad e importe. La cotización aceptada y el total de la orden permanecen sin cambios.</p>
                 </header>
             {% else %}
                 <header class="pf-card__header">
@@ -286,9 +334,9 @@
                     <table class="pf-table">
                         <thead><tr><th>#</th><th>Concepto</th><th class="pf-table__cell--right">Cantidad</th>{% if is_granted('service_orders.view_commercial') %}<th class="pf-table__cell--right">P. unitario</th><th class="pf-table__cell--right">Importe</th>{% endif %}</tr></thead>
                         <tbody>
-                            {% for item in serviceOrder.items %}
+                            {% for item in itemsForDisplay %}
                                 <tr>
-                                    <td>{{ item.lineNumber }}</td>
+                                    <td>{{ item.displayLineNumber }}</td>
                                     <td>
                                         <strong>{{ item.commercialItemSnapshot.name ?? item.commercialItem.name }}</strong>
                                         <span class="d-block text-muted small">{{ item.commercialItemSnapshot.code ?? '' }}</span>

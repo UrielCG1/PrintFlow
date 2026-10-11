@@ -688,7 +688,7 @@ php -m
 
 ## 19. Preparación para Hostinger
 
-Esta sección corresponde a una fase posterior, cuando se cuente con acceso al panel y credenciales del hosting.
+Antes de liberar, confirmar en hPanel los valores concretos del sitio: versión PHP, SSH, Composer, ruta de instalación, raíz web, permisos, variables y compatibilidad de base de datos. El runbook enlazado abajo tiene la secuencia completa; la ruta SSH histórica allí anotada no sustituye esta comprobación.
 
 Puntos a validar en Hostinger:
 
@@ -702,13 +702,11 @@ Puntos a validar en Hostinger:
 - Compatibilidad con MySQL/MariaDB.
 - Límites de memoria y tiempo de ejecución.
 
-Comando esperado para producción:
-
-```bash
-composer2 install --no-dev --optimize-autoloader
-php bin/console cache:clear --env=prod
-php bin/console cache:warmup --env=prod
-```
+El procedimiento actualizado de validación, migraciones, Composer,
+AssetMapper, caché y smoke test está en
+[docs/Runbook-Validacion-y-Deploy-Hostinger.md](docs/Runbook-Validacion-y-Deploy-Hostinger.md).
+No ejecutar un despliegue hasta confirmar allí la ruta real del sitio, la versión
+PHP y que el dominio sirve únicamente la carpeta `public/`.
 
 La carpeta pública del proyecto debe ser:
 
