@@ -244,11 +244,6 @@ final class DesignReviewManager
         if (!$plan instanceof ServiceOrderOperationPlan || $this->operationCode($plan) !== 'PRE-DISENO') {
             throw new \DomainException('La partida no tiene a Diseño como primera etapa activa de su ruta.');
         }
-        $assignedOperator = $plan->getAssignedOperator();
-        if ($assignedOperator === null || !$this->sameUser($assignedOperator, $actor)) {
-            throw new \DomainException('Solo la persona asignada a Diseño puede revisar esta partida.');
-        }
-
         return $plan;
     }
 

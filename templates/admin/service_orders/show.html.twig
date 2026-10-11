@@ -483,17 +483,20 @@
                                                         </details>
                                                     {% endif %}
                                                     {% if planReservations|length > 0 %}
+                                                        {% set isDesignOperation = plan.operationSnapshot.code|default(plan.operation.code) == 'PRE-DISENO' %}
                                                         <details class="service-order-disclosure service-order-disclosure--compact">
-                                                            <summary><span class="service-order-disclosure__label">Operador y tiempo real</span></summary>
-                                                            <form method="post" action="{{ path('admin_service_orders_assign_item_operation_operator', {id: serviceOrder.id, plan: plan.id}) }}" class="d-flex flex-wrap gap-2 align-items-center mt-2">
-                                                                <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-operator-' ~ plan.id) }}">
-                                                                <label class="form-label mb-0" for="operator-{{ plan.id }}">Operador (opcional)</label>
-                                                                <select class="form-select form-select-sm" style="max-width: 280px" id="operator-{{ plan.id }}" name="operator_id">
-                                                                    <option value="">Sin asignar</option>
-                                                                    {% for operator in productionOperators %}<option value="{{ operator.id }}"{% if plan.assignedOperator and plan.assignedOperator.id == operator.id %} selected{% endif %}>{{ operator.fullName }}</option>{% endfor %}
-                                                                </select>
-                                                                <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Guardar operador</button>
-                                                            </form>
+                                                            <summary><span class="service-order-disclosure__label">{{ isDesignOperation ? 'Tiempo real de Diseño' : 'Operador y tiempo real' }}</span></summary>
+                                                            {% if not isDesignOperation %}
+                                                                <form method="post" action="{{ path('admin_service_orders_assign_item_operation_operator', {id: serviceOrder.id, plan: plan.id}) }}" class="d-flex flex-wrap gap-2 align-items-center mt-2">
+                                                                    <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-operator-' ~ plan.id) }}">
+                                                                    <label class="form-label mb-0" for="operator-{{ plan.id }}">Operador (opcional)</label>
+                                                                    <select class="form-select form-select-sm" style="max-width: 280px" id="operator-{{ plan.id }}" name="operator_id">
+                                                                        <option value="">Sin asignar</option>
+                                                                        {% for operator in productionOperators %}<option value="{{ operator.id }}"{% if plan.assignedOperator and plan.assignedOperator.id == operator.id %} selected{% endif %}>{{ operator.fullName }}</option>{% endfor %}
+                                                                    </select>
+                                                                    <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Guardar operador</button>
+                                                                </form>
+                                                            {% endif %}
                                                             <form method="post" action="{{ path('admin_service_orders_record_item_operation_actual_time', {id: serviceOrder.id, plan: plan.id}) }}" class="d-flex flex-wrap gap-2 align-items-end mt-2">
                                                                 <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-actual-' ~ plan.id) }}">
                                                                 <div><label class="form-label mb-1" for="actual-minutes-{{ plan.id }}">Tiempo real (min)</label><input class="form-control form-control-sm" id="actual-minutes-{{ plan.id }}" name="actual_minutes" type="number" min="0" required value="{{ plan.actualMinutes ?? '' }}"></div>
@@ -501,7 +504,7 @@
                                                                 <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Registrar real</button>
                                                             </form>
                                                         </details>
-                                                    {% elseif not canPlan and plan.assignedOperator %}
+                                                    {% elseif not canPlan and plan.assignedOperator and (plan.operationSnapshot.code|default(plan.operation.code)) != 'PRE-DISENO' %}
                                                         <span><strong>Operador:</strong> {{ plan.assignedOperator.fullName }}</span>
                                                     {% endif %}
                                                 </div>

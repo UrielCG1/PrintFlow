@@ -71,6 +71,8 @@ Implementar permisos separados para configurar ruta/capacidad, planificar, repro
 
 El estado operativo de orden es distinto del estado comercial de cotización. Los estados actuales `PENDING_PLANNING` y `PLANNED` deben ampliarse o complementarse mediante migración nueva, sin reescribir las anteriores.
 
+**Excepción para Diseño:** el paso obligatorio inicial `PRE-DISENO` no requiere asignación individual como Operador. Puede iniciarlo y autorizar sus archivos cualquier usuario activo con permiso `production.design.review`; se registra como responsable de ese intento. La asignación de operador permanece disponible para las demás operaciones.
+
 ### 5.1 Flujo de planificación en la interfaz
 
 - La orden muestra avance por máquina, tiempo, agenda y fecha compromiso. Las acciones disponibles indican cuántos datos faltan y se habilitan solo cuando sus requisitos están satisfechos.
