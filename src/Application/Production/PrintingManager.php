@@ -22,6 +22,7 @@ use App\Repository\Equipment\EquipmentRepository;
 use App\Repository\Materials\MaterialVariantRepository;
 use App\Repository\Production\ProductionPrintedOutputRepository;
 use App\Repository\Production\ProductionPrintingScanRepository;
+use App\Repository\Orders\ServiceOrderTraceabilityEventRepository;
 use App\Repository\Production\ServiceOrderItemDesignReleaseRepository;
 use App\Service\Audit\AuditLogger;
 use App\Service\Orders\ServiceOrderTraceabilityRecorder;
@@ -37,6 +38,7 @@ final class PrintingManager
         private readonly MaterialVariantRepository $materialVariantRepository,
         private readonly ServiceOrderItemDesignReleaseRepository $releaseRepository,
         private readonly ProductionPrintingScanRepository $scanRepository,
+        private readonly ServiceOrderTraceabilityEventRepository $eventRepository,
         private readonly ProductionPrintedOutputRepository $outputRepository,
         private readonly ProductionExecutionManager $executionManager,
         private readonly ServiceOrderTraceabilityRecorder $traceabilityRecorder,
@@ -55,6 +57,9 @@ final class PrintingManager
             $order = $plan->getServiceOrderItem()->getServiceOrder();
             $this->lock($order, $plan);
             $this->assertPrintingPlan($plan);
+            if ($plan->getBlockedReason() !== null) {
+                throw new \DomainException('Resuelve el bloqueo operativo antes de cambiar los requisitos de Impresión.');
+            }
             if ($plan->hasOpenExecution() || $plan->hasCompletedExecution()) {
                 throw new \DomainException('No se pueden cambiar los requisitos después de iniciar Impresión. Registra un retrabajo autorizado.');
             }
@@ -166,7 +171,8 @@ final class PrintingManager
     public function start(ServiceOrderOperationPlan $plan, User $actor, ProductionExecutionCommand $command): ProductionOperationExecution
     {
         $scanId = null;
-        return $this->executionManager->start($plan, $actor, $command, null, function (ServiceOrder $order, ServiceOrderOperationPlan $lockedPlan, User $lockedActor) use (&$scanId): void {
+        $origin = $this->reworkOriginForPlan($plan);
+        return $this->executionManager->start($plan, $actor, $command, $origin, function (ServiceOrder $order, ServiceOrderOperationPlan $lockedPlan, User $lockedActor) use (&$scanId): void {
             $this->assertPrintingPlan($lockedPlan);
             $scan = $this->scanRepository->findCurrentForPlanForUpdate($lockedPlan);
             $release = $this->releaseRepository->findCurrentForUpdate($lockedPlan->getServiceOrderItem());
@@ -222,7 +228,23 @@ final class PrintingManager
             $usage->recordActual($total, $waste, QuantitySource::MEASURED, $lockedActor, $measurementMethod, $wasteReason);
             $currentOutput = $this->outputRepository->findCurrentForUpdate($plan->getServiceOrderItem());
             if ($currentOutput instanceof ProductionPrintedOutput) {
-                throw new \DomainException('La partida ya tiene una salida impresa vigente. Usa el flujo de retrabajo para una nueva impresión.');
+                $origin = $lockedExecution->getOriginExecution();
+                if (!$origin instanceof ProductionOperationExecution || !$this->eventRepository->hasQualityRejectionForExecution($origin)) {
+                    throw new \DomainException('La partida ya tiene una salida impresa vigente. Calidad debe autorizar el retrabajo antes de sustituirla.');
+                }
+                $currentOutput->supersede();
+                $this->traceabilityRecorder->record(
+                    $order,
+                    'printing.output_superseded',
+                    $lockedActor,
+                    null,
+                    null,
+                    $plan->getServiceOrderItem(),
+                    $plan,
+                    $lockedExecution,
+                    'Sustitución de salida autorizada por retrabajo de Calidad.',
+                    ['superseded_label_code' => $currentOutput->getLabelCode(), 'superseded_output_version' => $currentOutput->getVersionNumber()],
+                );
             }
             $output = new ProductionPrintedOutput($plan->getServiceOrderItem(), $lockedExecution, $release, $this->outputRepository->nextVersion($plan->getServiceOrderItem()));
             $this->entityManager->persist($usage);
@@ -306,6 +328,25 @@ final class PrintingManager
             || in_array($operationCode, ['PRINT', 'PRINTING', 'IMPRESION'], true);
     }
 
+    public function reworkOriginForPlan(ServiceOrderOperationPlan $plan): ?ProductionOperationExecution
+    {
+        $order = $plan->getServiceOrderItem()->getServiceOrder();
+        if ($order->getProductionStatus() !== \App\Enum\Orders\ProductionOrderStatus::QUALITY_REWORK || $plan->hasOpenExecution()) {
+            return null;
+        }
+        $event = $this->eventRepository->findLatestQualityRejectionForPlan($plan);
+        $origin = $event?->getOperationExecution();
+        if (!$origin instanceof ProductionOperationExecution
+            || $plan->getLatestExecution() !== $origin
+            || $origin->getStatus() !== \App\Enum\Production\ProductionOperationExecutionStatus::COMPLETED
+            || $plan->hasExecutionOrigin($origin)
+        ) {
+            return null;
+        }
+
+        return $origin;
+    }
+
     private function assertPrintingPlan(ServiceOrderOperationPlan $plan): void
     {
         if (!$this->isPrintingPlan($plan)) {
@@ -323,14 +364,20 @@ final class PrintingManager
 
     private function assertReadyForPrint(ServiceOrder $order, ServiceOrderOperationPlan $plan): void
     {
+        if ($plan->getBlockedReason() !== null) {
+            throw new \DomainException('Resuelve el bloqueo operativo antes de validar Impresión.');
+        }
         if (!$order->isPlanned() || $plan->getServiceOrderItem()->getDesignStatus() !== ServiceOrderItemDesignStatus::READY_FOR_PRINT) {
             throw new \DomainException('Diseño debe liberar el arte y su captura antes de validar Impresión.');
         }
-        if ($plan->hasOpenExecution() || $plan->hasCompletedExecution()) {
+        $qualityRework = $this->reworkOriginForPlan($plan) !== null;
+        if ($plan->hasOpenExecution() || ($plan->hasCompletedExecution() && !$qualityRework)) {
             throw new \DomainException('La operación de Impresión ya fue iniciada o terminada.');
         }
         foreach ($plan->getServiceOrderItem()->getActiveOperationPlans() as $previousPlan) {
-            if ($previousPlan->getSequenceNumber() < $plan->getSequenceNumber() && !$previousPlan->hasCompletedExecution()) {
+            if ($previousPlan->getSequenceNumber() < $plan->getSequenceNumber()
+                && (!$previousPlan->hasCompletedLatestExecution() || $previousPlan->hasOpenExecution())
+            ) {
                 throw new \DomainException('La operación anterior debe terminarse antes de validar Impresión.');
             }
         }

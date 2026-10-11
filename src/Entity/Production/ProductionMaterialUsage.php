@@ -12,6 +12,7 @@ use App\Entity\Materials\MaterialVariant;
 use App\Entity\Orders\ServiceOrderItem;
 use App\Entity\Orders\ServiceOrderOperationPlan;
 use App\Entity\Users\User;
+use App\Repository\Production\ProductionMaterialUsageRepository;
 use App\Enum\Inventory\QuantitySource;
 use App\Enum\Production\CalculationMethod;
 use Brick\Math\BigDecimal;
@@ -19,7 +20,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /** Registro inmutable de una captura de consumo; este flujo no mueve inventario. */
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: ProductionMaterialUsageRepository::class)]
 #[ORM\Table(name: 'production_material_usages')]
 #[ORM\Index(name: 'idx_usage_plan_execution', columns: ['operation_plan_id', 'operation_execution_id'])]
 #[ORM\HasLifecycleCallbacks]
@@ -43,16 +44,16 @@ class ProductionMaterialUsage
     private ?ProductionOperationExecution $operationExecution = null;
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(name: 'material_variant_id', nullable: false, onDelete: 'RESTRICT')]
-    private MaterialVariant $variant;
+    #[ORM\JoinColumn(name: 'material_variant_id', nullable: true, onDelete: 'RESTRICT')]
+    private ?MaterialVariant $variant;
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(name: 'lot_id', onDelete: 'RESTRICT')]
     private ?InventoryLot $lot = null;
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(name: 'unit_id', nullable: false, onDelete: 'RESTRICT')]
-    private MeasurementUnit $unit;
+    #[ORM\JoinColumn(name: 'unit_id', nullable: true, onDelete: 'RESTRICT')]
+    private ?MeasurementUnit $unit;
 
     #[ORM\OneToOne]
     #[ORM\JoinColumn(name: 'inventory_movement_id', onDelete: 'RESTRICT')]
@@ -99,31 +100,62 @@ class ProductionMaterialUsage
     #[ORM\Column(name: 'material_snapshot', type: Types::JSON, nullable: true)]
     private ?array $materialSnapshot = null;
 
+    #[ORM\Column(name: 'material_name_snapshot', length: 180)]
+    private string $materialNameSnapshot;
+
+    #[ORM\Column(name: 'unit_label_snapshot', length: 40)]
+    private string $unitLabelSnapshot;
+
     #[ORM\Column(name: 'measured_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $measuredAt = null;
 
     /** @param array<string, mixed> $snapshot */
     public function __construct(
         ServiceOrderItem $item,
-        MaterialVariant $variant,
-        MeasurementUnit $unit,
+        ?MaterialVariant $variant,
+        ?MeasurementUnit $unit,
         ?string $planned,
         CalculationMethod $method,
         int $version,
         array $snapshot,
+        ?string $materialNameSnapshot = null,
+        ?string $unitLabelSnapshot = null,
     ) {
         if ($version < 1) {
             throw new \InvalidArgumentException('La versión del cálculo debe ser positiva.');
         }
+        $materialNameSnapshot = trim((string) ($materialNameSnapshot ?? $variant?->getMaterial()->getName()));
+        $unitLabelSnapshot = trim((string) ($unitLabelSnapshot ?? $unit?->getSymbol()));
+        if ($materialNameSnapshot === '' || mb_strlen($materialNameSnapshot) > 180) {
+            throw new \InvalidArgumentException('El nombre del material debe tener entre 1 y 180 caracteres.');
+        }
+        if ($unitLabelSnapshot === '' || mb_strlen($unitLabelSnapshot) > 40) {
+            throw new \InvalidArgumentException('La unidad debe tener entre 1 y 40 caracteres.');
+        }
         $this->serviceOrderItem = $item;
         $this->variant = $variant;
         $this->unit = $unit;
+        $this->materialNameSnapshot = $materialNameSnapshot;
+        $this->unitLabelSnapshot = $unitLabelSnapshot;
         $this->plannedQuantity = self::decimalOrNull($planned, 'La cantidad prevista');
         $this->postedQuantity = $this->plannedQuantity;
         $this->calculationMethod = $method;
         $this->calculationMethodVersion = $version;
         $this->calculationSnapshot = $snapshot;
         $this->initializeTimestamps();
+    }
+
+    public function assignPlanContext(ServiceOrderOperationPlan $plan): self
+    {
+        if ($plan->getServiceOrderItem() !== $this->serviceOrderItem) {
+            throw new \DomainException('El material previsto debe pertenecer a la partida indicada.');
+        }
+        if ($this->operationExecution !== null) {
+            throw new \DomainException('Un consumo real no puede volver a convertirse en material previsto.');
+        }
+        $this->operationPlan = $plan;
+
+        return $this;
     }
 
     /** @param array<string, mixed> $materialSnapshot */
@@ -185,8 +217,10 @@ class ProductionMaterialUsage
     public function getServiceOrderItem(): ServiceOrderItem { return $this->serviceOrderItem; }
     public function getOperationPlan(): ?ServiceOrderOperationPlan { return $this->operationPlan; }
     public function getOperationExecution(): ?ProductionOperationExecution { return $this->operationExecution; }
-    public function getVariant(): MaterialVariant { return $this->variant; }
-    public function getUnit(): MeasurementUnit { return $this->unit; }
+    public function getVariant(): ?MaterialVariant { return $this->variant; }
+    public function getUnit(): ?MeasurementUnit { return $this->unit; }
+    public function getMaterialNameSnapshot(): string { return $this->materialNameSnapshot; }
+    public function getUnitLabelSnapshot(): string { return $this->unitLabelSnapshot; }
     public function getPlannedQuantity(): ?string { return $this->plannedQuantity; }
     public function getActualQuantity(): ?string { return $this->actualQuantity; }
     public function getPostedQuantity(): ?string { return $this->postedQuantity; }

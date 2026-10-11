@@ -1,0 +1,195 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Ejecución de producción | OoxCorp{% endblock %}
+{% block app_navigation_active %}production_execution{% endblock %}
+{% block app_breadcrumb %}Operación / Producción / Ejecución{% endblock %}
+
+{% block app_content %}
+    <section class="pf-page__content">
+        <header class="pf-page-header">
+            <div class="pf-page-header__content">
+                <p class="pf-page-header__eyebrow">Operación</p>
+                <h1 class="pf-page-header__title">Ejecución de producción</h1>
+                <p class="pf-page-header__description">Trabajos de producción activos. Cada persona puede iniciar y actualizar únicamente operaciones que tiene asignadas.</p>
+            </div>
+        </header>
+
+        {% if plans is empty %}
+            <section class="pf-card"><div class="pf-card__body"><p class="mb-0">No hay operaciones generales pendientes. Diseño e Impresión tienen sus colas propias.</p></div></section>
+        {% else %}
+            <div class="d-flex flex-column gap-3">
+                {% for plan in plans %}
+                    {% set item = plan.serviceOrderItem %}
+                    {% set order = item.serviceOrder %}
+                    {% set latest = plan.latestExecution %}
+                    {% set origin = reworkOrigins[plan.id]|default(null) %}
+                    {% set assignedToMe = plan.assignedOperator and plan.assignedOperator.id == actorId %}
+                    {% set priorityTone = item.priority.value == 'urgent' ? 'danger' : (item.priority.value == 'high' ? 'warning' : 'info') %}
+                    <article class="pf-card">
+                        <div class="pf-card__header d-flex flex-wrap justify-content-between gap-2">
+                            <div>
+                                <p class="small text-body-secondary mb-1">{{ order.folio }} · Partida {{ item.displayLineNumber }} · {{ item.trackingCode }}</p>
+                                <h2 class="pf-card__title">{{ item.commercialItemSnapshot.name|default(item.commercialItem.name) }}</h2>
+                                <p class="mb-0 small">{{ plan.operationSnapshot.name|default(plan.operation.name) }} · {{ plan.operationSnapshot.area_name|default(plan.operation.operationArea.name) }}</p>
+                            </div>
+                            <div class="text-md-end">
+                                <span class="pf-status-badge pf-status-badge--{{ priorityTone }}">Prioridad {{ item.priority.label }}</span>
+                                <span class="d-block small text-body-secondary mt-1">Compromiso: {{ order.commitmentDate ? order.commitmentDate|date('d/m/Y') : 'Pendiente' }}</span>
+                            </div>
+                        </div>
+                        <div class="pf-card__body">
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-3"><span class="small text-body-secondary d-block">Cantidad</span><strong>{{ item.quantity }} unidades</strong></div>
+                                <div class="col-md-3"><span class="small text-body-secondary d-block">Equipo</span><strong>{{ plan.equipment ? (plan.equipmentSnapshot.name|default(plan.equipment.name)) : 'Sin asignar' }}</strong></div>
+                                <div class="col-md-3"><span class="small text-body-secondary d-block">Estimación / real</span><strong>{{ plan.estimatedMinutes is not null ? plan.estimatedMinutes ~ ' / ' ~ (plan.actualMinutes is not null ? plan.actualMinutes : '—') ~ ' min' : 'Sin estimación' }}</strong></div>
+                                <div class="col-md-3"><span class="small text-body-secondary d-block">Responsable</span><strong>{{ plan.assignedOperator ? plan.assignedOperator.fullName : 'Sin asignar' }}</strong></div>
+                            </div>
+
+                            {% if plan.blockedReason %}
+                                <div class="alert alert-warning py-2" role="status"><strong>Bloqueada:</strong> {{ plan.blockedReason }}</div>
+                            {% endif %}
+
+                            {% if latest %}
+                                {% set statusLabel = latest.status.value == 'IN_PROGRESS' ? 'En curso' : (latest.status.value == 'PAUSED' ? 'Pausada' : (latest.status.value == 'COMPLETED' ? 'Completada' : 'Cancelada')) %}
+                                <p class="mb-3"><strong>Intento {{ latest.attemptNumber }} · {{ statusLabel }}</strong> · iniciado {{ latest.startedAt|date('d/m/Y H:i', 'America/Mexico_City') }}{% if latest.originExecution %} · retrabajo de intento {{ latest.originExecution.attemptNumber }}{% endif %}</p>
+                            {% else %}
+                                <p class="mb-3"><strong>Pendiente de iniciar</strong></p>
+                            {% endif %}
+
+                            {% if specializedKinds[plan.id]|default(null) == 'design' %}
+                                <a class="btn pf-button pf-button--secondary btn-sm" href="{{ path('admin_design_show', {id: item.id}) }}">Abrir en Diseño</a>
+                            {% elseif specializedKinds[plan.id]|default(null) == 'printing' %}
+                                <a class="btn pf-button pf-button--secondary btn-sm" href="{{ path('admin_printing_show', {id: plan.id}) }}">Abrir en Impresión</a>
+                            {% endif %}
+
+                            {% if not specializedKinds[plan.id]|default(null) %}
+                            {% if canExecute and assignedToMe and latest and latest.isOpen %}
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% if latest.status.value == 'IN_PROGRESS' %}
+                                        <form method="post" action="{{ path('admin_production_execution_pause', {id: latest.id}) }}" class="d-flex flex-wrap gap-2 align-items-end">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('production-execution-pause-' ~ latest.id) }}">
+                                            <input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}">
+                                            <input type="hidden" name="command_id" value="{{ commandIds.execution[latest.id].pause }}">
+                                            <label class="form-label small mb-0">Motivo de pausa<input class="form-control form-control-sm" name="note" minlength="5" maxlength="500" required></label>
+                                            <button class="btn pf-button pf-button--secondary btn-sm" type="submit">Pausar</button>
+                                        </form>
+                                        <form method="post" action="{{ path('admin_production_execution_complete', {id: latest.id}) }}">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('production-execution-complete-' ~ latest.id) }}">
+                                            <input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}">
+                                            <input type="hidden" name="command_id" value="{{ commandIds.execution[latest.id].complete }}">
+                                            <label class="visually-hidden" for="complete-note-{{ latest.id }}">Nota de cierre</label><input id="complete-note-{{ latest.id }}" class="form-control form-control-sm d-inline-block w-auto me-2" name="note" maxlength="500" placeholder="Nota opcional">
+                                            <button class="btn pf-button pf-button--primary btn-sm" type="submit">Completar operación</button>
+                                        </form>
+                                    {% elseif latest.status.value == 'PAUSED' and not plan.blockedReason %}
+                                        <form method="post" action="{{ path('admin_production_execution_resume', {id: latest.id}) }}">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('production-execution-resume-' ~ latest.id) }}">
+                                            <input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}">
+                                            <input type="hidden" name="command_id" value="{{ commandIds.execution[latest.id].resume }}">
+                                            <button class="btn pf-button pf-button--primary btn-sm" type="submit">Reanudar operación</button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            {% elseif canExecute and assignedToMe and (not latest or latest.status.value == 'CANCELLED') and not startBlocks[plan.id]|default(null) and order.isPlanned and order.productionStatus.value != 'QUALITY_REWORK' %}
+                                <form method="post" action="{{ path('admin_production_execution_start', {id: plan.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('production-execution-start-' ~ plan.id) }}">
+                                    <input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}">
+                                    <input type="hidden" name="command_id" value="{{ commandIds.plan[plan.id].start }}">
+                                    <button class="btn pf-button pf-button--primary btn-sm" type="submit">Iniciar operación</button>
+                                </form>
+                            {% elseif canExecute and assignedToMe and origin and order.isPlanned and not startBlocks[plan.id]|default(null) %}
+                                <form method="post" action="{{ path('admin_production_execution_start', {id: plan.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('production-execution-start-' ~ plan.id) }}">
+                                    <input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}">
+                                    <input type="hidden" name="command_id" value="{{ commandIds.plan[plan.id].start }}">
+                                    <input type="hidden" name="origin_execution_id" value="{{ origin.id }}">
+                                    <button class="btn pf-button pf-button--primary btn-sm" type="submit">Iniciar retrabajo · intento {{ origin.attemptNumber }}</button>
+                                </form>
+                            {% elseif canExecute and assignedToMe and startBlocks[plan.id]|default(null) %}
+                                <p class="small text-body-secondary mb-0">{{ startBlocks[plan.id] }}</p>
+                            {% elseif canExecute and not assignedToMe %}
+                                <p class="small text-body-secondary mb-0">{{ plan.assignedOperator ? 'La operación está asignada a otra persona.' : 'Pendiente de asignación de responsable.' }}</p>
+                            {% endif %}
+
+                            {% if canManageIncidents and not plan.blockedReason %}
+                                <details class="mt-3">
+                                    <summary>Registrar incidencia</summary>
+                                    <form method="post" action="{{ path('admin_production_execution_open_issue', {id: plan.id}) }}" class="d-flex flex-wrap gap-2 mt-2">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('production-issue-open-' ~ plan.id) }}">
+                                        <input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}">
+                                        <input type="hidden" name="command_id" value="{{ commandIds.plan[plan.id].open_issue }}">
+                                        <label class="visually-hidden" for="issue-{{ plan.id }}">Motivo de incidencia</label><input id="issue-{{ plan.id }}" class="form-control form-control-sm w-auto" name="note" minlength="5" maxlength="220" required placeholder="Motivo del bloqueo">
+                                        <button class="btn pf-button pf-button--secondary btn-sm" type="submit">Bloquear operación</button>
+                                    </form>
+                                </details>
+                            {% elseif canManageIncidents and plan.blockedReason starts with 'Incidencia:' %}
+                                <details class="mt-3">
+                                    <summary>Resolver incidencia</summary>
+                                    <form method="post" action="{{ path('admin_production_execution_resolve_issue', {id: plan.id}) }}" class="d-flex flex-wrap gap-2 mt-2">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('production-issue-resolve-' ~ plan.id) }}">
+                                        <input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}">
+                                        <input type="hidden" name="command_id" value="{{ commandIds.plan[plan.id].resolve_issue }}">
+                                        <label class="visually-hidden" for="resolve-issue-{{ plan.id }}">Resolución de incidencia</label><input id="resolve-issue-{{ plan.id }}" class="form-control form-control-sm w-auto" name="note" minlength="5" maxlength="220" required placeholder="Resolución aplicada">
+                                        <button class="btn pf-button pf-button--secondary btn-sm" type="submit">Resolver</button>
+                                    </form>
+                                </details>
+                            {% endif %}
+
+                            <details class="mt-3">
+                                <summary>Material previsto y usado</summary>
+                                {% set usages = materialUsages[plan.id]|default([]) %}
+                                {% if usages is not empty %}
+                                    <div class="table-responsive mt-2">
+                                        <table class="table table-sm align-middle mb-3">
+                                            <thead><tr><th>Material</th><th>Previsto</th><th>Usado</th><th>Merma</th><th>Unidad</th><th>Intento</th></tr></thead>
+                                            <tbody>
+                                            {% for usage in usages %}
+                                                <tr>
+                                                    <td>{{ usage.materialNameSnapshot }}</td>
+                                                    <td>{{ usage.plannedQuantity }}</td>
+                                                    <td>{{ usage.actualQuantity is not null ? usage.actualQuantity : '—' }}</td>
+                                                    <td>{{ usage.wasteQuantity is not null ? usage.wasteQuantity : '—' }}</td>
+                                                    <td>{{ usage.unitLabelSnapshot }}</td>
+                                                    <td>{{ usage.operationExecution ? '#' ~ usage.operationExecution.attemptNumber : 'Previsto' }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                {% else %}
+                                    <p class="small text-body-secondary mt-2 mb-2">Sin materiales capturados. El registro es informativo y no modifica existencias.</p>
+                                {% endif %}
+
+                                {% if canManageIncidents and (not latest or not latest.isOpen) and not plan.hasCompletedLatestExecution %}
+                                    <form method="post" action="{{ path('admin_production_execution_plan_material', {id: plan.id}) }}" class="row g-2 align-items-end mb-3">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('production-material-planned-' ~ plan.id) }}">
+                                        <input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}">
+                                        <input type="hidden" name="command_id" value="{{ commandIds.plan[plan.id].plan_material }}">
+                                        <div class="col-md-4"><label class="form-label small">Material previsto<input class="form-control form-control-sm" name="material_name" minlength="2" maxlength="180" required></label></div>
+                                        <div class="col-md-2"><label class="form-label small">Cantidad<input class="form-control form-control-sm" name="quantity" inputmode="decimal" required></label></div>
+                                        <div class="col-md-2"><label class="form-label small">Unidad<input class="form-control form-control-sm" name="unit" maxlength="40" required placeholder="m², m, kg"></label></div>
+                                        <div class="col-md-2"><button class="btn pf-button pf-button--secondary btn-sm" type="submit">Agregar previsto</button></div>
+                                    </form>
+                                {% endif %}
+
+                                {% if canExecute and assignedToMe and latest and latest.status.value == 'IN_PROGRESS' %}
+                                    <form method="post" action="{{ path('admin_production_execution_actual_material', {id: latest.id}) }}" class="row g-2 align-items-end">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('production-material-used-' ~ latest.id) }}">
+                                        <input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}">
+                                        <input type="hidden" name="command_id" value="{{ commandIds.execution[latest.id].actual_material }}">
+                                        <div class="col-md-3"><label class="form-label small">Material usado<input class="form-control form-control-sm" name="material_name" minlength="2" maxlength="180" required></label></div>
+                                        <div class="col-md-2"><label class="form-label small">Cantidad<input class="form-control form-control-sm" name="quantity" inputmode="decimal" required></label></div>
+                                        <div class="col-md-2"><label class="form-label small">Unidad<input class="form-control form-control-sm" name="unit" maxlength="40" required placeholder="m², m, kg"></label></div>
+                                        <div class="col-md-2"><label class="form-label small">Merma<input class="form-control form-control-sm" name="waste" inputmode="decimal" value="0"></label></div>
+                                        <div class="col-md-3"><label class="form-label small">Motivo de merma<input class="form-control form-control-sm" name="waste_reason" maxlength="220"></label></div>
+                                        <div class="col-12"><button class="btn pf-button pf-button--secondary btn-sm" type="submit">Registrar material usado</button></div>
+                                    </form>
+                                {% endif %}
+                            </details>
+                            {% endif %}
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </section>
+{% endblock %}

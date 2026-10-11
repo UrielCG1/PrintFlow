@@ -326,6 +326,37 @@ class ServiceOrderOperationPlan
 
         return false;
     }
+
+    public function getLatestExecution(): ?ProductionOperationExecution
+    {
+        $latest = null;
+        foreach ($this->executions as $execution) {
+            if ($latest === null || $execution->getAttemptNumber() > $latest->getAttemptNumber()) {
+                $latest = $execution;
+            }
+        }
+
+        return $latest;
+    }
+
+    public function hasCompletedLatestExecution(): bool
+    {
+        return $this->getLatestExecution()?->getStatus() === \App\Enum\Production\ProductionOperationExecutionStatus::COMPLETED;
+    }
+
+    public function hasExecutionOrigin(ProductionOperationExecution $origin): bool
+    {
+        foreach ($this->executions as $execution) {
+            $existingOrigin = $execution->getOriginExecution();
+            if ($existingOrigin === $origin
+                || ($existingOrigin?->getId() !== null && $existingOrigin->getId() === $origin->getId())
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
     public function clearEstimate(): self
     {
         $this->estimatedLoadValue = null;

@@ -1,0 +1,32 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Calidad · {{ order.folio }} | OoxCorp{% endblock %}
+{% block app_navigation_active %}quality{% endblock %}
+{% block app_breadcrumb %}Operación / Calidad / {{ order.folio }}{% endblock %}
+
+{% block app_content %}
+    <section class="pf-page__content">
+        <header class="pf-page-header"><div class="pf-page-header__content"><p class="pf-page-header__eyebrow">Revisión integral de la orden</p><h1 class="pf-page-header__title">{{ order.folio }}</h1><p class="pf-page-header__description">{{ order.clientSnapshot.business_name|default(order.clientSnapshot.legal_name|default('Cliente')) }} · Compromiso {{ order.commitmentDate ? order.commitmentDate|date('d/m/Y') : 'sin fecha' }}</p></div><div class="pf-page-header__actions"><a class="btn pf-button pf-button--secondary" href="{{ path('admin_production_quality_delivery_quality_index') }}">Volver a Calidad</a></div></header>
+
+        <section class="pf-card mb-4"><div class="pf-card__header"><h2 class="pf-card__title">Partidas y operaciones</h2></div><div class="pf-card__body d-flex flex-column gap-3">
+            {% for item in order.items %}
+                <article class="border rounded p-3">
+                    <div class="d-flex justify-content-between flex-wrap gap-2"><div><span class="small text-body-secondary">Partida {{ item.displayLineNumber }} · {{ item.trackingCode }}</span><h3 class="h5 mb-1">{{ item.commercialItemSnapshot.name|default(item.commercialItem.name) }}</h3><span class="small">{{ item.quantity }} unidades</span></div><span class="pf-status-badge pf-status-badge--{{ item.designStatus.badgeTone }}">{{ item.designStatus.label }}</span></div>
+                    <div class="table-responsive mt-3"><table class="pf-table"><thead><tr><th>Operación</th><th>Equipo</th><th>Tiempo</th><th>Último intento</th><th>Calidad</th></tr></thead><tbody>
+                        {% for plan in item.activeOperationPlans %}
+                            {% set latest = plan.latestExecution %}
+                            <tr><td>{{ plan.operationSnapshot.name|default(plan.operation.name) }}<span class="d-block small text-body-secondary">{{ plan.operationSnapshot.area_name|default(plan.operation.operationArea.name) }}</span></td><td>{{ plan.equipment ? (plan.equipmentSnapshot.name|default(plan.equipment.name)) : 'Sin equipo' }}</td><td>{{ plan.actualMinutes is not null ? plan.actualMinutes ~ ' min reales' : (plan.estimatedMinutes is not null ? plan.estimatedMinutes ~ ' min estimados' : 'Sin dato') }}</td><td>{% if latest %}Intento {{ latest.attemptNumber }} · {{ latest.status.value == 'COMPLETED' ? 'Completado' : latest.status.value == 'PAUSED' ? 'Pausado' : latest.status.value == 'IN_PROGRESS' ? 'En curso' : 'Cancelado' }}{% if latest.completedAt %}<span class="d-block small text-body-secondary">{{ latest.completedAt|date('d/m/Y H:i', 'America/Mexico_City') }}</span>{% endif %}{% else %}Sin intento{% endif %}</td><td>
+                                {% if is_granted('quality.return') and order.productionStatus.value == 'WAITING_QUALITY' and latest and latest.status.value == 'COMPLETED' and not plan.hasOpenExecution %}
+                                    <details><summary>Devolver a retrabajo</summary><form method="post" action="{{ path('admin_production_quality_delivery_return_for_rework', {id: order.id, item: item.id, plan: plan.id, execution: latest.id}) }}" class="mt-2"><input type="hidden" name="_token" value="{{ csrf_token('quality-return-' ~ order.id ~ '-' ~ item.id ~ '-' ~ plan.id ~ '-' ~ latest.id) }}"><input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}"><input type="hidden" name="command_id" value="{{ commandId }}"><label class="form-label" for="quality-reason-{{ latest.id }}">No conformidad</label><textarea class="form-control mb-2" id="quality-reason-{{ latest.id }}" name="note" rows="2" minlength="5" maxlength="500" required></textarea><button class="btn pf-button pf-button--danger btn-sm" type="submit">Registrar retrabajo</button></form></details>
+                                {% else %}<span class="text-body-secondary">{% if plan.blockedReason %}Bloqueo pendiente{% elseif plan.hasOpenExecution %}La operación sigue abierta{% elseif not latest %}Falta ejecución{% else %}Revisar resultado{% endif %}</span>{% endif %}
+                            </td></tr>
+                        {% else %}<tr><td colspan="5">La partida no tiene operaciones activas.</td></tr>{% endfor %}
+                    </tbody></table></div>
+                </article>
+            {% endfor %}
+        </div>
+        {% if order.productionStatus.value == 'WAITING_QUALITY' %}<div class="pf-card__footer d-flex flex-wrap justify-content-between align-items-center gap-3"><span>{{ canRelease ? 'Todas las operaciones están completas y sin incidencias.' : 'Completa o resuelve las operaciones pendientes antes de liberar.' }}</span>{% if is_granted('quality.release') %}<form method="post" action="{{ path('admin_production_quality_delivery_release', {id: order.id}) }}"><input type="hidden" name="_token" value="{{ csrf_token('quality-release-' ~ order.id) }}"><input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}"><input type="hidden" name="command_id" value="{{ releaseCommandId }}"><button class="btn pf-button pf-button--primary" type="submit" {{ not canRelease ? 'disabled' : '' }}>Liberar producción</button></form>{% endif %}</div>{% endif %}</section>
+
+        <section class="pf-card"><div class="pf-card__header"><h2 class="pf-card__title">Trazabilidad reciente</h2></div><div class="pf-card__body"><ol class="mb-0">{% for event in events %}<li class="mb-2"><strong>{{ event.eventType }}</strong> · {{ event.occurredAt|date('d/m/Y H:i', 'America/Mexico_City') }}{% if event.actor %} · {{ event.actor.fullName }}{% endif %}{% if event.reason %}<span class="d-block small">{{ event.reason }}</span>{% endif %}</li>{% else %}<li>Sin eventos registrados.</li>{% endfor %}</ol></div></section>
+    </section>
+{% endblock %}

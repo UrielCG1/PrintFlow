@@ -6,6 +6,7 @@ namespace App\Application\Production;
 
 use App\Entity\Orders\ServiceOrderItem;
 use App\Entity\Orders\ServiceOrderOperationPlan;
+use App\Entity\Orders\ServiceOrder;
 use App\Entity\Production\ProductionFile;
 use App\Entity\Production\ProductionOperationExecution;
 use App\Entity\Production\ServiceOrderItemDesignRelease;
@@ -18,6 +19,7 @@ use App\Repository\Orders\ServiceOrderOperationPlanRepository;
 use App\Repository\Production\ProductionFileRepository;
 use App\Repository\Production\ProductionOperationExecutionRepository;
 use App\Repository\Production\ServiceOrderItemDesignReleaseRepository;
+use App\Repository\Orders\ServiceOrderTraceabilityEventRepository;
 use App\Service\Audit\AuditLogger;
 use App\Service\Orders\ServiceOrderTraceabilityRecorder;
 use App\Service\Production\ProductionFileStorage;
@@ -35,6 +37,7 @@ final class DesignReviewManager
         private readonly ProductionFileRepository $fileRepository,
         private readonly ServiceOrderItemDesignReleaseRepository $releaseRepository,
         private readonly ProductionOperationExecutionRepository $executionRepository,
+        private readonly ServiceOrderTraceabilityEventRepository $eventRepository,
         private readonly ProductionFileStorage $fileStorage,
         private readonly ServiceOrderTraceabilityRecorder $traceabilityRecorder,
         private readonly AuditLogger $auditLogger,
@@ -49,16 +52,36 @@ final class DesignReviewManager
             if ($plan->hasOpenExecution()) {
                 throw new \DomainException('La partida ya tiene un intento de Diseño en curso.');
             }
+            if ($plan->getBlockedReason() !== null) {
+                throw new \DomainException('Resuelve el bloqueo operativo antes de iniciar Diseño.');
+            }
+            $origin = null;
+            if ($order->getProductionStatus() === ProductionOrderStatus::QUALITY_REWORK) {
+                $event = $this->eventRepository->findLatestQualityRejectionForPlan($plan);
+                $origin = $event?->getOperationExecution();
+                if (!$origin instanceof ProductionOperationExecution
+                    || $origin->getStatus() !== \App\Enum\Production\ProductionOperationExecutionStatus::COMPLETED
+                    || $plan->getLatestExecution() !== $origin
+                    || $plan->hasExecutionOrigin($origin)
+                ) {
+                    throw new \DomainException('No hay una devolución vigente de Calidad para iniciar este retrabajo de Diseño.');
+                }
+            } elseif ($plan->hasCompletedLatestExecution()) {
+                throw new \DomainException('Una revisión de Diseño completada solo puede repetirse por autorización de Calidad.');
+            }
             $previous = $this->itemState($item);
             $item->beginDesignReview();
             if ($order->getProductionStatus() === ProductionOrderStatus::WAITING_DESIGN) {
                 $order->beginProduction();
+            } elseif ($order->getProductionStatus() === ProductionOrderStatus::QUALITY_REWORK) {
+                $order->resumeProductionAfterQualityRework();
             }
             $execution = new ProductionOperationExecution(
                 $plan,
                 $actor,
                 $actor,
                 $plan->nextExecutionAttemptNumber(),
+                $origin,
             );
             $plan->addExecution($execution);
             $this->entityManager->persist($execution);
@@ -77,7 +100,7 @@ final class DesignReviewManager
 
         $this->entityManager->wrapInTransaction(function () use ($item, $storedReference, $instructions, $actor): void {
             $plan = $this->lockAndAssertDesignAssignment($item, $actor);
-            $this->assertArtworkCanChange($item);
+            $this->assertArtworkCanChange($item, $plan);
             $this->assertReviewInProgress($item);
             $artwork = $this->findOrCreateClientOriginal($item);
             $this->createRelease($item, $plan, $artwork, $storedReference, DesignAuthorizationType::CLIENT_ORIGINAL, $instructions, $actor);
@@ -91,7 +114,7 @@ final class DesignReviewManager
 
         $this->entityManager->wrapInTransaction(function () use ($item, $storedArtwork, $storedReference, $instructions, $actor): void {
             $plan = $this->lockAndAssertDesignAssignment($item, $actor);
-            $this->assertArtworkCanChange($item);
+            $this->assertArtworkCanChange($item, $plan);
             $this->assertReviewInProgress($item);
             $artwork = $this->createFile($item, ProductionFilePurpose::PREPARED_ARTWORK, $storedArtwork, ProductionFileSource::DESIGN_UPLOAD, $actor);
             $this->createRelease($item, $plan, $artwork, $storedReference, DesignAuthorizationType::PREPARED_ARTWORK, $instructions, $actor);
@@ -131,6 +154,9 @@ final class DesignReviewManager
         $this->entityManager->persist($release);
         $item->markReadyForPrint();
         $execution->complete('Arte autorizado por Diseño.');
+        if ($order->getProductionStatus() === ProductionOrderStatus::IN_PRODUCTION && $this->allOperationsCompleted($order)) {
+            $order->waitForQualityReview();
+        }
         $order->touchTraceability();
         $new = $this->itemState($item, $release);
 
@@ -233,11 +259,36 @@ final class DesignReviewManager
         }
     }
 
-    private function assertArtworkCanChange(ServiceOrderItem $item): void
+    private function assertArtworkCanChange(ServiceOrderItem $item, ServiceOrderOperationPlan $plan): void
     {
-        if ($this->executionRepository->hasStartedAfterDesignForItem($item)) {
+        if ($this->executionRepository->hasStartedAfterDesignForItem($item) && !$this->isAuthorizedRework($plan)) {
             throw new \DomainException('No se puede sustituir el arte después de iniciar una etapa posterior. Registra un retrabajo autorizado.');
         }
+    }
+
+    private function isAuthorizedRework(ServiceOrderOperationPlan $plan): bool
+    {
+        $execution = $plan->getLatestExecution();
+        $origin = $execution?->getOriginExecution();
+
+        return $execution?->isOpen() === true
+            && $origin instanceof ProductionOperationExecution
+            && $this->eventRepository->hasQualityRejectionForExecution($origin);
+    }
+
+    private function allOperationsCompleted(ServiceOrder $order): bool
+    {
+        $hasOperations = false;
+        foreach ($order->getItems() as $item) {
+            foreach ($item->getActiveOperationPlans() as $plan) {
+                $hasOperations = true;
+                if ($plan->hasOpenExecution() || !$plan->hasCompletedLatestExecution() || $plan->getBlockedReason() !== null) {
+                    return false;
+                }
+            }
+        }
+
+        return $hasOperations;
     }
 
     private function operationCode(ServiceOrderOperationPlan $plan): string
@@ -252,6 +303,7 @@ final class DesignReviewManager
     {
         return [
             'design_status' => $item->getDesignStatus()->value,
+            'production_status' => $item->getServiceOrder()->getProductionStatus()->value,
             'tracking_code' => $item->getTrackingCode(),
             'release_version' => $release?->getVersionNumber(),
             'authorization_type' => $release?->getAuthorizationType()->value,

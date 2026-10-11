@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Entity\Orders;
 
 use App\Entity\Orders\ServiceOrderOperationPlan;
+use App\Entity\Production\ProductionOperationExecution;
 use App\Entity\Users\User;
 use PHPUnit\Framework\TestCase;
 
@@ -38,5 +39,25 @@ final class ServiceOrderOperationPlanTest extends TestCase
         self::assertTrue($plan->isActive());
         self::assertNull($plan->getDeactivatedAt());
         self::assertNull($plan->getDeactivatedBy());
+    }
+
+    public function testLatestAttemptMustBeCompletedBeforeAnOperationIsConsideredComplete(): void
+    {
+        $operator = new User();
+        $plan = new ServiceOrderOperationPlan();
+        $first = new ProductionOperationExecution($plan, $operator, $operator, 1);
+        $plan->addExecution($first);
+        $first->complete('Primera ejecución completada.');
+
+        self::assertTrue($plan->hasCompletedLatestExecution());
+
+        $rework = new ProductionOperationExecution($plan, $operator, $operator, 2, $first);
+        $plan->addExecution($rework);
+
+        self::assertFalse($plan->hasCompletedLatestExecution());
+        self::assertTrue($plan->hasExecutionOrigin($first));
+
+        $rework->complete('Retrabajo completado.');
+        self::assertTrue($plan->hasCompletedLatestExecution());
     }
 }

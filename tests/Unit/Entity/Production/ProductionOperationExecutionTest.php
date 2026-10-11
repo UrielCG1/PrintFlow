@@ -35,4 +35,22 @@ final class ProductionOperationExecutionTest extends TestCase
         $this->expectException(\DomainException::class);
         $execution->complete('No debe cerrar mientras esté pausado.');
     }
+
+    public function testActiveTimeExcludesPausedPeriodsAcrossResumption(): void
+    {
+        $execution = new ProductionOperationExecution(new ServiceOrderOperationPlan(), new User(), new User(), 1);
+        $started = $execution->getStartedAt();
+        $pausedAt = $started->modify('+90 seconds');
+        $resumedAt = $started->modify('+1 hour');
+        $completedAt = $resumedAt->modify('+5 minutes');
+
+        $execution->pause('Espera de material.', $pausedAt);
+        self::assertSame(90, $execution->getActiveSeconds());
+        self::assertSame(90, $execution->getActiveSecondsAt($resumedAt));
+
+        $execution->resume($resumedAt);
+        $execution->complete('Trabajo terminado.', $completedAt);
+
+        self::assertSame(390, $execution->getActiveSeconds());
+    }
 }

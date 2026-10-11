@@ -159,7 +159,7 @@
             {% endif %}
         {% endif %}
 
-        {% if is_granted('suppliers.view') or is_granted('materials.view') or is_granted('material_categories.view') or is_granted('operations.view') or is_granted('operation_areas.view') or is_granted('production_routes.manage') or is_granted('production_calendar.manage') or is_granted('production.view') %}
+        {% if is_granted('suppliers.view') or is_granted('materials.view') or is_granted('material_categories.view') or is_granted('operations.view') or is_granted('operation_areas.view') or is_granted('production_routes.manage') or is_granted('production_calendar.manage') or is_granted('production.view') or is_granted('quality.review') or is_granted('delivery.confirm') or is_granted('delivery.ship') %}
             <p class="pf-sidebar__section">Operación</p>
 
             {% if is_granted('suppliers.view') %}
@@ -275,6 +275,37 @@
                 >
                     <i class="bi bi-printer" aria-hidden="true"></i>
                     <span>Impresión</span>
+                </a>
+                <a
+                    href="{{ path('admin_production_execution_index') }}"
+                    class="pf-sidebar__link {{ current_navigation == 'production_execution' ? 'is-active' : '' }}"
+                    {% if current_navigation == 'production_execution' %}aria-current="page"{% endif %}
+                    data-action="ui--sidebar#close"
+                >
+                    <i class="bi bi-play-circle" aria-hidden="true"></i>
+                    <span>Ejecución</span>
+                </a>
+            {% endif %}
+            {% if is_granted('quality.review') %}
+                <a
+                    href="{{ path('admin_production_quality_delivery_quality_index') }}"
+                    class="pf-sidebar__link {{ current_navigation == 'quality' ? 'is-active' : '' }}"
+                    {% if current_navigation == 'quality' %}aria-current="page"{% endif %}
+                    data-action="ui--sidebar#close"
+                >
+                    <i class="bi bi-clipboard2-check" aria-hidden="true"></i>
+                    <span>Calidad</span>
+                </a>
+            {% endif %}
+            {% if is_granted('delivery.confirm') or is_granted('delivery.ship') %}
+                <a
+                    href="{{ path('admin_production_quality_delivery_delivery_index') }}"
+                    class="pf-sidebar__link {{ current_navigation == 'delivery' ? 'is-active' : '' }}"
+                    {% if current_navigation == 'delivery' %}aria-current="page"{% endif %}
+                    data-action="ui--sidebar#close"
+                >
+                    <i class="bi bi-box-seam" aria-hidden="true"></i>
+                    <span>Entregas</span>
                 </a>
             {% endif %}
         {% endif %}

@@ -67,6 +67,14 @@ class ProductionOperationExecution
     #[ORM\Column(name: 'started_at', type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $startedAt;
 
+    /** Segundos efectivamente transcurridos en los intervalos activos del intento. */
+    #[ORM\Column(name: 'active_seconds', options: ['unsigned' => true, 'default' => 0])]
+    private int $activeSeconds = 0;
+
+    /** Inicio del intervalo activo más reciente; queda nulo mientras está pausado o cerrado. */
+    #[ORM\Column(name: 'active_segment_started_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $activeSegmentStartedAt = null;
+
     #[ORM\Column(name: 'paused_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $pausedAt = null;
 
@@ -108,6 +116,7 @@ class ProductionOperationExecution
         $this->attemptNumber = $attemptNumber;
         $this->originExecution = $originExecution;
         $this->startedAt = $now;
+        $this->activeSegmentStartedAt = $now;
         $this->createdAt = $now;
         $this->updatedAt = $now;
     }
@@ -162,6 +171,21 @@ class ProductionOperationExecution
         return $this->startedAt;
     }
 
+    public function getActiveSeconds(): int
+    {
+        return $this->activeSeconds;
+    }
+
+    public function getActiveSecondsAt(?\DateTimeImmutable $at = null): int
+    {
+        if ($this->status !== ProductionOperationExecutionStatus::IN_PROGRESS || $this->activeSegmentStartedAt === null) {
+            return $this->activeSeconds;
+        }
+
+        $at = ($at ?? self::now())->setTimezone(new \DateTimeZone('UTC'));
+        return $this->activeSeconds + max(0, $at->getTimestamp() - $this->activeSegmentStartedAt->getTimestamp());
+    }
+
     public function getPausedAt(): ?\DateTimeImmutable
     {
         return $this->pausedAt;
@@ -192,12 +216,13 @@ class ProductionOperationExecution
         return $this->updatedAt;
     }
 
-    public function pause(string $reason): self
+    public function pause(string $reason, ?\DateTimeImmutable $at = null): self
     {
         if ($this->status !== ProductionOperationExecutionStatus::IN_PROGRESS) {
             throw new \DomainException('Solo un intento en curso puede pausarse.');
         }
 
+        $this->accumulateActiveSeconds($at);
         $this->status = ProductionOperationExecutionStatus::PAUSED;
         $this->pauseReason = self::normalizeNote($reason, 'El motivo de pausa');
         $this->pausedAt = self::now();
@@ -205,7 +230,7 @@ class ProductionOperationExecution
         return $this;
     }
 
-    public function resume(): self
+    public function resume(?\DateTimeImmutable $at = null): self
     {
         if ($this->status !== ProductionOperationExecutionStatus::PAUSED) {
             throw new \DomainException('Solo un intento pausado puede reanudarse.');
@@ -214,16 +239,18 @@ class ProductionOperationExecution
         $this->status = ProductionOperationExecutionStatus::IN_PROGRESS;
         $this->pauseReason = null;
         $this->pausedAt = null;
+        $this->activeSegmentStartedAt = ($at ?? self::now())->setTimezone(new \DateTimeZone('UTC'));
 
         return $this;
     }
 
-    public function complete(?string $note = null): self
+    public function complete(?string $note = null, ?\DateTimeImmutable $at = null): self
     {
         if ($this->status !== ProductionOperationExecutionStatus::IN_PROGRESS) {
             throw new \DomainException('Solo un intento en curso puede completarse.');
         }
 
+        $this->accumulateActiveSeconds($at);
         $this->status = ProductionOperationExecutionStatus::COMPLETED;
         $this->openMarker = null;
         $this->completionNote = $note !== null ? self::normalizeNote($note, 'El comentario de cierre') : null;
@@ -232,12 +259,13 @@ class ProductionOperationExecution
         return $this;
     }
 
-    public function cancel(string $reason): self
+    public function cancel(string $reason, ?\DateTimeImmutable $at = null): self
     {
         if (!$this->status->isOpen()) {
             throw new \DomainException('Solo un intento abierto puede cancelarse.');
         }
 
+        $this->accumulateActiveSeconds($at);
         $this->status = ProductionOperationExecutionStatus::CANCELLED;
         $this->openMarker = null;
         $this->completionNote = self::normalizeNote($reason, 'El motivo de cancelación');
@@ -260,6 +288,20 @@ class ProductionOperationExecution
         }
 
         return $note;
+    }
+
+    private function accumulateActiveSeconds(?\DateTimeImmutable $at): void
+    {
+        if ($this->status !== ProductionOperationExecutionStatus::IN_PROGRESS || $this->activeSegmentStartedAt === null) {
+            return;
+        }
+
+        $at = ($at ?? self::now())->setTimezone(new \DateTimeZone('UTC'));
+        if ($at < $this->activeSegmentStartedAt) {
+            throw new \DomainException('La hora de la transición no puede ser anterior al último inicio activo.');
+        }
+        $this->activeSeconds += $at->getTimestamp() - $this->activeSegmentStartedAt->getTimestamp();
+        $this->activeSegmentStartedAt = null;
     }
 
     private static function now(): \DateTimeImmutable

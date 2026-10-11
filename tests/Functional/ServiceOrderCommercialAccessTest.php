@@ -8,8 +8,13 @@ use App\Application\Quotations\QuotationData;
 use App\Application\Quotations\QuotationItemData;
 use App\Application\Quotations\QuotationManager;
 use App\Application\Orders\ServiceOrderManager;
+use App\Application\Production\ProductionExecutionCommand;
+use App\Application\Production\ProductionExecutionManager;
 use App\Entity\Orders\ServiceOrder;
 use App\Entity\Orders\ServiceOrderItem;
+use App\Entity\Orders\ServiceOrderOperationPlan;
+use App\Entity\Operations\Operation;
+use App\Entity\Operations\OperationArea;
 use App\Entity\Users\Permission;
 use App\Entity\Users\Role;
 use App\Entity\Users\User;
@@ -99,6 +104,215 @@ final class ServiceOrderCommercialAccessTest extends TestCase
         $this->browser->request('GET', '/admin/produccion/rutas');
         self::assertSame(200, $this->browser->getResponse()->getStatusCode());
         $this->assertNoCommercialData((string) $this->browser->getResponse()->getContent(), 'production routes');
+    }
+
+    public function testExecutionQualityAndDeliveryViewsDoNotExposeCommercialAmounts(): void
+    {
+        $shopfloor = $this->createUserWithPermissions('qa-shopfloor', 'ROLE_QA_SHOPFLOOR', [
+            'production.view', 'production.execute', 'service_orders.view',
+        ]);
+        $quality = $this->createUserWithPermissions('qa-quality', 'ROLE_QA_QUALITY', [
+            'quality.review', 'quality.return', 'quality.release', 'service_orders.view',
+        ]);
+        $delivery = $this->createUserWithPermissions('qa-delivery', 'ROLE_QA_DELIVERY', [
+            'delivery.ship', 'delivery.confirm', 'service_orders.view',
+        ]);
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $area = (new OperationArea())->setCode('QA-FINISH')->setName('Acabados QA');
+        $operation = (new Operation())->setOperationArea($area)->setCode('QA-LAMINADO')->setName('Laminado QA');
+        $plan = (new ServiceOrderOperationPlan())
+            ->setSequenceNumber(1)
+            ->setOperation($operation)
+            ->setCreatedBy($this->fixtures['user'])
+            ->setOperationSnapshot(['code' => 'QA-LAMINADO', 'name' => 'Laminado QA', 'area_name' => 'Acabados QA'])
+            ->assignOperator($shopfloor);
+        $item = $this->serviceOrder->getItems()->first();
+        self::assertInstanceOf(ServiceOrderItem::class, $item);
+        $item->addOperationPlan($plan);
+        $this->serviceOrder
+            ->setCommitmentDate(new \DateTimeImmutable('2026-10-16'))
+            ->markPlanned($this->fixtures['user']);
+        $em->persist($area);
+        $em->persist($operation);
+        $em->flush();
+
+        foreach ([
+            [$shopfloor, '/admin/produccion/ejecucion', 'execution queue'],
+            [$quality, '/admin/produccion/calidad', 'quality queue'],
+            [$delivery, '/admin/produccion/entregas', 'delivery queue'],
+        ] as [$user, $path, $context]) {
+            $this->browser->loginUser($user);
+            $this->browser->request('GET', $path);
+            self::assertSame(200, $this->browser->getResponse()->getStatusCode(), $path);
+            $html = (string) $this->browser->getResponse()->getContent();
+            $this->assertNoCommercialData($html, $context);
+            self::assertStringNotContainsString('Total contratado', $html, $context);
+            self::assertStringNotContainsString('P. unitario', $html, $context);
+            if ($context === 'execution queue') {
+                self::assertStringContainsString('Laminado QA', $html);
+            }
+        }
+
+        $this->browser->loginUser($shopfloor);
+        foreach ([
+            '/admin/produccion/calidad',
+            '/admin/produccion/entregas',
+            '/admin/produccion/calidad/ordenes/'.$this->serviceOrder->getId().'/liberar',
+        ] as $path) {
+            $this->browser->request(str_ends_with($path, '/liberar') ? 'POST' : 'GET', $path);
+            self::assertSame(403, $this->browser->getResponse()->getStatusCode(), $path);
+            $this->assertNoCommercialData((string) $this->browser->getResponse()->getContent(), $path);
+        }
+    }
+
+    public function testCompletedProductionCanBeReviewedReleasedAndDeliveredAsSeparateHitos(): void
+    {
+        $quality = $this->createUserWithPermissions('qa-quality-flow', 'ROLE_QA_QUALITY_FLOW', [
+            'quality.review', 'quality.return', 'quality.release', 'service_orders.view',
+        ]);
+        $delivery = $this->createUserWithPermissions('qa-delivery-flow', 'ROLE_QA_DELIVERY_FLOW', [
+            'delivery.ship', 'delivery.confirm', 'service_orders.view',
+        ]);
+        $operator = $this->createUserWithPermissions('qa-worker-flow', 'ROLE_QA_WORKER_FLOW', [
+            'production.view', 'production.execute', 'service_orders.view',
+        ]);
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $area = (new OperationArea())->setCode('QA-FINISH')->setName('Acabados QA');
+        $operation = (new Operation())->setOperationArea($area)->setCode('QA-LAMINADO')->setName('Laminado QA');
+        $plan = (new ServiceOrderOperationPlan())
+            ->setSequenceNumber(1)
+            ->setOperation($operation)
+            ->setCreatedBy($this->fixtures['user'])
+            ->setOperationSnapshot(['code' => 'QA-LAMINADO', 'name' => 'Laminado QA', 'area_name' => 'Acabados QA'])
+            ->assignOperator($operator);
+        $item = $this->serviceOrder->getItems()->first();
+        self::assertInstanceOf(ServiceOrderItem::class, $item);
+        $item->beginDesignReview()->markReadyForPrint();
+        $item->addOperationPlan($plan);
+        $this->serviceOrder
+            ->setCommitmentDate(new \DateTimeImmutable('2026-10-16'))
+            ->markPlanned($this->fixtures['user']);
+        $em->persist($area);
+        $em->persist($operation);
+        $em->flush();
+
+        $executionManager = $this->kernel->getContainer()->get('test.service_container')->get(ProductionExecutionManager::class);
+        $execution = $executionManager->start(
+            $plan,
+            $operator,
+            new ProductionExecutionCommand(bin2hex(random_bytes(16)), $this->serviceOrder->getTraceabilityVersion()),
+        );
+        $em->refresh($this->serviceOrder);
+        $executionManager->complete(
+            $execution,
+            $operator,
+            new ProductionExecutionCommand(bin2hex(random_bytes(16)), $this->serviceOrder->getTraceabilityVersion(), 'Diseño terminado para revisión de Calidad.'),
+        );
+        $em->refresh($this->serviceOrder);
+        self::assertSame('WAITING_QUALITY', $this->serviceOrder->getProductionStatus()->value);
+
+        $this->browser->loginUser($quality);
+        $this->browser->request('GET', '/admin/produccion/calidad/ordenes/'.$this->serviceOrder->getId());
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        $qualityHtml = (string) $this->browser->getResponse()->getContent();
+        self::assertStringContainsString('Laminado QA', $qualityHtml);
+        self::assertStringContainsString('Devolver a retrabajo', $qualityHtml);
+        self::assertStringContainsString('Liberar producción', $qualityHtml);
+        $this->assertNoCommercialData($qualityHtml, 'quality review detail');
+
+        $returnAction = sprintf(
+            '/admin/produccion/calidad/ordenes/%d/partidas/%d/operaciones/%d/intentos/%d/devolver',
+            $this->serviceOrder->getId(),
+            $item->getId(),
+            $plan->getId(),
+            $execution->getId(),
+        );
+        $returnForm = $this->browser->getCrawler()->filter('form[action="'.$returnAction.'"]')->form();
+        $returnForm['note'] = 'Defecto de laminado detectado en inspección visual.';
+        $this->browser->submit($returnForm);
+        self::assertSame(302, $this->browser->getResponse()->getStatusCode());
+
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $this->serviceOrder = $em->getRepository(ServiceOrder::class)->find($this->serviceOrder->getId());
+        self::assertInstanceOf(ServiceOrder::class, $this->serviceOrder);
+        self::assertSame('QUALITY_REWORK', $this->serviceOrder->getProductionStatus()->value);
+
+        $this->browser->loginUser($operator);
+        $this->browser->request('GET', '/admin/produccion/ejecucion');
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        $executionHtml = (string) $this->browser->getResponse()->getContent();
+        self::assertStringContainsString('Iniciar retrabajo · intento 1', $executionHtml);
+        $this->assertNoCommercialData($executionHtml, 'quality rework queue');
+        $startForm = $this->browser->getCrawler()->filter(sprintf(
+            'form[action="/admin/produccion/ejecucion/operaciones/%d/iniciar"]',
+            $plan->getId(),
+        ))->form();
+        $this->browser->submit($startForm);
+        self::assertSame(302, $this->browser->getResponse()->getStatusCode());
+
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $plan = $em->getRepository(ServiceOrderOperationPlan::class)->find($plan->getId());
+        self::assertInstanceOf(ServiceOrderOperationPlan::class, $plan);
+        $rework = $plan->getLatestExecution();
+        self::assertInstanceOf(\App\Entity\Production\ProductionOperationExecution::class, $rework);
+        self::assertSame($execution->getId(), $rework->getOriginExecution()?->getId());
+        $this->serviceOrder = $em->getRepository(ServiceOrder::class)->find($this->serviceOrder->getId());
+        self::assertInstanceOf(ServiceOrder::class, $this->serviceOrder);
+        $operator = $em->getRepository(User::class)->find($operator->getId());
+        self::assertInstanceOf(User::class, $operator);
+        $executionManager = $this->kernel->getContainer()->get('test.service_container')->get(ProductionExecutionManager::class);
+        $executionManager->complete(
+            $rework,
+            $operator,
+            new ProductionExecutionCommand(bin2hex(random_bytes(16)), $this->serviceOrder->getTraceabilityVersion(), 'Retrabajo de laminado completado.'),
+        );
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $this->serviceOrder = $em->getRepository(ServiceOrder::class)->find($this->serviceOrder->getId());
+        self::assertInstanceOf(ServiceOrder::class, $this->serviceOrder);
+        self::assertSame('WAITING_QUALITY', $this->serviceOrder->getProductionStatus()->value);
+
+        $this->browser->loginUser($quality);
+        $this->browser->request('GET', '/admin/produccion/calidad/ordenes/'.$this->serviceOrder->getId());
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        $this->assertNoCommercialData((string) $this->browser->getResponse()->getContent(), 'quality review after rework');
+        $releaseForm = $this->browser->getCrawler()->filter(sprintf(
+            'form[action="/admin/produccion/calidad/ordenes/%d/liberar"]',
+            $this->serviceOrder->getId(),
+        ))->form();
+        $this->browser->submit($releaseForm);
+        self::assertSame(302, $this->browser->getResponse()->getStatusCode());
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $this->serviceOrder = $em->getRepository(ServiceOrder::class)->find($this->serviceOrder->getId());
+        self::assertInstanceOf(ServiceOrder::class, $this->serviceOrder);
+        self::assertSame('PRODUCTION_COMPLETED', $this->serviceOrder->getProductionStatus()->value);
+
+        $this->browser->loginUser($delivery);
+        $this->browser->request('GET', '/admin/produccion/entregas/ordenes/'.$this->serviceOrder->getId());
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        $this->assertNoCommercialData((string) $this->browser->getResponse()->getContent(), 'delivery detail before method');
+        $methodForm = $this->browser->getCrawler()->filter(sprintf(
+            'form[action="/admin/produccion/entregas/ordenes/%d/modalidad"]',
+            $this->serviceOrder->getId(),
+        ))->form();
+        $methodForm['fulfillment_method'] = 'pickup';
+        $this->browser->submit($methodForm);
+        self::assertSame(302, $this->browser->getResponse()->getStatusCode());
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $this->serviceOrder = $em->getRepository(ServiceOrder::class)->find($this->serviceOrder->getId());
+        self::assertInstanceOf(ServiceOrder::class, $this->serviceOrder);
+        self::assertSame('READY_FOR_PICKUP', $this->serviceOrder->getDeliveryStatus()->value);
+
+        $this->browser->request('GET', '/admin/produccion/entregas/ordenes/'.$this->serviceOrder->getId());
+        $confirmForm = $this->browser->getCrawler()->filter(sprintf(
+            'form[action="/admin/produccion/entregas/ordenes/%d/confirmar"]',
+            $this->serviceOrder->getId(),
+        ))->form();
+        $this->browser->submit($confirmForm);
+        self::assertSame(302, $this->browser->getResponse()->getStatusCode());
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $this->serviceOrder = $em->getRepository(ServiceOrder::class)->find($this->serviceOrder->getId());
+        self::assertInstanceOf(ServiceOrder::class, $this->serviceOrder);
+        self::assertSame('DELIVERED', $this->serviceOrder->getDeliveryStatus()->value);
     }
 
     public function testOperatorCannotChangeCommitmentOrPriorityAndProductionPreviewHasNoCommercialAmounts(): void

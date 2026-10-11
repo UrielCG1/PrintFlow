@@ -43,6 +43,9 @@ final class ProductionExecutionManager
         return $this->entityManager->wrapInTransaction(function () use ($plan, $actor, $command, $originExecution, $beforeStart): ProductionOperationExecution {
             $order = $plan->getServiceOrderItem()->getServiceOrder();
             $this->lockOrderAndPlan($order, $plan);
+            if ($originExecution !== null) {
+                $this->entityManager->lock($originExecution, LockMode::PESSIMISTIC_WRITE);
+            }
 
             $previousEvent = $this->eventRepository->findOneByCommandId($command->commandId);
             if ($previousEvent instanceof ServiceOrderTraceabilityEvent) {
@@ -58,6 +61,8 @@ final class ProductionExecutionManager
             $previousState = $order->traceabilityStateSnapshot();
             if ($order->getProductionStatus() === ProductionOrderStatus::WAITING_DESIGN) {
                 $order->beginProduction();
+            } elseif ($order->getProductionStatus() === ProductionOrderStatus::QUALITY_REWORK) {
+                $order->resumeProductionAfterQualityRework();
             }
 
             $execution = new ProductionOperationExecution(
@@ -157,6 +162,9 @@ final class ProductionExecutionManager
 
             $this->assertExpectedOrderVersion($order, $command);
             $this->assertExecutionActor($execution, $actor);
+            if ($plan->getBlockedReason() !== null) {
+                throw new \DomainException('La operación tiene una incidencia abierta que debe resolverse antes de cerrarla.');
+            }
             $previousState = $order->traceabilityStateSnapshot();
             if ($beforeComplete !== null) {
                 $beforeComplete($order, $plan, $execution, $actor);
@@ -218,6 +226,12 @@ final class ProductionExecutionManager
 
             $this->assertExpectedOrderVersion($order, $command);
             $this->assertExecutionActor($execution, $actor);
+            if ($plan->getBlockedReason() !== null && str_starts_with($plan->getBlockedReason(), 'Incidencia:')) {
+                $message = $eventType === 'production.execution_resumed'
+                    ? 'Resuelve la incidencia antes de reanudar la operación.'
+                    : 'La operación tiene una incidencia abierta y no puede pausarse de nuevo.';
+                throw new \DomainException($message);
+            }
             $previousState = $order->traceabilityStateSnapshot();
             $transition($execution);
             $order->touchTraceability();
@@ -274,6 +288,7 @@ final class ProductionExecutionManager
         if (!in_array($order->getProductionStatus(), [
             ProductionOrderStatus::WAITING_DESIGN,
             ProductionOrderStatus::IN_PRODUCTION,
+            ProductionOrderStatus::QUALITY_REWORK,
         ], true)) {
             throw new \DomainException('La orden no está disponible para iniciar operaciones productivas.');
         }
@@ -293,8 +308,24 @@ final class ProductionExecutionManager
         if ($plan->hasOpenExecution()) {
             throw new \DomainException('La operación ya tiene un intento abierto.');
         }
-        if ($originExecution !== null && $originExecution->getPlan() !== $plan) {
-            throw new \DomainException('El intento origen no pertenece a la operación planificada.');
+        if ($originExecution !== null) {
+            $rejection = $this->eventRepository->findLatestQualityRejectionForPlan($plan);
+            if ($originExecution->getPlan() !== $plan) {
+                throw new \DomainException('El intento origen no pertenece a la operación planificada.');
+            }
+            if ($order->getProductionStatus() !== ProductionOrderStatus::QUALITY_REWORK
+                || $rejection?->getOperationExecution() !== $originExecution
+                || $originExecution->isOpen()
+                || $originExecution->getStatus() !== \App\Enum\Production\ProductionOperationExecutionStatus::COMPLETED
+                || $plan->getLatestExecution() !== $originExecution
+                || $plan->hasExecutionOrigin($originExecution)
+            ) {
+                throw new \DomainException('El intento origen debe tener una devolución de Calidad vigente para iniciar el retrabajo.');
+            }
+        } elseif ($order->getProductionStatus() === ProductionOrderStatus::QUALITY_REWORK) {
+            throw new \DomainException('Selecciona el intento devuelto por Calidad para dejar vinculado el retrabajo.');
+        } elseif ($plan->hasCompletedLatestExecution()) {
+            throw new \DomainException('Una operación completada solo puede repetirse cuando Calidad autoriza un retrabajo.');
         }
 
         $assigned = $plan->getAssignedOperator();
@@ -306,7 +337,7 @@ final class ProductionExecutionManager
             if ($previousPlan->getSequenceNumber() >= $plan->getSequenceNumber()) {
                 continue;
             }
-            if (!$previousPlan->hasCompletedExecution()) {
+            if (!$previousPlan->hasCompletedLatestExecution() || $previousPlan->hasOpenExecution()) {
                 throw new \DomainException('La operación anterior de la partida debe completarse antes de continuar.');
             }
         }
@@ -325,7 +356,7 @@ final class ProductionExecutionManager
         foreach ($order->getItems() as $item) {
             foreach ($item->getActiveOperationPlans() as $plan) {
                 $hasOperations = true;
-                if (!$plan->hasCompletedExecution()) {
+                if (!$plan->hasCompletedLatestExecution() || $plan->hasOpenExecution() || $plan->getBlockedReason() !== null) {
                     return false;
                 }
             }

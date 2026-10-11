@@ -1,0 +1,17 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Calidad | OoxCorp{% endblock %}
+{% block app_navigation_active %}quality{% endblock %}
+{% block app_breadcrumb %}Operación / Calidad{% endblock %}
+
+{% block app_content %}
+    <section class="pf-page__content">
+        <header class="pf-page-header"><div class="pf-page-header__content"><p class="pf-page-header__eyebrow">Operación</p><h1 class="pf-page-header__title">Revisión de Calidad</h1><p class="pf-page-header__description">Revisa las partidas y las últimas operaciones. La liberación cierra Producción; una no conformidad abre un retrabajo trazable.</p></div></header>
+        <section class="pf-card"><div class="pf-card__body">
+            {% if orders is empty %}<p class="mb-0">No hay órdenes pendientes de revisión integral.</p>
+            {% else %}<div class="table-responsive"><table class="pf-table"><thead><tr><th>Orden</th><th>Cliente</th><th>Partidas</th><th>Compromiso</th><th>Acción</th></tr></thead><tbody>
+                {% for order in orders %}<tr><td><strong>{{ order.folio }}</strong></td><td>{{ order.clientSnapshot.business_name|default(order.clientSnapshot.legal_name|default('Cliente')) }}</td><td>{{ order.items|length }}</td><td>{{ order.commitmentDate ? order.commitmentDate|date('d/m/Y') : 'Sin fecha' }}</td><td><a class="btn pf-button pf-button--secondary btn-sm" href="{{ path('admin_production_quality_delivery_quality_show', {id: order.id}) }}">Revisar orden</a></td></tr>{% endfor %}
+            </tbody></table></div>{% endif %}
+        </div></section>
+    </section>
+{% endblock %}

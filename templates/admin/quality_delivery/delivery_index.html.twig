@@ -1,0 +1,15 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Entregas | OoxCorp{% endblock %}
+{% block app_navigation_active %}delivery{% endblock %}
+{% block app_breadcrumb %}Operación / Entregas{% endblock %}
+
+{% block app_content %}
+    <section class="pf-page__content">
+        <header class="pf-page-header"><div class="pf-page-header__content"><p class="pf-page-header__eyebrow">Operación</p><h1 class="pf-page-header__title">Entregas</h1><p class="pf-page-header__description">Producción libera la orden; Ventas confirma la modalidad y la entrega. El registro no envía correos.</p></div></header>
+        <section class="pf-card"><div class="pf-card__body">
+            {% if orders is empty %}<p class="mb-0">No hay órdenes pendientes de preparación o entrega.</p>
+            {% else %}<div class="table-responsive"><table class="pf-table"><thead><tr><th>Orden</th><th>Cliente</th><th>Modalidad</th><th>Estado de entrega</th><th>Compromiso</th><th></th></tr></thead><tbody>{% for order in orders %}<tr><td><strong>{{ order.folio }}</strong></td><td>{{ order.clientSnapshot.business_name|default(order.clientSnapshot.legal_name|default('Cliente')) }}</td><td>{{ order.fulfillmentMethod.label }}</td><td>{{ order.deliveryStatus.label }}</td><td>{{ order.commitmentDate ? order.commitmentDate|date('d/m/Y') : 'Sin fecha' }}</td><td><a class="btn pf-button pf-button--secondary btn-sm" href="{{ path('admin_production_quality_delivery_delivery_show', {id: order.id}) }}">Abrir entrega</a></td></tr>{% endfor %}</tbody></table></div>{% endif %}
+        </div></section>
+    </section>
+{% endblock %}

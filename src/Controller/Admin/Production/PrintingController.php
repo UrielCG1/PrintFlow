@@ -15,6 +15,7 @@ use App\Repository\Equipment\EquipmentRepository;
 use App\Repository\Materials\MaterialVariantRepository;
 use App\Repository\Orders\ServiceOrderOperationPlanRepository;
 use App\Repository\Production\ProductionPrintedOutputRepository;
+use App\Repository\Production\ProductionMaterialUsageRepository;
 use App\Repository\Production\ProductionPrintingScanRepository;
 use App\Repository\Production\ServiceOrderItemDesignReleaseRepository;
 use App\Service\Production\PrintingLabelRenderer;
@@ -34,7 +35,7 @@ final class PrintingController extends AbstractController
     ): Response {
         $this->denyAccessUnlessGranted('production.view');
         $plans = array_values(array_filter(
-            $planRepository->findActiveForServiceOrderItems(),
+            $planRepository->findForProductionQueue(),
             static fn (ServiceOrderOperationPlan $plan): bool => $printingManager->isPrintingPlan($plan),
         ));
         $outputs = [];
@@ -54,12 +55,14 @@ final class PrintingController extends AbstractController
         ServiceOrderItemDesignReleaseRepository $releaseRepository,
         ProductionPrintingScanRepository $scanRepository,
         ProductionPrintedOutputRepository $outputRepository,
+        ProductionMaterialUsageRepository $usageRepository,
     ): Response {
         $this->denyAccessUnlessGranted('production.view');
         if (!$printingManager->isPrintingPlan($plan)) {
             throw $this->createNotFoundException();
         }
         $item = $plan->getServiceOrderItem();
+        $reworkOrigin = $printingManager->reworkOriginForPlan($plan);
         $activeExecution = null;
         foreach ($plan->getExecutions() as $execution) {
             if ($execution->isOpen()) {
@@ -74,7 +77,10 @@ final class PrintingController extends AbstractController
             'release' => $releaseRepository->findCurrent($item),
             'currentScan' => $scanRepository->findCurrentForPlan($plan),
             'activeExecution' => $activeExecution,
+            'reworkOrigin' => $reworkOrigin,
+            'canStartPrinting' => !$plan->hasCompletedExecution() || $reworkOrigin !== null,
             'output' => $outputRepository->findCurrent($item),
+            'materialUsages' => $usageRepository->findForPlan($plan),
             'equipmentChoices' => $equipmentRepository->findAvailableForFutureExecution($plan->getOperation()),
             'materialChoices' => $materialVariantRepository->findActiveConsumable(),
             'canConfigure' => $this->isGranted('production.assign'),

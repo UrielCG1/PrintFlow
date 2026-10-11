@@ -42,6 +42,7 @@
                             <dt class="col-sm-4">Material</dt><dd class="col-sm-8">{% if plan.materialVariant %}{{ plan.materialVariant.material.name }} · {{ plan.materialVariant.code }}<span class="d-block text-muted small">Código: {{ plan.materialVariant.barcode ?? 'sin código de barras' }} · Unidad: {{ plan.materialVariant.consumptionUnit.symbol }}</span>{% else %}Sin configurar{% endif %}</dd>
                         </dl>
                         {% if plan.materialSnapshot %}<details class="mt-3"><summary>Características técnicas del material</summary><pre class="small mt-2 mb-0">{{ plan.materialSnapshot.specifications|default({})|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></details>{% endif %}
+                        <div class="mt-3"><h3 class="h6">Material usado</h3>{% if materialUsages is empty %}<p class="small text-body-secondary mb-0">El consumo real aparecerá aquí cuando se cierre una impresión. Este registro no modifica inventario.</p>{% else %}<ul class="small mb-0">{% for usage in materialUsages %}<li>Intento {{ usage.operationExecution.attemptNumber }} · {{ usage.materialNameSnapshot }} · {{ usage.actualQuantity }} {{ usage.unitLabelSnapshot }} usados · {{ usage.wasteQuantity }} {{ usage.unitLabelSnapshot }} de desperdicio · {{ usage.measuredAt|date('d/m/Y H:i', 'America/Mexico_City') }}</li>{% endfor %}</ul><p class="form-text mb-0">Consulta operativa; no implica salida o ajuste de existencias.</p>{% endif %}</div>
                     </div>
                 </section>
             </div>
@@ -60,7 +61,7 @@
                     </section>
                 {% endif %}
 
-                {% if canExecute and not activeExecution and not plan.hasCompletedExecution %}
+                {% if canExecute and not activeExecution and canStartPrinting %}
                     <section class="pf-card mb-4" data-controller="ui--printing-scanner">
                         <div class="pf-card__header"><h2 class="pf-card__title">1. Validar escaneos</h2></div>
                         <form class="pf-card__body pf-form" method="post" action="{{ path('admin_printing_validate_scans', {id: plan.id}) }}">
@@ -75,8 +76,8 @@
                     </section>
                 {% endif %}
 
-                {% if canExecute and currentScan and currentScan.available and not activeExecution and not plan.hasCompletedExecution %}
-                    <section class="pf-card mb-4"><div class="pf-card__header"><h2 class="pf-card__title">2. Iniciar impresión</h2></div><form class="pf-card__body" method="post" action="{{ path('admin_printing_start', {id: plan.id}) }}"><input type="hidden" name="_token" value="{{ csrf_token('printing-start-' ~ plan.id) }}"><input type="hidden" name="expected_order_version" value="{{ orderVersion }}"><input type="hidden" name="command_id" value="{{ startCommandId }}"><p class="small text-success">Escaneos validados para esta partida. Iniciar consume esta validación y deja trazabilidad del intento.</p><button class="btn pf-button pf-button--primary" type="submit">Iniciar impresión</button></form></section>
+                {% if canExecute and currentScan and currentScan.available and not activeExecution and canStartPrinting %}
+                    <section class="pf-card mb-4"><div class="pf-card__header"><h2 class="pf-card__title">2. Iniciar impresión</h2></div><form class="pf-card__body" method="post" action="{{ path('admin_printing_start', {id: plan.id}) }}"><input type="hidden" name="_token" value="{{ csrf_token('printing-start-' ~ plan.id) }}"><input type="hidden" name="expected_order_version" value="{{ orderVersion }}"><input type="hidden" name="command_id" value="{{ startCommandId }}"><p class="small text-success">{% if reworkOrigin %}Calidad autorizó el retrabajo del intento {{ reworkOrigin.attemptNumber }}. {% endif %}Escaneos validados para esta partida. Iniciar consume esta validación y deja trazabilidad del intento.</p><button class="btn pf-button pf-button--primary" type="submit">{{ reworkOrigin ? 'Iniciar retrabajo de impresión' : 'Iniciar impresión' }}</button></form></section>
                 {% endif %}
 
                 {% if canExecute and activeExecution %}
