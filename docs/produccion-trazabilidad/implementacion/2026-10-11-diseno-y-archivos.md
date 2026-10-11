@@ -1,4 +1,6 @@
-# Fase 3 — Diseño y archivos protegidos
+# Registro técnico — Diseño y archivos protegidos
+
+> Registro cronológico de una entrega; no corresponde a la Fase 3 del roadmap de producto. Consulta [fases y criterios vigentes](../roadmap/fases-y-historias.md).
 
 Fecha: 11 de octubre de 2026  
 Estado: implementada en código y migrada en la base de desarrollo.
@@ -9,7 +11,7 @@ Esta fase convierte Diseño en la puerta obligatoria entre la orden planificada 
 
 La bandeja **Operación / Diseño** muestra únicamente partidas pendientes, en revisión o bloqueadas. No muestra importes comerciales. El detalle enseña el folio, el código de rastreo, la solicitud, las especificaciones congeladas y los archivos autorizados para el perfil que tiene permiso de descarga.
 
-La persona asignada a la primera operación `PRE-DISENO` es la única que puede iniciar y liberar una revisión. El jefe de Producción o Administrador puede hacerlo cuando también está asignado a la partida. Esto conserva la regla de que los operadores solo ejecutan actividades asignadas.
+La bandeja de Diseño permite que el perfil con `production.design.review` inicie y libere la revisión sin exigir que una diseñadora esté asignada como operadora. La regla general de asignación sigue aplicando a las demás operaciones productivas.
 
 Una vez iniciada la revisión, Diseño puede elegir una de estas alternativas:
 
@@ -44,13 +46,13 @@ Las descargas se sirven por controlador y requieren `production.files.download`;
 
 La migración agrega el rol **Diseño** y el permiso `production.design.review`.
 
-- **Diseño:** consulta órdenes operativas, cola de Diseño y archivos autorizados; puede iniciar y liberar únicamente partidas que le fueron asignadas.
-- **Producción y Administrador:** también reciben `production.design.review`; siguen requiriendo ser el responsable asignado para ejecutar la acción sobre la partida.
+- **Diseño:** consulta órdenes operativas, cola de Diseño y archivos autorizados; puede iniciar y liberar partidas con el permiso `production.design.review`, sin asignación individual de operadora.
+- **Producción y Administrador:** reciben `production.design.review` según la matriz de permisos. La autorización se valida en servidor y no depende de asignar a la diseñadora como operadora.
 - **Operador y Calidad/Entregas:** pueden acceder a lo que les corresponda por sus permisos existentes, pero no liberan Diseño solo por consultar la partida.
 
 ## Datos y migración
 
-Archivo: [Version20261011090000.php](../migrations/Version20261011090000.php)
+Archivo: [Version20261011090000.php](../../../migrations/Version20261011090000.php)
 
 La migración agrega `service_order_items.design_status`, la tabla `production_files`, la tabla `service_order_item_design_releases`, sus restricciones de versión y la seguridad del rol Diseño. Se aplicó como `DoctrineMigrations\Version20261011090000`; la base de desarrollo quedó con 48 migraciones ejecutadas y ninguna pendiente.
 
@@ -65,6 +67,6 @@ No se inventan liberaciones para órdenes antiguas. Una partida histórica sin s
 - Migración aplicada en desarrollo y permisos sincronizados con `app:security:bootstrap`.
 - Suite completa: 110 pruebas, 326 aserciones correctas; 6 pruebas omitidas porque este equipo no cuenta con PDO SQLite.
 
-## Siguiente fase
+## Nota de vigencia
 
-La fase 4 implementará la ejecución de **Impresión**: escaneo de máquina y material, validación o sustitución autorizada, consumo y desperdicio, y la etiqueta QR para transferir cada partida a Acabados.
+La secuencia de ejecución evolucionó después de este registro. Consulta el [roadmap vigente](../roadmap/fases-y-historias.md) y la [guía operativa](../operacion/guia-operativa-planificacion-a-entrega.md) para el flujo actual y sus pendientes.

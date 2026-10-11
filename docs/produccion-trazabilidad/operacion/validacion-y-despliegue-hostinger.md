@@ -1,18 +1,18 @@
 # PrintFlow — comandos de validación y despliegue en Hostinger
 
 **Fecha:** 10 de octubre de 2026
-**Estado:** Uriel reporta que las Fases 1 y 2 están desplegadas y funcionan en producción. La implementación local de Fase 3 agrega `Version20261010160000` y ajustes UX de planificación; las pruebas funcionales y unitarias locales ya pasaron. Antes de desplegar, aún hay que revisar el dry run en Hostinger y validar en MySQL la reserva concurrente y atómica.
+**Estado:** las fases iniciales se reportaron desplegadas y operativas. El código y las pruebas locales posteriores incluyen prioridades, reprogramación y ajustes de interfaz. La última salida explícita de migraciones productivas registrada aquí es `Version20261010150000`; antes de una nueva liberación, revisar el dry run del commit y validar reservas concurrentes en MySQL.
 **Alcance:** cerrar verificaciones pendientes de Fase 0 y documentar el despliegue controlado de Symfony, sin respaldos.
 
-Este repositorio contiene cambios locales sin publicar. Antes de desplegar, revisar y aprobar el conjunto de cambios, conservar los cambios de otras personas, y publicar un commit identificado. No desplegar el árbol de trabajo local directamente.
+Antes de desplegar, revisar el conjunto de cambios, conservar todo cambio local fuera del alcance aprobado y publicar un commit identificado. No desplegar el árbol de trabajo local directamente.
 
 ### Resultado remoto recibido el 10 de octubre de 2026
 
-La salida compartida por Uriel confirma Composer `2.9.0`, PHP CLI `8.2.34` y requisitos de dependencias no-dev correctos. Los scripts `cache:clear`, `assets:install` e `importmap:install` terminaron con `[OK]`. El estado de Doctrine reportó 40 migraciones aplicadas, 41 disponibles y una pendiente: `Version20261010120000`. El `--dry-run` simuló esa migración y terminó `[OK]`; **no la aplicó**.
+La salida SSH reportada confirma Composer `2.9.0`, PHP CLI `8.2.34` y requisitos de dependencias no-dev correctos. Los scripts `cache:clear`, `assets:install` e `importmap:install` terminaron con `[OK]`. El estado de Doctrine reportó 40 migraciones aplicadas, 41 disponibles y una pendiente: `Version20261010120000`. El `--dry-run` simuló esa migración y terminó `[OK]`; **no la aplicó**.
 
-El mismo comando informó la base `u692972268_printflow_dev`; aunque el usuario la describió como producción, confirmar en hPanel que sea la base conectada al sitio productivo antes de cualquier escritura. `doctrine:schema:validate` encontró mappings válidos, pero el esquema no está sincronizado con esos mappings. La migración pendiente solo agrega/relaciona permisos y no corrige diferencias estructurales, por lo que hace falta identificar el SQL de esas diferencias antes de continuar.
+El comando identificó la base que se confirmó como productiva en hPanel. `doctrine:schema:validate` encontró mappings válidos, pero el esquema no estaba sincronizado con esos mappings. La migración pendiente solo agrega/relaciona permisos y no corregía diferencias estructurales, por lo que hacía falta identificar el SQL de esas diferencias antes de continuar.
 
-Este diagnóstico inicial quedó superado por comprobaciones posteriores de Uriel: confirmó que esa base es la de producción y compartió `doctrine:migrations:status` en `44/44`, última y actual `Version20261010150000`, sin versiones nuevas pendientes. También confirmó que el esquema está bien. No repetir la revisión antigua de `schema:update --dump-sql` como condición para liberar Fase 3; revisar la migración nueva con `migrations:status`, `migrations:list` y `migrate --dry-run`.
+Este diagnóstico inicial quedó superado por una comprobación posterior: `doctrine:migrations:status` informó `44/44`, última y actual `Version20261010150000`, sin versiones nuevas pendientes; también se reportó el esquema correcto. Es la última salida explícita de migraciones productivas registrada aquí. No repetir la revisión antigua de `schema:update --dump-sql` como condición de liberación; revisar el commit objetivo con `migrations:status`, `migrations:list` y `migrate --dry-run`.
 
 El `--dump-sql` posterior no propone borrar tablas o columnas, pero sí quitar tres claves foráneas y ocho índices, incluido `uniq_volume_review_attempt`. Esos objetos aparecen en migraciones históricas y varios protegen integridad o consultas; por tanto ese volcado **no es una lista de cambios aprobados**. El desglose y la evidencia del código están en la sección siguiente. No se ejecutó el SQL.
 
@@ -110,9 +110,9 @@ Resultado local del 10 de octubre: `ServiceOrderCommercialAccessTest.php` pasó 
 
 ### Error local `Unknown column 'q0_.discount_breakdown'`
 
-La entidad `Quotation` selecciona `discount_breakdown`, columna creada por `Version20261003010000`. La base local `printflow_p1_20261004` estaba en `Version20260822020000`: tenía **37 de 43** migraciones ejecutadas y seis pendientes. Uriel autorizó aplicar las seis en local; terminaron correctamente (**52 consultas**). Se confirmó después que Doctrine quedó en **43 de 43**, última `Version20261010140000`, y que una consulta sobre `quotations.discount_breakdown` ya se ejecuta. La conexión comprobada fue el MySQL local `DESKTOP-SJ1IHQ3:3307`; no fue Hostinger.
+La entidad `Quotation` selecciona `discount_breakdown`, columna creada por `Version20261003010000`. La base local de desarrollo estaba en `Version20260822020000`: tenía **37 de 43** migraciones ejecutadas y seis pendientes. Se aplicaron en local (**52 consultas**). Doctrine quedó en **43 de 43**, última `Version20261010140000`, y una consulta sobre `quotations.discount_breakdown` ya se ejecutaba. La conexión comprobada fue MySQL local, no Hostinger.
 
-Para diagnosticar otra base local primero consultar y simular las migraciones; ejecutar la escritura solo contra la base local correcta:
+Para diagnosticar una base local primero consultar y simular las migraciones; ejecutar la escritura solo contra la base local correcta:
 
 ```powershell
 Set-Location C:\PrintFlow
@@ -128,7 +128,7 @@ El `schema:validate` local sigue reportando drift histórico de tipos/defaults y
 
 ## 2. Inspección de solo lectura en Hostinger
 
-La ruta vista en documentación anterior es `/home/u692972268/domains/teramorphosis.com/printflow_app`; es un dato histórico, no confirmado para el sitio actual. Copiar desde hPanel la ruta SSH vigente y reemplazarla en el primer comando. No imprimir ni pegar `.env.local`, `DATABASE_URL`, contraseñas, claves ni salidas completas de configuración.
+Los ejemplos anteriores de rutas son históricos. Copiar desde hPanel la ruta SSH vigente y sustituir el marcador del primer comando. No imprimir ni pegar `.env.local`, `DATABASE_URL`, contraseñas, claves ni salidas completas de configuración.
 
 ```sh
 cd /RUTA/REAL/DE/PRINTFLOW
@@ -205,11 +205,11 @@ La consulta de equipos confirma el texto guardado, no una velocidad efectiva: va
 
 ## 3. Preparación para liberar
 
-Por instrucción de Uriel, no crear respaldos ni añadir comandos de respaldo a este procedimiento. La ruta SSH histórica anotada arriba no está confirmada como ruta vigente. Antes de escribir, confirmar en hPanel la carpeta correcta, el dominio, la raíz web `public/`, el PHP que ejecuta el sitio y la base conectada al sitio en vivo.
+Este procedimiento no incluye respaldos. La ruta SSH debe confirmarse en hPanel antes de usarla. Antes de escribir, confirmar la carpeta correcta, el dominio, la raíz web `public/`, el PHP que ejecuta el sitio y la base conectada al sitio en vivo.
 
 ### Publicar desde Windows a `main`
 
-Los archivos deben pasar revisión en `staged` antes de crear el commit. No añadir todo el árbol porque hay cambios paralelos de otra persona:
+Los archivos deben pasar revisión en `staged` antes de crear el commit. No añadir todo el árbol si hay archivos fuera del alcance de la entrega:
 
 ```powershell
 Set-Location C:\PrintFlow
@@ -218,7 +218,7 @@ git diff --cached --check
 git diff --cached --stat
 git diff --cached
 # Después de revisar que solo estén los archivos de la entrega aprobada:
-git commit -m "Agrega prioridades y compromisos de producción"
+git commit -m "Publica cambios revisados de producción y trazabilidad"
 git push origin main
 git rev-parse HEAD
 ```
@@ -269,7 +269,7 @@ php bin/console doctrine:migrations:status --env=prod --no-debug
 php bin/console doctrine:schema:validate --env=prod --no-debug
 ```
 
-Verificar que `doctrine:migrations:status` termine en la última versión del commit desplegado. El error `discount_breakdown` solo queda resuelto en producción cuando está desplegado el código que mapea la columna y también está aplicada `Version20261003010000`; no inferirlo del estado local. La base productiva confirmada está actualmente en `Version20261010150000`. Para liberar Fase 3, el *dry run* debe mostrar únicamente `Version20261010160000` como pendiente; si muestra cualquier otra versión, revisar y detenerse antes de migrar.
+Verificar que `doctrine:migrations:status` termine en la última versión del commit desplegado. El error `discount_breakdown` solo queda resuelto en producción cuando está desplegado el código que mapea la columna y también está aplicada `Version20261003010000`; no inferirlo del estado local. La última salida explícita registrada para producción mostró `Version20261010150000`. Los despliegues posteriores no quedaron certificados en este documento: usar el `--dry-run` del commit objetivo y revisar todas las migraciones pendientes, sin asumir que una versión específica sea la única.
 
 El repositorio no tiene un comando de mantenimiento de Symfony configurado; no usar `bin/console down`. Programar el cambio en una ventana de bajo tráfico. No usar `chmod -R 777`; resolver cualquier permiso de `var/cache` y `var/log` con el propietario/grupo de PHP asignado por Hostinger.
 

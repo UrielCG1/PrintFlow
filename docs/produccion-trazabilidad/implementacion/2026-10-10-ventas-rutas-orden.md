@@ -1,4 +1,6 @@
-# Fase 2 — Ventas, rutas y creación de orden
+# Registro técnico — Ventas, rutas y creación de orden
+
+> Registro cronológico de una entrega; no corresponde a la Fase 2 del roadmap de producto. Consulta [fases y criterios vigentes](../roadmap/fases-y-historias.md).
 
 Fecha: 10 de octubre de 2026  
 Estado: implementada en código y migrada en la base de desarrollo.
@@ -44,7 +46,7 @@ Para una cotización interna, la creación exige que Ventas haya elegido un cont
 
 ## Datos existentes y migración
 
-Archivos: [Version20261010170000.php](../migrations/Version20261010170000.php) y [Version20261010171000.php](../migrations/Version20261010171000.php)
+Archivos: [Version20261010170000.php](../../../migrations/Version20261010170000.php) y [Version20261010171000.php](../../../migrations/Version20261010171000.php)
 
 La migración agrega a `service_orders` la modalidad, el snapshot de contacto y el bloqueo de preparación de entrega. A `service_order_items` agrega el código estable y los snapshots de petición y archivo.
 

@@ -1,6 +1,8 @@
 # PrintFlow — historias de usuario y fases de desarrollo de producción
 
-**Versión:** 1.1 · **Fecha:** 11 de octubre de 2026 · **Fuente funcional:** [FSD de producción y trazabilidad](FSD-Produccion-y-Trazabilidad-2026-10-10.md).
+**Versión:** 1.2 · **Fecha:** 11 de octubre de 2026 · **Fuente funcional:** [FSD de producción y trazabilidad](../definicion/FSD-produccion-y-trazabilidad.md).
+
+> **Estado y precedencia:** esta es la secuencia de fases del producto. Los documentos fechados de `implementacion/` son registros históricos y su numeración no corresponde a estas fases. Las decisiones incorporadas después del FSD se reflejan aquí y en la [guía operativa](../operacion/guia-operativa-planificacion-a-entrega.md). El [estado actual](../estado-actual.md) separa código local, evidencia de pruebas y datos de producción.
 
 Este backlog implementa las reglas acordadas sin reconstruir cotizaciones, descuentos u órdenes en otra arquitectura. Cada historia se cierra con evidencia de prueba; la fase anterior es dependencia de la siguiente cuando comparte datos o permisos. Las estimaciones de esfuerzo se asignarán tras verificar esquema, datos y despliegue reales.
 
@@ -9,7 +11,7 @@ Este backlog implementa las reglas acordadas sin reconstruir cotizaciones, descu
 - Extender `ServiceOrderManager::createFromAcceptedQuotation`, `ServiceOrderItem` y `ServiceOrderOperationPlan` actuales.
 - Vincular rutas al Producto del cotizador (`CommercialItem`). Investigar la tabla `products` existente antes de crear una relación adicional.
 - Mantener importes comerciales en la orden y crear salidas operativas explícitamente libres de dinero.
-- Usar nuevas migraciones; no modificar migraciones ya ejecutadas ni sobrescribir cambios locales de otra persona.
+- Usar nuevas migraciones; no modificar migraciones ya ejecutadas ni sobrescribir cambios locales fuera del alcance.
 - Mantener el cálculo de capacidad, promesa y permisos en Symfony; DayPilot Lite solo muestra datos y solicita cambios.
 - No crear movimientos, existencias, reservas o alertas de inventario ni correo automático al cliente en este alcance.
 
@@ -17,9 +19,9 @@ Este backlog implementa las reglas acordadas sin reconstruir cotizaciones, descu
 
 **Objetivo:** eliminar la exposición monetaria actual y obtener una base verificable antes de abrir Producción a empleados.
 
-**Estado de ejecución (10 de octubre de 2026):** Uriel reporta que la Fase 1 se desplegó a producción y funciona hasta ahora. Esta sesión no tuvo acceso directo a Hostinger, así que no vuelve a certificar migraciones, permisos ni el esquema de ese entorno. La separación de importes y `ServiceOrderCommercialAccessTest` tienen las validaciones locales descritas abajo; la consulta remota del historial y una regresión completa desde cotización aceptada siguen como verificación técnica pendiente, no como impedimento para el trabajo local de Fase 2.
+**Estado registrado (10 de octubre de 2026):** el despliegue inicial de las rutas y las funciones probadas se reportó operativo. La evidencia disponible en el repositorio incluye pruebas locales de separación comercial. Esta anotación no certifica por sí sola migraciones, permisos ni esquema productivo posteriores; consulta el [estado actual](../estado-actual.md) y el runbook antes de una liberación.
 
-**Comandos pendientes y despliegue:** seguir [Runbook de validación y deploy en Hostinger](Runbook-Validacion-y-Deploy-Hostinger.md). Sus consultas de base son de solo lectura; la secuencia de despliegue requiere un commit revisado, confirmar la raíz `public/` y revisar el dry run de migraciones. Por instrucción de Uriel, el proceso no crea respaldos.
+**Comandos y despliegue:** seguir el [runbook de validación y despliegue en Hostinger](../operacion/validacion-y-despliegue-hostinger.md). Sus consultas de base son de solo lectura; la secuencia de despliegue requiere un commit revisado, confirmar la raíz `public/` y revisar el dry run de migraciones. El procedimiento de liberación no incluye respaldos.
 
 | ID | Historia | Criterio de terminado |
 | --- | --- | --- |
@@ -37,14 +39,14 @@ Este backlog implementa las reglas acordadas sin reconstruir cotizaciones, descu
 | ID | Historia | Criterio de terminado |
 | --- | --- | --- |
 | PF-P1-01 | Como jefe/Administrador, quiero definir rutas base reutilizables y asignarlas a varios Productos. | Se configuran secuencia, operación activa, condición, obligatoriedad y variantes sencillas; cada Producto publica una versión inequívoca. Un Producto puede ajustar su configuración sin alterar otros. |
-| PF-P1-02 | Como jefe/Administrador, quiero tratar por separado Diseño y revisión de archivo del cliente. | Con archivo aportado, la variante omite Diseño pero incluye preprensa; sin archivo requerido, preprensa queda bloqueada con causa y no se reservan pasos posteriores. |
+| PF-P1-02 | Como jefe/Administrador, quiero que cada partida llegue a la revisión de Diseño sin asignar a la diseñadora como operadora. | La ruta inicial pasa por `PRE-DISENO`; el perfil con `production.design.review` puede validar el archivo aportado o cargar arte preparado y una captura de referencia. La siguiente etapa queda bloqueada hasta liberar Diseño. |
 | PF-P1-03 | Como sistema, quiero generar un trabajo y sus pasos por cada `ServiceOrderItem` al crear la orden. | El caso de uso existente genera ruta y snapshot en su transacción; doble clic/concurrencia no duplican orden, trabajo ni planes. Folio y vínculos históricos permanecen. |
 | PF-P1-04 | Como jefe, quiero identificar partidas sin ruta o datos completos sin inventar un plan. | La orden se crea y el trabajo muestra causa de «requiere planificación/estimación»; no hay reserva ni pronóstico ficticio. |
 | PF-P1-05 | Como jefe, quiero corregir medidas técnicas y dividir una partida cuando producción lo requiera. | Corrección/división solo durante planificación, con permiso, CSRF y motivo; la cotización queda intacta; las hijas sustituyen la fila para Ventas, conservan cantidad/subtotal total y FK original única; revisión de ruta requerida tras corregir medidas. |
 
 **Puerta de salida:** prueba de extremo a extremo desde una cotización aceptada hasta los pasos generados; versiones nuevas no modifican trabajos existentes; la ruta manual actual permanece como excepción autorizada durante la transición.
 
-**Estado de Fase 1 (10 de octubre de 2026):** Uriel confirma que se desplegó y que las funciones probadas en producción trabajan correctamente. El código conserva rutas publicadas por Producto, snapshots y las correcciones/divisiones de partidas de la entrega. La prueba integrada de cotización aceptada → orden → ruta y el guardado de la ruta desde la interfaz aún no se volvieron a ejecutar en esta sesión; conservar esos dos casos en la regresión técnica posterior.
+**Estado de Fase 1 (10 de octubre de 2026):** se reportó en producción el despliegue inicial y el funcionamiento de las funciones probadas. El código conserva rutas publicadas por `CommercialItem`, snapshots y las correcciones/divisiones de partidas. Mantener en regresión los casos integrados de cotización aceptada → orden → ruta y el guardado de ruta desde la interfaz.
 
 ## Fase 2 — estimación, máquinas y calendario laboral
 
@@ -61,7 +63,7 @@ Este backlog implementa las reglas acordadas sin reconstruir cotizaciones, descu
 
 **Puerta de salida:** casos medidos reales validan el estimador; hay prueba de trabajo de 24 horas distribuido en jornadas de diez horas y de colisión concurrente de reservas.
 
-**Estado de Fase 2 (10 de octubre de 2026):** el código incorpora rendimiento numérico validado en la ficha del equipo, tiempos de preparación y limpieza, factor de eficiencia y vigencia; mantiene la capacidad textual anterior sin convertirla. El área de impresión se obtiene de medidas por cantidad. Los metros lineales de laminado y los cm de trayectoria de corte se capturan como cargas físicas explícitas; no se infiere longitud de corte desde área o número de piezas. También hay estimación manual auditada, registro de tiempo real, jornada 08:00–18:00, feriados, mantenimiento, averías, horas extra autorizadas, reservas divididas por día, secuencia, exclusión de solapes mediante bloqueo transaccional de máquina y asignación posterior de operador. Uriel confirma que las mediciones de tiempo son buenas y que la migración `Version20261010150000` está aplicada en Hostinger: estado `44/44`, última versión `20261010150000`; confirmó que `u692972268_printflow_dev` es la base productiva. También ejecutó la suite de unidad de Producción con **13 pruebas y 16 aserciones**, y confirmó que el esquema está bien. Queda pendiente únicamente la prueba de dos reservas concurrentes contra MySQL. El calendario visual, las prioridades y el riesgo siguen en fases posteriores.
+**Estado de Fase 2 (10 de octubre de 2026):** el código incorpora rendimiento numérico validado en la ficha del equipo, tiempos de preparación y limpieza, factor de eficiencia y vigencia; mantiene la capacidad textual anterior sin convertirla. El área de impresión se obtiene de medidas por cantidad. Los metros lineales de laminado y los cm de trayectoria de corte se capturan como cargas físicas explícitas; no se infiere longitud de corte desde área o número de piezas. También hay estimación manual auditada, registro de tiempo real, jornada 08:00–18:00, feriados, mantenimiento, averías, horas extra autorizadas, reservas divididas por día, secuencia, exclusión de solapes mediante bloqueo transaccional de máquina y asignación posterior de operador. La última salida explícita de Hostinger en el registro compartido confirmó `Version20261010150000` y 44 migraciones aplicadas. La suite de unidad de Producción pasó con **13 pruebas y 16 aserciones**; la prueba de reservas concurrentes contra MySQL quedó pendiente. El calendario visual, las prioridades y el riesgo corresponden a fases posteriores.
 
 ## Fase 3 — compromisos, prioridades y reprogramación
 
@@ -77,9 +79,11 @@ Este backlog implementa las reglas acordadas sin reconstruir cotizaciones, descu
 
 **Puerta de salida:** simulación con trabajo activo, reserva futura Normal y nueva Urgente muestra que la Urgente toma el próximo hueco válido, la Normal se reubica sin solapes y ambas fechas/alertas se recalculan; cancelar la vista previa no modifica datos.
 
-**Estado de Fase 3 (10 de octubre de 2026):** implementación local preparada en esta entrega. Incluye fecha sugerida tres días laborables después del fin previsto, indicador de riesgo configurable (por defecto holgura de un día), compromiso editable con motivo y auditoría, prioridad por partida, vista previa de desplazamientos y riesgos, confirmación con huella de versión para rechazar una agenda obsoleta, protección de trabajos iniciados y reservas fijadas, y bloqueo global de cambios de agenda en MySQL. Las pruebas de unidad de Producción pasaron con **17 pruebas y 25 aserciones** en PHP 8.2; la prueba funcional de permisos/ausencia de importes quedó añadida, pero esta sesión no pudo crear el caché aislado bajo `var/integration-qa`. La migración nueva es `Version20261010160000`; falta ejecutar la regresión funcional desde PowerShell normal y el escenario MySQL concurrente antes de cerrar la fase o desplegarla. La vista diaria/semanal con filtros permanece en Fase 5.
+**Estado de Fase 3 (11 de octubre de 2026):** se implementaron fecha sugerida con margen laboral, indicador de riesgo, compromiso editable con motivo y auditoría, prioridad por partida, vista previa de desplazamientos y riesgos, protección de trabajos iniciados/reservas fijadas y bloqueo de cambios de agenda. El runbook registra validación local posterior: suite de Producción con **17 pruebas y 25 aserciones** y `ServiceOrderCommercialAccessTest` con **9 pruebas y 347 aserciones**. Se reportó un error al convertir fechas al confirmar prioridad en producción; la corrección se incorporó y cubrió en local. El intento productivo demuestra que la ruta se ejecutó, no que la reprogramación corregida o su estado de migraciones estén certificados. La concurrencia MySQL y una nueva comprobación productiva siguen pendientes. La vista diaria/semanal con filtros permanece en Fase 5.
 
 **Actualización UX (11 de octubre de 2026):** se simplifica el detalle de orden según PF-P3-05 antes de avanzar a la siguiente fase. La interfaz agrupa preparación automática y reserva de la orden, pide solo datos faltantes, mantiene excepciones plegadas y exige motivo únicamente al cambiar una fecha compromiso existente. La reserva de toda la orden debe conservar atomicidad MySQL y verificarse en el entorno funcional antes de despliegue.
+
+La interfaz actual también presenta una barra de avance por etapas con el siguiente paso pendiente y agrupa la navegación de Operación en secciones por tarea y permisos. Esto prepara el recorrido diario, pero no sustituye el tablero de calendario de Fase 5.
 
 ## Fase 4 — ejecución, calidad y entrega
 
@@ -96,7 +100,7 @@ Este backlog implementa las reglas acordadas sin reconstruir cotizaciones, descu
 
 **Puerta de salida:** recorrido completo con dos roles desde orden hasta producción terminada y entrega; transiciones inválidas, acceso a pasos ajenos y descargas no autorizadas se rechazan.
 
-**Corrección de cierre (11 de octubre de 2026):** PF-P4-02 incorpora liberación de huecos por pausa/incidencia, suspensión del pronóstico, recuperación de agenda al resolver/reanudar, cálculo del tiempo restante y protección de trabajo activo y reservas fijadas. PF-P4-05 transfiere `delivery.confirm` a Ventas y lo retira del rol de Calidad/Entrega en migración y bootstrap. Las fechas de intentos se leen como UTC. El alta idempotente de Mesa de preprensa (Diseño) y Estación de acabados (Enrollado) utiliza catálogos y servicio de equipos existentes, con estimación manual y sin inventar capacidades. El paso inicial `PRE-DISENO` no requiere operador asignado; iniciar y liberar arte depende del permiso `production.design.review`. Ver [reglas y despliegue](Fase-4-Cierre-Agenda-y-Permisos-2026-10-11.md). El recorrido final en producción sigue pendiente; esta actualización no declara cerrada toda la fase.
+**Avance registrado (11 de octubre de 2026):** PF-P4-02 incorpora liberación de huecos por pausa/incidencia, suspensión del pronóstico, recuperación de agenda al resolver/reanudar, cálculo del tiempo restante y protección de trabajo activo y reservas fijadas. PF-P4-05 asigna `delivery.confirm` a Ventas y lo retira de Calidad/Entrega en migración y bootstrap. Las fechas de intentos se leen como UTC. El comando idempotente para Mesa de preprensa y Estación de acabados reutiliza los catálogos existentes y conserva estimación manual. El paso `PRE-DISENO` no requiere operadora asignada; la acción depende del permiso `production.design.review`. Las pruebas locales y el procedimiento están en el [registro técnico de agenda y permisos](../implementacion/2026-10-11-agenda-y-permisos.md). El recorrido completo y la migración en producción no están certificados por ese registro.
 
 ## Fase 5 — tablero y calendario DayPilot Lite
 
@@ -142,5 +146,5 @@ La primera entrega utilizable puede cerrar Fases 0–2: orden con ruta, estimaci
 2. **Dos modelos de Producto:** el cotizador usa `CommercialItem`; `Product` existe pero no se encontró en la ruta de cotización/orden. Evitar rutas duplicadas y documentar el vínculo futuro si se necesita.
 3. **Capacidad textual:** las cinco velocidades sembradas requieren validación y factores reales; no importarlas automáticamente como rendimiento efectivo.
 4. **Restricción única de operación por partida:** ruta inicial v1 no repite operación. Retrabajo se modela como intento, preservando historia. Revisar índice si se acuerdan repeticiones de ruta en el futuro.
-5. **Estado de entorno no comprobado:** migraciones aplicadas, `role_permissions` y Hostinger deben verificarse antes de modificar datos. PHP 8.2.31 tiene `pdo_mysql`; `pdo_sqlite` no está cargado por defecto. El comando PHPUnit actual no puede abrir `tests/bootstrap.php` dentro de esta sesión, aunque PowerShell sí lo lee. Los comandos exactos para repetir pruebas, lint, inspección de permisos y despliegue están en el runbook; faltan esos resultados desde consola normal y SSH real.
+5. **Verificación de entorno por fecha:** la última salida explícita de migraciones Hostinger recogida en el runbook fue `Version20261010150000`. Reportes posteriores muestran peticiones a rutas más nuevas, pero no sustituyen el estado de migraciones, la consulta de permisos ni el smoke test. Verificar los tres contra el checkout objetivo antes de liberar.
 6. **Licencias y legibilidad:** DayPilot Lite cumple día por máquina y semana horizontal por máquina bajo Apache 2.0. Una semana con día × máquina en columnas necesitaría otra composición y no forma parte de esta entrega; FullCalendar Scheduler v3 o actual no constituye una alternativa gratuita para el uso comercial cerrado.

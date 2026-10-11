@@ -1,6 +1,8 @@
 # PrintFlow — FSD de producción y trazabilidad
 
-**Versión:** 1.2 · **Fecha:** 11 de octubre de 2026 · **Estado:** reglas funcionales acordadas con Uriel; diseño técnico sujeto a verificación de la base de cada entorno.
+**Versión:** 1.2 · **Fecha:** 11 de octubre de 2026 · **Estado:** especificación funcional base; aplicar las decisiones posteriores resumidas en el índice y el roadmap.
+
+> **Precedencia y vigencia:** este FSD conserva los requisitos de la etapa inicial. Cuando una decisión posterior difiere, prevalecen el [roadmap y sus actualizaciones](../roadmap/fases-y-historias.md) y la [guía operativa vigente](../operacion/guia-operativa-planificacion-a-entrega.md). Entre las precisiones posteriores: Ventas confirma «Entregado»; la revisión de Diseño se habilita por permiso sin requerir asignación de operador; la pausa libera la máquina y actualiza la agenda; el correo automático al cliente sigue pospuesto.
 
 ## 1. Propósito y alcance
 
@@ -155,4 +157,4 @@ La restricción única `source_quotation_id` de `service_orders` y `source_quota
 
 ## 11. Verificación previa a implementación y liberación
 
-Antes de migrar: consultar `doctrine:migrations:status`, esquema real y `role_permissions` de cada entorno; revisar datos de los cinco equipos con el taller; comprobar si `products` tiene uso operativo no localizado; verificar que las migraciones nuevas no afecten las existentes. En el PHP local se comprobó `pdo_mysql` y no aparece `pdo_sqlite` en `php -m`. Un intento anterior descubrió la prueba pero omitió los casos por esa extensión. En este turno, `bin/phpunit --configuration phpunit.dist.xml --filter ServiceOrderCommercialAccessTest --do-not-cache-result` falló al abrir `tests/bootstrap.php`, aunque PowerShell confirma que el archivo existe. Las órdenes `lint:*`, la base remota y Hostinger aún no están verificadas en una consola/servidor con acceso normal. El [runbook de validación y despliegue](Runbook-Validacion-y-Deploy-Hostinger.md) contiene los comandos concretos de diagnóstico, consultas SQL y secuencia de liberación; la ruta SSH anotada allí es histórica y debe comprobarse en hPanel.
+Este apartado describe la revisión técnica inicial y sus límites a esa fecha; sus observaciones de extensiones, caché y pruebas ya no representan el estado más reciente. Las salidas posteriores y comandos vigentes están en el [runbook de validación y despliegue](../operacion/validacion-y-despliegue-hostinger.md) y en el [estado actual del módulo](../estado-actual.md). Antes de migrar, consulta el estado de Doctrine, el esquema y los permisos efectivos del entorno objetivo.

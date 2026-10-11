@@ -1,4 +1,6 @@
-# Fase 1 — Contratos y núcleo de trazabilidad
+# Registro técnico — contratos y núcleo de trazabilidad
+
+> Registro cronológico de una entrega; no corresponde a la Fase 1 del roadmap de producto. Consulta [fases y criterios vigentes](../roadmap/fases-y-historias.md).
 
 Fecha: 10 de octubre de 2026  
 Estado: implementada en código y migrada en la base de desarrollo.
@@ -56,7 +58,7 @@ Los permisos introducidos son `production.*`, `quality.*` y `delivery.*`; la mig
 
 ## Migración aplicada
 
-Archivo: [Version20261010160000.php](../migrations/Version20261010160000.php)
+Archivo: [Version20261010160000.php](../../../migrations/Version20261010160000.php)
 
 La migración es aditiva. Añade las columnas e índices de estado a `service_orders`, las tablas de intentos/eventos y los permisos/rol. La simulación de Doctrine reportó 11 sentencias y finalizó correctamente con `--dry-run`; después se aplicó correctamente como `DoctrineMigrations\Version20261010160000`.
 

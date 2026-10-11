@@ -14,6 +14,18 @@ Esta guía describe el flujo disponible en la aplicación para una orden de serv
 6. **Ventas** confirma si el cliente recogerá o recibirá un envío.
 7. **Calidad/Entrega** registra la salida cuando es envío; **Ventas** confirma la entrega final al cliente.
 
+## Cómo se muestra el progreso y la navegación
+
+El detalle de la orden presenta cinco etapas —**Planificación, Diseño, Producción, Calidad y Entrega**— en una secuencia horizontal. Cada etapa marca si está pendiente, en curso o completa; el encabezado resume el estado actual y el detalle indica qué falta. Durante producción se muestra cuántas operaciones ya terminaron. La vista conserva los datos comerciales detrás de `service_orders.view_commercial`; el progreso operativo no los requiere.
+
+El menú **Operación** se agrupa por intención y solo muestra enlaces que el perfil puede usar:
+
+- **Trabajo diario:** órdenes de servicio, Diseño, Impresión, Ejecución, Calidad y Entregas.
+- **Planificación del taller:** rutas, jornada, equipos, operaciones y áreas.
+- **Materiales y proveedores:** proveedores, materiales y categorías relacionadas.
+
+La agrupación reduce el bloque de enlaces que ve cada perfil, sin crear permisos nuevos. Administradores con permisos amplios verán más opciones; Diseño u Operador verán principalmente su trabajo diario.
+
 ```mermaid
 flowchart LR
     subgraph V[Ventas]

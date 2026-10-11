@@ -702,11 +702,11 @@ Puntos a validar en Hostinger:
 - Compatibilidad con MySQL/MariaDB.
 - Límites de memoria y tiempo de ejecución.
 
-El procedimiento actualizado de validación, migraciones, Composer,
-AssetMapper, caché y smoke test está en
-[docs/Runbook-Validacion-y-Deploy-Hostinger.md](docs/Runbook-Validacion-y-Deploy-Hostinger.md).
-No ejecutar un despliegue hasta confirmar allí la ruta real del sitio, la versión
-PHP y que el dominio sirve únicamente la carpeta `public/`.
+La documentación organizada de producción y trazabilidad, incluidos el
+procedimiento de validación, migraciones, Composer, AssetMapper, caché y smoke
+test, está en [docs/produccion-trazabilidad/README.md](docs/produccion-trazabilidad/README.md).
+No ejecutar un despliegue hasta confirmar allí la ruta real del sitio, la
+versión PHP y que el dominio sirve únicamente la carpeta `public/`.
 
 La carpeta pública del proyecto debe ser:
 

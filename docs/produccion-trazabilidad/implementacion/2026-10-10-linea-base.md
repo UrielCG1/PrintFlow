@@ -1,8 +1,10 @@
-# PrintFlow — Fase 0: línea base y preparación de trazabilidad
+# Registro técnico — línea base y preparación de trazabilidad
+
+> Registro histórico de línea base. Las decisiones funcionales posteriores del [roadmap](../roadmap/fases-y-historias.md) sustituyen cualquier propuesta que haya cambiado, incluida la notificación automática al cliente, que quedó pospuesta.
 
 **Fecha:** 10 de octubre de 2026  
 **Estado:** completada en código local y base de desarrollo; las consultas de desarrollo requieren mantener activo el túnel SSH local.  
-**Referencia funcional:** [Estrategia de implementación de trazabilidad](Estrategia-Implementacion-Trazabilidad-2026-10-10.md).
+**Referencia funcional:** [Estrategia de implementación](../definicion/estrategia-de-implementacion.md).
 
 ## Resultado
 
@@ -58,7 +60,7 @@ La orden abierta y sus dos partidas se conservan como datos históricos de prueb
 | Materiales | `MaterialVariant` tiene código único, código de barras opcional, especificaciones y unidades. | El código de barras de variante es la base correcta para validar el material técnico, sin activar inventario. |
 | Consumo | `ProductionMaterialUsage` contiene cantidad prevista, real, desperdicio y procedencia. | Debe ampliarse con paso/intento y hacerse obligatoria la cantidad real en los cierres definidos por la estrategia. |
 | Auditoría y seguridad | `AuditLogger`, `PermissionVoter`, permisos granulares y separación de importes comerciales en órdenes. | Las acciones nuevas se implementan como permisos y eventos, más validación de asignación y pertenencia del recurso. |
-| Correo | Symfony Mailer, servicios de correo de cotización y configuración SMTP existente. | Permite implementar la bandeja transaccional de aviso de recolección sin introducir otro proveedor por defecto. |
+| Correo | Symfony Mailer, servicios de correo de cotización y configuración SMTP existente. | Los correos comerciales se conservan; automatizar avisos de trazabilidad queda fuera del alcance vigente. |
 
 ## Brecha frente a la estrategia vigente
 
@@ -77,7 +79,7 @@ La tabla siguiente distingue capacidades comprobadas en código de los component
 | Retrabajo con historial | No existe modelo de intento/retrabajo. | Enlazar intento nuevo con el afectado e invalidar únicamente resultados dependientes. |
 | Producción terminada tras revisión de Calidad | `ServiceOrderStatus` actualmente solo distingue planificación pendiente/planificada. | Separar estado de planificación, producción y entrega; liberar con control de concurrencia. |
 | Recoger en sucursal, envío y entrega | Hay datos de dirección/método de entrega comercial, no hitos operativos. | Crear `READY_FOR_PICKUP`, `READY_FOR_SHIPMENT`, `SHIPPED` y `DELIVERED` con responsables. |
-| Correo automático de recolección | Existe infraestructura SMTP, no una outbox de trazabilidad. | Crear evento transaccional, procesador, reintentos técnicos y trazabilidad de envío. |
+| Brecha inicial: aviso automático de recolección | Existe infraestructura SMTP, no una outbox de trazabilidad. | La propuesta de automatizarlo se pospuso; el alcance actual conserva aviso manual. |
 | Vista por área y tablero de Calidad | Hay vistas de órdenes, rutas y calendario; no paneles por etapa. | Crear proyecciones operativas sin importes y colas de Diseño, Impresión, Acabados y Calidad/Entregas. |
 
 ## Hallazgos que afectan el diseño
@@ -99,7 +101,7 @@ No requieren nueva decisión funcional:
 - Impresión exige escaneo de máquina y material; el jefe de Producción o Administrador puede aprobar una sustitución compatible con motivo e historial.
 - Impresión y acabados que consuman insumos registran material total utilizado y desperdicio; no descuentan inventario.
 - Calidad/Entregas o Administrador revisa la orden completa, puede devolver partidas y es quien marca Producción terminada.
-- Recolección en sucursal genera correo automático al solicitante después de liberar producción. Domicilio conserva los hitos Enviado y Entregado, sin correo de recordatorio.
+- El aviso al cliente por una orden lista queda como acción manual; no se envía correo automático desde el flujo de trazabilidad. Domicilio conserva los hitos Enviado y Entregado.
 
 ## Bloqueos y acción requerida
 
@@ -110,6 +112,6 @@ No requieren nueva decisión funcional:
 
 No se solicita una contraseña por este documento ni debe enviarse por chat. La autorización de acceso se resolvió en Hostinger y las consultas se ejecutan mediante el túnel SSH. Mantener la sesión de PuTTY abierta mientras se requiera acceso a la base de desarrollo.
 
-## Siguiente paso técnico propuesto
+## Siguiente paso técnico propuesto en esa fecha
 
 La fase 0 terminó. La siguiente modificación de código es el núcleo de trazabilidad: estados operativos separados, rol y permisos de Calidad/Entregas, eventos de transición e invariantes de ejecución. Se implementará mediante una migración nueva y aditiva, conservando la orden abierta como caso de incorporación y sin activar inventario.

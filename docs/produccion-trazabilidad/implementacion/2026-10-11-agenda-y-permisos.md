@@ -1,8 +1,10 @@
-# Fase 4: agenda ante detenciones, confirmación de entrega y puestos manuales
+# Registro técnico — agenda ante detenciones, confirmación de entrega y puestos manuales
+
+> Registro cronológico de una entrega; no corresponde a la Fase 4 del roadmap de producto. Consulta [fases y criterios vigentes](../roadmap/fases-y-historias.md).
 
 ## Comportamiento
 
-- Pausar libera la máquina para otros trabajos, según decisión de Uriel. La cola relacionada se reorganiza usando prioridad, compromiso y creación, dentro de lunes a viernes de 08:00 a 18:00 y las excepciones vigentes.
+- Pausar libera la máquina para otros trabajos. La cola relacionada se reorganiza usando prioridad, compromiso y creación, dentro de lunes a viernes de 08:00 a 18:00 y las excepciones vigentes.
 - La operación pausada o bloqueada y sus pasos dependientes quedan sin pronóstico. No se inventa una duración de la detención. Las reservas pasadas y las fijadas se conservan; las fijadas pueden requerir revisión del jefe.
 - Resolver una incidencia sin intento pausado recupera sus reservas. Si el intento sigue pausado, la recuperación espera a que el operador reanude.
 - Reanudar reserva el tiempo estimado pendiente descontando solamente los segundos activos del intento actual, redondeados hacia arriba a minutos, con mínimo de un minuto. No descuenta las horas de pausa ni altera la estimación original. Es una proyección que puede variar con el tiempo real.
@@ -26,7 +28,7 @@ El bootstrap corrige también la concesión antigua, porque su comportamiento ha
 
 El área se toma de la operación. Cada equipo sigue teniendo una sola operación primaria; la estación de acabados no cubre automáticamente Laminado, Corte u otros acabados. No se asignan marcas, modelos, anchuras ni rendimientos inventados. El comando valida usuario administrador, operaciones y áreas activas antes de guardar, reutiliza `EquipmentManager`, registra auditoría y evita duplicados por código. Un código existente con otra operación se rechaza.
 
-Estado verificado: ambos puestos ya están creados en la base local `printflow_p1_20261004`. En producción, el alta por pantalla devuelve 403 a la cuenta administradora actual debido a los permisos de equipos pendientes de sincronizar; todavía no se han creado allí. Los comandos de despliegue siguientes corrigen el permiso y registran los dos puestos.
+Estado registrado al preparar esta entrega: ambos puestos ya están creados en la base local de desarrollo. En producción, el alta por pantalla devolvía 403 por permisos de equipos pendientes de sincronizar; el registro no confirma que los equipos se hayan creado posteriormente allí. Los comandos de despliegue siguientes sincronizan permisos y registran los dos puestos.
 
 ## Migraciones
 
@@ -50,11 +52,11 @@ cd C:\PrintFlow
 
 ## Despliegue Hostinger sin respaldos
 
-Después de revisar, confirmar y subir a `main` los archivos de esta entrega, ejecutar en la carpeta productiva confirmada por Uriel. Si `git status --short` muestra cambios del servidor, resolverlos antes de hacer pull; no descartarlos.
+Después de revisar y publicar esta entrega en `main`, ejecutar en la carpeta productiva confirmada en hPanel. Si `git status --short` muestra cambios del servidor, resolverlos antes de hacer pull; no descartarlos.
 
 ```bash
 set -e
-cd /home/u692972268/domains/teramorphosis.com/printflow_app
+cd /RUTA/REAL/DE/PRINTFLOW
 git status --short
 git branch --show-current
 if [ "$(git branch --show-current)" != "main" ] || [ -n "$(git status --porcelain)" ]; then
@@ -71,8 +73,8 @@ php bin/console cache:clear --env=prod --no-debug
 php bin/console doctrine:migrations:status --env=prod --no-debug
 php bin/console doctrine:migrations:migrate --dry-run --no-interaction --env=prod --no-debug
 php bin/console doctrine:migrations:migrate --no-interaction --env=prod --no-debug
-php bin/console app:equipment:ensure-manual-stations --actor=ucarbajal --dry-run --env=prod --no-debug
-php bin/console app:equipment:ensure-manual-stations --actor=ucarbajal --env=prod --no-debug
+php bin/console app:equipment:ensure-manual-stations --actor=USUARIO_ADMINISTRADOR --dry-run --env=prod --no-debug
+php bin/console app:equipment:ensure-manual-stations --actor=USUARIO_ADMINISTRADOR --env=prod --no-debug
 php bin/console cache:clear --env=prod --no-debug
 php bin/console cache:warmup --env=prod --no-debug
 php bin/console asset-map:compile --env=prod --no-debug
@@ -80,7 +82,7 @@ php bin/console doctrine:migrations:status --env=prod --no-debug
 php bin/console doctrine:schema:validate --skip-sync --env=prod --no-debug
 ```
 
-Detenerse si cualquier comando falla. El estado final debe mostrar `Version20261011140000` y cero migraciones nuevas. No ejecutar `doctrine:schema:update --force`. La migración corrige los permisos específicos; no es obligatorio ejecutar todo el bootstrap para aplicar esta entrega. Recargar la sesión después de migrar si la pantalla conserva permisos anteriores.
+Detenerse si cualquier comando falla. El estado final debe mostrar `Version20261011140000` y cero migraciones nuevas. Sustituir `USUARIO_ADMINISTRADOR` por una cuenta autorizada para registrar auditoría. No ejecutar `doctrine:schema:update --force`. La migración corrige los permisos específicos; no es obligatorio ejecutar todo el bootstrap para aplicar esta entrega. Recargar la sesión después de migrar si la pantalla conserva permisos anteriores.
 
 Validación por SQL, sin exponer credenciales:
 

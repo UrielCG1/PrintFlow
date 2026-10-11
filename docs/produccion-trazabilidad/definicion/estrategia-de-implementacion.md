@@ -1,9 +1,11 @@
 # PrintFlow — Estrategia de implementación de trazabilidad
 
-**Versión:** 1.0  
-**Fecha:** 10 de octubre de 2026  
-**Estado:** decisiones funcionales confirmadas por el solicitante; arquitectura y nombres nuevos propuestos para implementación.  
-**Alcance del entregable:** estrategia documental. No implica que los módulos, migraciones, escáneres o notificaciones descritos ya estén implementados.
+**Versión:** 1.0
+**Fecha:** 10 de octubre de 2026
+**Estado:** documento de diseño inicial; las decisiones posteriores registradas en el roadmap y la guía operativa prevalecen cuando lo actualizan.
+**Alcance del entregable:** estrategia documental. No implica que todos los módulos, migraciones, escáneres o notificaciones descritos ya estén implementados.
+
+> **Nota de lectura:** las fases numeradas en este documento forman parte de una propuesta técnica inicial. No son el roadmap de producto vigente. Usa [fases e historias](../roadmap/fases-y-historias.md) para el orden actual; las notificaciones automáticas continúan pospuestas.
 
 ## 1. Objetivo, referencias y precedencia
 
@@ -23,8 +25,8 @@ El jefe de Producción y el Administrador supervisan las etapas productivas; no 
 
 | Referencia | Uso en esta estrategia |
 | --- | --- |
-| [FSD-Produccion-y-Trazabilidad-2026-10-10.md](FSD-Produccion-y-Trazabilidad-2026-10-10.md) | Base de rutas versionadas, planificación, estimaciones, agenda, permisos, snapshots e historial. |
-| Decisiones del solicitante posteriores al FSD, confirmadas el 10 de octubre de 2026 | Reglas vigentes para Diseño obligatorio, Calidad/Entregas, cierre, escaneos, consumos y entrega. Prevalecen cuando modifican el FSD. |
+| [FSD de producción y trazabilidad](FSD-produccion-y-trazabilidad.md) | Requisitos funcionales y base para rutas versionadas, planificación, estimaciones, agenda, permisos, snapshots e historial. |
+| Decisiones funcionales posteriores al FSD | Reglas vigentes para ejecución, permisos, agenda, entrega y comunicación. El roadmap y la guía operativa resumen las actualizaciones. |
 | Código local de `C:\PrintFlow` | Identificar qué reutilizar y dónde extender la arquitectura actual. La inspección es de código, no de datos ni de ejecución en producción. |
 | Proyecto local `C:\MetroTickets` | Referencia de presentación por perfil: indicadores, listas con folio y estado, detalle de solicitud, resultados por elemento, responsable y acciones contextuales. |
 
@@ -36,14 +38,14 @@ MetroTickets se toma como referencia de usabilidad y seguimiento. La implementac
 | --- | --- | --- |
 | Archivo aportado por el cliente | Podía omitirse Diseño, conservando preprensa. | Todas las partidas pasan por Diseño. Si el archivo original es viable, se autoriza esa misma versión sin volver a subirla. La captura de referencia sigue siendo obligatoria. |
 | Cierre de producción | Cierre manual por una persona autorizada, sin una etapa propia de Calidad. | Todas las partidas terminadas en Acabados habilitan automáticamente la revisión de la orden en Calidad/Entregas. Este perfil o el Administrador marca **Producción terminada** después de verificar la totalidad. |
-| Avisos de orden lista | Fuera de la primera versión. | Al liberar producción de una orden de recolección en sucursal se genera automáticamente el correo al solicitante. |
-| Confirmación de entrega | Ventas confirmaba la entrega. | Calidad/Entregas o Administrador confirma la entrega. Ventas consulta su seguimiento, salvo que también tenga el permiso del perfil de entregas. |
-| Domicilio | Sin un flujo logístico detallado. | Calidad/Entregas o Administrador registra **Enviado** y posteriormente **Entregado al cliente** como hitos distintos. |
+| Avisos de orden lista | Fuera de la primera versión. | El correo automático al cliente permanece pospuesto; el aviso de orden lista es una acción manual o fase posterior. |
+| Confirmación de entrega | Ventas confirma la entrega. | Ventas conserva `delivery.confirm` y confirma «Entregado». Calidad/Entregas revisa y libera Producción y registra «Enviado» cuando aplica. |
+| Domicilio | Sin un flujo logístico detallado. | Calidad/Entregas o Administrador registra **Enviado**; Ventas registra **Entregado al cliente** con `delivery.confirm`. |
 | Consumo real | Registro manual sin obligatoriedad detallada por tarea. | Impresión exige consumo y desperdicio explícitos. Acabados los exige para las tareas que consumen material adicional. No se descuentan existencias. |
 
-La última respuesta confirma expresamente conservar «Enviado» y «Entregado» en el punto 8. Por ello, hacer el envío a domicilio registra **Enviado**; la recepción por el cliente permite registrar **Entregado**. Son dos acciones distintas a cargo de Calidad/Entregas o Administrador.
+El envío a domicilio registra **Enviado**; la recepción por el cliente permite registrar **Entregado**. Son dos hitos distintos: Calidad/Entregas o Administración registra el envío; Ventas confirma la recepción usando `delivery.confirm`.
 
-Se retira la propuesta inicial de correo al Administrador por órdenes listas para envío y la opción «Recordar más tarde». Las órdenes a domicilio listas se presentan en la bandeja de Calidad/Entregas. El correo automático nuevo de este módulo corresponde a recolección en sucursal. Los correos comerciales existentes se conservan como flujos separados.
+Las órdenes listas se presentan en la bandeja operativa correspondiente. No se incorpora correo automático nuevo en esta fase; los correos comerciales existentes se conservan como flujos separados.
 
 ## 2. Decisiones confirmadas y propuestas complementarias
 
@@ -61,8 +63,8 @@ Se retira la propuesta inicial de correo al Administrador por órdenes listas pa
 | D08 | Una máquina o material distinto requiere sustitución compatible autorizada por jefe/Administrador, con motivo e historial. |
 | D09 | Jefe/Administrador autoriza retrabajos. Ventas/Administrador autoriza cambios comerciales. |
 | D10 | Calidad/Entregas revisa la orden cuando todas sus partidas han terminado; puede devolver las incorrectas al área correspondiente. |
-| D11 | Calidad/Entregas o Administrador libera **Producción terminada** y confirma la entrega. |
-| D12 | Recolección en sucursal genera automáticamente el correo al solicitante al liberar producción. Domicilio conserva Enviado y Entregado sin el recordatorio propuesto inicialmente. |
+| D11 | Calidad/Entregas o Administrador libera **Producción terminada**; Ventas confirma la entrega con el permiso `delivery.confirm`. |
+| D12 | El correo automático al cliente queda pospuesto. Domicilio conserva los hitos Enviado y Entregado, registrados por los perfiles autorizados. |
 
 ### 2.2. Propuestas técnicas y reglas complementarias adoptadas para esta estrategia
 
@@ -99,7 +101,7 @@ La inspección local muestra una aplicación Symfony con PHP 8.2 como plataforma
 | Entidades completas en vistas actuales | `ServiceOrderController` entrega `serviceOrder` a Twig. | Las nuevas pantallas operativas reciben DTO con campos permitidos. Evitar que el control dependa únicamente de condicionales Twig. |
 | Archivo del solicitante por partida | `QuotationItem.attachmentPath`, `attachmentOriginalName`, `requestDetails`; subida actual a `public/uploads/quotations`. | Registrar archivos protegidos, versionados y vinculados a la partida. Migrar adjuntos públicos con comprobación de integridad. |
 | Copia actual de partida | `ServiceOrderManager::copyItem` copia especificaciones y datos comerciales, pero no crea un registro propio de archivo operativo. | Agregar referencia estable al archivo, requisitos técnicos y petición original depurada dentro de la creación de la orden. |
-| Correo existente | `QuotationMailer`, `PublicQuoteRequestMailer`, configuración de Mailer y `MAILER_SETUP.md`. | Reutilizar infraestructura SMTP y remitente. Añadir aviso de recolección mediante una bandeja transaccional propia de este módulo. |
+| Correo existente | `QuotationMailer`, `PublicQuoteRequestMailer`, configuración de Mailer y `MAILER_SETUP.md`. | Los correos comerciales existentes se conservan; la notificación automática de trazabilidad queda pospuesta. |
 | Seguridad y auditoría | `PermissionVoter`, `AuditLogger`, `permissions`, `role_permissions`. | Reutilizar permisos en servidor y auditoría. Validar además asignación y pertenencia de cada partida/paso. |
 
 El correo público actual presenta una cotización calculada incluso cuando el registro queda como REQUEST. Para cumplir la nueva definición de negocio, su pantalla, correo y PDF deben distinguir **solicitud/estimación preliminar** de **cotización revisada y emitida por Ventas**. La existencia de un cálculo automático no reemplaza la revisión comercial.
@@ -142,7 +144,7 @@ flowchart TD
     RE --> EC
 ```
 
-La disponibilidad para Calidad se calcula automáticamente; **Producción terminada requiere la acción autorizada de Calidad/Entregas o Administrador**. Un fallo del correo no revierte una liberación válida ni borra el evento de producción terminada.
+La disponibilidad para Calidad se calcula automáticamente; **Producción terminada requiere la acción autorizada de Calidad/Entregas o Administrador**. La confirmación de entrega es un evento posterior de Ventas; no depende de notificación automática.
 
 ### 4.2. Ciclo comercial
 
@@ -420,52 +422,39 @@ El jefe confirma el alcance de retrabajo y qué resultados posteriores dejan de 
 
 El enum actual no permite revisar una cotización ACCEPTED mediante el mismo `canBeRevised()` que usa estados anteriores. Para cambios posteriores a la aceptación se requiere un caso de uso explícito de modificación del alcance, enlazado a la cotización y orden originales. No habilitar edición libre del snapshot aceptado ni crear una segunda orden operativa para representar el mismo trabajo. Propuesta: una modificación comercial versionada, con evidencia de nueva aceptación cuando cambie lo pactado y evaluación de impacto productivo.
 
-Si una orden liberada y todavía no entregada recibe una no conformidad autorizada, registrar nueva revisión, retirar disponibilidad para entrega y cancelar avisos de recolección pendientes de envío. Un correo ya enviado permanece como evidencia; el responsable deberá coordinar la corrección con el solicitante. No se añade un correo automático nuevo de incidencia en esta versión.
+Si una orden liberada y todavía no entregada recibe una no conformidad autorizada, registrar nueva revisión y retirar disponibilidad para entrega. La coordinación de la corrección con el solicitante es manual; no hay avisos automáticos de trazabilidad pendientes de envío.
 
 Una orden ya enviada requiere resolver la custodia/retorno del material antes de ejecutar retrabajo. Una orden ya entregada conserva su hito de entrega; reclamaciones posteriores se registran como incidencias vinculadas, sin alterar silenciosamente la entrega histórica.
 
-## 9. Entrega y correo automático
+## 9. Entrega y notificaciones
+
+> **Vigencia:** no hay correo automático al cliente en el alcance vigente; el contacto se realiza manualmente o mediante una fase futura. Ventas conserva el permiso `delivery.confirm` para confirmar la recepción. Calidad/Entregas libera Producción y registra el despacho.
 
 ### 9.1. Recolección en sucursal
 
 1. Calidad libera producción.
-2. En la misma transacción se establece READY_FOR_PICKUP y se registra el evento de aviso pendiente.
-3. El procesador de notificaciones envía al solicitante el correo de orden lista, con folio, sucursal y datos de recolección.
-4. Calidad/Entregas o Administrador confirma entrega física y registra DELIVERED, actor, fecha y persona receptora. Evidencia adicional puede configurarse según operación.
+2. El sistema establece READY_FOR_PICKUP y muestra la orden en la bandeja para coordinar la recolección.
+3. El equipo coordina manualmente el aviso al cliente por sus canales comerciales; no se genera un correo automático al liberar producción.
+4. Ventas confirma la entrega física y registra DELIVERED con actor y fecha. Evidencia adicional puede configurarse según operación.
 
-Ventas puede consultar el resultado. Un permiso comercial no concede automáticamente la acción de entregar.
+Ventas puede consultar y confirmar la entrega mediante `delivery.confirm`.
 
 ### 9.2. Entrega a domicilio
 
 1. Calidad libera producción y establece READY_FOR_SHIPMENT.
 2. La orden aparece en «Listas para envío» de Calidad/Entregas con dirección, contacto, paquetes y datos logísticos necesarios.
 3. Al despachar se registra SHIPPED, persona responsable, fecha, modalidad/transportista y referencia de envío cuando corresponda.
-4. Cuando se confirma recepción, Calidad/Entregas o Administrador registra DELIVERED, fecha y receptor/evidencia disponible.
+4. Cuando se confirma recepción, Ventas registra DELIVERED, fecha y receptor/evidencia disponible mediante `delivery.confirm`.
 
-Sin dirección válida no se habilita Enviado. Enviado no cuenta como Entregado en indicadores. Si el mismo responsable envía y entrega inmediatamente, el sistema puede agrupar la captura en un formulario, guardando ambos eventos con confirmaciones y tiempos propios.
+Sin dirección válida no se habilita Enviado. Enviado no cuenta como Entregado en indicadores. El despacho y la confirmación de recepción mantienen sus eventos y permisos independientes, incluso si ocurren el mismo día.
 
 No hay correo automático al Administrador ni recordatorio de una hora. Las pendientes se consultan en el panel; no se configura una integración de transportista como requisito de v1.
 
-### 9.3. Bandeja transaccional de notificaciones
+### 9.3. Correo al cliente pospuesto
 
-Reutilizar Symfony Mailer para el transporte SMTP. La documentación permite envío directo y envío diferido mediante Messenger; esta estrategia propone una **bandeja transaccional en base de datos y comando procesador** para adaptarse al hosting, sin asumir que Messenger esté instalado. [Referencia: Symfony Mailer 7.4](https://symfony.com/doc/7.4/mailer.html).
+La integración automática con Symfony Mailer queda para una fase posterior. Si se retoma, primero se deben acordar el evento, destinatario y mecanismo de entrega; esta versión no exige una bandeja ni un procesador de avisos de trazabilidad.
 
-El evento de recolección se inserta junto con la liberación de calidad; el envío ocurre después del commit. Un fallo SMTP no debe repetir el cierre, imprimir etiquetas otra vez ni perder el aviso pendiente.
-
-| Aspecto | Propuesta |
-| --- | --- |
-| Destinatario | Snapshot explícito del solicitante de la orden. Correo ausente/inválido genera incidencia de notificación visible, sin inventar destinatario. |
-| Identidad | Clave única por orden, liberación vigente y tipo `pickup_ready`. Doble clic no crea otro aviso de la misma liberación. |
-| Estados | Pendiente, Procesando, Enviado, Fallido, Resultado incierto y Cancelado. |
-| Procesamiento | Comando de consola ejecutado por cron en hosting o worker supervisado si el entorno lo permite. Validar su disponibilidad antes de liberar el módulo. |
-| Reintentos | Política técnica limitada y configurable para fallos conocidos; no son recordatorios al usuario ni repiten correos enviados. |
-| Antes de enviar | Revalidar producción liberada, modalidad pickup y que la orden todavía esté pendiente de recolección. Cancelar mensajes obsoletos. |
-| Observabilidad | Intentos, siguiente intento, error depurado, destinatario y resultado; sin credenciales ni cuerpo completo de archivos. |
-| Reenvío manual | Permiso separado, confirmación de destinatario y motivo; no reabre producción. |
-
-SMTP no proporciona por sí solo entrega exactamente una vez al destinatario. Si el transporte acepta el mensaje y el proceso falla antes de guardar el resultado, marcarlo incierto y resolver antes de reenviar automáticamente. Usar un identificador estable del mensaje y registro persistente para reducir duplicados; no prometer recepción garantizada. «Enviado» del correo significa aceptación por el transporte, no lectura por el cliente.
-
-Si una liberación se revoca antes del procesamiento, cancelar el aviso pendiente. Una nueva liberación tras retrabajo tiene identidad propia; el panel muestra el aviso anterior y permite identificar por qué existe un nuevo ciclo de disponibilidad.
+Los estados y el diseño de bandeja descritos en propuestas anteriores quedan fuera de la implementación actual. Si se retoma el correo automático, documentar un diseño actualizado y sus controles antes de iniciar esa fase.
 
 ## 10. Información y experiencia por perfil
 
@@ -486,11 +475,11 @@ Estos patrones observados sirven para presentar la información. La línea de ti
 | Perfil | Información principal | Acciones principales |
 | --- | --- | --- |
 | Ventas | Solicitudes, borradores, cotizaciones, aceptación, pedidos en producción, compromisos y entrega. Datos comerciales según permiso. | Revisar, ajustar, emitir, registrar aceptación, crear orden y tramitar cambio comercial. |
-| Diseño | Partidas asignadas, petición y especificaciones depuradas, originales, bloqueos y urgencias. | Validar original, preparar arte, subir captura, registrar instrucciones y liberar. |
+| Diseño | Partidas pendientes de revisión, petición y especificaciones depuradas, originales, bloqueos y urgencias. | Validar original, preparar arte, subir captura, registrar instrucciones y liberar mediante `production.design.review`; no requiere asignación como operadora. |
 | Impresión | Cola asignada, archivo autorizado, referencia grande, máquina/material previstos, cantidad y estado de escaneos. | Escanear, iniciar/pausar, solicitar sustitución, registrar consumo y finalizar con etiqueta. |
 | Acabados | Recepción por QR, tareas asignadas, referencia, consumibles requeridos y empaque. | Recibir, ejecutar, registrar consumo cuando corresponde y completar partida. |
 | Jefe de Producción | Todas las áreas, carga, agenda, excepciones, incidencias, compromisos y retrabajos. | Asignar, planificar, aprobar sustituciones/retrabajos, reprogramar y resolver bloqueos. |
-| Calidad/Entregas | Órdenes completas pendientes de revisión, devoluciones, listas para recoger/enviar, enviadas y entregadas. Dirección/contacto solo cuando sean necesarios para entrega. | Revisar, devolver partidas, liberar producción, registrar envío, confirmar entrega y gestionar evidencia. |
+| Calidad/Entregas | Órdenes completas pendientes de revisión, devoluciones, listas para recoger/enviar y enviadas. Dirección/contacto solo cuando sean necesarios para entrega. | Revisar, devolver partidas, liberar producción, registrar envío y gestionar evidencia. |
 | Administrador | Vista global y capacidades según permisos efectivos. | Funciones de supervisión y de Calidad/Entregas autorizadas, además de administración. |
 
 Los operadores conservan consulta de todos los trabajos operativos conforme al FSD, con «Mis tareas» como vista inicial. Consultar otra partida no habilita ejecutarla. No reciben precios, subtotales, descuentos, IVA, total, costos ni márgenes.
@@ -501,7 +490,7 @@ Cabecera: folio de orden, referencia comercial visible según permiso, compromis
 
 Matriz de partidas: Producto, cantidad, etapa actual, responsable, Diseño, Impresión, Acabados, Calidad, bloqueo y siguiente acción. Mostrar contadores separados, por ejemplo **Acabados 3/3**, **Calidad 2/3**, **Producción pendiente de liberación**. Evitar una barra «100 % terminado» que confunda fabricación con entrega.
 
-Línea de tiempo filtrable por orden/partida: solicitud, revisión, aceptación, creación, asignación, liberación de arte, escaneos, sustituciones, ejecución, consumos, QR, empaque, calidad, devolución, retrabajo, liberación, correo, envío y entrega. Cada evento muestra actor, fecha local, resultado y motivo pertinente. Archivos y cantidades apuntan a su versión histórica.
+Línea de tiempo filtrable por orden/partida: solicitud, revisión, aceptación, creación, asignación, liberación de arte, escaneos, sustituciones, ejecución, consumos, QR, empaque, calidad, devolución, retrabajo, liberación, envío y entrega. Cada evento muestra actor, fecha local, resultado y motivo pertinente. Archivos y cantidades apuntan a su versión histórica.
 
 En tablet, usar captura y QR visibles, botones de acción claros, campos grandes y un paso de captura por tarea. Mensajes como «Material diferente al autorizado: solicita sustitución» o «Falta captura de referencia» deben explicar qué falta y quién puede resolverlo. Conservar capturas no enviadas ante errores de validación; confirmar éxito solo tras la respuesta del servidor.
 
@@ -526,7 +515,7 @@ Los perfiles se implementan mediante los permisos granulares existentes. Código
 | Registrar Enviado y Entregado | No por permiso comercial | No | No por permiso de jefatura | Sí | Sí |
 | Consultar dirección de entrega | Según función comercial | No por permiso operativo | Solo si necesita función logística autorizada | Sí, para entregar | Según permisos |
 
-Familias de permisos nuevas propuestas: `production.view`, `production.route.manage`, `production.plan`, `production.assign`, `production.execute`, `production.substitution.approve`, `production.rework.authorize`, `production.files.upload`, `production.files.download`, `production.labels.print`, `quality.review`, `quality.return`, `quality.release`, `delivery.ship`, `delivery.confirm`, `delivery.notification.retry`. Conservar o mapear permisos existentes para no romper acceso a órdenes.
+Familias de permisos nuevas propuestas: `production.view`, `production.route.manage`, `production.plan`, `production.assign`, `production.execute`, `production.substitution.approve`, `production.rework.authorize`, `production.files.upload`, `production.files.download`, `production.labels.print`, `quality.review`, `quality.return`, `quality.release`, `delivery.ship` y `delivery.confirm`. Conservar o mapear permisos existentes para no romper acceso a órdenes. Una futura integración de correo requerirá permisos propios solo cuando se defina ese alcance.
 
 `PermissionVoter` actual comprueba códigos sin un sujeto de entidad; por eso la asignación, el área, la pertenencia orden–partida–paso y la vigencia de un intento se validan adicionalmente en el servicio de aplicación, o mediante un voter de recurso nuevo si se decide incorporarlo.
 
@@ -584,7 +573,7 @@ Todos los nombres nuevos son propuestas. La fase 0 comprobará el esquema realme
 | `production_nonconformities` / vínculos de retrabajo | Defecto, área de retorno, alcance afectado, autorización y resolución. |
 | Registro de modificaciones de alcance | Cambios comerciales/técnicos autorizados y su relación con los snapshots originales. |
 | Eventos productivos y de entrega | Historial anexado con referencia de orden, partida, paso/intento y correlación. |
-| `notification_outbox` | Evento de disponibilidad para recoger, clave única, destinatario, estado, procesamiento y resultado. |
+| Notificación de entrega | Pospuesta. No se crea `notification_outbox` ni un procesador automático en el alcance actual. |
 | Capacidades, calendarios y reservas del FSD | Equipo, jornada/excepciones, rendimiento estructurado, segmentos de reserva y reprogramación. |
 
 La calidad final es un agregado de revisión de la **orden completa**, con detalle por partida. No se duplicará como una operación de máquina reservada en cada ruta para representar la misma inspección integral. Si se necesita inspección interna durante una tarea, será una operación distinta y explícita.
@@ -597,9 +586,9 @@ La calidad final es un agregado de revisión de la **orden completa**, con detal
 - Transacción para toda transición que cambie avance, consumo, eventos y habilitación del siguiente paso.
 - Bloquear siempre en un orden consistente: orden → partidas por ID → planes/ejecuciones → recursos afectados. Revalidar después de obtener bloqueo.
 - Usar versión esperada de recurso e identificador de comando para resolver doble clic, repetición de escaneo y conflictos de dos tablets. No permitir dos intentos activos para el mismo paso sin un caso de retrabajo autorizado.
-- Notificaciones y generación de artefactos se procesan después del commit mediante identidades persistidas. Fallos externos no repiten la fabricación.
+- Si se incorpora una integración externa o generación de artefactos en una fase futura, procesarla después del commit y evitar que un reintento repita la fabricación.
 - Eventos históricos y referencias utilizadas no se borran. Restricciones FK con `RESTRICT`, baja lógica y correcciones explícitas cuando correspondan.
-- Añadir índices de colas por área/estado/asignado, orden/partida, trazabilidad por instante, etiqueta vigente y outbox por estado/próximo intento.
+- Añadir índices de colas por área/estado/asignado, orden/partida, trazabilidad por instante y etiqueta vigente.
 
 Doctrine soporta bloqueo pesimista dentro de una transacción explícita. Es congruente con el patrón ya usado por `ServiceOrderManager`; las pruebas de carrera deben ejecutarse en el motor de base de datos objetivo. [Referencia: Doctrine ORM 3.6, transacciones y concurrencia](https://www.doctrine-project.org/projects/doctrine-orm/en/3.6/reference/transactions-and-concurrency.html).
 
@@ -642,9 +631,9 @@ Los hitos se pueden desarrollar y validar de forma incremental en un entorno de 
 | 4. Impresión y escaneos | Lector tablet, máquina/material, sustitución autorizada, intentos, consumo real, desperdicio, salida/QR y reimpresión. | Una discordancia bloquea; alternativa compatible permite continuar con historial; cierre y QR son idempotentes. |
 | 5. Acabados y empaque | Recepción QR, ruta de tareas, consumo por insumo requerido y empaque con etiqueta. | Corte no pide insumos innecesarios; ojillos/laminado exigen captura; partidas completas habilitan Calidad. |
 | 6. Calidad y retrabajos | Revisión de orden, conformidad por salida vigente, devoluciones, autorización e intentos de retrabajo, liberación manual. | Orden incompleta o no conforme no puede liberarse; retrabajo conserva consumos/archivos/eventos anteriores. |
-| 7. Entrega y notificaciones | Bandejas pickup/shipping, liberación y aviso de recolección, procesador/outbox, Enviado y Entregado. | El correo solo se genera para pickup liberada; domicilio conserva dos hitos; errores externos son visibles y recuperables. |
+| 7. Entrega | Bandejas pickup/shipping, liberación, Enviado y Entregado. | Calidad libera producción, registra el envío cuando aplica y Ventas confirma la recepción; el contacto con el cliente es manual. |
 | 8. Agenda y supervisión completa | Calendario del FSD, capacidad estructurada, segmentos, prioridades, reprogramación, riesgo y reportes operativos. | Reprogramación concurrente no solapa recursos ni oculta incidencias; vistas respetan permisos. |
-| 9. Piloto y liberación | Migración ensayada, prueba con trabajos reales controlados, capacitación por perfil, respaldos y observabilidad. | Escenarios de aceptación aprobados; cron/SMTP y etiquetas probados en el entorno objetivo; responsables capacitados. |
+| 9. Piloto y liberación | Migración ensayada, prueba con trabajos controlados, capacitación por perfil y observabilidad. | Escenarios de aceptación aprobados; etiquetas y flujo de entrega probados en el entorno objetivo; responsables capacitados. |
 
 ### 14.1. Detalle de la fase 0
 
@@ -654,7 +643,7 @@ Los hitos se pueden desarrollar y validar de forma incremental en un entorno de 
 4. Revisar catálogo de materiales/presentaciones, códigos existentes, unidades, especificaciones y compatibilidad con los cinco equipos del FSD; calibrar rendimientos con el taller.
 5. Revisar formatos/tamaños de archivos y adjuntos públicos; definir almacenamiento, respaldo y acceso protegido.
 6. Confirmar tablets/navegadores, HTTPS, cámara/lector e impresora de etiquetas; escoger y fijar bibliotecas QR/lectura compatibles.
-7. Comprobar capacidad de cron/worker y SMTP del hosting, sin modificar credenciales desde este documento.
+7. Confirmar que el flujo manual de contacto y los permisos de entrega están claros para cada perfil.
 8. Estimar trabajo y orden de despliegue con esas evidencias. No fijar fechas de implementación a partir de velocidades de máquina textuales ni de capacidades del hosting no verificadas.
 
 ### 14.2. Migración de órdenes en curso
@@ -664,7 +653,7 @@ Los hitos se pueden desarrollar y validar de forma incremental en un entorno de 
 - Órdenes sin ejecución registrada: inicializar ruta/Diseño si corresponde al estado real, sin eventos ficticios de trabajo realizado.
 - Órdenes ya fabricadas: responsable verifica su situación y registra incorporación al seguimiento con fecha real conocida o «dato histórico no disponible». No inventar operador, escaneo, consumo ni aprobación retroactivos.
 - Órdenes ya entregadas: conservar condición histórica mediante migración explícita; no enviarlas a Diseño ni disparar correos de recolección.
-- La migración no genera avisos automáticamente. Solo una liberación nueva y vigente de Calidad del flujo habilitado puede originar el correo.
+- La migración y la liberación de Calidad no generan avisos automáticos al cliente.
 - Migrar adjuntos con verificación de integridad antes de bloquear rutas públicas; conservar respaldo hasta validar usuarios y procesos.
 - Reversión operativa: deshabilitar acciones nuevas mediante configuración y detener procesador si hace falta, preservando historia. No eliminar registros productivos para volver atrás.
 
@@ -692,8 +681,8 @@ La verificación futura se centra en reglas de negocio, seguridad, carreras y fa
 | A16 | Calidad devuelve solo una partida a Impresión. | Bloqueo de orden, autorización de jefe, nuevo intento/consumo/QR y revisión; partidas correctas conservan sus resultados vigentes. |
 | A17 | Calidad devuelve una partida a Acabados sin defecto de impresión. | Nuevo intento de acabado; archivo y QR de impresión permanecen válidos. |
 | A18 | Liberación concurrente con devolución o cambio de versión. | Se rechaza cierre basado en datos obsoletos; no se genera aviso válido de disponibilidad. |
-| A19 | Orden pickup liberada; doble clic en Producción terminada. | Una liberación y un aviso por esa liberación; entrega sigue pendiente hasta confirmación física. |
-| A20 | SMTP falla o el worker se interrumpe. | Producción sigue liberada; aviso pendiente/fallido/incierto visible; recuperación sin repetir cierre ni enviar indiscriminadamente. |
+| A19 | Orden pickup liberada; doble clic en Producción terminada. | Una liberación; el contacto al cliente sigue siendo manual y la entrega queda pendiente hasta confirmación de Ventas. |
+| A20 | Se confirma dos veces la misma entrega o se reintenta una petición. | El evento de entrega no se duplica y la orden conserva su estado válido. |
 | A21 | Orden shipping liberada. | Bandeja de envío; sin correo al Administrador ni recordatorio; registrar Enviado no la marca Entregada. |
 | A22 | Dirección no definida para envío. | No permite Enviado; Calidad/Ventas ve el dato faltante y quién lo corrige. |
 | A23 | Operador intenta obtener importes o documentos comerciales por URL, JSON, PDF, QR o auditoría. | Acceso denegado o proyección depurada sin datos comerciales; no basta ocultar columnas. |
@@ -716,17 +705,17 @@ Orden OT-2026-000123 con dos partidas: una lona y un vinil.
 5. La orden aparece en Calidad. P001 es conforme; P002 presenta defecto de impresión y se devuelve.
 6. El jefe autoriza reimpresión de P002; su consumo anterior permanece. El nuevo intento registra material adicional, genera otra etiqueta y exige repetir sus acabados.
 7. Calidad revisa la nueva salida de P002; la conformidad vigente de P001 se mantiene. Libera la orden completa.
-8. Si es pickup, el sistema genera el correo al solicitante y Calidad confirma después la recolección. Si es shipping, Calidad registra envío y posteriormente entrega.
+8. Si es pickup, el aviso al cliente es manual y Ventas confirma la recolección. Si es shipping, Calidad registra el envío y Ventas confirma posteriormente la recepción.
 
 Este caso debe poder reconstruirse desde el detalle de la orden, desde la partida P002 y desde cualquiera de sus etiquetas, mostrando cuál salida quedó vigente y por qué.
 
 ## 16. Operación, indicadores y definición de terminado
 
-Indicadores iniciales por perfil: solicitudes por revisar, partidas listas/en curso/bloqueadas por área, antigüedad de cola, tiempo estimado/real, consumo y desperdicio por unidad/material, retrabajos por causa, órdenes esperando Calidad, listas para recoger/enviar, enviadas pendientes de recepción, entregadas y avisos fallidos.
+Indicadores iniciales por perfil: solicitudes por revisar, partidas listas/en curso/bloqueadas por área, antigüedad de cola, tiempo estimado/real, consumo y desperdicio por unidad/material, retrabajos por causa, órdenes esperando Calidad, listas para recoger/enviar, enviadas pendientes de recepción y entregadas.
 
 No sumar m², metros y piezas en una cifra de consumo; agrupar por material y unidad. No contar una reimpresión como otra partida vendida ni un envío como entrega. La productividad considera intentos y sus tiempos, con retrabajo visible.
 
-El monitoreo cubre errores de transición, archivos faltantes, etiquetas pendientes, reservas en conflicto y procesador de correos inactivo. Los responsables reciben estas incidencias en las bandejas del sistema; no se amplía automáticamente el alcance de correos.
+El monitoreo cubre errores de transición, archivos faltantes, etiquetas pendientes y reservas en conflicto. El correo automático de trazabilidad no forma parte del alcance vigente.
 
 La implementación se considera terminada cuando:
 
@@ -734,7 +723,7 @@ La implementación se considera terminada cuando:
 2. Cada partida completa recorre Diseño, Impresión y Acabados con las evidencias y consumos requeridos.
 3. Escaneos, sustituciones, versiones, etiquetas y retrabajos conservan identidad y trazabilidad verificables.
 4. Toda la orden pasa por Calidad/Entregas y solo ese perfil/Administrador autorizado libera producción después de revisar todas las partidas vigentes.
-5. Recolección genera aviso automático recuperable y entrega confirmada; domicilio registra Enviado y Entregado por separado.
+5. Ventas confirma la entrega. En domicilio, Enviado y Entregado quedan como hitos separados; el aviso al cliente se gestiona manualmente.
 6. Permisos, archivos y proyecciones protegen datos comerciales y personales conforme a cada función.
 7. Rutas, agenda y planificación cumplen las reglas compatibles del FSD; la migración histórica no inventa evidencia.
 8. El ciclo completo y sus excepciones se validan con el motor, hosting y dispositivos objetivo, y cada perfil puede consultar su siguiente acción sin perder el seguimiento por partida.
