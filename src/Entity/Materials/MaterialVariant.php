@@ -3,10 +3,11 @@ declare(strict_types=1);
 namespace App\Entity\Materials;
 use App\Entity\Catalog\MeasurementUnit;
 use App\Entity\Common\Timestampable;
+use App\Repository\Materials\MaterialVariantRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity,ORM\Table(name:'material_variants'),ORM\HasLifecycleCallbacks]
+#[ORM\Entity(repositoryClass: MaterialVariantRepository::class),ORM\Table(name:'material_variants'),ORM\HasLifecycleCallbacks]
 #[ORM\UniqueConstraint(name:'uniq_material_variants_code',columns:['code'])]
 #[ORM\UniqueConstraint(name:'uniq_material_variants_barcode',columns:['barcode'])]
 #[ORM\Index(name:'idx_variants_material_active',columns:['material_id','is_active'])]
@@ -38,5 +39,24 @@ class MaterialVariant
     /** Señala la opción propuesta cuando una receta solo exige el material general. */ #[ORM\Column(name:'is_default')] private bool $isDefault=false;
     /** Permite utilizar esta presentación en nuevas operaciones. */ #[ORM\Column(name:'is_active')] private bool $isActive=true;
     public function __construct(Material $material,string $code,MeasurementUnit $purchaseUnit,MeasurementUnit $inventoryUnit,MeasurementUnit $consumptionUnit){$this->material=$material;$this->code=strtoupper(trim($code));$this->purchaseUnit=$purchaseUnit;$this->inventoryUnit=$inventoryUnit;$this->consumptionUnit=$consumptionUnit;$this->initializeTimestamps();}
-    public function getId():?int{return $this->id;} public function getMaterial():Material{return $this->material;} public function getCode():string{return $this->code;} public function isLotControlled():bool{return $this->lotControlled;} public function isExpirationControlled():bool{return $this->expirationControlled;}
+    public function getId():?int{return $this->id;}
+    public function getMaterial():Material{return $this->material;}
+    public function getCode():string{return $this->code;}
+    public function getBarcode():?string{return $this->barcode;}
+    public function setBarcode(?string $barcode):self
+    {
+        $barcode = strtoupper(trim((string) $barcode));
+        if ($barcode !== '' && preg_match('/^[A-Z0-9._-]{3,80}$/D', $barcode) !== 1) {
+            throw new \InvalidArgumentException('El código de barras del material no tiene un formato válido.');
+        }
+        $this->barcode = $barcode !== '' ? $barcode : null;
+        return $this;
+    }
+    /** @return array<string, mixed> */
+    public function getSpecifications():array{return $this->specifications;}
+    public function getConsumptionUnit():MeasurementUnit{return $this->consumptionUnit;}
+    public function isActive():bool{return $this->isActive;}
+    public function isConsumable():bool{return $this->material->isConsumable();}
+    public function isLotControlled():bool{return $this->lotControlled;}
+    public function isExpirationControlled():bool{return $this->expirationControlled;}
 }

@@ -267,6 +267,15 @@
                     <i class="bi bi-palette" aria-hidden="true"></i>
                     <span>Diseño</span>
                 </a>
+                <a
+                    href="{{ path('admin_printing_index') }}"
+                    class="pf-sidebar__link {{ current_navigation == 'printing' ? 'is-active' : '' }}"
+                    {% if current_navigation == 'printing' %}aria-current="page"{% endif %}
+                    data-action="ui--sidebar#close"
+                >
+                    <i class="bi bi-printer" aria-hidden="true"></i>
+                    <span>Impresión</span>
+                </a>
             {% endif %}
         {% endif %}
 

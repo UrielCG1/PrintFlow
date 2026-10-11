@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity\Orders;
 
 use App\Entity\Equipment\Equipment;
+use App\Entity\Materials\MaterialVariant;
 use App\Entity\Operations\Operation;
 use App\Entity\Production\ProductionOperationExecution;
 use App\Entity\Users\User;
@@ -53,6 +54,11 @@ class ServiceOrderOperationPlan
     #[ORM\JoinColumn(name: 'equipment_id', nullable: true, onDelete: 'RESTRICT')]
     private ?Equipment $equipment = null;
 
+    /** Material técnico previsto para esta operación cuando requiere consumo. */
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(name: 'material_variant_id', nullable: true, onDelete: 'RESTRICT')]
+    private ?MaterialVariant $materialVariant = null;
+
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(name: 'created_by_user_id', nullable: false, onDelete: 'RESTRICT')]
     private User $createdBy;
@@ -77,6 +83,10 @@ class ServiceOrderOperationPlan
     /** @var array<string, mixed>|null */
     #[ORM\Column(name: 'equipment_snapshot', type: Types::JSON, nullable: true)]
     private ?array $equipmentSnapshot = null;
+
+    /** @var array<string, mixed>|null */
+    #[ORM\Column(name: 'material_snapshot', type: Types::JSON, nullable: true)]
+    private ?array $materialSnapshot = null;
 
     /** @var array<string, mixed>|null */
     #[ORM\Column(name: 'route_step_snapshot', type: Types::JSON, nullable: true)]
@@ -198,6 +208,26 @@ class ServiceOrderOperationPlan
     {
         $this->equipment = $equipment;
         $this->equipmentSnapshot = $equipment === null ? null : $equipmentSnapshot;
+
+        return $this;
+    }
+
+    public function getMaterialVariant(): ?MaterialVariant
+    {
+        return $this->materialVariant;
+    }
+
+    /** @return array<string, mixed>|null */
+    public function getMaterialSnapshot(): ?array
+    {
+        return $this->materialSnapshot;
+    }
+
+    /** @param array<string, mixed>|null $materialSnapshot */
+    public function setMaterialVariant(?MaterialVariant $materialVariant, ?array $materialSnapshot): self
+    {
+        $this->materialVariant = $materialVariant;
+        $this->materialSnapshot = $materialVariant === null ? null : $materialSnapshot;
 
         return $this;
     }
