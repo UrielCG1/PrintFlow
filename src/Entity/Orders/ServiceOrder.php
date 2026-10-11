@@ -6,6 +6,9 @@ namespace App\Entity\Orders;
 
 use App\Entity\Quotations\Quotation;
 use App\Entity\Users\User;
+use App\Enum\Orders\ProductionOrderStatus;
+use App\Enum\Orders\ServiceOrderDeliveryStatus;
+use App\Enum\Orders\ServiceOrderFulfillmentMethod;
 use App\Enum\Orders\ServiceOrderStatus;
 use App\Repository\Orders\ServiceOrderRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -18,6 +21,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\UniqueConstraint(name: 'uniq_service_orders_folio', columns: ['folio'])]
 #[ORM\UniqueConstraint(name: 'uniq_service_orders_source_quotation', columns: ['source_quotation_id'])]
 #[ORM\Index(name: 'idx_service_orders_status_created_at', columns: ['status', 'created_at'])]
+#[ORM\Index(name: 'idx_service_orders_production_status_created_at', columns: ['production_status', 'created_at'])]
+#[ORM\Index(name: 'idx_service_orders_delivery_status_created_at', columns: ['delivery_status', 'created_at'])]
 #[ORM\Index(name: 'idx_service_orders_created_by_user', columns: ['created_by_user_id'])]
 #[ORM\HasLifecycleCallbacks]
 class ServiceOrder
@@ -41,6 +46,15 @@ class ServiceOrder
     #[ORM\Column(length: 30, enumType: ServiceOrderStatus::class)]
     private ServiceOrderStatus $status = ServiceOrderStatus::PENDING_PLANNING;
 
+    #[ORM\Column(name: 'production_status', length: 30, enumType: ProductionOrderStatus::class, options: ['default' => 'WAITING_DESIGN'])]
+    private ProductionOrderStatus $productionStatus = ProductionOrderStatus::WAITING_DESIGN;
+
+    #[ORM\Column(name: 'delivery_status', length: 30, enumType: ServiceOrderDeliveryStatus::class, options: ['default' => 'NOT_READY'])]
+    private ServiceOrderDeliveryStatus $deliveryStatus = ServiceOrderDeliveryStatus::NOT_READY;
+
+    #[ORM\Column(name: 'fulfillment_method', length: 20, enumType: ServiceOrderFulfillmentMethod::class, options: ['default' => 'undefined'])]
+    private ServiceOrderFulfillmentMethod $fulfillmentMethod = ServiceOrderFulfillmentMethod::UNDEFINED;
+
     #[ORM\Column(name: 'source_quotation_folio', length: 40)]
     private string $sourceQuotationFolio;
 
@@ -59,6 +73,13 @@ class ServiceOrder
     /** @var array<string, mixed>|null */
     #[ORM\Column(name: 'delivery_address_snapshot', type: Types::JSON, nullable: true)]
     private ?array $deliveryAddressSnapshot = null;
+
+    /** @var array<string, mixed> */
+    #[ORM\Column(name: 'delivery_contact_snapshot', type: Types::JSON)]
+    private array $deliveryContactSnapshot = [];
+
+    #[ORM\Column(name: 'delivery_preparation_issue', length: 255, nullable: true)]
+    private ?string $deliveryPreparationIssue = 'La modalidad de entrega sigue pendiente de definición por Ventas.';
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $notes = null;
@@ -96,6 +117,10 @@ class ServiceOrder
 
     #[ORM\Column(name: 'planned_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $plannedAt = null;
+
+    #[ORM\Version]
+    #[ORM\Column(name: 'traceability_version', type: Types::INTEGER, options: ['unsigned' => true, 'default' => 1])]
+    private int $traceabilityVersion = 1;
 
     #[ORM\Column(name: 'created_at', type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
@@ -173,6 +198,33 @@ class ServiceOrder
         return $this->status;
     }
 
+    public function getProductionStatus(): ProductionOrderStatus
+    {
+        return $this->productionStatus;
+    }
+
+    public function getDeliveryStatus(): ServiceOrderDeliveryStatus
+    {
+        return $this->deliveryStatus;
+    }
+
+    public function getFulfillmentMethod(): ServiceOrderFulfillmentMethod
+    {
+        return $this->fulfillmentMethod;
+    }
+
+    public function setFulfillmentMethod(ServiceOrderFulfillmentMethod $fulfillmentMethod): self
+    {
+        $this->fulfillmentMethod = $fulfillmentMethod;
+
+        return $this;
+    }
+
+    public function getTraceabilityVersion(): int
+    {
+        return $this->traceabilityVersion;
+    }
+
     public function getSourceQuotationFolio(): string
     {
         return $this->sourceQuotationFolio;
@@ -245,6 +297,40 @@ class ServiceOrder
         $this->deliveryAddressSnapshot = $deliveryAddressSnapshot;
 
         return $this;
+    }
+
+    /** @return array<string, mixed> */
+    public function getDeliveryContactSnapshot(): array
+    {
+        return $this->deliveryContactSnapshot;
+    }
+
+    /** @param array<string, mixed> $deliveryContactSnapshot */
+    public function setDeliveryContactSnapshot(array $deliveryContactSnapshot): self
+    {
+        $this->deliveryContactSnapshot = $deliveryContactSnapshot;
+
+        return $this;
+    }
+
+    public function getDeliveryPreparationIssue(): ?string
+    {
+        return $this->deliveryPreparationIssue;
+    }
+
+    public function setDeliveryPreparationIssue(?string $deliveryPreparationIssue): self
+    {
+        $deliveryPreparationIssue = trim((string) $deliveryPreparationIssue);
+        $this->deliveryPreparationIssue = $deliveryPreparationIssue !== ''
+            ? mb_substr($deliveryPreparationIssue, 0, 255)
+            : null;
+
+        return $this;
+    }
+
+    public function isDeliveryPrepared(): bool
+    {
+        return $this->deliveryPreparationIssue === null;
     }
 
     public function getNotes(): ?string
@@ -414,6 +500,142 @@ class ServiceOrder
         return $this;
     }
 
+    /**
+     * La producción se inicia solamente después de planificar la orden. La
+     * primera operación de la ruta será Diseño, incluso cuando solo valide el
+     * archivo original del cliente.
+     */
+    public function beginProduction(): self
+    {
+        if (!$this->isPlanned()) {
+            throw new \DomainException('La orden debe estar planificada antes de iniciar Producción.');
+        }
+        if ($this->productionStatus !== ProductionOrderStatus::WAITING_DESIGN) {
+            throw new \DomainException('La orden no está pendiente de Diseño.');
+        }
+
+        $this->productionStatus = ProductionOrderStatus::IN_PRODUCTION;
+
+        return $this;
+    }
+
+    /** Se habilita Calidad cuando ya no quedan operaciones productivas pendientes. */
+    public function waitForQualityReview(): self
+    {
+        if ($this->productionStatus !== ProductionOrderStatus::IN_PRODUCTION) {
+            throw new \DomainException('Solo una orden en producción puede enviarse a Calidad.');
+        }
+
+        $this->productionStatus = ProductionOrderStatus::WAITING_QUALITY;
+
+        return $this;
+    }
+
+    /** La no conformidad de Calidad conserva la orden dentro del flujo productivo. */
+    public function returnForQualityRework(): self
+    {
+        if ($this->productionStatus !== ProductionOrderStatus::WAITING_QUALITY) {
+            throw new \DomainException('Solo una orden pendiente de Calidad puede devolverse a retrabajo.');
+        }
+
+        $this->productionStatus = ProductionOrderStatus::QUALITY_REWORK;
+
+        return $this;
+    }
+
+    /** Lo invoca el flujo de retrabajo autorizado antes de crear el nuevo intento. */
+    public function resumeProductionAfterQualityRework(): self
+    {
+        if ($this->productionStatus !== ProductionOrderStatus::QUALITY_REWORK) {
+            throw new \DomainException('La orden no se encuentra en retrabajo de Calidad.');
+        }
+
+        $this->productionStatus = ProductionOrderStatus::IN_PRODUCTION;
+
+        return $this;
+    }
+
+    /** La liberación requiere una revisión previa de Calidad. */
+    public function markProductionCompleted(): self
+    {
+        if ($this->productionStatus !== ProductionOrderStatus::WAITING_QUALITY) {
+            throw new \DomainException('La orden debe estar pendiente de Calidad para liberar la producción.');
+        }
+
+        $this->productionStatus = ProductionOrderStatus::PRODUCTION_COMPLETED;
+
+        return $this;
+    }
+
+    public function markReadyForPickup(): self
+    {
+        $this->assertProductionCompletedBeforeDelivery();
+        if ($this->deliveryStatus !== ServiceOrderDeliveryStatus::NOT_READY) {
+            throw new \DomainException('La orden ya tiene un estado de entrega.');
+        }
+
+        $this->deliveryStatus = ServiceOrderDeliveryStatus::READY_FOR_PICKUP;
+
+        return $this;
+    }
+
+    public function markReadyForShipment(): self
+    {
+        $this->assertProductionCompletedBeforeDelivery();
+        if ($this->deliveryStatus !== ServiceOrderDeliveryStatus::NOT_READY) {
+            throw new \DomainException('La orden ya tiene un estado de entrega.');
+        }
+
+        $this->deliveryStatus = ServiceOrderDeliveryStatus::READY_FOR_SHIPMENT;
+
+        return $this;
+    }
+
+    public function markShipped(): self
+    {
+        if ($this->deliveryStatus !== ServiceOrderDeliveryStatus::READY_FOR_SHIPMENT) {
+            throw new \DomainException('Solo una orden lista para envío puede marcarse como enviada.');
+        }
+
+        $this->deliveryStatus = ServiceOrderDeliveryStatus::SHIPPED;
+
+        return $this;
+    }
+
+    public function markDelivered(): self
+    {
+        if (!in_array($this->deliveryStatus, [
+            ServiceOrderDeliveryStatus::READY_FOR_PICKUP,
+            ServiceOrderDeliveryStatus::SHIPPED,
+        ], true)) {
+            throw new \DomainException('La orden debe estar lista para recoger o enviada antes de entregarse.');
+        }
+
+        $this->deliveryStatus = ServiceOrderDeliveryStatus::DELIVERED;
+
+        return $this;
+    }
+
+    /** @return array{planning_status: string, production_status: string, delivery_status: string, fulfillment_method: string, delivery_prepared: bool} */
+    public function traceabilityStateSnapshot(): array
+    {
+        return [
+            'planning_status' => $this->status->value,
+            'production_status' => $this->productionStatus->value,
+            'delivery_status' => $this->deliveryStatus->value,
+            'fulfillment_method' => $this->fulfillmentMethod->value,
+            'delivery_prepared' => $this->isDeliveryPrepared(),
+        ];
+    }
+
+    /** Marca la raíz de concurrencia cuando cambia una operación hija. */
+    public function touchTraceability(): self
+    {
+        $this->updatedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+
+        return $this;
+    }
+
     /** @return Collection<int, ServiceOrderItem> */
     public function getItems(): Collection
     {
@@ -444,5 +666,12 @@ class ServiceOrder
     public function refreshUpdatedAt(): void
     {
         $this->updatedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+    }
+
+    private function assertProductionCompletedBeforeDelivery(): void
+    {
+        if ($this->productionStatus !== ProductionOrderStatus::PRODUCTION_COMPLETED) {
+            throw new \DomainException('La producción debe estar liberada por Calidad antes de preparar la entrega.');
+        }
     }
 }

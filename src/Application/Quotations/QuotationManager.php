@@ -562,6 +562,7 @@ final class QuotationManager
             ->setFiscalAddressSnapshot($this->clientAddressSnapshot($fiscalAddress))
             ->setDeliveryAddressSnapshot($this->clientAddressSnapshot($deliveryAddress))
             ->setExpiresAt($data->expiresAt)
+            ->setDeliveryMethod($data->deliveryMethod)
             ->setNotes($data->notes);
 
         $resolvedItems = [];

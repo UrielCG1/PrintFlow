@@ -27,6 +27,8 @@
             </div>
             <div class="pf-page-header__actions">
                 <span class="pf-status-badge pf-status-badge--{{ serviceOrder.status.badgeTone }}">{{ serviceOrder.status.label }}</span>
+                <span class="pf-status-badge pf-status-badge--{{ serviceOrder.productionStatus.badgeTone }}">{{ serviceOrder.productionStatus.label }}</span>
+                <span class="pf-status-badge pf-status-badge--{{ serviceOrder.deliveryStatus.badgeTone }}">{{ serviceOrder.deliveryStatus.label }}</span>
                 <a href="{{ path('admin_service_orders_index') }}" class="btn pf-button pf-button--secondary">
                     <i class="bi bi-arrow-left" aria-hidden="true"></i>
                     Volver
@@ -74,6 +76,32 @@
                 </section>
             </div>
         </div>
+
+        <section class="pf-card mb-4">
+            <div class="pf-card__body">
+                <div class="row g-3">
+                    <div class="col-12 col-md-4">
+                        <span class="text-muted small d-block mb-1">Modalidad de entrega</span>
+                        <strong>{{ serviceOrder.fulfillmentMethod.label }}</strong>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <span class="text-muted small d-block mb-1">Contacto de entrega</span>
+                        <strong>{{ serviceOrder.deliveryContactSnapshot.name|default('Dato histórico no disponible') }}</strong>
+                        {% if serviceOrder.deliveryContactSnapshot.email|default(null) or serviceOrder.deliveryContactSnapshot.phone|default(null) %}
+                            <span class="d-block text-muted small mt-1">{{ serviceOrder.deliveryContactSnapshot.email|default('') }}{% if serviceOrder.deliveryContactSnapshot.email|default(null) and serviceOrder.deliveryContactSnapshot.phone|default(null) %} · {% endif %}{{ serviceOrder.deliveryContactSnapshot.phone|default('') }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <span class="text-muted small d-block mb-1">Preparación de entrega</span>
+                        {% if serviceOrder.deliveryPreparationIssue %}
+                            <span class="text-warning-emphasis">{{ serviceOrder.deliveryPreparationIssue }}</span>
+                        {% else %}
+                            <span class="text-success-emphasis">Datos completos para la modalidad seleccionada.</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </section>
 
         {% if is_granted('service_orders.view_commercial') %}
             <section class="pf-card mb-4">
@@ -144,7 +172,7 @@
                     <article class="border rounded p-3">
                         <header class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
                             <div>
-                                <span class="text-muted small">Partida {{ item.displayLineNumber }}</span>
+                                <span class="text-muted small">Partida {{ item.displayLineNumber }} · Rastreo {{ item.trackingCode }}</span>
                                 <h3 class="h6 mb-1">{{ item.commercialItemSnapshot.name ?? item.commercialItem.name }}</h3>
                                 <span class="text-muted small">{{ item.splitPosition is not null ? 'Cantidad de esta subpartida:' : 'Cantidad contratada:' }} {{ item.quantity }}</span>
                                 {% if item.productionSpecificationsSnapshot.summary|default(item.specificationsSnapshot.summary|default(null)) %}
@@ -153,8 +181,19 @@
                                 {% if item.routeVersion %}
                                     <span class="d-block text-muted small mt-1">Ruta aplicada: {{ item.routeVersion.nameSnapshot }} v{{ item.routeVersion.versionNumber }}</span>
                                 {% endif %}
+                                {% if item.sourceFileSnapshot.status|default(null) == 'CLIENT_FILE_RECEIVED' %}
+                                    <span class="d-block text-muted small mt-1"><i class="bi bi-paperclip" aria-hidden="true"></i> Archivo original del cliente registrado para revisión de Diseño.</span>
+                                {% elseif item.sourceFileSnapshot.status|default(null) == 'DESIGN_PREPARATION_REQUIRED' %}
+                                    <span class="d-block text-warning small mt-1"><i class="bi bi-palette" aria-hidden="true"></i> Diseño debe preparar o solicitar el archivo de impresión.</span>
+                                {% endif %}
                             </div>
-                            <span class="text-muted small">{{ plans|length }} {{ plans|length == 1 ? 'operación' : 'operaciones' }} activas</span>
+                            <div class="d-flex flex-column align-items-md-end gap-2">
+                                <span class="pf-status-badge pf-status-badge--{{ item.designStatus.badgeTone }}">{{ item.designStatus.label }}</span>
+                                <span class="text-muted small">{{ plans|length }} {{ plans|length == 1 ? 'operación' : 'operaciones' }} activas</span>
+                                {% if is_granted('production.view') %}
+                                    <a href="{{ path('admin_design_show', {id: item.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm">Abrir Diseño</a>
+                                {% endif %}
+                            </div>
                         </header>
 
                         {% if item.productionSpecificationsSnapshot._production_adjustment|default(null) %}
@@ -416,7 +455,7 @@
                         <tbody>
                             {% for item in itemsForDisplay %}
                                 <tr>
-                                    <td>{{ item.displayLineNumber }}</td>
+                                    <td>{{ item.displayLineNumber }}<span class="d-block text-muted small">{{ item.trackingCode }}</span></td>
                                     <td>
                                         <strong>{{ item.commercialItemSnapshot.name ?? item.commercialItem.name }}</strong>
                                         <span class="d-block text-muted small">{{ item.commercialItemSnapshot.code ?? '' }}</span>

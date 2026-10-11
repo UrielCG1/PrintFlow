@@ -14,18 +14,18 @@ use App\Repository\Clients\ClientContactRepository;
 use App\Service\Quotations\PublicQuoteRequestMailer;
 use App\Service\Quotations\PublicCustomerNumberMailer;
 use App\Service\Clients\ClientContactEmailVerifier;
+use App\Service\Production\ProductionFileStorage;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\{JsonResponse,Request,Response};
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\String\Slugger\SluggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 final class PublicQuoteRequestController extends AbstractController
 {
  #[Route('/cotizar',name:'public_quote_request',methods:['GET','POST'])]
- public function index(Request $request,EntityManagerInterface $em,SluggerInterface $slugger,PublicQuotationClientResolver $clientResolver,QuotationManager $manager,PublicQuoteRequestMailer $mailer,ClientContactEmailVerifier $emailVerifier):Response
+ public function index(Request $request,EntityManagerInterface $em,ProductionFileStorage $fileStorage,PublicQuotationClientResolver $clientResolver,QuotationManager $manager,PublicQuoteRequestMailer $mailer,ClientContactEmailVerifier $emailVerifier):Response
  {
   $data=new PublicQuotationRequestData();if(!$request->isMethod('POST'))$data->addItem(new PublicQuotationRequestItemData());
   $form=$this->createForm(PublicQuoteRequestType::class,$data);$form->handleRequest($request);$verifiedContact=null;
@@ -47,10 +47,9 @@ final class PublicQuoteRequestController extends AbstractController
     try{
      $customer=$clientResolver->resolve($data,$verifiedContact);$quotationData=new QuotationData();$quotationData->client=$customer->client;$quotationData->commercialContactId=(string)$customer->contact->getId();$quotationData->items=array_map(static fn(PublicQuotationRequestItemData $item)=>$item->toQuotationItemData(),$data->items);
      if($verifiedContact&&$data->deliveryMethod==='shipping'){foreach($em->getRepository(ClientAddress::class)->findForClient($customer->client) as $address){if($address->isActive()&&$address->isDeliveryAddress()){$quotationData->deliveryAddressId=(string)$address->getId();break;}}}
-     $uploadDirectory=$this->getParameter('kernel.project_dir').'/public/uploads/quotations';if(!is_dir($uploadDirectory))mkdir($uploadDirectory,0775,true);
-     foreach($form->get('items') as $index=>$itemForm){$file=$itemForm->get('attachment')->getData();if(!$file)continue;$name=$slugger->slug(pathinfo($file->getClientOriginalName(),PATHINFO_FILENAME)).'-'.bin2hex(random_bytes(6)).'.'.($file->guessExtension()?:'bin');$file->move($uploadDirectory,$name);$data->items[$index]->attachmentPath='uploads/quotations/'.$name;$data->items[$index]->attachmentOriginalName=$file->getClientOriginalName();}
+     foreach($form->get('items') as $index=>$itemForm){$file=$itemForm->get('attachment')->getData();if(!$file)continue;$stored=$fileStorage->storePublicRequest($file);$data->items[$index]->attachmentPath=$stored->internalPath;$data->items[$index]->attachmentOriginalName=$stored->originalName;}
      $quotation=$manager->createPublic($quotationData,$data);$mailer->send($quotation);if(!$customer->contact->isEmailVerified()&&$customer->contact->getEmailVerificationSentAt()===null){try{$emailVerifier->send($customer->contact);}catch(\Throwable){}}$this->addFlash('success','Tu solicitud fue confirmada y enviamos la cotización calculada a tu correo.');return $this->redirectToRoute('public_quote_request');
-    }catch(\DomainException|\InvalidArgumentException $exception){$form->addError(new FormError($exception->getMessage()));}
+    }catch(\DomainException|\InvalidArgumentException|\RuntimeException $exception){$form->addError(new FormError($exception->getMessage()));}
     }else{
      $messages=[];foreach($form->getErrors(true) as $error){$messages[]=$error->getMessage();}
      $form->addError(new FormError('No pudimos enviar la solicitud. Revisa los campos marcados: '.implode(' ',array_unique($messages))));

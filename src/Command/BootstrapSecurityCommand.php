@@ -36,6 +36,14 @@ final class BootstrapSecurityCommand extends Command
             'name' => 'Operador',
             'description' => 'Ejecución y actualización de etapas asignadas.',
         ],
+        'ROLE_DESIGN' => [
+            'name' => 'Diseño',
+            'description' => 'Revisión y autorización interna de archivos por partida.',
+        ],
+        'ROLE_QUALITY_DELIVERY' => [
+            'name' => 'Calidad/Entregas',
+            'description' => 'Revisión final de producción, liberación y confirmación de entrega.',
+        ],
     ];
 
     private const PERMISSIONS = [
@@ -110,6 +118,22 @@ final class BootstrapSecurityCommand extends Command
         'service_orders.view' => ['service_orders', 'view', 'Consultar órdenes operativas'],
         'service_orders.view_commercial' => ['service_orders', 'view_commercial', 'Consultar importes comerciales de órdenes'],
         'production_routes.manage' => ['production_routes', 'manage', 'Configurar rutas de producción'],
+        'production.view' => ['production', 'view', 'Consultar producción'],
+        'production.plan' => ['production', 'plan', 'Planificar producción'],
+        'production.assign' => ['production', 'assign', 'Asignar operaciones de producción'],
+        'production.execute' => ['production', 'execute', 'Ejecutar operaciones asignadas'],
+        'production.substitution.approve' => ['production', 'substitution_approve', 'Autorizar sustituciones de producción'],
+        'production.rework.authorize' => ['production', 'rework_authorize', 'Autorizar retrabajos'],
+        'production.design.review' => ['production', 'design_review', 'Revisar y liberar Diseño'],
+        'production.files.upload' => ['production', 'files_upload', 'Cargar archivos de producción'],
+        'production.files.download' => ['production', 'files_download', 'Descargar archivos de producción'],
+        'production.labels.print' => ['production', 'labels_print', 'Imprimir etiquetas de producción'],
+        'quality.review' => ['quality', 'review', 'Revisar Calidad'],
+        'quality.return' => ['quality', 'return', 'Devolver partidas por no conformidad'],
+        'quality.release' => ['quality', 'release', 'Liberar producción terminada'],
+        'delivery.ship' => ['delivery', 'ship', 'Registrar envío a domicilio'],
+        'delivery.confirm' => ['delivery', 'confirm', 'Confirmar entrega al cliente'],
+        'delivery.notification.retry' => ['delivery', 'notification_retry', 'Reintentar aviso de recolección'],
 
         'traceability.view' => ['traceability', 'view', 'Consultar trazabilidad'],
         'traceability.assign' => ['traceability', 'assign', 'Asignar etapas de producción'],
@@ -151,6 +175,16 @@ final class BootstrapSecurityCommand extends Command
             'traceability.update_stage',
             'materials.view',
             'equipment.view',
+            'production.view',
+            'production.plan',
+            'production.assign',
+            'production.execute',
+            'production.substitution.approve',
+            'production.rework.authorize',
+            'production.design.review',
+            'production.files.upload',
+            'production.files.download',
+            'production.labels.print',
         ],
 
         'ROLE_OPERATOR' => [
@@ -159,6 +193,34 @@ final class BootstrapSecurityCommand extends Command
             'order.view',
             'traceability.view',
             'traceability.update_stage',
+            'production.view',
+            'production.execute',
+            'production.files.upload',
+            'production.files.download',
+            'production.labels.print',
+        ],
+
+        'ROLE_DESIGN' => [
+            'dashboard.view',
+            'service_orders.view',
+            'production.view',
+            'production.design.review',
+            'production.files.upload',
+            'production.files.download',
+        ],
+
+        'ROLE_QUALITY_DELIVERY' => [
+            'dashboard.view',
+            'service_orders.view',
+            'traceability.view',
+            'production.view',
+            'production.files.download',
+            'quality.review',
+            'quality.return',
+            'quality.release',
+            'delivery.ship',
+            'delivery.confirm',
+            'delivery.notification.retry',
         ],
     ];
 

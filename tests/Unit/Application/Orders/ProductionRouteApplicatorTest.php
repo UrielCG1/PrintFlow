@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Application\Orders;
 
 use App\Application\Orders\ProductionRouteApplicator;
+use App\Application\Orders\ProductionRoutePolicy;
+use App\Application\Production\ProductionRouteStepData;
 use App\Entity\Catalog\CommercialCategory;
 use App\Entity\Catalog\CommercialItem;
 use App\Entity\Catalog\MeasurementUnit;
@@ -21,7 +23,7 @@ use PHPUnit\Framework\TestCase;
 
 final class ProductionRouteApplicatorTest extends TestCase
 {
-    public function testClientFileSkipsDesignAndAppliesPrepress(): void
+    public function testClientFileStillStartsInDesignBeforePrepress(): void
     {
         [$item, $version, $design, $prepress] = $this->routeFixture();
         $source = (new QuotationItem())->setAttachmentPath('/private/artwork.pdf');
@@ -33,9 +35,10 @@ final class ProductionRouteApplicatorTest extends TestCase
         (new ProductionRouteApplicator())->apply($orderItem, $actor);
 
         self::assertSame($version, $orderItem->getRouteVersion());
-        self::assertCount(1, $orderItem->getActiveOperationPlans());
-        self::assertSame($prepress, $orderItem->getActiveOperationPlans()[0]->getOperation());
-        self::assertTrue($orderItem->getActiveOperationPlans()[0]->getConditionApplied());
+        self::assertCount(2, $orderItem->getActiveOperationPlans());
+        self::assertSame($design, $orderItem->getActiveOperationPlans()[0]->getOperation());
+        self::assertSame($prepress, $orderItem->getActiveOperationPlans()[1]->getOperation());
+        self::assertTrue($orderItem->getActiveOperationPlans()[1]->getConditionApplied());
         self::assertNull($orderItem->getPlanningIssue());
     }
 
@@ -74,12 +77,40 @@ final class ProductionRouteApplicatorTest extends TestCase
         self::assertCount(0, $orderItem->getActiveOperationPlans());
     }
 
+    public function testRouteWithoutMandatoryDesignFirstLeavesAnExplicitPlanningIssue(): void
+    {
+        [$item, $version] = $this->routeFixture();
+        $version->getSteps()->first()->setOperation($this->operation('PREPRENSA', 'PREPRESS'));
+        $orderItem = (new ServiceOrderItem())
+            ->setSourceQuotationItem(new QuotationItem())
+            ->setCommercialItem($item);
+
+        (new ProductionRouteApplicator())->apply($orderItem, new User());
+
+        self::assertSame(
+            'La ruta publicada no inicia con Diseño obligatorio; requiere corrección antes de planificar.',
+            $orderItem->getPlanningIssue(),
+        );
+        self::assertCount(0, $orderItem->getActiveOperationPlans());
+    }
+
+    public function testPolicyRejectsPublishingARouteThatDoesNotStartInDesign(): void
+    {
+        $step = new ProductionRouteStepData();
+        $step->operation = $this->operation('PREPRENSA', 'PREPRESS');
+
+        $this->expectException(\DomainException::class);
+        $this->expectExceptionMessage('La primera operación obligatoria de toda ruta debe ser Diseño');
+
+        ProductionRoutePolicy::assertStartsWithDesign([$step]);
+    }
+
     /** @return array{CommercialItem, CommercialItemRouteVersion, Operation, Operation} */
     private function routeFixture(): array
     {
         $item = $this->commercialItem();
-        $design = $this->operation('DISENO');
-        $prepress = $this->operation('PREPRENSA');
+        $design = $this->operation('PRE-DISENO', 'PREPRESS');
+        $prepress = $this->operation('PREPRENSA', 'PREPRESS');
         $version = (new CommercialItemRouteVersion())
             ->setCommercialItem($item)
             ->setVersionNumber(1)
@@ -88,7 +119,7 @@ final class ProductionRouteApplicatorTest extends TestCase
         $version->addStep((new CommercialItemRouteStep())
             ->setOperation($design)
             ->setSequenceNumber(1)
-            ->setCondition(RouteCondition::CLIENT_FILE_MISSING)
+            ->setCondition(RouteCondition::ALWAYS)
             ->setIsRequired(true)
             ->setOperationSnapshot(['code' => 'DISENO', 'name' => 'Diseño', 'area_name' => 'Diseño']));
         $version->addStep((new CommercialItemRouteStep())
@@ -116,9 +147,9 @@ final class ProductionRouteApplicatorTest extends TestCase
             ->setBasePrice('1');
     }
 
-    private function operation(string $code): Operation
+    private function operation(string $code, ?string $areaCode = null): Operation
     {
-        $area = (new OperationArea())->setCode($code)->setName($code);
+        $area = (new OperationArea())->setCode($areaCode ?? $code)->setName($areaCode ?? $code);
 
         return (new Operation())
             ->setCode($code)

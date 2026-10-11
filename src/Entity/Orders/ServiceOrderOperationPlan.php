@@ -6,6 +6,7 @@ namespace App\Entity\Orders;
 
 use App\Entity\Equipment\Equipment;
 use App\Entity\Operations\Operation;
+use App\Entity\Production\ProductionOperationExecution;
 use App\Entity\Users\User;
 use App\Entity\Production\ProductionReservation;
 use App\Enum\Equipment\ProductionLoadUnit;
@@ -125,6 +126,11 @@ class ServiceOrderOperationPlan
     #[ORM\OrderBy(['segmentNumber' => 'ASC'])]
     private Collection $reservations;
 
+    /** @var Collection<int, ProductionOperationExecution> */
+    #[ORM\OneToMany(mappedBy: 'plan', targetEntity: ProductionOperationExecution::class, cascade: ['persist'])]
+    #[ORM\OrderBy(['attemptNumber' => 'ASC', 'id' => 'ASC'])]
+    private Collection $executions;
+
     #[ORM\Column(name: 'condition_applied', nullable: true)]
     private ?bool $conditionApplied = null;
 
@@ -146,6 +152,7 @@ class ServiceOrderOperationPlan
         $this->createdAt = $now;
         $this->updatedAt = $now;
         $this->reservations = new ArrayCollection();
+        $this->executions = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -234,6 +241,56 @@ class ServiceOrderOperationPlan
     {
         if (!$this->reservations->contains($reservation)) { $this->reservations->add($reservation); }
         return $this;
+    }
+
+    /** @return Collection<int, ProductionOperationExecution> */
+    public function getExecutions(): Collection
+    {
+        return $this->executions;
+    }
+
+    public function addExecution(ProductionOperationExecution $execution): self
+    {
+        if ($execution->getPlan() !== $this) {
+            throw new \DomainException('El intento no pertenece a esta operación planificada.');
+        }
+        if (!$this->executions->contains($execution)) {
+            $this->executions->add($execution);
+        }
+
+        return $this;
+    }
+
+    public function nextExecutionAttemptNumber(): int
+    {
+        $highest = 0;
+        foreach ($this->executions as $execution) {
+            $highest = max($highest, $execution->getAttemptNumber());
+        }
+
+        return $highest + 1;
+    }
+
+    public function hasOpenExecution(): bool
+    {
+        foreach ($this->executions as $execution) {
+            if ($execution->isOpen()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function hasCompletedExecution(): bool
+    {
+        foreach ($this->executions as $execution) {
+            if ($execution->getStatus() === \App\Enum\Production\ProductionOperationExecutionStatus::COMPLETED) {
+                return true;
+            }
+        }
+
+        return false;
     }
     public function clearEstimate(): self
     {

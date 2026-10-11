@@ -77,6 +77,10 @@ services:
         arguments:
             $projectDir: '%kernel.project_dir%'
 
+    App\Service\Production\ProductionFileStorage:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+
     App\Controller\PrivacyNoticeController:
         arguments:
             $privacyResponsible: '%env(string:PRINTFLOW_QUOTATION_ISSUER_NAME)%'

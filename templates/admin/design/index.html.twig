@@ -1,0 +1,70 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Diseño | OoxCorp{% endblock %}
+{% block app_navigation_active %}design{% endblock %}
+{% block app_breadcrumb %}Operación / Diseño{% endblock %}
+
+{% block app_content %}
+    <section class="pf-page__content">
+        <header class="pf-page-header">
+            <div class="pf-page-header__content">
+                <p class="pf-page-header__eyebrow">Primera etapa de producción</p>
+                <h1 class="pf-page-header__title">Diseño</h1>
+                <p class="pf-page-header__description">Revisa cada partida, autoriza el arte vigente y adjunta siempre la captura que guiará a Impresión.</p>
+            </div>
+        </header>
+
+        <section class="pf-card pf-card--padding-none">
+            <div class="pf-table-responsive pf-table-responsive--flat">
+                <table class="pf-table">
+                    <thead>
+                        <tr>
+                            <th>Orden</th>
+                            <th>Partida</th>
+                            <th>Producto</th>
+                            <th>Archivo del cliente</th>
+                            <th>Estado de Diseño</th>
+                            <th class="pf-table__actions-cell">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                            {% set source = item.sourceFileSnapshot ?? {} %}
+                            <tr>
+                                <td>
+                                    <strong class="pf-table__primary">{{ item.serviceOrder.folio }}</strong>
+                                    <span class="d-block text-muted small">{{ item.trackingCode }}</span>
+                                </td>
+                                <td>{{ item.displayLineNumber }}</td>
+                                <td>{{ item.commercialItemSnapshot.name ?? item.commercialItem.name }}</td>
+                                <td>
+                                    {% if source.path ?? false %}
+                                        <span class="text-success">Recibido</span>
+                                    {% else %}
+                                        <span class="text-muted">Se requiere preparación</span>
+                                    {% endif %}
+                                </td>
+                                <td><span class="pf-status-badge pf-status-badge--{{ item.designStatus.badgeTone }}">{{ item.designStatus.label }}</span></td>
+                                <td class="pf-table__actions-cell">
+                                    <a class="btn pf-button pf-button--secondary pf-button--sm" href="{{ path('admin_design_show', {id: item.id}) }}">
+                                        <i class="bi bi-palette" aria-hidden="true"></i> Revisar
+                                    </a>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="pf-table__empty">
+                                    <div class="pf-table__empty-content">
+                                        <i class="bi bi-palette pf-table__empty-icon" aria-hidden="true"></i>
+                                        <strong class="pf-table__empty-title">No hay partidas pendientes de Diseño.</strong>
+                                        <span class="pf-table__empty-description">Las partidas liberadas para Impresión ya no aparecen en esta cola.</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </section>
+{% endblock %}

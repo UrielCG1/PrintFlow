@@ -9,6 +9,7 @@ use App\Repository\Clients\ClientRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
@@ -45,6 +46,15 @@ final class QuotationType extends AbstractType
                 'widget' => 'single_text',
                 'input' => 'datetime_immutable',
                 'help' => 'Último día en que esta propuesta comercial será válida.',
+            ])
+            ->add('deliveryMethod', ChoiceType::class, [
+                'label' => 'Modalidad de entrega',
+                'choices' => [
+                    'Recoger en sucursal' => 'pickup',
+                    'Envío a domicilio' => 'shipping',
+                    'Por definir' => 'undefined',
+                ],
+                'help' => 'Se congela al crear la orden. Si queda pendiente, Calidad no podrá liberarla para entrega.',
             ])
             ->add('commercialContactId', HiddenType::class, [
                 'required' => false,
