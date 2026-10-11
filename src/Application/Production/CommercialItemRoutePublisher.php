@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Application\Production;
 
+use App\Application\Orders\ProductionRoutePolicy;
 use App\Entity\Catalog\CommercialItem;
 use App\Entity\Operations\Operation;
 use App\Entity\Production\CommercialItemRouteStep;
@@ -40,6 +41,7 @@ final class CommercialItemRoutePublisher
         if ($steps === []) {
             throw new \DomainException('La ruta del Producto debe contener al menos una operación.');
         }
+        ProductionRoutePolicy::assertStartsWithDesign($steps);
 
         return $this->entityManager->wrapInTransaction(function () use ($item, $template, $steps, $actor): CommercialItemRouteVersion {
             $this->entityManager->lock($item, LockMode::PESSIMISTIC_WRITE);

@@ -3,6 +3,7 @@
 namespace App\Application\Quotations;
 
 use App\Entity\Clients\Client;
+use App\Enum\Orders\ServiceOrderFulfillmentMethod;
 use Symfony\Component\Validator\Constraints as Assert;
 use App\Entity\Quotations\Quotation;
 
@@ -13,6 +14,9 @@ final class QuotationData
 
     #[Assert\NotNull(message: 'Captura la fecha de vigencia.')]
     public ?\DateTimeImmutable $expiresAt = null;
+
+    #[Assert\Choice(choices: ['pickup', 'shipping', 'undefined'])]
+    public string $deliveryMethod = ServiceOrderFulfillmentMethod::UNDEFINED->value;
 
     #[Assert\Length(max: 5000)]
     public ?string $notes = null;
@@ -76,6 +80,8 @@ final class QuotationData
 
         $data->client = $quotation->getClient();
         $data->expiresAt = $quotation->getExpiresAt();
+        $data->deliveryMethod = ServiceOrderFulfillmentMethod::tryFrom((string) $quotation->getDeliveryMethod())?->value
+            ?? ServiceOrderFulfillmentMethod::UNDEFINED->value;
         $data->notes = $quotation->getNotes();
         $commercialContactId = $quotation->getClientSnapshot()['commercial_contact']['client_contact_id'] ?? null;
         $fiscalAddressId = $quotation->getFiscalAddressSnapshot()['client_address_id'] ?? null;

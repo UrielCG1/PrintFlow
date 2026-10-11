@@ -288,9 +288,21 @@ class Quotation
         $companyName = trim((string) $companyName);
         $this->requestCompanyName = $companyName !== '' ? $companyName : null;
         $this->contactPreference = $contactPreference;
-        $this->deliveryMethod = $deliveryMethod;
+        $this->setDeliveryMethod($deliveryMethod);
         $this->requestedDeliveryAt = $requestedDeliveryAt;
         $this->requiresInvoice = $requiresInvoice;
+        return $this;
+    }
+
+    public function setDeliveryMethod(?string $deliveryMethod): self
+    {
+        $deliveryMethod = strtolower(trim((string) $deliveryMethod));
+        if (!in_array($deliveryMethod, ['pickup', 'shipping', 'undefined'], true)) {
+            throw new \InvalidArgumentException('La modalidad de entrega no es válida.');
+        }
+
+        $this->deliveryMethod = $deliveryMethod;
+
         return $this;
     }
 

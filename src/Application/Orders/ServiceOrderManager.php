@@ -16,11 +16,13 @@ use App\Entity\Quotations\QuotationItem;
 use App\Entity\Users\User;
 use App\Enum\Quotations\QuotationStatus;
 use App\Enum\Orders\ProductionEstimateKind;
+use App\Enum\Orders\ServiceOrderFulfillmentMethod;
 use App\Repository\Orders\ServiceOrderOperationPlanRepository;
 use App\Repository\Orders\ServiceOrderRepository;
 use App\Application\Production\ProductionScheduleLock;
 use App\Service\Audit\AuditLogger;
 use App\Service\Orders\ServiceOrderFolioGenerator;
+use App\Service\Orders\ServiceOrderTraceabilityRecorder;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -36,6 +38,7 @@ final class ServiceOrderManager
         private readonly AuditLogger $auditLogger,
         private readonly ProductionRouteApplicator $productionRouteApplicator,
         private readonly ProductionScheduleLock $scheduleLock,
+        private readonly ServiceOrderTraceabilityRecorder $traceabilityRecorder,
     ) {
     }
 
@@ -69,6 +72,9 @@ final class ServiceOrderManager
                     throw new \DomainException('La cotización aceptada no tiene partidas para convertir en una orden.');
                 }
 
+                $fulfillmentMethod = $this->fulfillmentMethod($quotation);
+                $deliveryContactSnapshot = $this->deliveryContactSnapshot($quotation);
+
                 $createdAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
                 $serviceOrder = (new ServiceOrder())
                     ->setSourceQuotation($quotation)
@@ -79,6 +85,9 @@ final class ServiceOrderManager
                     ->setClientSnapshot($quotation->getClientSnapshot())
                     ->setFiscalAddressSnapshot($quotation->getFiscalAddressSnapshot())
                     ->setDeliveryAddressSnapshot($quotation->getDeliveryAddressSnapshot())
+                    ->setFulfillmentMethod($fulfillmentMethod)
+                    ->setDeliveryContactSnapshot($deliveryContactSnapshot)
+                    ->setDeliveryPreparationIssue($this->deliveryPreparationIssue($fulfillmentMethod, $quotation->getDeliveryAddressSnapshot()))
                     ->setNotes($quotation->getNotes())
                     ->setCurrency($quotation->getCurrency())
                     ->setDiscountPercent($quotation->getDiscountPercent())
@@ -92,13 +101,32 @@ final class ServiceOrderManager
                     );
 
                 foreach ($quotation->getItems() as $quotationItem) {
-                    $item = $this->copyItem($quotationItem);
+                    $item = $this->copyItem(
+                        $quotationItem,
+                        $this->itemTrackingCode($serviceOrder->getFolio(), $quotationItem->getLineNumber()),
+                    );
                     $serviceOrder->addItem($item);
                     $this->productionRouteApplicator->apply($item, $actor);
                 }
 
                 $this->entityManager->persist($serviceOrder);
                 $this->entityManager->flush();
+
+                $this->traceabilityRecorder->record(
+                    $serviceOrder,
+                    'production.order_initialized',
+                    $actor,
+                    null,
+                    $serviceOrder->traceabilityStateSnapshot(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    [
+                        'source_quotation_id' => $quotation->getId(),
+                        'source_quotation_folio' => $quotation->getFolio(),
+                    ],
+                );
 
                 $this->auditLogger->record(
                     actor: $actor,
@@ -209,11 +237,14 @@ final class ServiceOrderManager
                 $child = (new ServiceOrderItem())
                     ->setCommercialItem($item->getCommercialItem())
                     ->setLineNumber(++$maxLineNumber)
+                    ->setTrackingCode($item->getTrackingCode().'-S'.str_pad((string) ($position + 1), 2, '0', STR_PAD_LEFT))
                     ->setQuantity($quantity)
                     ->setUnitPrice($item->getUnitPrice())
                     ->setLineSubtotal($subtotals[$position])
                     ->setCommercialItemSnapshot($item->getCommercialItemSnapshot())
                     ->setPriceRuleSnapshot($item->getPriceRuleSnapshot())
+                    ->setRequestDetailsSnapshot($item->getRequestDetailsSnapshot())
+                    ->setSourceFileSnapshot($item->getSourceFileSnapshot())
                     ->setSpecificationsSnapshot($item->getSpecificationsSnapshot())
                     ->setProductionSpecificationsSnapshot($item->getProductionSpecificationsSnapshot())
                     ->setSpecificationSchemaVersion($item->getSpecificationSchemaVersion())
@@ -978,23 +1009,26 @@ final class ServiceOrderManager
         ];
     }
 
-    private function copyItem(QuotationItem $quotationItem): ServiceOrderItem
+    private function copyItem(QuotationItem $quotationItem, string $trackingCode): ServiceOrderItem
     {
         return (new ServiceOrderItem())
             ->setSourceQuotationItem($quotationItem)
             ->setCommercialItem($quotationItem->getCommercialItem())
             ->setLineNumber($quotationItem->getLineNumber())
+            ->setTrackingCode($trackingCode)
             ->setQuantity($quotationItem->getQuantity())
             ->setUnitPrice($quotationItem->getUnitPrice())
             ->setLineSubtotal($quotationItem->getLineSubtotal())
             ->setCommercialItemSnapshot($quotationItem->getCommercialItemSnapshot())
             ->setPriceRuleSnapshot($quotationItem->getPriceRuleSnapshot())
+            ->setRequestDetailsSnapshot($quotationItem->getRequestDetails())
+            ->setSourceFileSnapshot($this->sourceFileSnapshot($quotationItem))
             ->setSpecificationsSnapshot($quotationItem->getSpecificationsSnapshot())
             ->setProductionSpecificationsSnapshot($quotationItem->getSpecificationsSnapshot())
             ->setSpecificationSchemaVersion($quotationItem->getSpecificationSchemaVersion());
     }
 
-    /** @return array<string, int|string|null> */
+    /** @return array<string, mixed> */
     private function quotationSnapshot(Quotation $quotation): array
     {
         return [
@@ -1012,7 +1046,95 @@ final class ServiceOrderManager
             'pricing_hash' => $quotation->getPricingHash(),
             'volume_hash' => $quotation->getVolumeHash(),
             'discount_breakdown' => $quotation->getDiscountBreakdown(),
+            'origin' => $quotation->getOrigin(),
+            'request_reference' => $quotation->getRequestReference(),
+            'requested_delivery_at' => $quotation->getRequestedDeliveryAt()?->format('Y-m-d'),
+            'fulfillment_method' => $this->fulfillmentMethod($quotation)->value,
         ];
+    }
+
+    private function fulfillmentMethod(Quotation $quotation): ServiceOrderFulfillmentMethod
+    {
+        return ServiceOrderFulfillmentMethod::tryFrom((string) $quotation->getDeliveryMethod())
+            ?? ServiceOrderFulfillmentMethod::UNDEFINED;
+    }
+
+    /** @return array<string, string|null> */
+    private function deliveryContactSnapshot(Quotation $quotation): array
+    {
+        if ($quotation->isPublicRequest()) {
+            $name = trim((string) $quotation->getRequestContactName());
+            $email = trim((string) $quotation->getRequestEmail());
+            if ($name === '' || $email === '') {
+                throw new \DomainException('La solicitud pública no tiene un contacto suficiente para crear la orden.');
+            }
+
+            return [
+                'source' => 'PUBLIC_REQUEST',
+                'name' => $name,
+                'email' => $email,
+                'phone' => $this->optionalText($quotation->getRequestPhone()),
+                'contact_preference' => $this->optionalText($quotation->getContactPreference()),
+            ];
+        }
+
+        $contact = $quotation->getClientSnapshot()['commercial_contact'] ?? null;
+        if (!is_array($contact) || trim((string) ($contact['full_name'] ?? '')) === '') {
+            throw new \DomainException('Selecciona un contacto comercial antes de crear una orden interna.');
+        }
+
+        return [
+            'source' => 'COMMERCIAL_CONTACT',
+            'name' => trim((string) $contact['full_name']),
+            'email' => $this->optionalText($contact['email'] ?? null),
+            'phone' => $this->optionalText($contact['phone'] ?? null),
+            'contact_preference' => null,
+        ];
+    }
+
+    /** @param array<string, mixed>|null $deliveryAddressSnapshot */
+    private function deliveryPreparationIssue(
+        ServiceOrderFulfillmentMethod $fulfillmentMethod,
+        ?array $deliveryAddressSnapshot,
+    ): ?string {
+        return match ($fulfillmentMethod) {
+            ServiceOrderFulfillmentMethod::UNDEFINED => 'La modalidad de entrega sigue pendiente de definición por Ventas.',
+            ServiceOrderFulfillmentMethod::SHIPPING => $deliveryAddressSnapshot === null
+                ? 'Falta el domicilio de entrega para el envío a domicilio.'
+                : null,
+            ServiceOrderFulfillmentMethod::PICKUP => null,
+        };
+    }
+
+    private function itemTrackingCode(string $serviceOrderFolio, int $lineNumber): string
+    {
+        return $serviceOrderFolio.'-P'.str_pad((string) $lineNumber, 3, '0', STR_PAD_LEFT);
+    }
+
+    /** @return array<string, string> */
+    private function sourceFileSnapshot(QuotationItem $quotationItem): array
+    {
+        $path = trim((string) $quotationItem->getAttachmentPath());
+        if ($path === '') {
+            return [
+                'status' => 'DESIGN_PREPARATION_REQUIRED',
+                'source' => 'NO_CLIENT_FILE',
+            ];
+        }
+
+        return [
+            'status' => 'CLIENT_FILE_RECEIVED',
+            'source' => 'CLIENT_UPLOAD',
+            'path' => $path,
+            'original_name' => trim((string) $quotationItem->getAttachmentOriginalName()),
+        ];
+    }
+
+    private function optionalText(mixed $value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value !== '' ? $value : null;
     }
 
     /** @return array<string, int|string|null> */
@@ -1026,6 +1148,8 @@ final class ServiceOrderManager
             'client_name' => $serviceOrder->getClientSnapshot()['business_name'] ?? null,
             'total' => $serviceOrder->getTotal(),
             'currency' => $serviceOrder->getCurrency(),
+            'fulfillment_method' => $serviceOrder->getFulfillmentMethod()->value,
+            'delivery_preparation_issue' => $serviceOrder->getDeliveryPreparationIssue(),
             'commitment_date' => $serviceOrder->getCommitmentDate()?->format('Y-m-d'),
             'items' => $serviceOrder->getItems()->count(),
         ];

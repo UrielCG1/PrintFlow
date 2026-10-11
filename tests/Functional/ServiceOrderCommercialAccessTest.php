@@ -460,6 +460,7 @@ final class ServiceOrderCommercialAccessTest extends TestCase
             ->setSourceQuotationItem($quotationItem)
             ->setCommercialItem($this->fixtures['lona'])
             ->setLineNumber(1)
+            ->setTrackingCode('OS-2026-000001-P001')
             ->setQuantity('2')
             ->setUnitPrice('12345.67')
             ->setLineSubtotal('24691.34')

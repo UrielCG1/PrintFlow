@@ -8,15 +8,18 @@ use App\Entity\Catalog\CommercialItem;
 use App\Entity\Production\CommercialItemRouteVersion;
 use App\Entity\Quotations\QuotationItem;
 use App\Enum\Orders\ProductionPriority;
+use App\Enum\Orders\ServiceOrderItemDesignStatus;
+use App\Repository\Orders\ServiceOrderItemRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: ServiceOrderItemRepository::class)]
 #[ORM\Table(name: 'service_order_items')]
 #[ORM\UniqueConstraint(name: 'uniq_service_order_items_line_number', columns: ['service_order_id', 'line_number'])]
 #[ORM\UniqueConstraint(name: 'uniq_service_order_items_source_quotation_item', columns: ['source_quotation_item_id'])]
+#[ORM\UniqueConstraint(name: 'uniq_service_order_items_tracking_code', columns: ['tracking_code'])]
 #[ORM\Index(name: 'idx_service_order_items_split_parent_position', fields: ['splitParentItem', 'splitPosition'])]
 #[ORM\Index(name: 'idx_service_order_items_commercial_item', columns: ['commercial_item_id'])]
 #[ORM\Index(name: 'idx_service_order_items_route_version', columns: ['route_version_id'])]
@@ -50,6 +53,12 @@ class ServiceOrderItem
     #[ORM\Column(name: 'line_number', options: ['unsigned' => true])]
     private int $lineNumber;
 
+    #[ORM\Column(name: 'tracking_code', length: 64)]
+    private string $trackingCode;
+
+    #[ORM\Column(name: 'design_status', length: 30, enumType: ServiceOrderItemDesignStatus::class, options: ['default' => 'PENDING_REVIEW'])]
+    private ServiceOrderItemDesignStatus $designStatus = ServiceOrderItemDesignStatus::PENDING_REVIEW;
+
     #[ORM\Column(type: Types::DECIMAL, precision: 18, scale: 6)]
     private string $quantity;
 
@@ -66,6 +75,14 @@ class ServiceOrderItem
     /** @var array<string, mixed>|null */
     #[ORM\Column(name: 'price_rule_snapshot', type: Types::JSON, nullable: true)]
     private ?array $priceRuleSnapshot = null;
+
+    /** @var array<string, mixed>|null */
+    #[ORM\Column(name: 'request_details_snapshot', type: Types::JSON, nullable: true)]
+    private ?array $requestDetailsSnapshot = null;
+
+    /** @var array<string, mixed>|null */
+    #[ORM\Column(name: 'source_file_snapshot', type: Types::JSON, nullable: true)]
+    private ?array $sourceFileSnapshot = null;
 
     /** @var array<string, mixed> */
     #[ORM\Column(name: 'specifications_snapshot', type: Types::JSON)]
@@ -205,6 +222,63 @@ class ServiceOrderItem
         return $this;
     }
 
+    public function getTrackingCode(): string
+    {
+        return $this->trackingCode;
+    }
+
+    public function setTrackingCode(string $trackingCode): self
+    {
+        $trackingCode = strtoupper(trim($trackingCode));
+        if (preg_match('/^[A-Z0-9-]{1,64}$/D', $trackingCode) !== 1) {
+            throw new \InvalidArgumentException('El código de trazabilidad de la partida no tiene un formato válido.');
+        }
+
+        $this->trackingCode = $trackingCode;
+
+        return $this;
+    }
+
+    public function getDesignStatus(): ServiceOrderItemDesignStatus
+    {
+        return $this->designStatus;
+    }
+
+    public function beginDesignReview(): self
+    {
+        if ($this->designStatus === ServiceOrderItemDesignStatus::BLOCKED) {
+            throw new \DomainException('La partida está bloqueada en Diseño y requiere una corrección previa.');
+        }
+        if ($this->designStatus === ServiceOrderItemDesignStatus::IN_REVIEW) {
+            throw new \DomainException('La partida ya tiene una revisión de Diseño en curso.');
+        }
+
+        $this->designStatus = ServiceOrderItemDesignStatus::IN_REVIEW;
+
+        return $this;
+    }
+
+    public function markReadyForPrint(): self
+    {
+        if ($this->designStatus !== ServiceOrderItemDesignStatus::IN_REVIEW) {
+            throw new \DomainException('Inicia la revisión de Diseño antes de liberar la partida a Impresión.');
+        }
+
+        $this->designStatus = ServiceOrderItemDesignStatus::READY_FOR_PRINT;
+
+        return $this;
+    }
+
+    public function blockDesign(?string $reason = null): self
+    {
+        $this->designStatus = ServiceOrderItemDesignStatus::BLOCKED;
+        if ($reason !== null && trim($reason) !== '') {
+            $this->setPlanningIssue($reason);
+        }
+
+        return $this;
+    }
+
     public function getQuantity(): string
     {
         return $this->quantity;
@@ -276,6 +350,34 @@ class ServiceOrderItem
     public function setPriceRuleSnapshot(?array $priceRuleSnapshot): self
     {
         $this->priceRuleSnapshot = $priceRuleSnapshot;
+
+        return $this;
+    }
+
+    /** @return array<string, mixed>|null */
+    public function getRequestDetailsSnapshot(): ?array
+    {
+        return $this->requestDetailsSnapshot;
+    }
+
+    /** @param array<string, mixed>|null $requestDetailsSnapshot */
+    public function setRequestDetailsSnapshot(?array $requestDetailsSnapshot): self
+    {
+        $this->requestDetailsSnapshot = $requestDetailsSnapshot;
+
+        return $this;
+    }
+
+    /** @return array<string, mixed>|null */
+    public function getSourceFileSnapshot(): ?array
+    {
+        return $this->sourceFileSnapshot;
+    }
+
+    /** @param array<string, mixed>|null $sourceFileSnapshot */
+    public function setSourceFileSnapshot(?array $sourceFileSnapshot): self
+    {
+        $this->sourceFileSnapshot = $sourceFileSnapshot;
 
         return $this;
     }

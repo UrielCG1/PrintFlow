@@ -26,6 +26,12 @@ final class ProductionRouteApplicator
             throw new \LogicException('La ruta publicada no pertenece al Producto de la partida.');
         }
 
+        if (($designFirstIssue = ProductionRoutePolicy::designFirstIssue($version)) !== null) {
+            $item->setPlanningIssue($designFirstIssue);
+
+            return;
+        }
+
         $sourceItem = $item->getSourceQuotationItem();
         if ($sourceItem === null) {
             $item->setPlanningIssue('La partida no conserva su vínculo de origen; requiere revisión.');

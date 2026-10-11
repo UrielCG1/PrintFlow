@@ -395,10 +395,10 @@
                                         <div class="quotation-commercial-field__heading">
                                             <div>
                                                 <label class="form-label mb-1" for="{{ form.commercialContactId.vars.id }}_selector">
-                                                    Contacto comercial <span class="quotation-optional">Opcional</span>
+                                                    Contacto comercial
                                                 </label>
                                                 <p class="quotation-commercial-field__hint">
-                                                    Persona de referencia para esta propuesta.
+                                                    Persona de referencia para esta propuesta. Es obligatorio para crear una orden interna.
                                                 </p>
                                             </div>
                                             <i class="bi bi-person-lines-fill" aria-hidden="true"></i>
@@ -480,6 +480,10 @@
 
                         <div class="col-12 col-md-6 pf-form-field">
                             {{ form_row(form.expiresAt) }}
+                        </div>
+
+                        <div class="col-12 col-md-6 pf-form-field">
+                            {{ form_row(form.deliveryMethod) }}
                         </div>
 
                         <div class="col-12 pf-form-field">

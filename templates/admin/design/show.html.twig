@@ -1,0 +1,120 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Revisión de Diseño | OoxCorp{% endblock %}
+{% block app_navigation_active %}design{% endblock %}
+{% block app_breadcrumb %}Operación / Diseño / {{ item.serviceOrder.folio }} · partida {{ item.displayLineNumber }}{% endblock %}
+
+{% block app_content %}
+    {% set source = item.sourceFileSnapshot ?? {} %}
+    <section class="pf-page__content">
+        <header class="pf-page-header">
+            <div class="pf-page-header__content">
+                <p class="pf-page-header__eyebrow">{{ item.serviceOrder.folio }} · {{ item.trackingCode }}</p>
+                <h1 class="pf-page-header__title">Partida {{ item.displayLineNumber }}: {{ item.commercialItemSnapshot.name ?? item.commercialItem.name }}</h1>
+                <p class="pf-page-header__description">La partida solo avanza cuando Diseño autoriza el archivo exacto que se imprimirá y su captura de referencia.</p>
+            </div>
+            <div class="pf-page-header__actions">
+                <a href="{{ path('admin_design_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-arrow-left" aria-hidden="true"></i> Cola de Diseño</a>
+            </div>
+        </header>
+
+        <div class="row g-4">
+            <div class="col-xl-7">
+                <section class="pf-card mb-4">
+                    <div class="pf-card__header"><h2 class="pf-card__title">Solicitud y especificaciones</h2></div>
+                    <div class="pf-card__body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Estado</dt><dd class="col-sm-8"><span class="pf-status-badge pf-status-badge--{{ item.designStatus.badgeTone }}">{{ item.designStatus.label }}</span></dd>
+                            <dt class="col-sm-4">Cantidad</dt><dd class="col-sm-8">{{ item.quantity }}</dd>
+                            <dt class="col-sm-4">Archivo del cliente</dt>
+                            <dd class="col-sm-8">
+                                {% if hasClientOriginal %}
+                                    <a href="{{ path('admin_design_download_client_original', {id: item.id}) }}">{{ source.original_name ?? 'Descargar original' }}</a>
+                                {% else %}
+                                    <span class="text-muted">No se proporcionó archivo; Diseño debe preparar el arte.</span>
+                                {% endif %}
+                            </dd>
+                            <dt class="col-sm-4">Solicitud del cliente</dt><dd class="col-sm-8">{{ source.status ?? 'Sin información adicional' }}</dd>
+                        </dl>
+                        {% if item.requestDetailsSnapshot.notes ?? false %}<p class="mb-0 mt-3"><strong>Notas:</strong> {{ item.requestDetailsSnapshot.notes }}</p>{% endif %}
+                        {% if item.productionSpecificationsSnapshot is not empty %}
+                            <details class="mt-3"><summary>Ver especificaciones técnicas congeladas</summary><pre class="small mt-2 mb-0">{{ item.productionSpecificationsSnapshot|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></details>
+                        {% endif %}
+                    </div>
+                </section>
+
+                <section class="pf-card">
+                    <div class="pf-card__header"><h2 class="pf-card__title">Liberación vigente</h2></div>
+                    <div class="pf-card__body">
+                        {% if currentRelease %}
+                            <dl class="row mb-0">
+                                <dt class="col-sm-4">Versión</dt><dd class="col-sm-8">{{ currentRelease.versionNumber }}</dd>
+                                <dt class="col-sm-4">Autorización</dt><dd class="col-sm-8">{{ currentRelease.authorizationType.label }}</dd>
+                                <dt class="col-sm-4">Arte</dt><dd class="col-sm-8"><a href="{{ path('admin_design_download_file', {id: currentRelease.artworkFile.id}) }}">{{ currentRelease.artworkFile.originalName }}</a></dd>
+                                <dt class="col-sm-4">Captura guía</dt><dd class="col-sm-8"><a href="{{ path('admin_design_download_file', {id: currentRelease.referenceFile.id}) }}">{{ currentRelease.referenceFile.originalName }}</a></dd>
+                                <dt class="col-sm-4">Autorizó</dt><dd class="col-sm-8">{{ currentRelease.authorizedBy.fullName }} · {{ currentRelease.authorizedAt|date('d/m/Y H:i', 'America/Mexico_City') }}</dd>
+                                {% if currentRelease.instructions %}<dt class="col-sm-4">Instrucciones</dt><dd class="col-sm-8">{{ currentRelease.instructions|nl2br }}</dd>{% endif %}
+                            </dl>
+                        {% else %}
+                            <p class="mb-0 text-muted">Todavía no existe una liberación para Impresión.</p>
+                        {% endif %}
+                    </div>
+                </section>
+            </div>
+
+            <div class="col-xl-5">
+                {% if canReview and item.designStatus.value != 'IN_REVIEW' and item.designStatus.value != 'BLOCKED' %}
+                    <section class="pf-card mb-4">
+                        <div class="pf-card__body">
+                            <form method="post" action="{{ path('admin_design_start_review', {id: item.id}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('design-start-review-' ~ item.id) }}">
+                                <button class="btn pf-button pf-button--primary" type="submit"><i class="bi bi-play-fill" aria-hidden="true"></i> Iniciar revisión de Diseño</button>
+                            </form>
+                        </div>
+                    </section>
+                {% endif %}
+
+                {% if canReview and item.designStatus.value == 'IN_REVIEW' %}
+                    {% if hasClientOriginal %}
+                        <section class="pf-card mb-4">
+                            <div class="pf-card__header"><h2 class="pf-card__title">Autorizar original viable</h2></div>
+                            <form class="pf-card__body pf-form" method="post" enctype="multipart/form-data" action="{{ path('admin_design_authorize_original', {id: item.id}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('design-authorize-original-' ~ item.id) }}">
+                                <p class="small text-body-secondary">Úsalo cuando el archivo del cliente es correcto para impresión. La captura final sigue siendo obligatoria.</p>
+                                <div class="mb-3"><label class="form-label" for="reference-original">Captura del diseño final</label><input id="reference-original" name="reference" type="file" class="form-control" accept="image/jpeg,image/png,image/webp" required></div>
+                                <div class="mb-3"><label class="form-label" for="instructions-original">Instrucciones para Impresión</label><textarea id="instructions-original" name="instructions" class="form-control" rows="3" maxlength="5000"></textarea></div>
+                                <button class="btn pf-button pf-button--primary" type="submit">Autorizar original y liberar</button>
+                            </form>
+                        </section>
+                    {% endif %}
+
+                    <section class="pf-card">
+                        <div class="pf-card__header"><h2 class="pf-card__title">Autorizar arte preparado</h2></div>
+                        <form class="pf-card__body pf-form" method="post" enctype="multipart/form-data" action="{{ path('admin_design_authorize_prepared', {id: item.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('design-authorize-prepared-' ~ item.id) }}">
+                            <div class="mb-3"><label class="form-label" for="prepared-artwork">Archivo listo para impresión</label><input id="prepared-artwork" name="artwork" type="file" class="form-control" required></div>
+                            <div class="mb-3"><label class="form-label" for="reference-prepared">Captura del diseño final</label><input id="reference-prepared" name="reference" type="file" class="form-control" accept="image/jpeg,image/png,image/webp" required></div>
+                            <div class="mb-3"><label class="form-label" for="instructions-prepared">Instrucciones para Impresión</label><textarea id="instructions-prepared" name="instructions" class="form-control" rows="3" maxlength="5000"></textarea></div>
+                            <button class="btn pf-button pf-button--primary" type="submit">Autorizar arte preparado y liberar</button>
+                        </form>
+                    </section>
+                {% elseif not canReview %}
+                    <section class="pf-card"><div class="pf-card__body text-muted">Tu perfil puede consultar los archivos de Diseño, pero no autorizar una liberación.</div></section>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if releaseHistory|length > 1 or files|length > 0 %}
+            <section class="pf-card mt-4">
+                <div class="pf-card__header"><h2 class="pf-card__title">Historial de archivos y liberaciones</h2></div>
+                <div class="pf-card__body">
+                    <ul class="mb-0">
+                        {% for release in releaseHistory %}
+                            <li>Versión {{ release.versionNumber }} · {{ release.authorizationType.label }} · {{ release.isCurrent ? 'vigente' : 'sustituida' }} · {{ release.authorizedAt|date('d/m/Y H:i', 'America/Mexico_City') }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </section>
+        {% endif %}
+    </section>
+{% endblock %}
