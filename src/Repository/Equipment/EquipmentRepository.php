@@ -130,6 +130,25 @@ final class EquipmentRepository extends ServiceEntityRepository
         return $equipment;
     }
 
+    public function findAvailableByCode(string $code): ?Equipment
+    {
+        /** @var Equipment|null $equipment */
+        $equipment = $this->createQueryBuilder('equipment')
+            ->innerJoin('equipment.primaryOperation', 'operation')
+            ->innerJoin('operation.operationArea', 'area')
+            ->addSelect('operation', 'area')
+            ->andWhere('equipment.code = :code')
+            ->andWhere('equipment.status = :available')
+            ->andWhere('operation.isActive = true')
+            ->andWhere('area.isActive = true')
+            ->setParameter('code', strtoupper(trim($code)))
+            ->setParameter('available', EquipmentStatus::AVAILABLE->value)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $equipment;
+    }
+
     /** @return list<Equipment> */
     public function findAllForCalendarException(): array
     {

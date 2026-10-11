@@ -38,8 +38,9 @@ final class ProductionExecutionManager
         User $actor,
         ProductionExecutionCommand $command,
         ?ProductionOperationExecution $originExecution = null,
+        ?callable $beforeStart = null,
     ): ProductionOperationExecution {
-        return $this->entityManager->wrapInTransaction(function () use ($plan, $actor, $command, $originExecution): ProductionOperationExecution {
+        return $this->entityManager->wrapInTransaction(function () use ($plan, $actor, $command, $originExecution, $beforeStart): ProductionOperationExecution {
             $order = $plan->getServiceOrderItem()->getServiceOrder();
             $this->lockOrderAndPlan($order, $plan);
 
@@ -50,6 +51,9 @@ final class ProductionExecutionManager
 
             $this->assertExpectedOrderVersion($order, $command);
             $this->assertPlanCanStart($order, $plan, $actor, $originExecution);
+            if ($beforeStart !== null) {
+                $beforeStart($order, $plan, $actor);
+            }
 
             $previousState = $order->traceabilityStateSnapshot();
             if ($order->getProductionStatus() === ProductionOrderStatus::WAITING_DESIGN) {
@@ -136,8 +140,9 @@ final class ProductionExecutionManager
         ProductionOperationExecution $execution,
         User $actor,
         ProductionExecutionCommand $command,
+        ?callable $beforeComplete = null,
     ): void {
-        $this->entityManager->wrapInTransaction(function () use ($execution, $actor, $command): void {
+        $this->entityManager->wrapInTransaction(function () use ($execution, $actor, $command, $beforeComplete): void {
             $plan = $execution->getPlan();
             $order = $plan->getServiceOrderItem()->getServiceOrder();
             $this->lockOrderAndPlan($order, $plan);
@@ -153,6 +158,9 @@ final class ProductionExecutionManager
             $this->assertExpectedOrderVersion($order, $command);
             $this->assertExecutionActor($execution, $actor);
             $previousState = $order->traceabilityStateSnapshot();
+            if ($beforeComplete !== null) {
+                $beforeComplete($order, $plan, $execution, $actor);
+            }
             $execution->complete($command->note);
 
             if ($this->allActiveOperationsAreCompleted($order)) {

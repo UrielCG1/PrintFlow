@@ -44,6 +44,28 @@ final class ServiceOrderOperationPlanRepository extends ServiceEntityRepository
     }
 
     /** @return list<ServiceOrderOperationPlan> */
+    public function findActiveForServiceOrderItems(): array
+    {
+        /** @var list<ServiceOrderOperationPlan> $plans */
+        $plans = $this->createQueryBuilder('plan')
+            ->innerJoin('plan.serviceOrderItem', 'item')
+            ->innerJoin('item.serviceOrder', 'serviceOrder')
+            ->innerJoin('plan.operation', 'operation')
+            ->innerJoin('operation.operationArea', 'area')
+            ->leftJoin('plan.equipment', 'equipment')
+            ->leftJoin('plan.materialVariant', 'material')
+            ->addSelect('item', 'serviceOrder', 'operation', 'area', 'equipment', 'material')
+            ->andWhere('plan.isActive = true')
+            ->orderBy('serviceOrder.createdAt', 'ASC')
+            ->addOrderBy('item.lineNumber', 'ASC')
+            ->addOrderBy('plan.sequenceNumber', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $plans;
+    }
+
+    /** @return list<ServiceOrderOperationPlan> */
     public function findActiveForItemForUpdate(ServiceOrderItem $serviceOrderItem): array
     {
         /** @var list<ServiceOrderOperationPlan> $plans */

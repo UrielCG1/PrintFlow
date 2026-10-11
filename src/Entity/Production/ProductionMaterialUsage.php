@@ -1,21 +1,219 @@
 <?php
+
 declare(strict_types=1);
+
 namespace App\Entity\Production;
-use App\Entity\Catalog\MeasurementUnit; use App\Entity\Common\Timestampable; use App\Entity\Inventory\InventoryLot; use App\Entity\Inventory\InventoryMovement; use App\Entity\Materials\MaterialVariant; use App\Entity\Orders\ServiceOrderItem; use App\Entity\Users\User; use App\Enum\Inventory\QuantitySource; use App\Enum\Production\CalculationMethod; use Doctrine\DBAL\Types\Types; use Doctrine\ORM\Mapping as ORM;
-#[ORM\Entity,ORM\Table(name:'production_material_usages'),ORM\HasLifecycleCallbacks]
-/** Compara el consumo planeado con la medición opcional y conserva el cálculo histórico. */
+
+use App\Entity\Catalog\MeasurementUnit;
+use App\Entity\Common\Timestampable;
+use App\Entity\Inventory\InventoryLot;
+use App\Entity\Inventory\InventoryMovement;
+use App\Entity\Materials\MaterialVariant;
+use App\Entity\Orders\ServiceOrderItem;
+use App\Entity\Orders\ServiceOrderOperationPlan;
+use App\Entity\Users\User;
+use App\Enum\Inventory\QuantitySource;
+use App\Enum\Production\CalculationMethod;
+use Brick\Math\BigDecimal;
+use Doctrine\DBAL\Types\Types;
+use Doctrine\ORM\Mapping as ORM;
+
+/** Registro inmutable de una captura de consumo; este flujo no mueve inventario. */
+#[ORM\Entity]
+#[ORM\Table(name: 'production_material_usages')]
+#[ORM\Index(name: 'idx_usage_plan_execution', columns: ['operation_plan_id', 'operation_execution_id'])]
+#[ORM\HasLifecycleCallbacks]
 class ProductionMaterialUsage
 {
- use Timestampable; /** Identificador interno del registro. */ #[ORM\Id,ORM\GeneratedValue,ORM\Column] private ?int $id=null; /** Partida de orden para la que se consume el material. */ #[ORM\ManyToOne] #[ORM\JoinColumn(name:'service_order_item_id',nullable:false,onDelete:'RESTRICT')] private ServiceOrderItem $serviceOrderItem;
- /** Presentación prevista o efectivamente utilizada. */ #[ORM\ManyToOne] #[ORM\JoinColumn(name:'material_variant_id',nullable:false,onDelete:'RESTRICT')] private MaterialVariant $variant; /** Lote físico consumido cuando aplica trazabilidad. */ #[ORM\ManyToOne] #[ORM\JoinColumn(name:'lot_id',onDelete:'RESTRICT')] private ?InventoryLot $lot=null;
- /** Unidad común para cantidades planeada, real, contabilizada y merma. */ #[ORM\ManyToOne] #[ORM\JoinColumn(name:'unit_id',nullable:false,onDelete:'RESTRICT')] private MeasurementUnit $unit; /** Movimiento definitivo que descontó el inventario. */ #[ORM\OneToOne] #[ORM\JoinColumn(name:'inventory_movement_id',onDelete:'RESTRICT')] private ?InventoryMovement $movement=null;
- /** Usuario que proporcionó o confirmó la medición. */ #[ORM\ManyToOne] #[ORM\JoinColumn(name:'measured_by',onDelete:'RESTRICT')] private ?User $measuredBy=null; /** Consumo calculado originalmente por la BOM. */ #[ORM\Column(name:'planned_quantity',type:Types::DECIMAL,precision:20,scale:6)] private string $plannedQuantity;
- /** Consumo real opcional; permanece NULL si producción no lo captura. */ #[ORM\Column(name:'actual_quantity',type:Types::DECIMAL,precision:20,scale:6,nullable:true)] private ?string $actualQuantity=null; /** Cantidad usada para inventario y costo: real si existe, planeada en caso contrario. */ #[ORM\Column(name:'posted_quantity',type:Types::DECIMAL,precision:20,scale:6)] private string $postedQuantity;
- /** Parte identificada como merma dentro del consumo real; no se suma nuevamente. */ #[ORM\Column(name:'waste_quantity',type:Types::DECIMAL,precision:20,scale:6,nullable:true)] private ?string $wasteQuantity=null; /** Procedencia de la cantidad contabilizada: estimada, medida, derivada o reportada por máquina. */ #[ORM\Column(name:'quantity_source',length:20,enumType:QuantitySource::class)] private QuantitySource $quantitySource=QuantitySource::ESTIMATED;
- /** Técnica utilizada para obtener el dato real. */ #[ORM\Column(name:'measurement_method',length:30,nullable:true)] private ?string $measurementMethod=null; /** Explicación opcional de una merma identificada. */ #[ORM\Column(name:'waste_reason',length:255,nullable:true)] private ?string $wasteReason=null;
- /** Algoritmo predefinido utilizado para calcular lo planeado. */ #[ORM\Column(name:'calculation_method',length:30,enumType:CalculationMethod::class)] private CalculationMethod $calculationMethod; /** Versión exacta de ese algoritmo. */ #[ORM\Column(name:'calculation_method_version')] private int $calculationMethodVersion;
- /** Fotografía de entradas, parámetros y resultado del cálculo original. */ #[ORM\Column(name:'calculation_snapshot',type:Types::JSON)] private array $calculationSnapshot; /** Instante UTC de la medición real, si existió. */ #[ORM\Column(name:'measured_at',type:Types::DATETIME_IMMUTABLE,nullable:true)] private ?\DateTimeImmutable $measuredAt=null;
- public function __construct(ServiceOrderItem $item,MaterialVariant $variant,MeasurementUnit $unit,string $planned,CalculationMethod $method,int $version,array $snapshot){$this->serviceOrderItem=$item;$this->variant=$variant;$this->unit=$unit;$this->plannedQuantity=$this->postedQuantity=$planned;$this->calculationMethod=$method;$this->calculationMethodVersion=$version;$this->calculationSnapshot=$snapshot;$this->initializeTimestamps();}
- public function recordActual(string $actual,?string $waste,QuantitySource $source,User $user,string $method):void{if($source===QuantitySource::ESTIMATED)throw new \InvalidArgumentException('Un consumo real no puede marcarse como estimado.');$this->actualQuantity=$this->postedQuantity=$actual;$this->wasteQuantity=$waste;$this->quantitySource=$source;$this->measuredBy=$user;$this->measurementMethod=$method;$this->measuredAt=new \DateTimeImmutable('now',new \DateTimeZone('UTC'));}
- public function getActualQuantity():?string{return $this->actualQuantity;} public function getPostedQuantity():string{return $this->postedQuantity;} public function getQuantitySource():QuantitySource{return $this->quantitySource;}
+    use Timestampable;
+
+    #[ORM\Id, ORM\GeneratedValue, ORM\Column]
+    private ?int $id = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(name: 'service_order_item_id', nullable: false, onDelete: 'RESTRICT')]
+    private ServiceOrderItem $serviceOrderItem;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(name: 'operation_plan_id', nullable: true, onDelete: 'RESTRICT')]
+    private ?ServiceOrderOperationPlan $operationPlan = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(name: 'operation_execution_id', nullable: true, onDelete: 'RESTRICT')]
+    private ?ProductionOperationExecution $operationExecution = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(name: 'material_variant_id', nullable: false, onDelete: 'RESTRICT')]
+    private MaterialVariant $variant;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(name: 'lot_id', onDelete: 'RESTRICT')]
+    private ?InventoryLot $lot = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(name: 'unit_id', nullable: false, onDelete: 'RESTRICT')]
+    private MeasurementUnit $unit;
+
+    #[ORM\OneToOne]
+    #[ORM\JoinColumn(name: 'inventory_movement_id', onDelete: 'RESTRICT')]
+    private ?InventoryMovement $movement = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(name: 'measured_by', onDelete: 'RESTRICT')]
+    private ?User $measuredBy = null;
+
+    /** La previsión puede no existir cuando no hay BOM válida. */
+    #[ORM\Column(name: 'planned_quantity', type: Types::DECIMAL, precision: 20, scale: 6, nullable: true)]
+    private ?string $plannedQuantity = null;
+
+    #[ORM\Column(name: 'actual_quantity', type: Types::DECIMAL, precision: 20, scale: 6, nullable: true)]
+    private ?string $actualQuantity = null;
+
+    /** Compatibilidad histórica: no representa movimiento de inventario. */
+    #[ORM\Column(name: 'posted_quantity', type: Types::DECIMAL, precision: 20, scale: 6, nullable: true)]
+    private ?string $postedQuantity = null;
+
+    #[ORM\Column(name: 'waste_quantity', type: Types::DECIMAL, precision: 20, scale: 6, nullable: true)]
+    private ?string $wasteQuantity = null;
+
+    #[ORM\Column(name: 'quantity_source', length: 20, enumType: QuantitySource::class)]
+    private QuantitySource $quantitySource = QuantitySource::ESTIMATED;
+
+    #[ORM\Column(name: 'measurement_method', length: 30, nullable: true)]
+    private ?string $measurementMethod = null;
+
+    #[ORM\Column(name: 'waste_reason', length: 255, nullable: true)]
+    private ?string $wasteReason = null;
+
+    #[ORM\Column(name: 'calculation_method', length: 30, enumType: CalculationMethod::class)]
+    private CalculationMethod $calculationMethod;
+
+    #[ORM\Column(name: 'calculation_method_version')]
+    private int $calculationMethodVersion;
+
+    /** @var array<string, mixed> */
+    #[ORM\Column(name: 'calculation_snapshot', type: Types::JSON)]
+    private array $calculationSnapshot;
+
+    /** @var array<string, mixed>|null */
+    #[ORM\Column(name: 'material_snapshot', type: Types::JSON, nullable: true)]
+    private ?array $materialSnapshot = null;
+
+    #[ORM\Column(name: 'measured_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $measuredAt = null;
+
+    /** @param array<string, mixed> $snapshot */
+    public function __construct(
+        ServiceOrderItem $item,
+        MaterialVariant $variant,
+        MeasurementUnit $unit,
+        ?string $planned,
+        CalculationMethod $method,
+        int $version,
+        array $snapshot,
+    ) {
+        if ($version < 1) {
+            throw new \InvalidArgumentException('La versión del cálculo debe ser positiva.');
+        }
+        $this->serviceOrderItem = $item;
+        $this->variant = $variant;
+        $this->unit = $unit;
+        $this->plannedQuantity = self::decimalOrNull($planned, 'La cantidad prevista');
+        $this->postedQuantity = $this->plannedQuantity;
+        $this->calculationMethod = $method;
+        $this->calculationMethodVersion = $version;
+        $this->calculationSnapshot = $snapshot;
+        $this->initializeTimestamps();
+    }
+
+    /** @param array<string, mixed> $materialSnapshot */
+    public function assignExecutionContext(
+        ServiceOrderOperationPlan $plan,
+        ProductionOperationExecution $execution,
+        array $materialSnapshot,
+    ): self {
+        if ($plan->getServiceOrderItem() !== $this->serviceOrderItem || $execution->getPlan() !== $plan) {
+            throw new \DomainException('El consumo debe pertenecer a la partida, plan e intento indicados.');
+        }
+        $this->operationPlan = $plan;
+        $this->operationExecution = $execution;
+        $this->materialSnapshot = $materialSnapshot;
+
+        return $this;
+    }
+
+    public function recordActual(
+        string $actual,
+        ?string $waste,
+        QuantitySource $source,
+        User $user,
+        string $method,
+        ?string $wasteReason = null,
+    ): void {
+        if ($source === QuantitySource::ESTIMATED) {
+            throw new \InvalidArgumentException('Un consumo real no puede marcarse como estimado.');
+        }
+        $total = self::positiveDecimal($actual, 'El material total consumido');
+        if ($waste === null || trim($waste) === '') {
+            throw new \InvalidArgumentException('Registra el desperdicio explícitamente; captura 0 cuando no exista.');
+        }
+        $wasteValue = self::nonNegativeDecimal($waste, 'El desperdicio');
+        if (BigDecimal::of($wasteValue)->isGreaterThan(BigDecimal::of($total))) {
+            throw new \InvalidArgumentException('El desperdicio no puede ser mayor que el material total consumido.');
+        }
+        $method = trim($method);
+        if ($method === '' || mb_strlen($method) > 30) {
+            throw new \InvalidArgumentException('Indica el método de medición del consumo.');
+        }
+        $wasteReason = trim((string) $wasteReason);
+        if (BigDecimal::of($wasteValue)->isGreaterThan(BigDecimal::zero()) && $wasteReason === '') {
+            throw new \InvalidArgumentException('Explica el desperdicio cuando su cantidad es mayor que cero.');
+        }
+        if (mb_strlen($wasteReason) > 255) {
+            throw new \InvalidArgumentException('El motivo del desperdicio no puede superar 255 caracteres.');
+        }
+        $this->actualQuantity = $this->postedQuantity = $total;
+        $this->wasteQuantity = $wasteValue;
+        $this->quantitySource = $source;
+        $this->measuredBy = $user;
+        $this->measurementMethod = $method;
+        $this->wasteReason = $wasteReason !== '' ? $wasteReason : null;
+        $this->measuredAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+    }
+
+    public function getId(): ?int { return $this->id; }
+    public function getServiceOrderItem(): ServiceOrderItem { return $this->serviceOrderItem; }
+    public function getOperationPlan(): ?ServiceOrderOperationPlan { return $this->operationPlan; }
+    public function getOperationExecution(): ?ProductionOperationExecution { return $this->operationExecution; }
+    public function getVariant(): MaterialVariant { return $this->variant; }
+    public function getUnit(): MeasurementUnit { return $this->unit; }
+    public function getPlannedQuantity(): ?string { return $this->plannedQuantity; }
+    public function getActualQuantity(): ?string { return $this->actualQuantity; }
+    public function getPostedQuantity(): ?string { return $this->postedQuantity; }
+    public function getWasteQuantity(): ?string { return $this->wasteQuantity; }
+    public function getQuantitySource(): QuantitySource { return $this->quantitySource; }
+    /** @return array<string, mixed>|null */ public function getMaterialSnapshot(): ?array { return $this->materialSnapshot; }
+
+    private static function decimalOrNull(?string $value, string $field): ?string
+    {
+        return $value === null || trim($value) === '' ? null : self::nonNegativeDecimal($value, $field);
+    }
+
+    private static function positiveDecimal(string $value, string $field): string
+    {
+        $decimal = self::nonNegativeDecimal($value, $field);
+        if (BigDecimal::of($decimal)->isLessThanOrEqualTo(BigDecimal::zero())) {
+            throw new \InvalidArgumentException($field.' debe ser mayor que cero.');
+        }
+        return $decimal;
+    }
+
+    private static function nonNegativeDecimal(string $value, string $field): string
+    {
+        $value = trim(str_replace(',', '.', $value));
+        if (preg_match('/^(?:0|[1-9]\d{0,13})(?:\.\d{1,6})?$/D', $value) !== 1) {
+            throw new \InvalidArgumentException($field.' no tiene un formato válido.');
+        }
+        return BigDecimal::of($value)->toScale(6)->__toString();
+    }
 }

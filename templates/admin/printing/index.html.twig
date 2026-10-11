@@ -1,0 +1,58 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Impresión | OoxCorp{% endblock %}
+{% block app_navigation_active %}printing{% endblock %}
+{% block app_breadcrumb %}Operación / Impresión{% endblock %}
+
+{% block app_content %}
+    <section class="pf-page__content">
+        <header class="pf-page-header">
+            <div class="pf-page-header__content">
+                <p class="pf-page-header__eyebrow">Segunda etapa de producción</p>
+                <h1 class="pf-page-header__title">Impresión</h1>
+                <p class="pf-page-header__description">Valida la máquina y el material contra la ruta, imprime la partida completa y registra el consumo real antes de cerrarla.</p>
+            </div>
+        </header>
+
+        <section class="pf-card pf-card--padding-none">
+            <div class="pf-table-responsive pf-table-responsive--flat">
+                <table class="pf-table">
+                    <thead><tr><th>Orden</th><th>Partida</th><th>Producto</th><th>Requisitos</th><th>Estado</th><th class="pf-table__actions-cell">Acciones</th></tr></thead>
+                    <tbody>
+                        {% for plan in plans %}
+                            {% set output = outputs[plan.id] ?? null %}
+                            <tr>
+                                <td><strong class="pf-table__primary">{{ plan.serviceOrderItem.serviceOrder.folio }}</strong><span class="d-block text-muted small">{{ plan.serviceOrderItem.trackingCode }}</span></td>
+                                <td>{{ plan.serviceOrderItem.displayLineNumber }}</td>
+                                <td>{{ plan.serviceOrderItem.commercialItemSnapshot.name ?? plan.serviceOrderItem.commercialItem.name }}</td>
+                                <td>
+                                    {% if plan.equipment and plan.materialVariant %}
+                                        <span>{{ plan.equipment.name }} · {{ plan.materialVariant.material.name }}</span>
+                                    {% else %}
+                                        <span class="text-warning">Pendientes de configurar</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if output %}
+                                        <span class="pf-status-badge pf-status-badge--{{ output.labelPlaced ? 'success' : 'warning' }}">{{ output.labelPlaced ? 'Impresa y etiquetada' : 'Pendiente de etiqueta' }}</span>
+                                    {% elseif plan.hasOpenExecution %}
+                                        <span class="pf-status-badge pf-status-badge--info">Imprimiendo</span>
+                                    {% elseif plan.hasCompletedExecution %}
+                                        <span class="pf-status-badge pf-status-badge--warning">Revisar salida</span>
+                                    {% elseif plan.serviceOrderItem.designStatus.value == 'READY_FOR_PRINT' %}
+                                        <span class="pf-status-badge pf-status-badge--neutral">Lista para validar</span>
+                                    {% else %}
+                                        <span class="pf-status-badge pf-status-badge--neutral">Esperando Diseño</span>
+                                    {% endif %}
+                                </td>
+                                <td class="pf-table__actions-cell"><a class="btn pf-button pf-button--secondary pf-button--sm" href="{{ path('admin_printing_show', {id: plan.id}) }}"><i class="bi bi-printer" aria-hidden="true"></i> Abrir</a></td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="6" class="pf-table__empty"><div class="pf-table__empty-content"><i class="bi bi-printer pf-table__empty-icon" aria-hidden="true"></i><strong class="pf-table__empty-title">No hay partidas en Impresión.</strong><span class="pf-table__empty-description">Las partidas aparecerán aquí cuando su ruta tenga una operación del área Impresión.</span></div></td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </section>
+{% endblock %}
