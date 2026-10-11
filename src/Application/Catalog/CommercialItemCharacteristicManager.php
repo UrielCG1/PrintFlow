@@ -266,15 +266,37 @@ final class CommercialItemCharacteristicManager
     /** @param list<CommercialCharacteristicOption> $options */
     private function replaceAllowedOptions(CommercialItemCharacteristic $configuration, array $options): void
     {
+        $existingByOptionId = [];
+        foreach ($configuration->getAllowedOptions() as $allowedOption) {
+            $optionId = $allowedOption->getCharacteristicOption()->getId();
+            if ($optionId !== null) {
+                $existingByOptionId[$optionId] = $allowedOption;
+            }
+        }
+
+        $selectedIds = array_fill_keys(array_map(
+            static fn (CommercialCharacteristicOption $option): int => (int) $option->getId(),
+            $options,
+        ), true);
+
         foreach ($configuration->getAllowedOptions()->toArray() as $allowedOption) {
-            $configuration->removeAllowedOption($allowedOption);
+            $optionId = $allowedOption->getCharacteristicOption()->getId();
+            if ($optionId === null || !isset($selectedIds[$optionId])) {
+                $configuration->removeAllowedOption($allowedOption);
+            }
         }
 
         foreach ($options as $position => $option) {
-            $allowedOption = (new CommercialItemCharacteristicOption())
-                ->setCharacteristicOption($option)
-                ->setDisplayOrder(($position + 1) * 10);
-            $configuration->addAllowedOption($allowedOption);
+            $optionId = (int) $option->getId();
+            $allowedOption = $existingByOptionId[$optionId] ?? null;
+
+            if ($allowedOption === null) {
+                $allowedOption = (new CommercialItemCharacteristicOption())
+                    ->setCharacteristicOption($option);
+                $configuration->addAllowedOption($allowedOption);
+            }
+
+            $allowedOption->setDisplayOrder(($position + 1) * 10);
         }
     }
 
