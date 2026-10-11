@@ -617,8 +617,10 @@ final class ProductionPriorityRescheduler
     {
         $connection = $this->entityManager->getConnection();
         $utc = new \DateTimeZone('UTC');
-        $start = $now->setTimezone($utc);
-        $end = $now->modify('+'.self::HORIZON_DAYS.' days')->setTimezone($utc);
+        // These values are bound by DBAL directly (outside ORM type conversion).
+        // Pass the database datetime representation explicitly instead of DateTimeImmutable.
+        $start = $now->setTimezone($utc)->format('Y-m-d H:i:s');
+        $end = $now->modify('+'.self::HORIZON_DAYS.' days')->setTimezone($utc)->format('Y-m-d H:i:s');
         $equipmentIds = $connection->fetchFirstColumn(
             'SELECT DISTINCT equipment_id FROM production_reservations WHERE is_active = 1 AND starts_at < ? AND ends_at > ? ORDER BY equipment_id',
             [$end, $start],

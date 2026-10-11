@@ -139,6 +139,19 @@ final class ServiceOrderCommercialAccessTest extends TestCase
         self::assertSame(200, $this->browser->getResponse()->getStatusCode());
         self::assertStringContainsString('Revisar cambio a prioridad Alta', (string) $this->browser->getResponse()->getContent());
         $this->assertNoCommercialData((string) $this->browser->getResponse()->getContent(), 'priority preview');
+
+        $confirmForm = $this->browser->getCrawler()->filter(sprintf(
+            'form[action="/admin/ordenes-servicio/%d/partidas/%d/prioridad/confirmar"]',
+            $this->serviceOrder->getId(),
+            $item->getId(),
+        ))->form();
+        $this->browser->submit($confirmForm);
+        self::assertSame(302, $this->browser->getResponse()->getStatusCode(), 'Confirming a priority preview must complete without a DBAL date binding error.');
+        $this->browser->followRedirect();
+        $currentEntityManager = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $updatedItem = $currentEntityManager->getRepository(ServiceOrderItem::class)->find($item->getId());
+        self::assertInstanceOf(ServiceOrderItem::class, $updatedItem);
+        self::assertSame('high', $updatedItem->getPriority()->value);
     }
 
     public function testOrderCannotBeFinalizedWhenItsRouteIsMissing(): void
