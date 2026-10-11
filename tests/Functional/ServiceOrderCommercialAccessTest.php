@@ -73,6 +73,7 @@ final class ServiceOrderCommercialAccessTest extends TestCase
 
     protected function tearDown(): void
     {
+        \Symfony\Component\Clock\Clock::set(new \Symfony\Component\Clock\NativeClock());
         if (isset($this->kernel)) {
             $this->kernel->shutdown();
         }
@@ -180,6 +181,248 @@ final class ServiceOrderCommercialAccessTest extends TestCase
         self::assertStringContainsString('Pendiente de planificación', $html);
         self::assertStringNotContainsString('Iniciar revisión de Diseño', $html);
         $this->assertNoCommercialData($html, 'design detail pending planning');
+    }
+
+    public function testPauseFreesMachineAndSuspendsDependenciesThenResumesOnlyRemainingTime(): void
+    {
+        $clock = new \Symfony\Component\Clock\MockClock('2026-10-12 08:00:00 America/Mexico_City');
+        \Symfony\Component\Clock\Clock::set($clock);
+        [$target, $next, $other, $pinned, $operator] = $this->createSchedulingScenario();
+        $services = $this->kernel->getContainer()->get('test.service_container');
+        $manager = $services->get(ProductionExecutionManager::class);
+        $execution = $manager->start($target, $operator, $this->productionCommand());
+        $clock->modify('+30 minutes');
+        $pauseCommand = $this->productionCommand('Se requiere corregir el archivo.');
+        $manager->pause($execution, $operator, $pauseCommand);
+        $forecast = $services->get(\App\Application\Production\ProductionCommitmentForecaster::class)->forOrder($this->serviceOrder);
+        self::assertNull($forecast['order']['production_finish']);
+        self::assertStringContainsString('pausada o bloqueada', $forecast['order']['risk_cause']);
+        self::assertSame(1800, $execution->getActiveSeconds());
+        self::assertSame([], $this->futureReservations($target, $clock->now()));
+        self::assertSame([], $this->futureReservations($next, $clock->now()));
+        self::assertSame('08:30', $this->futureReservations($other, $clock->now())[0]->getStartsAt()->setTimezone(new \DateTimeZone('America/Mexico_City'))->format('H:i'));
+        self::assertSame('12:00', $this->futureReservations($pinned, $clock->now())[0]->getStartsAt()->setTimezone(new \DateTimeZone('America/Mexico_City'))->format('H:i'));
+        $connection = $this->kernel->getContainer()->get('doctrine')->getConnection();
+        self::assertSame('2026-10-12 22:00:00', $connection->fetchOne("SELECT r.starts_at FROM production_reservations r JOIN equipment e ON e.id = r.equipment_id WHERE e.code = 'QA-EQ-UNRELATED' AND r.is_active = 1"), 'Una máquina de otra partida no se reorganiza por esta pausa.');
+        $count = $target->getReservations()->count() + $other->getReservations()->count();
+        $manager->pause($execution, $operator, $pauseCommand);
+        self::assertSame($count, $target->getReservations()->count() + $other->getReservations()->count(), 'El reintento HTTP no vuelve a mover reservas.');
+        $incidents = $services->get(\App\Application\Production\ProductionIncidentManager::class);
+        $incidents->open($target, $operator, $this->productionCommand('Se solicita el archivo corregido.'));
+        $incidents->resolve($target, $operator, $this->productionCommand('El archivo corregido fue recibido.'));
+        self::assertSame('PAUSED', $execution->getStatus()->value);
+        self::assertSame([], $this->futureReservations($target, $clock->now()), 'Resolver el bloqueo conserva la pausa hasta que el operador reanude.');
+
+        $clock->modify('+75 minutes');
+        $manager->resume($execution, $operator, $this->productionCommand());
+        $rows = $this->futureReservations($target, $clock->now());
+        self::assertSame(5400, array_sum(array_map(static fn ($row): int => $row->getEndsAt()->getTimestamp() - $row->getStartsAt()->getTimestamp(), $rows)));
+        self::assertSame('09:45', $rows[0]->getStartsAt()->setTimezone(new \DateTimeZone('America/Mexico_City'))->format('H:i'));
+        $nextRows = $this->futureReservations($next, $clock->now());
+        self::assertGreaterThanOrEqual($rows[array_key_last($rows)]->getEndsAt(), $nextRows[0]->getStartsAt());
+        $forecast = $services->get(\App\Application\Production\ProductionCommitmentForecaster::class)->forOrder($this->serviceOrder);
+        self::assertNotNull($forecast['order']['production_finish']);
+        $this->assertNoMachineOverlaps();
+        self::assertTrue($target->getReservations()->count() > 1, 'La agenda anterior se conserva.');
+    }
+
+    public function testIncidentResolutionRestoresReservationsAndForecastWithoutRestartingAnAttempt(): void
+    {
+        $clock = new \Symfony\Component\Clock\MockClock('2026-10-12 08:00:00 America/Mexico_City');
+        \Symfony\Component\Clock\Clock::set($clock);
+        [$target, $next, $other, $pinned, $operator] = $this->createSchedulingScenario();
+        $services = $this->kernel->getContainer()->get('test.service_container');
+        $manager = $services->get(\App\Application\Production\ProductionIncidentManager::class);
+        $manager->open($target, $operator, $this->productionCommand('Falta confirmar la especificación.'));
+        self::assertSame([], $this->futureReservations($target, $clock->now()));
+        self::assertSame([], $this->futureReservations($next, $clock->now()));
+        self::assertNull($services->get(\App\Application\Production\ProductionCommitmentForecaster::class)->forOrder($this->serviceOrder)['order']['production_finish']);
+        $clock->modify('+1 hour');
+        $command = $this->productionCommand('La especificación quedó confirmada.');
+        $manager->resolve($target, $operator, $command);
+        self::assertNull($target->getLatestExecution(), 'Resolver una incidencia no inicia trabajo automáticamente.');
+        self::assertNotEmpty($this->futureReservations($target, $clock->now()));
+        self::assertNotEmpty($this->futureReservations($next, $clock->now()));
+        $forecast = $services->get(\App\Application\Production\ProductionCommitmentForecaster::class)->forOrder($this->serviceOrder)['order'];
+        self::assertNotNull($forecast['production_finish']);
+        self::assertSame('2026-10-15', $forecast['suggested_delivery']->format('Y-m-d'));
+        $count = $target->getReservations()->count();
+        $manager->resolve($target, $operator, $command);
+        self::assertSame($count, $target->getReservations()->count());
+        $this->assertNoMachineOverlaps();
+    }
+
+    public function testBusyMachineRejectsResumptionAndKeepsThePausedAttemptAndAgenda(): void
+    {
+        $clock = new \Symfony\Component\Clock\MockClock('2026-10-12 08:00:00 America/Mexico_City');
+        \Symfony\Component\Clock\Clock::set($clock);
+        [$target, $next, $other, $pinned, $operator] = $this->createSchedulingScenario();
+        $manager = $this->kernel->getContainer()->get('test.service_container')->get(ProductionExecutionManager::class);
+        $execution = $manager->start($target, $operator, $this->productionCommand());
+        $manager->pause($execution, $operator, $this->productionCommand('Esperando autorización del archivo.'));
+        $manager->start($other, $operator, $this->productionCommand());
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $connection = $em->getConnection();
+        $before = $connection->fetchAllAssociative('SELECT * FROM production_reservations ORDER BY id');
+        try {
+            $manager->resume($execution, $operator, $this->productionCommand());
+            self::fail('No debe interrumpir otra máquina activa.');
+        } catch (\DomainException $exception) {
+            self::assertStringContainsString('ejecutando otro trabajo', $exception->getMessage());
+        }
+        self::assertSame('PAUSED', $connection->fetchOne('SELECT status FROM production_operation_executions WHERE id = ?', [$execution->getId()]));
+        self::assertSame($before, $connection->fetchAllAssociative('SELECT * FROM production_reservations ORDER BY id'));
+    }
+
+    public function testBootstrapTransfersDeliveryConfirmationToSalesAndHttpEnforcesIt(): void
+    {
+        $quality = $this->createUserWithPermissions('qa-quality-managed', 'ROLE_QUALITY_DELIVERY', ['delivery.confirm', 'delivery.ship', 'quality.review']);
+        $services = $this->kernel->getContainer()->get('test.service_container');
+        $application = new \Symfony\Bundle\FrameworkBundle\Console\Application($this->kernel);
+        $command = new \Symfony\Component\Console\Tester\CommandTester($application->find('app:security:bootstrap'));
+        self::assertSame(0, $command->execute([]));
+        self::assertSame(0, $command->execute([]));
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $salesRole = $em->getRepository(Role::class)->findOneBy(['code' => 'ROLE_SALES']);
+        $qualityRole = $em->getRepository(Role::class)->findOneBy(['code' => 'ROLE_QUALITY_DELIVERY']);
+        self::assertTrue($salesRole->hasPermission('delivery.confirm'));
+        self::assertFalse($qualityRole->hasPermission('delivery.confirm'));
+        self::assertTrue($qualityRole->hasPermission('delivery.ship'));
+        self::assertTrue($em->getRepository(Role::class)->findOneBy(['code' => 'ROLE_ADMIN'])->hasPermission('equipment.create'));
+        $sales = $em->getRepository(User::class)->findOneBy(['username' => 'qa-sales']);
+        $this->serviceOrder->setCommitmentDate(new \DateTimeImmutable('2026-10-16'))->markPlanned($this->fixtures['user'])->beginProduction()->waitForQualityReview()->markProductionCompleted();
+        $this->serviceOrder->setFulfillmentMethod(\App\Enum\Orders\ServiceOrderFulfillmentMethod::PICKUP)->markReadyForPickup();
+        $em->flush();
+        $path = '/admin/produccion/entregas/ordenes/'.$this->serviceOrder->getId();
+        $this->browser->loginUser($sales);
+        $crawler = $this->browser->request('GET', $path);
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        $form = $crawler->filter('form[action="'.$path.'/confirmar"]')->form();
+        $payload = $form->getPhpValues();
+        $this->browser->loginUser($quality);
+        $this->browser->request('POST', $path.'/confirmar', $payload);
+        self::assertSame(403, $this->browser->getResponse()->getStatusCode());
+        $this->browser->request('GET', $path);
+        $this->assertNoCommercialData((string) $this->browser->getResponse()->getContent(), 'quality delivery observation');
+        self::assertStringNotContainsString('action="'.$path.'/confirmar"', (string) $this->browser->getResponse()->getContent());
+        $this->browser->loginUser($sales);
+        $this->browser->request('POST', $path.'/confirmar', $payload);
+        self::assertSame(302, $this->browser->getResponse()->getStatusCode());
+        self::assertSame('DELIVERED', $em->getConnection()->fetchOne('SELECT delivery_status FROM service_orders WHERE id = ?', [$this->serviceOrder->getId()]));
+    }
+
+    public function testPinnedReservationRejectsImmediateResumptionWithoutPartialChanges(): void
+    {
+        $clock = new \Symfony\Component\Clock\MockClock('2026-10-12 08:00:00 America/Mexico_City');
+        \Symfony\Component\Clock\Clock::set($clock);
+        [$target, $next, $other, $pinned, $operator] = $this->createSchedulingScenario();
+        $manager = $this->kernel->getContainer()->get('test.service_container')->get(ProductionExecutionManager::class);
+        $execution = $manager->start($target, $operator, $this->productionCommand());
+        $manager->pause($execution, $operator, $this->productionCommand('Esperando autorización del archivo.'));
+        $pinned->getReservations()->first()->reschedule($clock->now(), $clock->now()->modify('+1 hour'));
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $em->flush();
+        $connection = $em->getConnection();
+        $before = $connection->fetchAllAssociative('SELECT * FROM production_reservations ORDER BY id');
+        try {
+            $manager->resume($execution, $operator, $this->productionCommand());
+            self::fail('No debe desplazar la reserva fijada para reanudar inmediatamente.');
+        } catch (\DomainException $exception) {
+            self::assertStringContainsString('no puede reanudarse ahora', $exception->getMessage());
+        }
+        self::assertSame('PAUSED', $connection->fetchOne('SELECT status FROM production_operation_executions WHERE id = ?', [$execution->getId()]));
+        self::assertSame($before, $connection->fetchAllAssociative('SELECT * FROM production_reservations ORDER BY id'));
+    }
+
+    public function testManualStationsCommandCreatesCompatibleEquipmentOnceWithoutInventingCapacity(): void
+    {
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        foreach (['PRE-DISENO' => 'Preprensa', 'ACA-ENROLLADO' => 'Acabados'] as $code => $name) {
+            $area = (new OperationArea())->setCode($name)->setName($name);
+            $operation = (new Operation())->setCode($code)->setName($name)->setOperationArea($area);
+            $em->persist($area);
+            $em->persist($operation);
+        }
+        $em->flush();
+        $application = new \Symfony\Bundle\FrameworkBundle\Console\Application($this->kernel);
+        $command = new \Symfony\Component\Console\Tester\CommandTester($application->find('app:equipment:ensure-manual-stations'));
+        self::assertSame(0, $command->execute(['--actor' => 'qa-local', '--dry-run' => true]));
+        self::assertSame(0, (int) $em->getConnection()->fetchOne('SELECT COUNT(*) FROM equipment'));
+        self::assertSame(0, $command->execute(['--actor' => 'qa-local']));
+        self::assertSame(0, $command->execute(['--actor' => 'qa-local']));
+        self::assertSame(2, (int) $em->getConnection()->fetchOne('SELECT COUNT(*) FROM equipment'));
+        foreach (['EQ-PRE-MESA-01' => 'PRE-DISENO', 'EQ-ACA-ESTACION-01' => 'ACA-ENROLLADO'] as $code => $operationCode) {
+            $equipment = $em->getRepository(\App\Entity\Equipment\Equipment::class)->findOneBy(['code' => $code]);
+            self::assertSame($operationCode, $equipment->getPrimaryOperation()->getCode());
+            self::assertNull($equipment->getCapacityRate());
+            self::assertNull($equipment->getCapacityValidatedAt());
+            self::assertTrue($equipment->isSelectableForFutureExecution());
+        }
+    }
+
+    private function productionCommand(?string $note = null): ProductionExecutionCommand
+    {
+        return new ProductionExecutionCommand(bin2hex(random_bytes(16)), $this->serviceOrder->getTraceabilityVersion(), $note);
+    }
+
+    /** @return array{ServiceOrderOperationPlan, ServiceOrderOperationPlan, ServiceOrderOperationPlan, ServiceOrderOperationPlan, User} */
+    private function createSchedulingScenario(): array
+    {
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $operator = $this->createUserWithPermissions('qa-scheduled-worker', 'ROLE_QA_SCHEDULED', ['production.view', 'production.execute']);
+        $area = (new OperationArea())->setCode('QA-SCHEDULE')->setName('Acabados QA');
+        $operation = (new Operation())->setOperationArea($area)->setCode('QA-FINISH')->setName('Acabados QA');
+        $secondOperation = (new Operation())->setOperationArea($area)->setCode('QA-FINISH-2')->setName('Acabado posterior QA');
+        $unrelatedOperation = (new Operation())->setOperationArea($area)->setCode('QA-UNRELATED')->setName('Trabajo independiente QA');
+        $firstMachine = (new \App\Entity\Equipment\Equipment())->setCode('QA-EQ-1')->setName('Equipo QA 1')->setPrimaryOperation($operation);
+        $secondMachine = (new \App\Entity\Equipment\Equipment())->setCode('QA-EQ-2')->setName('Equipo QA 2')->setPrimaryOperation($secondOperation);
+        $unrelatedMachine = (new \App\Entity\Equipment\Equipment())->setCode('QA-EQ-UNRELATED')->setName('Equipo independiente QA')
+            ->setPrimaryOperation($unrelatedOperation)->setStatus(\App\Enum\Equipment\EquipmentStatus::INACTIVE);
+        foreach ([$area, $operation, $secondOperation, $unrelatedOperation, $firstMachine, $secondMachine, $unrelatedMachine] as $entity) { $em->persist($entity); }
+        $firstItem = $this->serviceOrder->getItems()->first();
+        $firstItem->beginDesignReview()->markReadyForPrint();
+        $items = [$firstItem];
+        foreach ([2, 3, 4] as $number) {
+            $item = (new ServiceOrderItem())->setCommercialItem($this->fixtures['lona'])->setLineNumber($number)
+                ->setTrackingCode('QA-SCHED-'.$number)->setQuantity('1')->setUnitPrice('100')->setLineSubtotal('100')
+                ->setCommercialItemSnapshot(['name' => 'Trabajo QA '.$number]);
+            $item->beginDesignReview()->markReadyForPrint();
+            $this->serviceOrder->addItem($item);
+            $items[] = $item;
+        }
+        $specs = [[$items[0], 1, $firstMachine, 120, '08:00'], [$items[0], 2, $secondMachine, 60, '10:00'],
+            [$items[1], 1, $firstMachine, 60, '10:00'], [$items[2], 1, $firstMachine, 60, '12:00'],
+            [$items[3], 1, $unrelatedMachine, 60, '16:00']];
+        $plans = [];
+        foreach ($specs as [$item, $sequence, $machine, $minutes, $hour]) {
+            $plan = (new ServiceOrderOperationPlan())->setSequenceNumber($sequence)->setOperation($machine->getPrimaryOperation())
+                ->setCreatedBy($this->fixtures['user'])->setOperationSnapshot(['code' => 'QA-FINISH', 'name' => 'Acabados QA'])
+                ->setEquipment($machine, ['name' => $machine->getName()])->assignOperator($operator)
+                ->setManualEstimate(null, null, $minutes, 'Duración de prueba operativa.', [], $operator);
+            $item->addOperationPlan($plan);
+            $start = new \DateTimeImmutable('2026-10-12 '.$hour, new \DateTimeZone('America/Mexico_City'));
+            $row = (new \App\Entity\Production\ProductionReservation())->setPlan($plan)->setEquipment($machine)->setCreatedBy($operator)
+                ->setSegmentNumber(1)->setStartsAt($start)->setEndsAt($start->modify('+'.$minutes.' minutes'));
+            $plan->addReservation($row);
+            $em->persist($row);
+            $plans[] = $plan;
+        }
+        $plans[3]->setSchedulePinned(true);
+        $this->serviceOrder->setCommitmentDate(new \DateTimeImmutable('2026-10-16'))->markPlanned($operator);
+        $em->flush();
+        return [...array_slice($plans, 0, 4), $operator];
+    }
+
+    /** @return list<\App\Entity\Production\ProductionReservation> */
+    private function futureReservations(ServiceOrderOperationPlan $plan, \DateTimeImmutable $now): array
+    {
+        return array_values(array_filter($plan->getReservations()->toArray(), static fn ($row): bool => $row->isActive() && $row->getEndsAt() > $now));
+    }
+
+    private function assertNoMachineOverlaps(): void
+    {
+        $connection = $this->kernel->getContainer()->get('doctrine')->getConnection();
+        self::assertSame(0, (int) $connection->fetchOne('SELECT COUNT(*) FROM production_reservations a JOIN production_reservations b ON a.id < b.id AND a.equipment_id = b.equipment_id AND a.starts_at < b.ends_at AND a.ends_at > b.starts_at WHERE a.is_active = 1 AND b.is_active = 1'));
     }
 
     public function testCompletedProductionCanBeReviewedReleasedAndDeliveredAsSeparateHitos(): void

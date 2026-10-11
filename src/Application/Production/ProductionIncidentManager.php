@@ -23,6 +23,8 @@ final class ProductionIncidentManager
         private readonly ServiceOrderTraceabilityEventRepository $eventRepository,
         private readonly ServiceOrderTraceabilityRecorder $traceabilityRecorder,
         private readonly AuditLogger $auditLogger,
+        private readonly ProductionScheduleLock $scheduleLock,
+        private readonly ProductionPriorityRescheduler $rescheduler,
     ) {
     }
 
@@ -48,10 +50,10 @@ final class ProductionIncidentManager
         ProductionExecutionCommand $command,
         bool $opening,
     ): void {
-        $this->entityManager->wrapInTransaction(function () use ($plan, $actor, $command, $opening): void {
+        $this->scheduleLock->synchronized(fn () => $this->entityManager->wrapInTransaction(function () use ($plan, $actor, $command, $opening): void {
             $order = $plan->getServiceOrderItem()->getServiceOrder();
-            $this->entityManager->lock($order, LockMode::PESSIMISTIC_WRITE);
-            $this->entityManager->lock($plan, LockMode::PESSIMISTIC_WRITE);
+            $this->entityManager->refresh($order, LockMode::PESSIMISTIC_WRITE);
+            $this->entityManager->refresh($plan, LockMode::PESSIMISTIC_WRITE);
 
             $eventType = $opening ? 'production.issue_opened' : 'production.issue_resolved';
             $previousEvent = $this->eventRepository->findOneByCommandId($command->commandId);
@@ -94,6 +96,7 @@ final class ProductionIncidentManager
                 'order' => $order->traceabilityStateSnapshot(),
                 'blocked_reason' => $currentReason,
             ];
+            $this->rescheduler->recalculateAfterExecutionChange($plan, $actor, $eventType);
             $order->touchTraceability();
             $newState = [
                 'order' => $order->traceabilityStateSnapshot(),
@@ -115,6 +118,6 @@ final class ProductionIncidentManager
             );
             $this->auditLogger->record($actor, $eventType, 'service_order_operation_plan', $plan->getId(), $previousState, $newState);
             $this->entityManager->flush();
-        });
+        }));
     }
 }

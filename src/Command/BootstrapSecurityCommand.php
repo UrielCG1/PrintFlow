@@ -42,7 +42,7 @@ final class BootstrapSecurityCommand extends Command
         ],
         'ROLE_QUALITY_DELIVERY' => [
             'name' => 'Calidad/Entregas',
-            'description' => 'Revisión final de producción, liberación y confirmación de entrega.',
+            'description' => 'Revisión final de producción, liberación y registro de envíos. Ventas confirma la entrega.',
         ],
     ];
 
@@ -90,6 +90,9 @@ final class BootstrapSecurityCommand extends Command
 
         'equipment.view' => ['equipment', 'view', 'Consultar equipos'],
         'equipment.manage' => ['equipment', 'manage', 'Administrar equipos'],
+        'equipment.create' => ['equipment', 'create', 'Crear equipos'],
+        'equipment.update' => ['equipment', 'update', 'Editar equipos'],
+        'equipment.change_status' => ['equipment', 'change_status', 'Cambiar estado de equipos'],
 
         'quote.view' => ['quotes', 'view', 'Consultar cotizaciones'],
         'quote.create' => ['quotes', 'create', 'Crear cotizaciones'],
@@ -161,6 +164,7 @@ final class BootstrapSecurityCommand extends Command
             'order.send_email',
             'service_orders.view',
             'service_orders.view_commercial',
+            'delivery.confirm',
         ],
 
         'ROLE_PRODUCTION' => [
@@ -219,7 +223,6 @@ final class BootstrapSecurityCommand extends Command
             'quality.return',
             'quality.release',
             'delivery.ship',
-            'delivery.confirm',
             'delivery.notification.retry',
         ],
     ];
@@ -409,6 +412,11 @@ final class BootstrapSecurityCommand extends Command
     {
         foreach (self::ROLE_PERMISSIONS as $roleCode => $permissionCodes) {
             $role = $roles[$roleCode];
+
+            // El bootstrap también corrige la concesión legada de este permiso.
+            if ($roleCode === 'ROLE_QUALITY_DELIVERY') {
+                $role->removePermission($permissions['delivery.confirm']);
+            }
 
             if ($permissionCodes === ['*']) {
                 foreach ($permissions as $permission) {

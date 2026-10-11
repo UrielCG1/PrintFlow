@@ -36,4 +36,15 @@ final class ProductionScheduleLock
             $this->entityManager->getConnection()->fetchOne('SELECT RELEASE_LOCK(?)', [self::LOCK_NAME]);
         }
     }
+
+    /** @template T @param callable(): T $action @return T */
+    public function synchronized(callable $action): mixed
+    {
+        $acquired = $this->acquire();
+        try {
+            return $action();
+        } finally {
+            $this->release($acquired);
+        }
+    }
 }

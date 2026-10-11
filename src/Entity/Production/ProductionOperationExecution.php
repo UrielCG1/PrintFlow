@@ -64,7 +64,7 @@ class ProductionOperationExecution
     #[ORM\Column(name: 'pause_reason', length: 500, nullable: true)]
     private ?string $pauseReason = null;
 
-    #[ORM\Column(name: 'started_at', type: Types::DATETIME_IMMUTABLE)]
+    #[ORM\Column(name: 'started_at', type: 'utc_datetime_immutable', options: ['comment' => '(DC2Type:utc_datetime_immutable)'])]
     private \DateTimeImmutable $startedAt;
 
     /** Segundos efectivamente transcurridos en los intervalos activos del intento. */
@@ -72,13 +72,13 @@ class ProductionOperationExecution
     private int $activeSeconds = 0;
 
     /** Inicio del intervalo activo más reciente; queda nulo mientras está pausado o cerrado. */
-    #[ORM\Column(name: 'active_segment_started_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    #[ORM\Column(name: 'active_segment_started_at', type: 'utc_datetime_immutable', nullable: true, options: ['comment' => '(DC2Type:utc_datetime_immutable)'])]
     private ?\DateTimeImmutable $activeSegmentStartedAt = null;
 
-    #[ORM\Column(name: 'paused_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    #[ORM\Column(name: 'paused_at', type: 'utc_datetime_immutable', nullable: true, options: ['comment' => '(DC2Type:utc_datetime_immutable)'])]
     private ?\DateTimeImmutable $pausedAt = null;
 
-    #[ORM\Column(name: 'completed_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    #[ORM\Column(name: 'completed_at', type: 'utc_datetime_immutable', nullable: true, options: ['comment' => '(DC2Type:utc_datetime_immutable)'])]
     private ?\DateTimeImmutable $completedAt = null;
 
     #[ORM\Column(name: 'completion_note', length: 500, nullable: true)]
@@ -88,10 +88,10 @@ class ProductionOperationExecution
     #[ORM\Column(name: 'state_version', type: Types::INTEGER, options: ['unsigned' => true, 'default' => 1])]
     private int $stateVersion = 1;
 
-    #[ORM\Column(name: 'created_at', type: Types::DATETIME_IMMUTABLE)]
+    #[ORM\Column(name: 'created_at', type: 'utc_datetime_immutable', options: ['comment' => '(DC2Type:utc_datetime_immutable)'])]
     private \DateTimeImmutable $createdAt;
 
-    #[ORM\Column(name: 'updated_at', type: Types::DATETIME_IMMUTABLE)]
+    #[ORM\Column(name: 'updated_at', type: 'utc_datetime_immutable', options: ['comment' => '(DC2Type:utc_datetime_immutable)'])]
     private \DateTimeImmutable $updatedAt;
 
     public function __construct(
@@ -222,10 +222,11 @@ class ProductionOperationExecution
             throw new \DomainException('Solo un intento en curso puede pausarse.');
         }
 
+        $normalizedReason = self::normalizeNote($reason, 'El motivo de pausa');
         $this->accumulateActiveSeconds($at);
         $this->status = ProductionOperationExecutionStatus::PAUSED;
-        $this->pauseReason = self::normalizeNote($reason, 'El motivo de pausa');
-        $this->pausedAt = self::now();
+        $this->pauseReason = $normalizedReason;
+        $this->pausedAt = ($at ?? self::now())->setTimezone(new \DateTimeZone('UTC'));
 
         return $this;
     }
@@ -254,7 +255,7 @@ class ProductionOperationExecution
         $this->status = ProductionOperationExecutionStatus::COMPLETED;
         $this->openMarker = null;
         $this->completionNote = $note !== null ? self::normalizeNote($note, 'El comentario de cierre') : null;
-        $this->completedAt = self::now();
+        $this->completedAt = ($at ?? self::now())->setTimezone(new \DateTimeZone('UTC'));
 
         return $this;
     }
@@ -306,6 +307,6 @@ class ProductionOperationExecution
 
     private static function now(): \DateTimeImmutable
     {
-        return new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+        return \Symfony\Component\Clock\Clock::get()->now()->setTimezone(new \DateTimeZone('UTC'));
     }
 }

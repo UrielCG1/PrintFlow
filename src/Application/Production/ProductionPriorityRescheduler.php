@@ -12,6 +12,7 @@ use App\Entity\Production\ProductionReservation;
 use App\Entity\Users\User;
 use App\Enum\Orders\ProductionPriority;
 use App\Enum\Orders\ProductionEstimateKind;
+use App\Enum\Production\ProductionOperationExecutionStatus;
 use App\Repository\Orders\ServiceOrderOperationPlanRepository;
 use App\Repository\Production\ProductionCalendarExceptionRepository;
 use App\Repository\Production\ProductionReservationRepository;
@@ -181,12 +182,60 @@ final class ProductionPriorityRescheduler
         }
     }
 
+    /** El llamador conserva el bloqueo global y la transacción de la transición. */
+    public function recalculateAfterExecutionChange(ServiceOrderOperationPlan $target, User $actor, string $eventType): void
+    {
+        $now = \Symfony\Component\Clock\Clock::get()->now()->setTimezone(new \DateTimeZone(self::TIMEZONE));
+        $this->lockQueueRows($now);
+        $item = $target->getServiceOrderItem();
+        $simulation = $this->simulate($item, $item->getPriority(), $eventType, $now, $target);
+        if ($eventType === 'production.execution_resumed' && $target->getEquipment() !== null) {
+            $first = $simulation['schedule'][(int) $target->getId()][0]['start'] ?? null;
+            if ($first === null || $first > $this->ceilToNextMinute($now)) {
+                throw new \DomainException('La máquina no puede reanudarse ahora: revisa su jornada, trabajos activos y reservas fijadas. El intento permanece pausado.');
+            }
+        }
+        foreach ($simulation['schedule'] as $planId => $segments) {
+            $record = $simulation['plans'][(int) $planId];
+            $plan = $record['plan'];
+            $before = $record['current_segments'];
+            $futureBefore = array_values(array_filter($record['rows'], static fn (ProductionReservation $row): bool => $row->getEndsAt() > $now));
+            if ($this->segmentSnapshot(array_map(static fn (ProductionReservation $row): array => [
+                'start' => $row->getStartsAt(), 'end' => $row->getEndsAt(),
+            ], $futureBefore)) === $this->segmentSnapshot($segments)) {
+                continue;
+            }
+            // Las reservas pasadas se conservan. La parte pendiente se retira y
+            // se crea de nuevo, dejando visibles tanto los intentos como su agenda anterior.
+            foreach ($futureBefore as $row) {
+                if ($row->getStartsAt() < $now) {
+                    $row->reschedule($row->getStartsAt(), $now);
+                } else {
+                    $row->deactivate();
+                }
+            }
+            $maxSegment = 0;
+            foreach ($plan->getReservations() as $row) { $maxSegment = max($maxSegment, $row->getSegmentNumber()); }
+            foreach ($segments as $segment) {
+                $row = (new ProductionReservation())->setPlan($plan)->setEquipment($plan->getEquipment())
+                    ->setCreatedBy($actor)->setSegmentNumber(++$maxSegment)
+                    ->setStartsAt($segment['start'])->setEndsAt($segment['end']);
+                $plan->addReservation($row);
+                $this->entityManager->persist($row);
+            }
+            $record['order']->touchTraceability();
+            $this->auditLogger->record($actor, 'production.execution_schedule_recalculated', 'service_order_operation_plan', $plan->getId(),
+                ['segments' => $before], ['segments' => $this->segmentSnapshot($segments), 'trigger' => $eventType]);
+        }
+    }
+
     /** @return array<string, mixed> */
     private function simulate(
         ServiceOrderItem $priorityTarget,
         ProductionPriority $targetPriority,
         string $reason,
         \DateTimeImmutable $now,
+        ?ServiceOrderOperationPlan $executionTarget = null,
     ): array {
         $timezone = new \DateTimeZone(self::TIMEZONE);
         $horizon = $now->modify('+'.self::HORIZON_DAYS.' days');
@@ -195,6 +244,35 @@ final class ProductionPriorityRescheduler
             $plan = $reservation->getPlan();
             $id = (int) $plan->getId();
             $records[$id] ??= ['plan' => $plan];
+        }
+
+        // También entran pasos suspendidos que ya tuvieron agenda: al resolver
+        // una incidencia deben recuperar su reserva sin una captura manual nueva.
+        foreach ($this->planRepository->findForProductionQueue() as $plan) {
+            if ($plan->getConditionApplied() !== false && !$plan->getReservations()->isEmpty()) {
+                $records[(int) $plan->getId()] ??= ['plan' => $plan];
+            }
+        }
+
+        if ($executionTarget !== null) {
+            $affectedItems = [(int) $priorityTarget->getId() => true];
+            $affectedEquipment = [];
+            if ($executionTarget->getEquipment() !== null) { $affectedEquipment[(int) $executionTarget->getEquipment()->getId()] = true; }
+            for ($pass = 0; $pass < count($records); ++$pass) {
+                $previousSize = count($affectedItems) + count($affectedEquipment);
+                foreach ($records as $record) {
+                    $plan = $record['plan'];
+                    $itemId = (int) $plan->getServiceOrderItem()->getId();
+                    $equipmentId = (int) $plan->getEquipment()?->getId();
+                    if (isset($affectedItems[$itemId]) || isset($affectedEquipment[$equipmentId])) {
+                        $affectedItems[$itemId] = true;
+                        if ($equipmentId !== 0) { $affectedEquipment[$equipmentId] = true; }
+                    }
+                }
+                if ($previousSize === count($affectedItems) + count($affectedEquipment)) { break; }
+            }
+            // Solo se reorganizan máquinas y partidas relacionadas con el cambio.
+            $records = array_filter($records, static fn (array $record): bool => isset($affectedItems[(int) $record['plan']->getServiceOrderItem()->getId()]));
         }
 
         foreach ($records as $id => &$record) {
@@ -213,15 +291,19 @@ final class ProductionPriorityRescheduler
             $record['equipment'] = $plan->getEquipment();
             $record['item'] = $plan->getServiceOrderItem();
             $record['order'] = $record['item']->getServiceOrder();
-            $record['started'] = false;
+            $execution = $plan->getLatestExecution();
+            $record['completed'] = $plan->hasCompletedLatestExecution();
+            $record['suspended'] = $plan->getBlockedReason() !== null
+                || $execution?->getStatus() === ProductionOperationExecutionStatus::PAUSED;
+            $record['started'] = $execution?->getStatus() === ProductionOperationExecutionStatus::IN_PROGRESS;
             foreach ($activeRows as $row) {
-                if ($row->getStartsAt() <= $now) {
+                if ($executionTarget === null && $row->getStartsAt() <= $now) {
                     $record['started'] = true;
                     break;
                 }
             }
             $record['fixed'] = $plan->isSchedulePinned()
-                || $record['started']
+                || ($record['started'] && $plan !== $executionTarget)
                 || !$plan->isActive()
                 || $plan->getEquipment() === null
                 || $plan->getEstimatedMinutes() === null;
@@ -237,8 +319,26 @@ final class ProductionPriorityRescheduler
             $record['order_created_at'] = $record['order']->getCreatedAt()->format('Y-m-d\TH:i:s.uP');
             $record['sequence'] = $plan->getSequenceNumber();
             $record['current_rows'] = $record['current_segments'];
+            $record['remaining_minutes'] = $execution !== null && $execution->isOpen()
+                ? max(1, (int) ceil((($plan->getEstimatedMinutes() ?? 0) * 60 - $execution->getActiveSecondsAt($now)) / 60))
+                : $plan->getEstimatedMinutes();
         }
         unset($record);
+
+        // Propaga la falta de fecha a pasos dependientes, incluso en otra máquina.
+        for ($pass = 0; $pass < count($records); ++$pass) {
+            $changed = false;
+            foreach ($records as &$record) {
+                $previous = $this->planRepository->findPreviousActivePlan($record['plan']);
+                if (!$record['completed'] && !$record['suspended'] && $previous !== null
+                    && ($records[(int) $previous->getId()]['suspended'] ?? false)) {
+                    $record['suspended'] = true;
+                    $changed = true;
+                }
+            }
+            unset($record);
+            if (!$changed) { break; }
+        }
 
         $equipmentById = [];
         $orderById = [];
@@ -291,6 +391,10 @@ final class ProductionPriorityRescheduler
                 'estimated_minutes' => $record['plan']->getEstimatedMinutes(),
                 'is_active' => $record['plan']->isActive(),
                 'is_schedule_pinned' => $record['plan']->isSchedulePinned(),
+                'blocked_reason' => $record['plan']->getBlockedReason(),
+                'execution_status' => $record['plan']->getLatestExecution()?->getStatus()->value,
+                'execution_id' => $record['plan']->getLatestExecution()?->getId(),
+                'traceability_version' => $record['order']->getTraceabilityVersion(),
                 'segments' => $record['current_segments'],
             ];
         }
@@ -300,11 +404,24 @@ final class ProductionPriorityRescheduler
         $busyByEquipment = [];
         $completionByPlan = [];
         $pending = [];
+        $schedule = [];
         foreach ($records as $id => $record) {
             $rows = $record['future_rows'];
-            if ($rows === []) {
+            if ($record['completed']) {
+                $completionByPlan[(int) $id] = $record['plan']->getLatestExecution()->getCompletedAt();
+                if ($executionTarget !== null && $rows !== []) { $schedule[(int) $id] = []; }
                 continue;
             }
+            if ($record['suspended'] && !$record['plan']->isSchedulePinned() && !$record['started']) {
+                if ($executionTarget !== null) { $schedule[(int) $id] = []; }
+                continue;
+            }
+            if ($rows === [] && $record['started'] && $record['fixed'] && $record['equipment_id'] !== null) {
+                $end = $now->modify('+'.(int) $record['remaining_minutes'].' minutes');
+                $busyByEquipment[(int) $record['equipment_id']][] = ['start' => $now, 'end' => $end];
+                $completionByPlan[(int) $id] = $end;
+            }
+            if ($rows === [] && ($executionTarget === null || $record['fixed'])) { continue; }
             $latestEnd = null;
             foreach ($rows as $row) {
                 if ($latestEnd === null || $row->getEndsAt() > $latestEnd) {
@@ -319,12 +436,11 @@ final class ProductionPriorityRescheduler
                         'end' => $row->getEndsAt(),
                     ];
                 }
-            } else {
+            } elseif (!$record['suspended']) {
                 $pending[(int) $id] = $record;
             }
         }
 
-        $schedule = [];
         while ($pending !== []) {
             $ready = [];
             foreach ($pending as $id => $record) {
@@ -343,7 +459,9 @@ final class ProductionPriorityRescheduler
                     continue;
                 }
 
-                $previousEnd = $this->latestActiveEnd($previous);
+                $previousEnd = $previous->hasCompletedLatestExecution()
+                    ? $previous->getLatestExecution()->getCompletedAt()
+                    : $this->latestActiveEnd($previous);
                 if ($previousEnd === null) {
                     throw new \DomainException('No se puede reprogramar: falta una reserva de la operación anterior.');
                 }
@@ -360,6 +478,8 @@ final class ProductionPriorityRescheduler
                 $rightPlan = $right['record']['plan'];
                 $leftOrder = $leftPlan->getServiceOrderItem()->getServiceOrder();
                 $rightOrder = $rightPlan->getServiceOrderItem()->getServiceOrder();
+                $resuming = ($right['record']['started'] ? 1 : 0) <=> ($left['record']['started'] ? 1 : 0);
+                if ($resuming !== 0) { return $resuming; }
                 $priority = $right['record']['priority']->weight() <=> $left['record']['priority']->weight();
                 if ($priority !== 0) {
                     return $priority;
@@ -388,7 +508,7 @@ final class ProductionPriorityRescheduler
                 $equipment = $record['equipment'];
                 $segments = $this->scheduleCalculator->segments(
                     $entry['not_before'],
-                    (int) $record['plan']->getEstimatedMinutes(),
+                    (int) $record['remaining_minutes'],
                     $busyByEquipment[(int) $equipment->getId()] ?? [],
                     $exceptionsByEquipment[(int) $equipment->getId()] ?? [],
                 );
@@ -399,6 +519,16 @@ final class ProductionPriorityRescheduler
                 }
                 $completionByPlan[$id] = $segments[array_key_last($segments)]['end'];
                 unset($pending[$id]);
+            }
+        }
+
+        foreach ($records as $record) {
+            if (!$record['fixed'] || $record['suspended'] || $record['completed'] || $record['future_rows'] === []) { continue; }
+            $previous = $this->planRepository->findPreviousActivePlan($record['plan']);
+            $previousEnd = $previous === null ? null : ($completionByPlan[(int) $previous->getId()] ?? null);
+            $firstStart = min(array_map(static fn (ProductionReservation $row): \DateTimeImmutable => $row->getStartsAt(), $record['future_rows']));
+            if ($previousEnd !== null && $previousEnd > $firstStart) {
+                throw new \DomainException('El nuevo horario no cabe antes de una reserva fijada o activa de la misma ruta. El jefe debe revisar esa reserva antes de continuar.');
             }
         }
 
@@ -466,7 +596,11 @@ final class ProductionPriorityRescheduler
             }
         }
         foreach ($schedule as $planId => $segments) {
-            $afterEnds[$planId] = $segments[array_key_last($segments)]['end'];
+            if ($segments === []) {
+                unset($afterEnds[$planId]);
+            } else {
+                $afterEnds[$planId] = $segments[array_key_last($segments)]['end'];
+            }
         }
 
         $risks = [];
@@ -523,6 +657,11 @@ final class ProductionPriorityRescheduler
             ));
             usort($plans, static fn (ServiceOrderOperationPlan $left, ServiceOrderOperationPlan $right): int => $left->getSequenceNumber() <=> $right->getSequenceNumber());
             $last = $plans !== [] ? $plans[array_key_last($plans)] : null;
+            foreach ($plans as $plan) {
+                if ($plan->getBlockedReason() !== null || $plan->getLatestExecution()?->getStatus() === ProductionOperationExecutionStatus::PAUSED) {
+                    return null;
+                }
+            }
             $itemEnd = $last !== null ? ($ends[(int) $last->getId()] ?? null) : null;
             if ($itemEnd === null) {
                 return null;
@@ -616,6 +755,7 @@ final class ProductionPriorityRescheduler
     private function lockQueueRows(\DateTimeImmutable $now): void
     {
         $connection = $this->entityManager->getConnection();
+        if (!$connection->getDatabasePlatform() instanceof \Doctrine\DBAL\Platforms\AbstractMySQLPlatform) { return; }
         $utc = new \DateTimeZone('UTC');
         // These values are bound by DBAL directly (outside ORM type conversion).
         // Pass the database datetime representation explicitly instead of DateTimeImmutable.

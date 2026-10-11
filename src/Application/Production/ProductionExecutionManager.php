@@ -30,6 +30,9 @@ final class ProductionExecutionManager
         private readonly ServiceOrderTraceabilityEventRepository $eventRepository,
         private readonly ServiceOrderTraceabilityRecorder $traceabilityRecorder,
         private readonly AuditLogger $auditLogger,
+        private readonly ProductionScheduleLock $scheduleLock,
+        private readonly ProductionPriorityRescheduler $rescheduler,
+        private readonly \App\Repository\Orders\ServiceOrderOperationPlanRepository $planRepository,
     ) {
     }
 
@@ -40,7 +43,7 @@ final class ProductionExecutionManager
         ?ProductionOperationExecution $originExecution = null,
         ?callable $beforeStart = null,
     ): ProductionOperationExecution {
-        return $this->entityManager->wrapInTransaction(function () use ($plan, $actor, $command, $originExecution, $beforeStart): ProductionOperationExecution {
+        return $this->scheduleLock->synchronized(fn () => $this->entityManager->wrapInTransaction(function () use ($plan, $actor, $command, $originExecution, $beforeStart): ProductionOperationExecution {
             $order = $plan->getServiceOrderItem()->getServiceOrder();
             $this->lockOrderAndPlan($order, $plan);
             if ($originExecution !== null) {
@@ -54,6 +57,7 @@ final class ProductionExecutionManager
 
             $this->assertExpectedOrderVersion($order, $command);
             $this->assertPlanCanStart($order, $plan, $actor, $originExecution);
+            $this->assertMachineAvailable($plan);
             if ($beforeStart !== null) {
                 $beforeStart($order, $plan, $actor);
             }
@@ -110,7 +114,7 @@ final class ProductionExecutionManager
             $this->entityManager->flush();
 
             return $execution;
-        });
+        }));
     }
 
     public function pause(
@@ -147,11 +151,11 @@ final class ProductionExecutionManager
         ProductionExecutionCommand $command,
         ?callable $beforeComplete = null,
     ): void {
-        $this->entityManager->wrapInTransaction(function () use ($execution, $actor, $command, $beforeComplete): void {
+        $this->scheduleLock->synchronized(fn () => $this->entityManager->wrapInTransaction(function () use ($execution, $actor, $command, $beforeComplete): void {
             $plan = $execution->getPlan();
             $order = $plan->getServiceOrderItem()->getServiceOrder();
             $this->lockOrderAndPlan($order, $plan);
-            $this->entityManager->lock($execution, LockMode::PESSIMISTIC_WRITE);
+            $this->entityManager->refresh($execution, LockMode::PESSIMISTIC_WRITE);
 
             $previousEvent = $this->eventRepository->findOneByCommandId($command->commandId);
             if ($previousEvent instanceof ServiceOrderTraceabilityEvent) {
@@ -170,6 +174,7 @@ final class ProductionExecutionManager
                 $beforeComplete($order, $plan, $execution, $actor);
             }
             $execution->complete($command->note);
+            $this->rescheduler->recalculateAfterExecutionChange($plan, $actor, 'production.execution_completed');
 
             if ($this->allActiveOperationsAreCompleted($order)) {
                 $order->waitForQualityReview();
@@ -200,7 +205,7 @@ final class ProductionExecutionManager
                 $newState,
             );
             $this->entityManager->flush();
-        });
+        }));
     }
 
     /** @param callable(ProductionOperationExecution): ProductionOperationExecution $transition */
@@ -211,11 +216,11 @@ final class ProductionExecutionManager
         string $eventType,
         callable $transition,
     ): void {
-        $this->entityManager->wrapInTransaction(function () use ($execution, $actor, $command, $eventType, $transition): void {
+        $this->scheduleLock->synchronized(fn () => $this->entityManager->wrapInTransaction(function () use ($execution, $actor, $command, $eventType, $transition): void {
             $plan = $execution->getPlan();
             $order = $plan->getServiceOrderItem()->getServiceOrder();
             $this->lockOrderAndPlan($order, $plan);
-            $this->entityManager->lock($execution, LockMode::PESSIMISTIC_WRITE);
+            $this->entityManager->refresh($execution, LockMode::PESSIMISTIC_WRITE);
 
             $previousEvent = $this->eventRepository->findOneByCommandId($command->commandId);
             if ($previousEvent instanceof ServiceOrderTraceabilityEvent) {
@@ -233,7 +238,9 @@ final class ProductionExecutionManager
                 throw new \DomainException($message);
             }
             $previousState = $order->traceabilityStateSnapshot();
+            if ($eventType === 'production.execution_resumed') { $this->assertMachineAvailable($plan); }
             $transition($execution);
+            $this->rescheduler->recalculateAfterExecutionChange($plan, $actor, $eventType);
             $order->touchTraceability();
             $newState = $order->traceabilityStateSnapshot();
 
@@ -260,13 +267,24 @@ final class ProductionExecutionManager
                 $newState,
             );
             $this->entityManager->flush();
-        });
+        }));
+    }
+
+    private function assertMachineAvailable(ServiceOrderOperationPlan $plan): void
+    {
+        if ($plan->getEquipment() === null) { return; }
+        foreach ($this->planRepository->findForProductionQueue() as $other) {
+            if ($other !== $plan && $other->getEquipment()?->getId() === $plan->getEquipment()->getId()
+                && $other->getLatestExecution()?->getStatus() === \App\Enum\Production\ProductionOperationExecutionStatus::IN_PROGRESS) {
+                throw new \DomainException('La máquina está ejecutando otro trabajo. Espera a que termine o sea pausado antes de iniciar o reanudar.');
+            }
+        }
     }
 
     private function lockOrderAndPlan(ServiceOrder $order, ServiceOrderOperationPlan $plan): void
     {
-        $this->entityManager->lock($order, LockMode::PESSIMISTIC_WRITE);
-        $this->entityManager->lock($plan, LockMode::PESSIMISTIC_WRITE);
+        $this->entityManager->refresh($order, LockMode::PESSIMISTIC_WRITE);
+        $this->entityManager->refresh($plan, LockMode::PESSIMISTIC_WRITE);
     }
 
     private function assertExpectedOrderVersion(ServiceOrder $order, ProductionExecutionCommand $command): void

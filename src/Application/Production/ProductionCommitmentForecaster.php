@@ -10,6 +10,7 @@ use App\Entity\Orders\ServiceOrderOperationPlan;
 use App\Entity\Production\ProductionReservation;
 use App\Repository\Production\ProductionCalendarExceptionRepository;
 use App\Repository\Production\ProductionReservationRepository;
+use App\Enum\Production\ProductionOperationExecutionStatus;
 
 final class ProductionCommitmentForecaster
 {
@@ -47,11 +48,25 @@ final class ProductionCommitmentForecaster
 
         $finishes = [];
         $itemsWithFinish = [];
+        $causes = [];
         $allItemsScheduled = true;
         foreach ($order->getItems() as $item) {
             $plans = $plansByItem[(int) $item->getId()] ?? [];
             $lastPlan = $plans !== [] ? $plans[array_key_last($plans)] : null;
-            $finish = $lastPlan !== null ? $this->latestReservationEnd($reservationsByPlan[(int) $lastPlan->getId()] ?? []) : null;
+            $finish = $lastPlan?->hasCompletedLatestExecution()
+                ? $lastPlan->getLatestExecution()->getCompletedAt()
+                : ($lastPlan !== null ? $this->latestReservationEnd($reservationsByPlan[(int) $lastPlan->getId()] ?? []) : null);
+            foreach ($plans as $plan) {
+                if ($plan->getBlockedReason() !== null || $plan->getLatestExecution()?->getStatus() === ProductionOperationExecutionStatus::PAUSED) {
+                    $finish = null;
+                    $causes[(int) $item->getId()] = 'La ruta está pausada o bloqueada. El pronóstico se recuperará al reanudar o resolver la incidencia.';
+                    break;
+                }
+                if (!$plan->hasCompletedLatestExecution() && ($reservationsByPlan[(int) $plan->getId()] ?? []) === []) {
+                    $finish = null;
+                    break;
+                }
+            }
             $itemsWithFinish[(int) $item->getId()] = $finish;
             if ($finish === null) {
                 $allItemsScheduled = false;
@@ -74,10 +89,16 @@ final class ProductionCommitmentForecaster
                 $order->getCommitmentDate(),
                 $holidays,
             );
+            if (isset($causes[(int) $item->getId()])) {
+                $items[(int) $item->getId()]['risk_cause'] = $causes[(int) $item->getId()];
+            }
         }
 
+        $orderForecast = $this->analyzer->analyze($orderFinish, $order->getCommitmentDate(), $holidays);
+        if ($causes !== []) { $orderForecast['risk_cause'] = reset($causes); }
+
         return [
-            'order' => $this->analyzer->analyze($orderFinish, $order->getCommitmentDate(), $holidays),
+            'order' => $orderForecast,
             'items' => $items,
         ];
     }
