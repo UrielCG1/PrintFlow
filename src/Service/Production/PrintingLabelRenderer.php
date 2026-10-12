@@ -17,6 +17,9 @@ final class PrintingLabelRenderer
 
         $result = \Endroid\QrCode\Builder\Builder::create()
             ->writer(new \Endroid\QrCode\Writer\SvgWriter())
+            ->writerOptions([
+                \Endroid\QrCode\Writer\SvgWriter::WRITER_OPTION_EXCLUDE_XML_DECLARATION => true,
+            ])
             ->data($output->getQrPayload())
             ->size(240)
             ->margin(8)
