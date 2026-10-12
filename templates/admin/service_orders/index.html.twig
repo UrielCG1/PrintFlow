@@ -7,87 +7,88 @@
 {% block app_breadcrumb %}Operación / Órdenes de servicio{% endblock %}
 
 {% block app_content %}
-    <section class="pf-page__content">
-        <header class="pf-page-header">
+    <section class="pf-page__content service-orders-board" data-controller="admin--service-order-list">
+        <header class="pf-page-header service-orders-board__header">
             <div class="pf-page-header__content">
                 <p class="pf-page-header__eyebrow">Operación</p>
                 <h1 class="pf-page-header__title">Órdenes de servicio</h1>
-                <p class="pf-page-header__description">
-                    Consulta operativa de los trabajos derivados de cotizaciones aceptadas.
-                </p>
+                <p class="pf-page-header__description">Seguimiento de trabajos desde planificación hasta entrega.</p>
             </div>
         </header>
 
-        <section class="pf-card pf-card--padding-none">
-            <div class="pf-table-responsive pf-table-responsive--flat">
-                <table class="pf-table">
-                    <thead>
-                        <tr>
-                            <th>Folio</th>
-                            <th>Cliente</th>
-                            {% if is_granted('service_orders.view_commercial') %}
-                                <th>Cotización origen</th>
-                            {% endif %}
-                            <th>Estado</th>
-                            {% if is_granted('service_orders.view_commercial') %}
-                                <th class="pf-table__cell--right">Total</th>
-                            {% endif %}
-                            <th>Fecha compromiso</th>
-                            <th>Creada</th>
-                            <th class="pf-table__actions-cell">Acciones</th>
+        <section class="service-order-metrics" aria-label="Resumen de órdenes de servicio">
+            <article class="service-order-metric service-order-metric--green">
+                <span class="service-order-metric__icon" aria-hidden="true"><i class="bi bi-gear-wide-connected"></i></span>
+                <div><h2>En producción</h2><strong>{{ serviceOrderSummary.in_production }}</strong><p>órdenes en proceso</p></div>
+            </article>
+            <article class="service-order-metric service-order-metric--blue">
+                <span class="service-order-metric__icon" aria-hidden="true"><i class="bi bi-calendar2-week"></i></span>
+                <div><h2>Pendientes de planificar</h2><strong>{{ serviceOrderSummary.pending_planning }}</strong><p>órdenes por planificar</p></div>
+            </article>
+            <article class="service-order-metric service-order-metric--orange">
+                <span class="service-order-metric__icon" aria-hidden="true"><i class="bi bi-calendar-event"></i></span>
+                <div><h2>Vencen esta semana</h2><strong>{{ serviceOrderSummary.due_this_week }}</strong><p>compromisos próximos</p></div>
+            </article>
+            <article class="service-order-metric service-order-metric--red">
+                <span class="service-order-metric__icon" aria-hidden="true"><i class="bi bi-exclamation-triangle"></i></span>
+                <div><h2>Con atraso</h2><strong>{{ serviceOrderSummary.overdue }}</strong><p>órdenes con retraso</p></div>
+            </article>
+        </section>
+
+        <section class="pf-card service-orders-panel" aria-label="Listado de órdenes">
+            <div class="service-orders-filters">
+                <label class="service-orders-search">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <span class="visually-hidden">Buscar órdenes</span>
+                    <input type="search" placeholder="Buscar por folio, cliente o producto..." autocomplete="off" data-admin--service-order-list-target="search" data-action="input->admin--service-order-list#filter">
+                </label>
+                <label class="service-orders-select"><span>Etapa</span><select data-admin--service-order-list-target="stage" data-action="change->admin--service-order-list#filter"><option value="">Todas</option><option value="planning">Planificación</option><option value="design">Diseño</option><option value="production">Producción</option><option value="quality">Calidad</option><option value="delivery">Entrega</option></select></label>
+                <label class="service-orders-select"><span>Estado</span><select data-admin--service-order-list-target="status" data-action="change->admin--service-order-list#filter"><option value="">Todos</option><option value="pending">Pendiente de planificar</option><option value="planned">Planificada</option></select></label>
+                <label class="service-orders-select"><span>Prioridad</span><select data-admin--service-order-list-target="priority" data-action="change->admin--service-order-list#filter"><option value="">Todas</option><option value="urgent">Urgente</option><option value="high">Alta</option><option value="normal">Normal</option></select></label>
+                <label class="service-orders-select"><span>Compromiso</span><select data-admin--service-order-list-target="commitment" data-action="change->admin--service-order-list#filter"><option value="">Todos</option><option value="late">Atrasado</option><option value="week">Esta semana</option><option value="future">A tiempo</option><option value="unassigned">Sin fecha</option></select></label>
+                <label class="service-orders-select service-orders-select--client"><span>Cliente</span><select data-admin--service-order-list-target="client" data-action="change->admin--service-order-list#filter"><option value="">Todos</option>{% for clientName in serviceOrderClients %}<option value="{{ clientName|lower }}">{{ clientName }}</option>{% endfor %}</select></label>
+                <button type="button" class="service-orders-clear" data-action="click->admin--service-order-list#clear">Limpiar</button>
+            </div>
+
+            <div class="service-orders-tabs" role="tablist" aria-label="Filtrar órdenes por atención">
+                <button type="button" class="is-active" role="tab" aria-selected="true" data-filter="all" data-action="click->admin--service-order-list#selectTab">Todas <span>({{ serviceOrders|length }})</span></button>
+                <button type="button" role="tab" aria-selected="false" data-filter="action" data-action="click->admin--service-order-list#selectTab">Requieren acción <span>({{ serviceOrderSummary.requiring_action }})</span></button>
+                <button type="button" role="tab" aria-selected="false" data-filter="risk" data-action="click->admin--service-order-list#selectTab">En riesgo <span>({{ serviceOrderSummary.at_risk }})</span></button>
+                <button type="button" role="tab" aria-selected="false" data-filter="completed" data-action="click->admin--service-order-list#selectTab">Completadas <span>({{ serviceOrderSummary.completed }})</span></button>
+            </div>
+
+            <div class="service-orders-table-scroll">
+                <table class="service-orders-table">
+                    <thead><tr><th>Orden / origen</th><th>Cliente y partidas</th><th>Progreso</th><th>Etapa actual</th><th>Compromiso / riesgo</th><th>Siguiente acción</th></tr></thead>
+                    <tbody data-admin--service-order-list-target="rows">
+                    {% for serviceOrder in serviceOrders %}
+                        {% set productionState = serviceOrder.productionStatus.value %}
+                        {% set deliveryState = serviceOrder.deliveryStatus.value %}
+                        {% set orderStage = serviceOrder.status.value == 'PENDING_PLANNING' ? 'planning' : (productionState == 'WAITING_DESIGN' ? 'design' : (productionState in ['IN_PRODUCTION'] ? 'production' : (productionState in ['WAITING_QUALITY', 'QUALITY_REWORK'] ? 'quality' : 'delivery'))) %}
+                        {% set currentStageIndex = orderStage == 'planning' ? 0 : (orderStage == 'design' ? 1 : (orderStage == 'production' ? 2 : (orderStage == 'quality' ? 3 : 4))) %}
+                        {% set orderPriority = 'normal' %}
+                        {% for item in serviceOrder.items %}{% if item.priority.value == 'urgent' %}{% set orderPriority = 'urgent' %}{% elseif item.priority.value == 'high' and orderPriority != 'urgent' %}{% set orderPriority = 'high' %}{% endif %}{% endfor %}
+                        {% set commitmentState = serviceOrder.commitmentDate is null ? 'unassigned' : (serviceOrder.commitmentDate|date('Y-m-d', 'America/Mexico_City') < serviceOrderToday|date('Y-m-d') and deliveryState != 'DELIVERED' ? 'late' : (serviceOrder.commitmentDate|date('W', 'America/Mexico_City') == serviceOrderToday|date('W') and serviceOrder.commitmentDate|date('o', 'America/Mexico_City') == serviceOrderToday|date('o') ? 'week' : 'future')) %}
+                        {% set clientName = serviceOrder.clientSnapshot.business_name ?? 'Cliente no disponible' %}
+                        {% set isCompleted = deliveryState == 'DELIVERED' %}
+                        {% set needsAction = serviceOrder.status.value == 'PENDING_PLANNING' or productionState in ['WAITING_QUALITY', 'QUALITY_REWORK'] or (productionState == 'PRODUCTION_COMPLETED' and not isCompleted) %}
+                        <tr data-order-row data-search="{{ serviceOrderSearchTerms[serviceOrder.id]|lower }}" data-stage="{{ orderStage }}" data-status="{{ serviceOrder.status.value == 'PENDING_PLANNING' ? 'pending' : 'planned' }}" data-priority="{{ orderPriority }}" data-commitment="{{ commitmentState }}" data-client="{{ clientName|lower }}" data-tab-action="{{ needsAction ? '1' : '0' }}" data-tab-risk="{{ commitmentState == 'late' or productionState == 'QUALITY_REWORK' ? '1' : '0' }}" data-tab-completed="{{ isCompleted ? '1' : '0' }}">
+                            <td data-label="Orden / origen"><a class="service-orders-folio" href="{{ path('admin_service_orders_show', {id: serviceOrder.id}) }}">{{ serviceOrder.folio }}</a>{% if is_granted('service_orders.view_commercial') %}<span class="service-orders-origin">{{ serviceOrder.sourceQuotationFolio }}</span>{% endif %}</td>
+                            <td data-label="Cliente y partidas"><strong class="service-orders-client">{{ clientName }}</strong><span class="service-orders-detail">{{ serviceOrder.items|length }} {{ serviceOrder.items|length == 1 ? 'partida' : 'partidas' }}</span>{% for item in serviceOrder.items|slice(0, 2) %}<small class="service-orders-item-detail">{{ item.commercialItemSnapshot.name ?? 'Producto' }} · {{ item.quantity|number_format(2, '.', ',') }} {{ item.commercialItemSnapshot.measurement_unit.code ?? '' }}</small>{% endfor %}</td>
+                            <td data-label="Progreso"><ol class="service-orders-progress" aria-label="Progreso de la orden">
+                                {% set progressLabels = ['Planificación', 'Diseño', 'Producción', 'Calidad', 'Entrega'] %}
+                                {% for progressLabel in progressLabels %}<li class="{{ loop.index0 < currentStageIndex or isCompleted ? 'is-complete' : (loop.index0 == currentStageIndex ? 'is-current' : '') }}"><span aria-hidden="true">{% if loop.index0 < currentStageIndex or isCompleted %}<i class="bi bi-check-lg"></i>{% endif %}</span><small>{{ progressLabel }}</small></li>{% endfor %}
+                            </ol></td>
+                            <td data-label="Etapa actual"><span class="service-orders-stage service-orders-stage--{{ orderStage }}">{{ orderStage == 'planning' ? 'Planificación' : (orderStage == 'design' ? 'Diseño' : (orderStage == 'production' ? 'Producción' : (orderStage == 'quality' ? 'Calidad' : 'Entrega'))) }}</span></td>
+                            <td data-label="Compromiso / riesgo"><strong class="service-orders-date">{% if serviceOrder.commitmentDate %}{{ serviceOrder.commitmentDate|date('d/m/Y', 'America/Mexico_City') }}{% else %}Por asignar{% endif %}</strong><span class="service-orders-risk service-orders-risk--{{ commitmentState }}"><i aria-hidden="true"></i>{{ commitmentState == 'late' ? 'Con atraso' : (commitmentState == 'week' ? 'Vence esta semana' : (commitmentState == 'unassigned' ? 'Sin fecha' : (isCompleted ? 'Entregada' : 'A tiempo'))) }}</span></td>
+                            <td data-label="Siguiente acción"><a class="service-orders-action service-orders-action--{{ orderStage }}" href="{{ path('admin_service_orders_show', {id: serviceOrder.id}) }}"><i class="bi {{ orderStage == 'planning' ? 'bi-calendar2-plus' : (orderStage == 'quality' ? 'bi-check-circle' : (orderStage == 'delivery' ? 'bi-truck' : 'bi-gear')) }}" aria-hidden="true"></i><span>{{ serviceOrder.status.value == 'PENDING_PLANNING' ? 'Definir fecha' : (productionState in ['WAITING_QUALITY', 'QUALITY_REWORK'] ? 'Revisar en Calidad' : (productionState == 'PRODUCTION_COMPLETED' ? 'Preparar entrega' : (productionState == 'IN_PRODUCTION' ? 'Completar impresión' : 'Ver orden'))) }}</span><i class="bi bi-chevron-down service-orders-action__chevron" aria-hidden="true"></i></a></td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        {% for serviceOrder in serviceOrders %}
-                            <tr>
-                                <td><strong class="pf-table__primary">{{ serviceOrder.folio }}</strong></td>
-                                <td>
-                                    <strong class="d-block pf-table__primary">{{ serviceOrder.clientSnapshot.business_name ?? 'Cliente no disponible' }}</strong>
-                                    {% if is_granted('service_orders.view_commercial') and (serviceOrder.clientSnapshot.tax_id ?? false) %}
-                                        <span class="d-block text-muted small">{{ serviceOrder.clientSnapshot.tax_id }}</span>
-                                    {% endif %}
-                                </td>
-                                {% if is_granted('service_orders.view_commercial') %}
-                                    <td>
-                                        {% if is_granted('quotations.view') %}
-                                            <a href="{{ path('admin_quotations_show', {id: serviceOrder.sourceQuotation.id}) }}">{{ serviceOrder.sourceQuotationFolio }}</a>
-                                        {% else %}
-                                            {{ serviceOrder.sourceQuotationFolio }}
-                                        {% endif %}
-                                    </td>
-                                {% endif %}
-                                <td><span class="pf-status-badge pf-status-badge--{{ serviceOrder.status.badgeTone }}">{{ serviceOrder.status.label }}</span></td>
-                                {% if is_granted('service_orders.view_commercial') %}
-                                    <td class="pf-table__cell--right pf-table__cell--nowrap fw-semibold">${{ serviceOrder.total|number_format(2, '.', ',') }} {{ serviceOrder.currency }}</td>
-                                {% endif %}
-                                <td>
-                                    {% if serviceOrder.commitmentDate %}
-                                        {{ serviceOrder.commitmentDate|date('d/m/Y') }}
-                                    {% else %}
-                                        <span class="text-muted">Por asignar</span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ serviceOrder.createdAt|date('d/m/Y H:i', 'America/Mexico_City') }}</td>
-                                <td class="pf-table__actions-cell">
-                                    <a href="{{ path('admin_service_orders_show', {id: serviceOrder.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm">
-                                        <i class="bi bi-eye" aria-hidden="true"></i>
-                                        Ver
-                                    </a>
-                                </td>
-                            </tr>
-                        {% else %}
-                            <tr>
-                                <td colspan="{{ is_granted('service_orders.view_commercial') ? 8 : 6 }}" class="pf-table__empty">
-                                    <div class="pf-table__empty-content">
-                                        <i class="bi bi-clipboard-check pf-table__empty-icon" aria-hidden="true"></i>
-                                        <strong class="pf-table__empty-title">Aún no hay órdenes de servicio.</strong>
-                                        <span class="pf-table__empty-description">Se crean desde el detalle de una cotización aceptada.</span>
-                                    </div>
-                                </td>
-                            </tr>
-                        {% endfor %}
+                    {% else %}
+                        <tr class="service-orders-empty"><td colspan="6"><i class="bi bi-clipboard2-check" aria-hidden="true"></i><strong>Aún no hay órdenes de servicio.</strong><span>Se crean desde una cotización aceptada.</span></td></tr>
+                    {% endfor %}
                     </tbody>
                 </table>
+                <p class="service-orders-no-results" hidden data-admin--service-order-list-target="empty">No hay órdenes que coincidan con los filtros.</p>
             </div>
         </section>
     </section>
