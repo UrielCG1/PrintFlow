@@ -9,5 +9,6 @@ Estos registros conservan las decisiones técnicas, migraciones y verificaciones
 | 10 oct 2026 | [Ventas, rutas y orden](2026-10-10-ventas-rutas-orden.md) | Ruta publicada por Producto, snapshots de partida y creación desde cotización aceptada. |
 | 11 oct 2026 | [Diseño y archivos](2026-10-11-diseno-y-archivos.md) | Revisión de arte, evidencia por partida y almacenamiento privado. |
 | 11 oct 2026 | [Agenda y permisos](2026-10-11-agenda-y-permisos.md) | Pausas, recálculo, permisos de entrega y equipos manuales de taller. |
+| 11 oct 2026 | [Operadores y estándares de tiempo](2026-10-11-operadores-y-estandares.md) | Asignación antes del inicio, tiempos estándar por Producto, medición automática y migración asociada. |
 
 Para identificar lo ya incorporado, los pendientes y el estado de verificación productiva, consulta [estado actual](../estado-actual.md). Para saber qué sigue, usa el [roadmap del producto](../roadmap/fases-y-historias.md).

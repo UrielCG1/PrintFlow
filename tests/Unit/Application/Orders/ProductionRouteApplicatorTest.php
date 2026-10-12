@@ -18,6 +18,7 @@ use App\Entity\Production\CommercialItemRouteVersion;
 use App\Entity\Quotations\QuotationItem;
 use App\Entity\Users\User;
 use App\Enum\Catalog\CommercialItemType;
+use App\Enum\Orders\ProductionEstimateKind;
 use App\Enum\Production\RouteCondition;
 use PHPUnit\Framework\TestCase;
 
@@ -75,6 +76,30 @@ final class ProductionRouteApplicatorTest extends TestCase
         self::assertNull($orderItem->getRouteVersion());
         self::assertSame('El Producto no tiene una ruta de producción publicada.', $orderItem->getPlanningIssue());
         self::assertCount(0, $orderItem->getActiveOperationPlans());
+    }
+
+    public function testProductRouteStandardAutomaticallyEstimatesEachOperationByQuantity(): void
+    {
+        [$item, $version] = $this->routeFixture();
+        $version->getSteps()->get(0)
+            ->setStandardBaseMinutes(12)
+            ->setStandardMinutesPerUnit('0.5');
+        $version->getSteps()->get(1)
+            ->setStandardBaseMinutes(2)
+            ->setStandardMinutesPerUnit('0.25');
+        $orderItem = (new ServiceOrderItem())
+            ->setSourceQuotationItem(new QuotationItem())
+            ->setCommercialItem($item)
+            ->setQuantity('10');
+
+        (new ProductionRouteApplicator())->apply($orderItem, new User());
+
+        $plans = $orderItem->getActiveOperationPlans();
+        self::assertSame(17, $plans[0]->getEstimatedMinutes());
+        self::assertSame(ProductionEstimateKind::STANDARD, $plans[0]->getEstimateKind());
+        self::assertSame('10.000000', $plans[0]->getEstimateSnapshot()['quantity']);
+        self::assertSame(5, $plans[1]->getEstimatedMinutes());
+        self::assertSame(ProductionEstimateKind::STANDARD, $plans[1]->getEstimateKind());
     }
 
     public function testRouteWithoutMandatoryDesignFirstLeavesAnExplicitPlanningIssue(): void

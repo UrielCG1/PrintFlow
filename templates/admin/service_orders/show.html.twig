@@ -247,6 +247,24 @@
                 </div>
             </header>
 
+            {% if canAssignProduction and assignableOperatorPlans > 0 %}
+                <div class="pf-card__body border-bottom bg-light">
+                    <form method="post" action="{{ path('admin_service_orders_assign_pending_operators', {id: serviceOrder.id}) }}" class="row g-2 align-items-end">
+                        <input type="hidden" name="_token" value="{{ csrf_token('service-order-assign-operators-' ~ serviceOrder.id) }}">
+                        <div class="col-lg-5">
+                            <label class="form-label" for="bulk-operator">Responsable para operaciones sin asignar</label>
+                            <select class="form-select" id="bulk-operator" name="operator_id" required>
+                                <option value="">Selecciona una persona</option>
+                                {% for operator in productionOperators %}<option value="{{ operator.id }}">{{ operator.fullName }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-lg-4 small text-muted">Se asignará a {{ assignableOperatorPlans }} operación(es) reservadas, sin responsable y aún sin iniciar. Diseño se gestiona por su perfil. Puedes ajustar responsables por paso después.</div>
+                        <div class="col-lg-3"><button type="submit" class="btn pf-button pf-button--secondary">Asignar operaciones sin responsable</button></div>
+                    </form>
+                    {% if productionOperators is empty %}<p class="small text-warning mb-0 mt-2">No hay usuarios activos con rol Operador. Activa o asigna el rol en Usuarios para continuar.</p>{% endif %}
+                </div>
+            {% endif %}
+
             {% if canPlan and planningProgress.auto_actions > 0 %}<div class="pf-card__body border-bottom service-order-auto-action">
                 <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
                     <div class="flex-grow-1">
@@ -468,13 +486,16 @@
                                             <td colspan="{{ canPlan ? (plans|length > 1 ? 6 : 5) : 4 }}">
                                                 <div class="d-flex flex-column gap-2">
                                                     <div>
-                                                        {% if plan.estimateKind %}
-                                                            <strong>Estimación {{ plan.estimateKind.value == 'manual' ? 'manual' : 'calculada' }}:</strong>
+                                                    {% if plan.estimateKind %}
+                                                        <strong>Estimación {{ plan.estimateKind.value == 'manual' ? 'manual' : (plan.estimateKind.value == 'standard' ? 'estándar del Producto' : 'calculada por máquina') }}:</strong>
                                                             {{ plan.estimatedMinutes }} min
                                                             {% if plan.estimatedLoadValue and plan.estimatedLoadUnit %} · Carga {{ plan.estimatedLoadValue }} {{ plan.estimatedLoadUnit.label }}{% endif %}
                                                             {% if plan.estimateKind.value == 'manual' %}<span class="text-muted"> · {{ plan.manualEstimateReason }}</span>{% endif %}
+                                                            {% set measuredMinutes = plan.measuredActiveMinutes %}
                                                             {% if plan.actualMinutes is not null %}
-                                                                <span class="ms-2"><strong>Real:</strong> {{ plan.actualMinutes }} min · Diferencia: {{ plan.actualMinutes - plan.estimatedMinutes }} min</span>
+                                                                <span class="ms-2"><strong>Real corregido:</strong> {{ plan.actualMinutes }} min · Diferencia: {{ plan.actualMinutes - plan.estimatedMinutes }} min</span>
+                                                            {% elseif measuredMinutes is not null %}
+                                                                <span class="ms-2"><strong>Real acumulado:</strong> {{ measuredMinutes }} min · Diferencia: {{ measuredMinutes - plan.estimatedMinutes }} min</span>
                                                             {% endif %}
                                                         {% else %}
                                                             <span class="text-warning">Falta calcular el tiempo.</span>
@@ -555,10 +576,10 @@
                                                         </details>
                                                     {% endif %}
                                                     {% if planReservations|length > 0 %}
-                                                        {% set isDesignOperation = plan.operationSnapshot.code|default(plan.operation.code) == 'PRE-DISENO' %}
                                                         <details class="service-order-disclosure service-order-disclosure--compact">
-                                                            <summary><span class="service-order-disclosure__label">{{ isDesignOperation ? 'Tiempo real de Diseño' : 'Operador y tiempo real' }}</span></summary>
-                                                            {% if not isDesignOperation %}
+                                                            {% set isDesignOperation = plan.operationSnapshot.code|default(plan.operation.code) == 'PRE-DISENO' %}
+                                                            <summary><span class="service-order-disclosure__label">{{ isDesignOperation ? 'Tiempo real de Diseño' : 'Responsable y tiempo real' }}</span></summary>
+                                                            {% if canAssignProduction and operatorAssignmentWindowOpen and not isDesignOperation and not plan.hasStartedExecution %}
                                                                 <form method="post" action="{{ path('admin_service_orders_assign_item_operation_operator', {id: serviceOrder.id, plan: plan.id}) }}" class="d-flex flex-wrap gap-2 align-items-center mt-2">
                                                                     <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-operator-' ~ plan.id) }}">
                                                                     <label class="form-label mb-0" for="operator-{{ plan.id }}">Operador (opcional)</label>
@@ -568,13 +589,21 @@
                                                                     </select>
                                                                     <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Guardar operador</button>
                                                                 </form>
+                                                            {% elseif not isDesignOperation and plan.assignedOperator %}
+                                                                <p class="small mt-2 mb-0"><strong>Responsable:</strong> {{ plan.assignedOperator.fullName }}{% if plan.hasStartedExecution %} · La operación ya inició; la asignación queda protegida.{% endif %}</p>
                                                             {% endif %}
-                                                            <form method="post" action="{{ path('admin_service_orders_record_item_operation_actual_time', {id: serviceOrder.id, plan: plan.id}) }}" class="d-flex flex-wrap gap-2 align-items-end mt-2">
-                                                                <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-actual-' ~ plan.id) }}">
-                                                                <div><label class="form-label mb-1" for="actual-minutes-{{ plan.id }}">Tiempo real (min)</label><input class="form-control form-control-sm" id="actual-minutes-{{ plan.id }}" name="actual_minutes" type="number" min="0" required value="{{ plan.actualMinutes ?? '' }}"></div>
-                                                                <div class="flex-grow-1"><label class="form-label mb-1" for="actual-note-{{ plan.id }}">Nota de medición</label><input class="form-control form-control-sm" id="actual-note-{{ plan.id }}" name="actual_note" maxlength="500" required value="{{ plan.actualNote ?? '' }}"></div>
-                                                                <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Registrar real</button>
-                                                            </form>
+                                                            {% if plan.measuredActiveMinutes is not null %}<p class="small mt-2 mb-0"><strong>Tiempo registrado:</strong> {{ plan.measuredActiveMinutes }} min activos (pausas excluidas; calculado automáticamente).</p>{% endif %}
+                                                            {% if canManageProductionPlanning %}
+                                                                <details class="service-order-disclosure service-order-disclosure--compact mt-2">
+                                                                    <summary><span class="service-order-disclosure__label">Corregir tiempo real (excepción)</span></summary>
+                                                                    <form method="post" action="{{ path('admin_service_orders_record_item_operation_actual_time', {id: serviceOrder.id, plan: plan.id}) }}" class="d-flex flex-wrap gap-2 align-items-end mt-2">
+                                                                        <input type="hidden" name="_token" value="{{ csrf_token('service-order-operation-actual-' ~ plan.id) }}">
+                                                                        <div><label class="form-label mb-1" for="actual-minutes-{{ plan.id }}">Tiempo corregido (min)</label><input class="form-control form-control-sm" id="actual-minutes-{{ plan.id }}" name="actual_minutes" type="number" min="0" required value="{{ plan.actualMinutes ?? '' }}"></div>
+                                                                        <div class="flex-grow-1"><label class="form-label mb-1" for="actual-note-{{ plan.id }}">Motivo de la corrección</label><input class="form-control form-control-sm" id="actual-note-{{ plan.id }}" name="actual_note" maxlength="500" minlength="5" required value="{{ plan.actualNote ?? '' }}"></div>
+                                                                        <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Guardar corrección</button>
+                                                                    </form>
+                                                                </details>
+                                                            {% endif %}
                                                         </details>
                                                     {% elseif not canPlan and plan.assignedOperator and (plan.operationSnapshot.code|default(plan.operation.code)) != 'PRE-DISENO' %}
                                                         <span><strong>Operador:</strong> {{ plan.assignedOperator.fullName }}</span>

@@ -14,6 +14,8 @@ final class ProductionRouteStepData
     public ?string $specificationKey = null;
     public ?string $specificationValue = null;
     public bool $isRequired = true;
+    public ?int $standardBaseMinutes = null;
+    public ?string $standardMinutesPerUnit = null;
 
     /** @return array<string, string>|null */
     public function conditionConfig(): ?array

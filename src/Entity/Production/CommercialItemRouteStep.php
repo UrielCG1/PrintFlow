@@ -42,6 +42,12 @@ class CommercialItemRouteStep
     #[ORM\Column(name: 'is_required', options: ['default' => true])]
     private bool $isRequired = true;
 
+    #[ORM\Column(name: 'standard_base_minutes', nullable: true, options: ['unsigned' => true])]
+    private ?int $standardBaseMinutes = null;
+
+    #[ORM\Column(name: 'standard_minutes_per_unit', type: Types::DECIMAL, precision: 10, scale: 4, nullable: true)]
+    private ?string $standardMinutesPerUnit = null;
+
     /** @var array<string, mixed> */
     #[ORM\Column(name: 'operation_snapshot', type: Types::JSON)]
     private array $operationSnapshot = [];
@@ -61,6 +67,29 @@ class CommercialItemRouteStep
     public function setConditionConfig(?array $config): self { $this->conditionConfig = $config; return $this; }
     public function isRequired(): bool { return $this->isRequired; }
     public function setIsRequired(bool $required): self { $this->isRequired = $required; return $this; }
+    public function getStandardBaseMinutes(): ?int { return $this->standardBaseMinutes; }
+    public function setStandardBaseMinutes(?int $minutes): self
+    {
+        if ($minutes !== null && ($minutes < 0 || $minutes > 525600)) {
+            throw new \InvalidArgumentException('El tiempo base debe estar entre 0 y 525600 minutos.');
+        }
+        $this->standardBaseMinutes = $minutes;
+        return $this;
+    }
+    public function getStandardMinutesPerUnit(): ?string { return $this->standardMinutesPerUnit; }
+    public function setStandardMinutesPerUnit(?string $minutes): self
+    {
+        $minutes = $minutes !== null ? trim(str_replace(',', '.', $minutes)) : '';
+        if ($minutes === '') {
+            $this->standardMinutesPerUnit = null;
+            return $this;
+        }
+        if (!is_numeric($minutes) || (float) $minutes < 0 || (float) $minutes > 999999.9999) {
+            throw new \InvalidArgumentException('El tiempo por unidad debe ser un número entre 0 y 999999.9999.');
+        }
+        $this->standardMinutesPerUnit = number_format((float) $minutes, 4, '.', '');
+        return $this;
+    }
     /** @return array<string, mixed> */
     public function getOperationSnapshot(): array { return $this->operationSnapshot; }
     /** @param array<string, mixed> $snapshot */

@@ -89,6 +89,8 @@ final class CommercialItemRoutePublisher
                     ->setCondition($data->condition)
                     ->setConditionConfig($data->conditionConfig())
                     ->setIsRequired($data->isRequired)
+                    ->setStandardBaseMinutes($data->standardBaseMinutes)
+                    ->setStandardMinutesPerUnit($data->standardMinutesPerUnit)
                     ->setOperationSnapshot($operationSnapshot);
                 $version->addStep($step);
                 $definitionSteps[] = [
@@ -97,6 +99,8 @@ final class CommercialItemRoutePublisher
                     'condition' => $data->condition->value,
                     'condition_config' => $data->conditionConfig(),
                     'is_required' => $data->isRequired,
+                    'standard_base_minutes' => $data->standardBaseMinutes,
+                    'standard_minutes_per_unit' => $data->standardMinutesPerUnit,
                 ];
             }
 
@@ -138,7 +142,12 @@ final class CommercialItemRoutePublisher
         $result = [];
         foreach ($steps as $step) {
             if ($step->operation === null) {
-                if ($step->condition !== \App\Enum\Production\RouteCondition::ALWAYS || trim((string) $step->specificationKey) !== '' || trim((string) $step->specificationValue) !== '' || !$step->isRequired) {
+                if ($step->condition !== \App\Enum\Production\RouteCondition::ALWAYS
+                    || trim((string) $step->specificationKey) !== ''
+                    || trim((string) $step->specificationValue) !== ''
+                    || !$step->isRequired
+                    || $step->standardBaseMinutes !== null
+                    || trim((string) $step->standardMinutesPerUnit) !== '') {
                     throw new \DomainException('Completa o elimina cada fila de operación de la ruta.');
                 }
                 continue;
@@ -158,6 +167,23 @@ final class CommercialItemRoutePublisher
                 if (preg_match('/^[A-Z0-9_]{1,80}$/D', $key) !== 1 || $value === '' || mb_strlen($value) > 120) {
                     throw new \DomainException('La condición técnica requiere una clave y un valor válidos.');
                 }
+            }
+            $baseMinutes = $step->standardBaseMinutes ?? 0;
+            $minutesPerUnit = trim(str_replace(',', '.', (string) $step->standardMinutesPerUnit));
+            if ($baseMinutes < 0 || $baseMinutes > 525600) {
+                throw new \DomainException('Los minutos base por partida deben estar entre 0 y 525600.');
+            }
+            if ($minutesPerUnit !== '' && (!is_numeric($minutesPerUnit) || (float) $minutesPerUnit < 0 || (float) $minutesPerUnit > 999999.9999)) {
+                throw new \DomainException('Los minutos por unidad deben ser un número entre 0 y 999999.9999.');
+            }
+            if ($baseMinutes === 0 && ($minutesPerUnit === '' || (float) $minutesPerUnit === 0.0)) {
+                $step->standardBaseMinutes = null;
+                $step->standardMinutesPerUnit = null;
+            } else {
+                $step->standardBaseMinutes = $baseMinutes > 0 ? $baseMinutes : null;
+                $step->standardMinutesPerUnit = $minutesPerUnit !== '' && (float) $minutesPerUnit > 0
+                    ? number_format((float) $minutesPerUnit, 4, '.', '')
+                    : null;
             }
             $result[] = $step;
         }

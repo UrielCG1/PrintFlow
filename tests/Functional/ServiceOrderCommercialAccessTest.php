@@ -10,6 +10,7 @@ use App\Application\Quotations\QuotationManager;
 use App\Application\Orders\ServiceOrderManager;
 use App\Application\Production\ProductionExecutionCommand;
 use App\Application\Production\ProductionExecutionManager;
+use App\Application\Production\ProductionPlanManager;
 use App\Entity\Orders\ServiceOrder;
 use App\Entity\Orders\ServiceOrderItem;
 use App\Entity\Orders\ServiceOrderOperationPlan;
@@ -51,6 +52,7 @@ final class ServiceOrderCommercialAccessTest extends TestCase
         $this->createUserWithPermissions('qa-production', 'ROLE_PRODUCTION', [
             'service_orders.view',
             'service_orders.plan',
+            'production.assign',
             'service_orders.commitment.manage',
             'production_routes.manage',
             'production.priority.manage',
@@ -105,6 +107,105 @@ final class ServiceOrderCommercialAccessTest extends TestCase
         $this->browser->request('GET', '/admin/produccion/rutas');
         self::assertSame(200, $this->browser->getResponse()->getStatusCode());
         $this->assertNoCommercialData((string) $this->browser->getResponse()->getContent(), 'production routes');
+        $product = $this->fixtures['lona'];
+        $this->browser->request('GET', '/admin/produccion/rutas/productos/'.$product->getId());
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode(), 'product route time standard form');
+        self::assertStringContainsString('Minutos base por partida', (string) $this->browser->getResponse()->getContent());
+        self::assertStringContainsString('Minutos por unidad', (string) $this->browser->getResponse()->getContent());
+    }
+
+    public function testProductionCanAssignAReservedOperationAfterPlanningButNotAfterItStarts(): void
+    {
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $productionManager = $em->getRepository(User::class)->findOneBy(['username' => 'qa-production']);
+        self::assertInstanceOf(User::class, $productionManager);
+        $firstOperator = $em->getRepository(User::class)->findOneBy(['username' => 'qa-operator']);
+        $operatorRole = $em->getRepository(Role::class)->findOneBy(['code' => 'ROLE_OPERATOR']);
+        self::assertInstanceOf(User::class, $firstOperator);
+        self::assertInstanceOf(Role::class, $operatorRole);
+        $secondOperator = (new User())
+            ->setUsername('qa-assigned-second')
+            ->setFullName('Operador QA alterno')
+            ->setEmail('qa-assigned-second@example.invalid')
+            ->setMustChangePassword(false)
+            ->setPassword('unused')
+            ->addRole($operatorRole);
+        $em->persist($secondOperator);
+        $em->flush();
+        $area = (new OperationArea())->setCode('QA-ASSIGN')->setName('Acabados QA');
+        $operation = (new Operation())->setOperationArea($area)->setCode('QA-ASSIGN-OP')->setName('Acabado QA');
+        $machine = (new \App\Entity\Equipment\Equipment())->setCode('QA-ASSIGN-EQ')->setName('Equipo QA')->setPrimaryOperation($operation);
+        $item = $this->serviceOrder->getItems()->first();
+        self::assertInstanceOf(ServiceOrderItem::class, $item);
+        $plan = (new ServiceOrderOperationPlan())
+            ->setSequenceNumber(1)
+            ->setOperation($operation)
+            ->setCreatedBy($productionManager)
+            ->setOperationSnapshot(['code' => 'QA-ASSIGN-OP', 'name' => 'Acabado QA'])
+            ->setEquipment($machine, ['name' => 'Equipo QA']);
+        $item->addOperationPlan($plan);
+        $start = new \DateTimeImmutable('+1 day', new \DateTimeZone('UTC'));
+        $reservation = (new \App\Entity\Production\ProductionReservation())
+            ->setPlan($plan)
+            ->setEquipment($machine)
+            ->setCreatedBy($productionManager)
+            ->setSegmentNumber(1)
+            ->setStartsAt($start)
+            ->setEndsAt($start->modify('+30 minutes'));
+        $plan->addReservation($reservation);
+        foreach ([$area, $operation, $machine, $reservation] as $entity) { $em->persist($entity); }
+        $em->flush();
+
+        $manager = $this->kernel->getContainer()->get('test.service_container')->get(ProductionPlanManager::class);
+        $manager->assignOperator($plan, $firstOperator, $productionManager);
+        $this->serviceOrder->setCommitmentDate(new \DateTimeImmutable('+3 days'))->markPlanned($productionManager);
+        $manager->assignOperator($plan, $secondOperator, $productionManager);
+        self::assertSame($secondOperator, $plan->getAssignedOperator());
+
+        $execution = new \App\Entity\Production\ProductionOperationExecution($plan, $secondOperator, $productionManager, 1);
+        $plan->addExecution($execution);
+        $em->persist($execution);
+        $em->flush();
+
+        try {
+            $manager->assignOperator($plan, $firstOperator, $productionManager);
+            self::fail('A started operation must not be reassigned.');
+        } catch (\DomainException $exception) {
+            self::assertStringContainsString('después de iniciar', $exception->getMessage());
+        }
+    }
+
+    public function testOperatorCannotAccessBulkAssignmentEndpoint(): void
+    {
+        $operator = $this->kernel->getContainer()->get('doctrine')->getManager()
+            ->getRepository(User::class)->findOneBy(['username' => 'qa-operator']);
+        self::assertInstanceOf(User::class, $operator);
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $area = (new OperationArea())->setCode('QA-ASSIGN-DENIED')->setName('Acabados QA');
+        $operation = (new Operation())->setOperationArea($area)->setCode('QA-ASSIGN-DENIED-OP')->setName('Acabado QA');
+        $item = $this->serviceOrder->getItems()->first();
+        self::assertInstanceOf(ServiceOrderItem::class, $item);
+        $plan = (new ServiceOrderOperationPlan())
+            ->setSequenceNumber(1)
+            ->setOperation($operation)
+            ->setCreatedBy($this->fixtures['user'])
+            ->setOperationSnapshot(['code' => 'QA-ASSIGN-DENIED-OP', 'name' => 'Acabado QA']);
+        $item->addOperationPlan($plan);
+        $em->persist($area);
+        $em->persist($operation);
+        $em->flush();
+
+        $this->browser->loginUser($operator);
+        $this->browser->request('POST', '/admin/ordenes-servicio/'.$this->serviceOrder->getId().'/operadores/asignar-pendientes', [
+            '_token' => 'invalid',
+            'operator_id' => '1',
+        ]);
+        self::assertSame(403, $this->browser->getResponse()->getStatusCode());
+        $this->browser->request('POST', '/admin/ordenes-servicio/'.$this->serviceOrder->getId().'/operaciones/'.$plan->getId().'/operador', [
+            '_token' => 'invalid',
+            'operator_id' => '1',
+        ]);
+        self::assertSame(403, $this->browser->getResponse()->getStatusCode());
     }
 
     public function testExecutionQualityAndDeliveryViewsDoNotExposeCommercialAmounts(): void

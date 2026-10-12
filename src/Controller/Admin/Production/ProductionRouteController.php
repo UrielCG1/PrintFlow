@@ -204,6 +204,15 @@ final class ProductionRouteController extends AbstractController
         $routeVersion = $item->getCurrentRouteVersion();
         $requestedTemplateId = $request->query->getInt('base');
         if ($requestedTemplateId > 0) {
+            $standardByOperation = [];
+            if ($routeVersion !== null) {
+                foreach ($routeVersion->getSteps() as $currentStep) {
+                    $operationId = $currentStep->getOperation()->getId();
+                    if ($operationId !== null) {
+                        $standardByOperation[$operationId] = $currentStep;
+                    }
+                }
+            }
             $template = $entityManager->getRepository(ProductionRouteTemplate::class)->find($requestedTemplateId);
             if ($template instanceof ProductionRouteTemplate && $template->isActive()) {
                 $data->sourceTemplate = $template;
@@ -214,6 +223,11 @@ final class ProductionRouteController extends AbstractController
                     $stepData->isRequired = $step->isRequired();
                     $stepData->specificationKey = $step->getConditionConfig()['key'] ?? null;
                     $stepData->specificationValue = $step->getConditionConfig()['value'] ?? null;
+                    $currentStep = $standardByOperation[$step->getOperation()->getId()] ?? null;
+                    if ($currentStep instanceof CommercialItemRouteStep) {
+                        $stepData->standardBaseMinutes = $currentStep->getStandardBaseMinutes();
+                        $stepData->standardMinutesPerUnit = $currentStep->getStandardMinutesPerUnit();
+                    }
                     $data->steps[] = $stepData;
                 }
             }
@@ -236,6 +250,8 @@ final class ProductionRouteController extends AbstractController
         $data->isRequired = $step->isRequired();
         $data->specificationKey = $step->getConditionConfig()['key'] ?? null;
         $data->specificationValue = $step->getConditionConfig()['value'] ?? null;
+        $data->standardBaseMinutes = $step->getStandardBaseMinutes();
+        $data->standardMinutesPerUnit = $step->getStandardMinutesPerUnit();
 
         return $data;
     }

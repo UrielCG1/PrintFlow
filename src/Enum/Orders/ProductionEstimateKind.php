@@ -8,4 +8,5 @@ enum ProductionEstimateKind: string
 {
     case CALCULATED = 'calculated';
     case MANUAL = 'manual';
+    case STANDARD = 'standard';
 }

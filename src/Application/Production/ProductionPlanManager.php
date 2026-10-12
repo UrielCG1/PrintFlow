@@ -188,9 +188,6 @@ final class ProductionPlanManager
         if ($plan->getBlockedReason() !== null) {
             throw new \DomainException('La operación tiene un bloqueo y no puede reservarse todavía.');
         }
-        if ($plan->getEstimatedMinutes() === null || $plan->getEstimateKind() === null) {
-            throw new \DomainException('Guarda primero una estimación calculada o manual.');
-        }
         if ($this->reservationRepository->findActiveForPlan($plan) !== []) {
             throw new \DomainException('Esta operación ya tiene una reserva activa.');
         }
@@ -203,6 +200,10 @@ final class ProductionPlanManager
         if ($id === null) { throw new \LogicException('El equipo no tiene identificador.'); }
         $this->entityManager->getConnection()->fetchOne('SELECT id FROM equipment WHERE id = ? FOR UPDATE', [$id]);
         $this->assertCompatibleMachine($plan, $equipment);
+        $this->upgradeStandardEstimateToPhysical($plan, $actor);
+        if ($plan->getEstimatedMinutes() === null || $plan->getEstimateKind() === null) {
+            throw new \DomainException('Guarda primero una estimación estándar, calculada o manual.');
+        }
 
         $now = new \DateTimeImmutable('now', new \DateTimeZone('America/Mexico_City'));
         $startAfter = $now;
@@ -289,28 +290,80 @@ final class ProductionPlanManager
         $this->entityManager->wrapInTransaction(function () use ($plan, $operator, $actor): void {
             $order = $plan->getServiceOrderItem()->getServiceOrder();
             $this->entityManager->lock($order, LockMode::PESSIMISTIC_WRITE);
-            $this->assertPendingPlanning($order);
+            $this->assertOperatorAssignmentWindow($order);
             $this->entityManager->lock($plan, LockMode::PESSIMISTIC_WRITE);
             $this->assertPlanBelongsToOrder($order, $plan);
-            if ($this->reservationRepository->findActiveForPlan($plan) === []) {
-                throw new \DomainException('Asigna un operador después de reservar la máquina.');
-            }
-            if ($operator !== null && (!$operator->isActive() || $operator->getDeletedAt() !== null || !in_array('ROLE_OPERATOR', $operator->getRoles(), true))) {
-                throw new \DomainException('Selecciona un operador activo de Producción.');
-            }
-            $before = $plan->getAssignedOperator();
-            if ($before === $operator) { return; }
-            $plan->assignOperator($operator);
-            $this->auditLogger->record(
-                actor: $actor,
-                action: 'production.operation_operator_assigned',
-                entityType: 'service_order_operation_plan',
-                entityId: $plan->getId(),
-                oldValues: ['operator_user_id' => $before?->getId()],
-                newValues: ['operator_user_id' => $operator?->getId()],
-            );
+            $this->assignOperatorToUnstartedPlan($plan, $operator, $actor);
             $this->entityManager->flush();
         });
+    }
+
+    public function assignOperatorToPendingOrderOperations(ServiceOrder $order, User $operator, User $actor): int
+    {
+        return $this->entityManager->wrapInTransaction(function () use ($order, $operator, $actor): int {
+            $this->entityManager->lock($order, LockMode::PESSIMISTIC_WRITE);
+            $this->assertOperatorAssignmentWindow($order);
+            $this->assertValidOperator($operator);
+            $changed = 0;
+
+            foreach ($this->planRepository->findActiveForServiceOrder($order) as $plan) {
+                $operationCode = $plan->getOperationSnapshot()['code'] ?? $plan->getOperation()->getCode();
+                if ($operationCode === 'PRE-DISENO'
+                    || !$plan->isActive()
+                    || $plan->hasStartedExecution()
+                    || $plan->getBlockedReason() !== null
+                    || $plan->getAssignedOperator() !== null
+                    || $this->reservationRepository->findActiveForPlan($plan) === []) {
+                    continue;
+                }
+                $this->entityManager->lock($plan, LockMode::PESSIMISTIC_WRITE);
+                if ($plan->getAssignedOperator() === $operator) {
+                    continue;
+                }
+                $this->assignOperatorToUnstartedPlan($plan, $operator, $actor);
+                ++$changed;
+            }
+
+            $this->entityManager->flush();
+
+            return $changed;
+        });
+    }
+
+    /** Replaces a route standard at reservation time when validated machine inputs exist. */
+    private function upgradeStandardEstimateToPhysical(ServiceOrderOperationPlan $plan, User $actor): void
+    {
+        if ($plan->getEstimateKind() !== ProductionEstimateKind::STANDARD) {
+            return;
+        }
+        $equipment = $plan->getEquipment();
+        $unit = $equipment?->getCapacityUnit()?->loadUnit();
+        if ($equipment === null || $unit === null) {
+            return;
+        }
+        $load = $this->loadResolver->automaticLoad($plan->getServiceOrderItem(), $unit);
+        $now = new \DateTimeImmutable('now', new \DateTimeZone('America/Mexico_City'));
+        if ($load === null || !$equipment->hasValidatedCapacityAt($now)) {
+            return;
+        }
+
+        $previous = $this->snapshot($plan);
+        $estimate = $this->estimator->estimate($equipment, $unit, $load, $now);
+        $plan->setCalculatedEstimate(
+            $estimate['load'],
+            $unit,
+            $estimate['minutes'],
+            $estimate['snapshot'] + ['load_source' => 'dimensions_times_quantity'],
+            $actor,
+        );
+        $this->auditLogger->record(
+            actor: $actor,
+            action: 'production.operation_estimated',
+            entityType: 'service_order_operation_plan',
+            entityId: $plan->getId(),
+            oldValues: $previous,
+            newValues: $this->snapshot($plan),
+        );
     }
 
     public function recordActualMinutes(ServiceOrderOperationPlan $plan, int $minutes, string $note, User $actor): void
@@ -363,6 +416,57 @@ final class ProductionPlanManager
     {
         if (!$plan->isActive()) { throw new \DomainException('La operación fue retirada de la ruta.'); }
         if ($plan->getBlockedReason() !== null) { throw new \DomainException('La operación está bloqueada y aún no puede planificarse.'); }
+    }
+
+    private function assertOperatorAssignmentWindow(ServiceOrder $order): void
+    {
+        if ((!$order->isPendingPlanning() && !$order->isPlanned())
+            || in_array($order->getProductionStatus(), [
+                \App\Enum\Orders\ProductionOrderStatus::WAITING_QUALITY,
+                \App\Enum\Orders\ProductionOrderStatus::PRODUCTION_COMPLETED,
+                \App\Enum\Orders\ProductionOrderStatus::CANCELLED,
+            ], true)) {
+            throw new \DomainException('La asignación solo está disponible antes de iniciar las operaciones de una orden pendiente o planificada.');
+        }
+    }
+
+    private function assertValidOperator(User $operator): void
+    {
+        if (!$operator->isActive() || $operator->getDeletedAt() !== null || !in_array('ROLE_OPERATOR', $operator->getRoles(), true)) {
+            throw new \DomainException('Selecciona un operador activo de Producción.');
+        }
+    }
+
+    private function assignOperatorToUnstartedPlan(ServiceOrderOperationPlan $plan, ?User $operator, User $actor): void
+    {
+        $this->assertActivePlan($plan);
+        $operationCode = $plan->getOperationSnapshot()['code'] ?? $plan->getOperation()->getCode();
+        if ($operationCode === 'PRE-DISENO') {
+            throw new \DomainException('Diseño se asigna por su perfil y no requiere un operador de Producción.');
+        }
+        if ($plan->hasStartedExecution()) {
+            throw new \DomainException('No se puede cambiar la asignación después de iniciar la operación.');
+        }
+        if ($this->reservationRepository->findActiveForPlan($plan) === []) {
+            throw new \DomainException('Asigna un operador después de reservar la máquina.');
+        }
+        if ($operator !== null) {
+            $this->assertValidOperator($operator);
+        }
+
+        $before = $plan->getAssignedOperator();
+        if ($before === $operator) {
+            return;
+        }
+        $plan->assignOperator($operator);
+        $this->auditLogger->record(
+            actor: $actor,
+            action: 'production.operation_operator_assigned',
+            entityType: 'service_order_operation_plan',
+            entityId: $plan->getId(),
+            oldValues: ['operator_user_id' => $before?->getId()],
+            newValues: ['operator_user_id' => $operator?->getId()],
+        );
     }
 
     /** @return array<string, mixed> */

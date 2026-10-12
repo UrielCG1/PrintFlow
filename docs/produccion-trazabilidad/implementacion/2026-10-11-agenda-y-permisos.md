@@ -82,7 +82,7 @@ php bin/console doctrine:migrations:status --env=prod --no-debug
 php bin/console doctrine:schema:validate --skip-sync --env=prod --no-debug
 ```
 
-Detenerse si cualquier comando falla. El estado final debe mostrar `Version20261011140000` y cero migraciones nuevas. Sustituir `USUARIO_ADMINISTRADOR` por una cuenta autorizada para registrar auditoría. No ejecutar `doctrine:schema:update --force`. La migración corrige los permisos específicos; no es obligatorio ejecutar todo el bootstrap para aplicar esta entrega. Recargar la sesión después de migrar si la pantalla conserva permisos anteriores.
+Detenerse si cualquier comando falla. Para esta entrega el estado final debe mostrar `Version20261011150000` y cero migraciones nuevas. Sustituir `USUARIO_ADMINISTRADOR` por una cuenta autorizada para registrar auditoría. No ejecutar `doctrine:schema:update --force`. La migración corrige los permisos específicos; no es obligatorio ejecutar todo el bootstrap para aplicar esta entrega. Recargar la sesión después de migrar si la pantalla conserva permisos anteriores.
 
 Validación por SQL, sin exponer credenciales:
 

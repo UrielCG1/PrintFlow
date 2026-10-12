@@ -55,6 +55,8 @@ final class ProductionRouteApplicator
                 'condition' => $routeStep->getCondition()->value,
                 'condition_config' => $routeStep->getConditionConfig(),
                 'is_required' => $routeStep->isRequired(),
+                'standard_base_minutes' => $routeStep->getStandardBaseMinutes(),
+                'standard_minutes_per_unit' => $routeStep->getStandardMinutesPerUnit(),
                 'condition_applied' => $matches,
                 'blocked_reason' => $blockedReason,
             ];
@@ -74,6 +76,8 @@ final class ProductionRouteApplicator
                 ->setRouteStepSnapshot($stepSnapshot)
                 ->setConditionApplied($matches)
                 ->setBlockedReason($blockedReason);
+
+            $plan->applyRouteStandardEstimate($actor);
 
             $item->addOperationPlan($plan);
         }

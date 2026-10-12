@@ -232,6 +232,7 @@ Usar esta secuencia solo si el directorio de la aplicación es un checkout Git l
 Antes de entrar al servidor, copiar el SHA completo que devolvió `git rev-parse HEAD` después del `push` revisado. En el servidor, después de comprobar en hPanel que la base destino es la del sitio productivo:
 
 ```sh
+set -e
 cd /RUTA/REAL/DE/PRINTFLOW
 DEPLOY_COMMIT='<SHA_COMPLETO_DEL_COMMIT_APROBADO>'
 test -z "$(git status --porcelain)" || { echo "Checkout con cambios; detener deploy"; exit 1; }
@@ -254,11 +255,11 @@ APP_ENV=prod APP_DEBUG=0 "$COMPOSER_CMD" install --no-dev --prefer-dist --no-int
 APP_ENV=prod APP_DEBUG=0 "$COMPOSER_CMD" check-platform-reqs --no-dev
 php bin/console doctrine:migrations:status --env=prod --no-debug
 php bin/console doctrine:migrations:list --env=prod --no-debug
-php bin/console doctrine:schema:validate --env=prod --no-debug
+php bin/console doctrine:schema:validate --skip-sync --env=prod --no-debug
 php bin/console doctrine:migrations:migrate --dry-run --env=prod --no-debug
 ```
 
-`schema:validate` y `schema:update --dump-sql` son diagnósticos: el historial de Hostinger ya mostró drift y SQL que elimina índices históricos. No ejecutar ese SQL ni `schema:update --force`. Revisar `migrations:list` y el SQL del *dry run* contra los archivos de migración del commit. Si el checkout tiene versiones pendientes distintas de las esperadas, parar. Si coincide, aplicar todas las pendientes de ese commit y preparar producción:
+La validación completa de sincronía ya reportó drift tanto en la base local como en el historial de Hostinger. El dump de la base local incluso propone quitar las columnas nuevas de estándar aunque están presentes en `information_schema` y en el mapping. `schema:validate --skip-sync` comprueba el mapping sin presentar ese drift como una falla de esta versión. No ejecutar SQL de `schema:update --dump-sql` ni `schema:update --force`. Revisar `migrations:list` y el SQL del *dry run* contra los archivos de migración del commit. Si hay una versión pendiente cuyo efecto no coincide con una migración revisada, detenerse. Cuando el dry-run corresponda únicamente a cambios aprobados, aplicar las migraciones pendientes y preparar producción:
 
 ```sh
 php bin/console doctrine:migrations:migrate --no-interaction --env=prod --no-debug
@@ -266,10 +267,10 @@ php bin/console asset-map:compile --env=prod --no-debug
 php bin/console cache:clear --env=prod --no-debug
 php bin/console cache:warmup --env=prod --no-debug
 php bin/console doctrine:migrations:status --env=prod --no-debug
-php bin/console doctrine:schema:validate --env=prod --no-debug
+php bin/console doctrine:schema:validate --skip-sync --env=prod --no-debug
 ```
 
-Verificar que `doctrine:migrations:status` termine en la última versión del commit desplegado. El error `discount_breakdown` solo queda resuelto en producción cuando está desplegado el código que mapea la columna y también está aplicada `Version20261003010000`; no inferirlo del estado local. La última salida explícita registrada para producción mostró `Version20261010150000`. Los despliegues posteriores no quedaron certificados en este documento: usar el `--dry-run` del commit objetivo y revisar todas las migraciones pendientes, sin asumir que una versión específica sea la única.
+Verificar que `doctrine:migrations:status` termine en la última versión del commit desplegado. La actualización local más reciente agrega `Version20261011150000`: dos columnas opcionales en `commercial_item_route_steps` para minutos base por partida y minutos por unidad. El despliegue queda completo solo cuando esta migración aparece ejecutada y no hay versiones nuevas pendientes. El error `discount_breakdown` solo queda resuelto en producción cuando está desplegado el código que mapea la columna y también está aplicada `Version20261003010000`; no inferirlo del estado local. La última salida explícita compartida para producción mostró `Version20261010150000`. Los despliegues posteriores no quedaron certificados en este documento: usar el `--dry-run` del commit objetivo y revisar todas las migraciones pendientes, sin asumir que una versión específica sea la única.
 
 El repositorio no tiene un comando de mantenimiento de Symfony configurado; no usar `bin/console down`. Programar el cambio en una ventana de bajo tráfico. No usar `chmod -R 777`; resolver cualquier permiso de `var/cache` y `var/log` con el propietario/grupo de PHP asignado por Hostinger.
 

@@ -13,6 +13,8 @@ use App\Entity\Production\ProductionReservation;
 use App\Enum\Equipment\ProductionLoadUnit;
 use App\Enum\Orders\ProductionEstimateKind;
 use App\Repository\Orders\ServiceOrderOperationPlanRepository;
+use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
@@ -357,6 +359,30 @@ class ServiceOrderOperationPlan
 
         return false;
     }
+
+    public function hasStartedExecution(): bool
+    {
+        return !$this->executions->isEmpty();
+    }
+
+    public function getMeasuredActiveSeconds(): int
+    {
+        $seconds = 0;
+        foreach ($this->executions as $execution) {
+            $seconds += $execution->getActiveSecondsAt();
+        }
+
+        return $seconds;
+    }
+
+    public function getMeasuredActiveMinutes(): ?int
+    {
+        if ($this->executions->isEmpty()) {
+            return null;
+        }
+
+        return (int) ceil($this->getMeasuredActiveSeconds() / 60);
+    }
     public function clearEstimate(): self
     {
         $this->estimatedLoadValue = null;
@@ -383,6 +409,45 @@ class ServiceOrderOperationPlan
         $this->estimatedBy = $actor;
         $this->estimatedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
         return $this;
+    }
+
+    /** Reuses the standard configured on the immutable Product route snapshot. */
+    public function applyRouteStandardEstimate(User $actor): bool
+    {
+        $base = $this->routeStepSnapshot['standard_base_minutes'] ?? null;
+        $perUnit = $this->routeStepSnapshot['standard_minutes_per_unit'] ?? null;
+        $baseMinutes = BigDecimal::of(is_numeric($base) ? (string) $base : '0');
+        $rate = BigDecimal::of(is_numeric($perUnit) ? (string) $perUnit : '0');
+        if ($baseMinutes->compareTo('0') <= 0 && $rate->compareTo('0') <= 0) {
+            return false;
+        }
+
+        $quantity = BigDecimal::of($this->serviceOrderItem->getQuantity());
+        if ($quantity->compareTo('0') <= 0) {
+            throw new \DomainException('La cantidad de la partida debe ser positiva para calcular el tiempo estándar.');
+        }
+        $totalMinutes = $baseMinutes->plus($rate->multipliedBy($quantity));
+        $minutes = (int) $totalMinutes->toScale(0, RoundingMode::Ceiling)->__toString();
+        if ($minutes < 1 || $minutes > 525600) {
+            return false;
+        }
+
+        $this->estimatedLoadValue = null;
+        $this->estimatedLoadUnit = null;
+        $this->estimateKind = ProductionEstimateKind::STANDARD;
+        $this->estimatedMinutes = $minutes;
+        $this->manualEstimateReason = null;
+        $this->estimateSnapshot = [
+            'version' => 'product-route-standard-v1',
+            'base_minutes' => $baseMinutes->__toString(),
+            'minutes_per_unit' => $rate->__toString(),
+            'quantity' => $this->serviceOrderItem->getQuantity(),
+            'formula' => 'ceil(base_minutes + minutes_per_unit * quantity)',
+        ];
+        $this->estimatedBy = $actor;
+        $this->estimatedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+
+        return true;
     }
 
     /** @param array<string, mixed> $availableData */

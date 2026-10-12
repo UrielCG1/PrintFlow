@@ -477,7 +477,7 @@ final class ServiceOrderController extends AbstractController
         UserRepository $userRepository,
         ProductionPlanManager $productionPlanManager,
     ): Response {
-        $this->denyAccessUnlessGranted('service_orders.plan');
+        $this->denyAccessUnlessGranted('production.assign');
         $this->assertPlanRouteOrder($serviceOrder, $plan);
         if (!$this->isCsrfTokenValid('service-order-operation-operator-'.$plan->getId(), $request->request->getString('_token'))) {
             throw $this->createAccessDeniedException('La solicitud no es válida.');
@@ -499,6 +499,37 @@ final class ServiceOrderController extends AbstractController
         } catch (\DomainException $exception) {
             $this->addFlash('error', $exception->getMessage());
         }
+        return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+    }
+
+    #[Route('/{id}/operadores/asignar-pendientes', name: 'assign_pending_operators', requirements: ['id' => '\\d+'], methods: ['POST'])]
+    public function assignOperatorToPendingOperations(
+        Request $request,
+        ServiceOrder $serviceOrder,
+        UserRepository $userRepository,
+        ProductionPlanManager $productionPlanManager,
+    ): Response {
+        $this->denyAccessUnlessGranted('production.assign');
+        if (!$this->isCsrfTokenValid('service-order-assign-operators-'.$serviceOrder->getId(), $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('La solicitud no es válida.');
+        }
+        $operatorId = $request->request->getString('operator_id');
+        try {
+            if (preg_match('/^[1-9]\\d*$/D', $operatorId) !== 1) {
+                throw new \DomainException('Selecciona un operador activo de Producción.');
+            }
+            $operator = $userRepository->find((int) $operatorId);
+            if (!$operator instanceof User) {
+                throw new \DomainException('El operador seleccionado no existe.');
+            }
+            $assigned = $productionPlanManager->assignOperatorToPendingOrderOperations($serviceOrder, $operator, $this->authenticatedUser());
+            $this->addFlash($assigned > 0 ? 'success' : 'info', $assigned > 0
+                ? sprintf('Se asignó a %s en %d operación(es) pendientes.', $operator->getFullName(), $assigned)
+                : 'No había operaciones reservadas y aún sin iniciar para asignar.');
+        } catch (\DomainException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        }
+
         return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
     }
 
@@ -748,6 +779,25 @@ final class ServiceOrderController extends AbstractController
         }
 
         $canPlan = $serviceOrder->isPendingPlanning() && $this->isGranted('service_orders.plan');
+        $canAssignProduction = $this->isGranted('production.assign');
+        $assignableOperatorPlans = 0;
+        $operatorAssignmentWindowOpen = ($serviceOrder->isPendingPlanning() || $serviceOrder->isPlanned())
+            && !in_array($serviceOrder->getProductionStatus(), [
+                \App\Enum\Orders\ProductionOrderStatus::WAITING_QUALITY,
+                \App\Enum\Orders\ProductionOrderStatus::PRODUCTION_COMPLETED,
+                \App\Enum\Orders\ProductionOrderStatus::CANCELLED,
+            ], true);
+        if ($canAssignProduction && $operatorAssignmentWindowOpen) {
+            foreach ($allPlans as $plan) {
+                $code = $plan->getOperationSnapshot()['code'] ?? $plan->getOperation()->getCode();
+                if ($code !== 'PRE-DISENO' && $plan->isActive() && !$plan->hasStartedExecution()
+                    && $plan->getBlockedReason() === null
+                    && $plan->getAssignedOperator() === null
+                    && ($reservationsByPlan[(int) $plan->getId()] ?? []) !== []) {
+                    ++$assignableOperatorPlans;
+                }
+            }
+        }
         $canManageCommitment = $this->isGranted('service_orders.commitment.manage');
         $canManagePriority = $this->isGranted('production.priority.manage');
         $canReprogramSchedule = $this->isGranted('production.schedule.reprogram');
@@ -957,6 +1007,9 @@ final class ServiceOrderController extends AbstractController
             'canReserveFullPlan' => $canReserveFullPlan,
             'canMarkPlanned' => $canMarkPlanned,
             'canPlan' => $canPlan,
+            'canAssignProduction' => $canAssignProduction,
+            'operatorAssignmentWindowOpen' => $operatorAssignmentWindowOpen,
+            'assignableOperatorPlans' => $assignableOperatorPlans,
             'canManageCommitment' => $canManageCommitment,
             'canManagePriority' => $canManagePriority,
             'canReprogramSchedule' => $canReprogramSchedule,
@@ -973,7 +1026,7 @@ final class ServiceOrderController extends AbstractController
             'requiredLoadUnitByPlan' => $requiredLoadUnitByPlan,
             'operationPlansByItem' => $plansByItem,
             'reservationsByPlan' => $reservationsByPlan,
-            'productionOperators' => $canPlan ? $userRepository->findActiveProductionOperators() : [],
+            'productionOperators' => $canAssignProduction ? $userRepository->findActiveProductionOperators() : [],
             'productionLoadUnits' => ProductionLoadUnit::cases(),
             'canManageProductionPlanning' => $this->isGranted('service_orders.plan'),
             'splitEligibleItems' => $splitEligibleItems,

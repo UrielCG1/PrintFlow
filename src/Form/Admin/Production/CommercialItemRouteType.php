@@ -26,7 +26,7 @@ final class CommercialItemRouteType extends AbstractType
             ])
             ->add('steps', CollectionType::class, [
                 'entry_type' => ProductionRouteTemplateStepType::class,
-                'entry_options' => ['operations' => $options['operations']],
+                'entry_options' => ['operations' => $options['operations'], 'include_time_standard' => true],
                 'allow_add' => true,
                 'allow_delete' => true,
                 'by_reference' => false,

@@ -60,4 +60,26 @@ final class ServiceOrderOperationPlanTest extends TestCase
         $rework->complete('Retrabajo completado.');
         self::assertTrue($plan->hasCompletedLatestExecution());
     }
+
+    public function testMeasuredOperationTimeUsesExecutionActiveSecondsAndExcludesPauses(): void
+    {
+        $clock = new \Symfony\Component\Clock\MockClock('2026-10-12 08:00:00 UTC');
+        \Symfony\Component\Clock\Clock::set($clock);
+        try {
+            $operator = new User();
+            $plan = new ServiceOrderOperationPlan();
+            $execution = new ProductionOperationExecution($plan, $operator, $operator, 1);
+            $plan->addExecution($execution);
+            $started = $execution->getStartedAt();
+            $execution->pause('Se espera confirmación.', $started->modify('+90 seconds'));
+            $execution->resume($started->modify('+1 hour'));
+            $execution->complete('Trabajo terminado.', $started->modify('+1 hour 5 minutes'));
+
+            self::assertTrue($plan->hasStartedExecution());
+            self::assertSame(390, $plan->getMeasuredActiveSeconds());
+            self::assertSame(7, $plan->getMeasuredActiveMinutes());
+        } finally {
+            \Symfony\Component\Clock\Clock::set(new \Symfony\Component\Clock\NativeClock());
+        }
+    }
 }

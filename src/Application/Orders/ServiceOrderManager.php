@@ -215,7 +215,9 @@ final class ServiceOrderManager
 
             $activePlans = $this->operationPlanRepository->findActiveForItemForUpdate($item);
             foreach ($activePlans as $activePlan) {
-                if ($activePlan->getEstimatedMinutes() !== null || $activePlan->hasActiveReservations()) {
+                if ($activePlan->hasActiveReservations()
+                    || ($activePlan->getEstimatedMinutes() !== null
+                        && $activePlan->getEstimateKind() !== ProductionEstimateKind::STANDARD)) {
                     throw new \DomainException('Retira las estimaciones y reservas antes de dividir esta partida.');
                 }
             }
@@ -231,6 +233,11 @@ final class ServiceOrderManager
                 ->setSplitPosition(1)
                 ->setQuantity($quantities[0])
                 ->setLineSubtotal($subtotals[0]);
+            foreach ($activePlans as $activePlan) {
+                if ($activePlan->getEstimateKind() === ProductionEstimateKind::STANDARD) {
+                    $activePlan->applyRouteStandardEstimate($actor);
+                }
+            }
             $rows = [$item];
 
             foreach (array_slice($quantities, 1, null, true) as $position => $quantity) {
@@ -266,6 +273,7 @@ final class ServiceOrderManager
                         ->setRouteStepSnapshot($activePlan->getRouteStepSnapshot())
                         ->setConditionApplied($activePlan->getConditionApplied())
                         ->setBlockedReason($activePlan->getBlockedReason());
+                    $plan->applyRouteStandardEstimate($actor);
                     $child->addOperationPlan($plan);
                 }
                 $rows[] = $child;
@@ -379,7 +387,9 @@ final class ServiceOrderManager
 
             $item->setProductionSpecificationsSnapshot($newSpecifications);
             foreach ($plansBeforeCorrection as $plan) {
-                $plan->clearEstimate();
+                if ($plan->getEstimateKind() !== ProductionEstimateKind::STANDARD) {
+                    $plan->clearEstimate();
+                }
             }
             $item->setPlanningIssue(self::PRODUCTION_ROUTE_REVIEW_ISSUE);
             $this->auditLogger->record(

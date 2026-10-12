@@ -16,6 +16,22 @@ Este backlog implementa las reglas acordadas sin reconstruir cotizaciones, descu
 
 La interfaz actual puede llamar a esta etapa simplemente «Planificación». Al explicar el flujo, especificar «plan operativo» ayuda a distinguirlo de la creación de la orden y de la fecha comercial acordada.
 
+## Simplificación de operadores y tiempos
+
+> **Estado:** implementada y migrada en la base local (`Version20261011150000`); queda pendiente desplegarla en producción. Los valores concretos de cada Producto quedan por capturar con referencias reales de Producción.
+
+### Asignación de operadores
+
+Producción puede asignar o cambiar el responsable de una operación con máquina reservada mientras no haya iniciado, tanto durante `PENDING_PLANNING` como después de pasar a `PLANNED`. La acción usa `production.assign`, valida cuentas activas con `ROLE_OPERATOR` y conserva auditoría. `PRE-DISENO` sigue administrándose con el permiso de Diseño. La asignación en lote cubre operaciones reservadas sin responsable y sin intentos de ejecución; los cambios de una sola operación permiten corregir la asignación antes de iniciar.
+
+### Estimaciones por secuencia
+
+Cada paso de la ruta publicada por Producto puede guardar minutos base por partida y minutos variables por unidad. Al crear la orden, la regla se copia al snapshot del paso y se calcula `ceil(base + minutos_por_unidad × cantidad)`. Si la regla no está configurada, se mantiene el flujo actual de capacidad física o estimación manual justificada. Al reservar, una capacidad de máquina validada y una carga obtenible sustituyen el estándar por el cálculo físico. Las pausas de ejecución siguen excluidas; en corte no se infieren centímetros de trayectoria a partir de piezas o área. La división de una partida vuelve a calcular los estándares por la cantidad de cada hija.
+
+No se asignaron tiempos iniciales: deben capturarse por Producto cuando Producción tenga referencias confiables. El tiempo real visible se calcula desde `active_seconds` de los intentos; la corrección manual permanece disponible como excepción auditada.
+
+**Resultado:** la orden hereda ruta, tiempo estándar y cálculo sin pedir minutos por secuencia. Producción revisa la máquina y solo captura información cuando no hay estándar ni medición automática confiable.
+
 ## Principios de entrega
 
 - Extender `ServiceOrderManager::createFromAcceptedQuotation`, `ServiceOrderItem` y `ServiceOrderOperationPlan` actuales.
