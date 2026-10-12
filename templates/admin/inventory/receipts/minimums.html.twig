@@ -1,0 +1,26 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Mínimos de inventario | OoxCorp{% endblock %}
+{% block app_navigation_active %}inventory{% endblock %}
+{% block app_breadcrumb %}Operación / Inventario / Mínimos{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page__content">
+        <div class="pf-page-header"><div class="pf-page-header__content"><h1 class="pf-page-header__title">Mínimos y reabasto</h1><p class="pf-page-header__description">Configura los umbrales por presentación y en su unidad de inventario. Estos valores no modifican las existencias.</p></div></div>
+        <div class="alert alert-info" role="alert">El aviso se activa cuando el saldo utilizable es igual o menor al mínimo. El saldo utilizable descuenta material bloqueado o comprometido.</div>
+        <div class="pf-card"><div class="pf-card__body p-0"><div class="table-responsive"><table class="table pf-table mb-0"><thead><tr><th>Material</th><th>Unidad</th><th>Mínimo</th><th>Punto de reabasto</th><th>Cantidad sugerida</th><th>Acción</th></tr></thead><tbody>
+            {% for variant in variants %}
+                <tr>
+                    <td><strong class="pf-table__primary">{{ variant.material.name }}</strong><div class="small text-body-secondary">{{ variant.code }}</div></td>
+                    <td>{{ variant.inventoryUnit.symbol }}</td>
+                    <td><input form="thresholds-{{ variant.id }}" name="minimum_stock" value="{{ variant.minimumStock }}" class="form-control form-control-sm" inputmode="decimal" aria-label="Mínimo para {{ variant.code }}"></td>
+                    <td><input form="thresholds-{{ variant.id }}" name="reorder_point" value="{{ variant.reorderPoint }}" class="form-control form-control-sm" inputmode="decimal" aria-label="Punto de reabasto para {{ variant.code }}"></td>
+                    <td><input form="thresholds-{{ variant.id }}" name="reorder_quantity" value="{{ variant.reorderQuantity }}" class="form-control form-control-sm" inputmode="decimal" aria-label="Cantidad de reabasto para {{ variant.code }}"></td>
+                    <td><form id="thresholds-{{ variant.id }}" method="post" action="{{ path('admin_inventory_receipts_minimums_update', { id: variant.id }) }}"><input type="hidden" name="_token" value="{{ csrf_token('inventory_thresholds_' ~ variant.id) }}"><button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Guardar</button></form></td>
+                </tr>
+            {% else %}
+                <tr><td colspan="6" class="pf-table__empty">No hay presentaciones activas con control de existencias.</td></tr>
+            {% endfor %}
+        </tbody></table></div></div></div>
+    </div>
+{% endblock %}

@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+use App\Repository\Materials\MaterialVariantRepository;
+use App\Repository\Inventory\InventoryCommitmentRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -9,10 +11,17 @@ use Symfony\Component\Routing\Attribute\Route;
 final class DashboardController extends AbstractController
 {
     #[Route('/', name: 'app_dashboard', methods: ['GET'])]
-    public function index(): Response
+    public function index(MaterialVariantRepository $variantRepository, InventoryCommitmentRepository $commitmentRepository): Response
     {
         $this->denyAccessUnlessGranted('dashboard.view');
 
-        return $this->render('dashboard/index.html.twig');
+        return $this->render('dashboard/index.html.twig', [
+            'lowStockAlerts' => $this->isGranted('inventory.configure')
+                ? $variantRepository->findLowStockAlerts()
+                : [],
+            'materialShortageAlerts' => $this->isGranted('inventory.configure')
+                ? $commitmentRepository->findShortages()
+                : [],
+        ]);
     }
 }

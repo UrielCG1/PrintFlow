@@ -9,6 +9,7 @@ use App\Entity\Orders\ServiceOrderOperationPlan;
 use App\Entity\Orders\ServiceOrderTraceabilityEvent;
 use App\Entity\Production\ProductionOperationExecution;
 use App\Entity\Users\User;
+use App\Application\Inventory\InventoryProductionAuthorizationGuard;
 use App\Enum\Orders\ProductionOrderStatus;
 use App\Enum\Orders\ServiceOrderItemDesignStatus;
 use App\Repository\Orders\ServiceOrderTraceabilityEventRepository;
@@ -33,6 +34,7 @@ final class ProductionExecutionManager
         private readonly ProductionScheduleLock $scheduleLock,
         private readonly ProductionPriorityRescheduler $rescheduler,
         private readonly \App\Repository\Orders\ServiceOrderOperationPlanRepository $planRepository,
+        private readonly InventoryProductionAuthorizationGuard $inventoryAuthorizationGuard,
     ) {
     }
 
@@ -57,6 +59,7 @@ final class ProductionExecutionManager
 
             $this->assertExpectedOrderVersion($order, $command);
             $this->assertPlanCanStart($order, $plan, $actor, $originExecution);
+            $this->inventoryAuthorizationGuard->assertOrderCanStartProduction($order);
             $this->assertMachineAvailable($plan);
             if ($beforeStart !== null) {
                 $beforeStart($order, $plan, $actor);

@@ -11,4 +11,8 @@ class InventoryLot
  /** Fecha de fabricación declarada, cuando está disponible. */ #[ORM\Column(name:'manufactured_at',type:Types::DATE_IMMUTABLE,nullable:true)] private ?\DateTimeImmutable $manufacturedAt=null; /** Fecha de caducidad, obligatoria por regla de dominio si la variante la controla. */ #[ORM\Column(name:'expires_at',type:Types::DATE_IMMUTABLE,nullable:true)] private ?\DateTimeImmutable $expiresAt=null;
  /** Costo MXN de la unidad recibida, conservado como evidencia histórica. */ #[ORM\Column(name:'received_unit_cost_mxn',type:Types::DECIMAL,precision:19,scale:6,nullable:true)] private ?string $receivedUnitCostMxn=null;
  public function __construct(MaterialVariant $variant,string $internalNumber){$this->variant=$variant;$this->internalLotNumber=strtoupper(trim($internalNumber));$this->initializeTimestamps();}
+ public function getId():?int{return $this->id;}
+ public function getVariant():MaterialVariant{return $this->variant;}
+ public function getInternalLotNumber():string{return $this->internalLotNumber;}
+ public function getManufacturerLotNumber():?string{return $this->manufacturerLotNumber;}
 }

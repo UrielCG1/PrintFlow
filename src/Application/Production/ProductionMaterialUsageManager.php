@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Production;
 
 use App\Entity\Orders\ServiceOrderOperationPlan;
+use App\Entity\Materials\MaterialVariant;
 use App\Entity\Orders\ServiceOrderTraceabilityEvent;
 use App\Entity\Production\ProductionMaterialUsage;
 use App\Entity\Production\ProductionOperationExecution;
@@ -35,15 +36,15 @@ final class ProductionMaterialUsageManager
         ServiceOrderOperationPlan $plan,
         User $actor,
         ProductionExecutionCommand $command,
-        string $materialName,
+        MaterialVariant $variant,
         string $quantity,
-        string $unitLabel,
     ): void {
-        $materialName = $this->validateMaterialName($materialName);
         $quantity = $this->positiveQuantity($quantity, 'La cantidad prevista');
-        $unitLabel = $this->validateUnit($unitLabel);
+        if (!$variant->isActive() || !$variant->isConsumable()) {
+            throw new \DomainException('La variante seleccionada no está disponible para producción.');
+        }
 
-        $this->entityManager->wrapInTransaction(function () use ($plan, $actor, $command, $materialName, $quantity, $unitLabel): void {
+        $this->entityManager->wrapInTransaction(function () use ($plan, $actor, $command, $variant, $quantity): void {
             $order = $plan->getServiceOrderItem()->getServiceOrder();
             $this->entityManager->lock($order, LockMode::PESSIMISTIC_WRITE);
             $this->entityManager->lock($plan, LockMode::PESSIMISTIC_WRITE);
@@ -59,14 +60,14 @@ final class ProductionMaterialUsageManager
 
             $usage = new ProductionMaterialUsage(
                 $plan->getServiceOrderItem(),
-                null,
-                null,
+                $variant,
+                $variant->getConsumptionUnit(),
                 $quantity,
                 CalculationMethod::FIXED,
                 1,
-                ['source' => 'manual-production-plan', 'version' => 1],
-                $materialName,
-                $unitLabel,
+                ['source' => 'manual-production-plan', 'version' => 1, 'variant_code' => $variant->getCode()],
+                $variant->getMaterial()->getName(),
+                $variant->getConsumptionUnit()->getSymbol(),
             );
             $usage->assignPlanContext($plan);
             $this->entityManager->persist($usage);
@@ -84,7 +85,7 @@ final class ProductionMaterialUsageManager
                 $plan,
                 null,
                 $command->note,
-                ['material_name' => $materialName, 'planned_quantity' => $quantity, 'unit' => $unitLabel],
+                ['material_variant_id' => $variant->getId(), 'material_code' => $variant->getCode(), 'planned_quantity' => $quantity, 'unit' => $variant->getConsumptionUnit()->getSymbol()],
                 $command->commandId,
                 $command->commandId,
             );

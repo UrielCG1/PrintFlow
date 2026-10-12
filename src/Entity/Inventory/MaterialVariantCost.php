@@ -2,14 +2,40 @@
 declare(strict_types=1);
 namespace App\Entity\Inventory;
 use App\Entity\Materials\MaterialVariant; use Doctrine\DBAL\Types\Types; use Doctrine\ORM\Mapping as ORM;
-#[ORM\Entity,ORM\Table(name:'material_variant_costs')]
+use App\Repository\Inventory\MaterialVariantCostRepository;
+use Brick\Math\BigDecimal;
+#[ORM\Entity(repositoryClass:MaterialVariantCostRepository::class),ORM\Table(name:'material_variant_costs')]
 /** Proyección bloqueable del saldo, valor y costo promedio móvil actual de una variante. */
 class MaterialVariantCost
 {
  /** Variante y clave primaria de la proyección. */ #[ORM\Id,ORM\OneToOne] #[ORM\JoinColumn(name:'material_variant_id',onDelete:'RESTRICT')] private MaterialVariant $variant;
  /** Existencia física actual en su unidad de inventario. */ #[ORM\Column(name:'on_hand_quantity',type:Types::DECIMAL,precision:20,scale:6)] private string $onHandQuantity='0.000000';
+ /** Cantidad físicamente existente que no se puede usar por condición, caducidad o revisión. */ #[ORM\Column(name:'blocked_quantity',type:Types::DECIMAL,precision:20,scale:6)] private string $blockedQuantity='0.000000';
+ /** Cantidad apartada para órdenes pendientes; no se descuenta del físico. */ #[ORM\Column(name:'committed_quantity',type:Types::DECIMAL,precision:20,scale:6)] private string $committedQuantity='0.000000';
  /** Valor contable total actual expresado en MXN. */ #[ORM\Column(name:'inventory_value_mxn',type:Types::DECIMAL,precision:19,scale:6)] private string $inventoryValueMxn='0.000000';
  /** Costo promedio móvil actual por unidad de inventario, en MXN. */ #[ORM\Column(name:'moving_average_cost_mxn',type:Types::DECIMAL,precision:19,scale:6)] private string $movingAverageCostMxn='0.000000';
  /** Instante UTC de la última actualización transaccional. */ #[ORM\Column(name:'updated_at',type:Types::DATETIME_IMMUTABLE)] private \DateTimeImmutable $updatedAt;
  public function __construct(MaterialVariant $variant){$this->variant=$variant;$this->updatedAt=new \DateTimeImmutable('now',new \DateTimeZone('UTC'));}
+ public function getVariant():MaterialVariant{return $this->variant;}
+ public function getOnHandQuantity():string{return $this->onHandQuantity;}
+ public function getBlockedQuantity():string{return $this->blockedQuantity;}
+ public function getCommittedQuantity():string{return $this->committedQuantity;}
+ public function getAvailableQuantity():string{return BigDecimal::of($this->onHandQuantity)->minus($this->blockedQuantity)->minus($this->committedQuantity)->toScale(6)->__toString();}
+ public function increaseOnHand(string $quantity):void{$this->onHandQuantity=BigDecimal::of($this->onHandQuantity)->plus(self::positiveDecimal($quantity))->toScale(6)->__toString();$this->touchBalance();}
+ public function commit(string $quantity):void
+ {
+  $quantity=self::positiveDecimal($quantity);
+  $available=BigDecimal::of($this->getAvailableQuantity());
+  if(BigDecimal::of($quantity)->isGreaterThan($available))throw new \DomainException('El apartado supera el saldo utilizable de la variante.');
+  $this->committedQuantity=BigDecimal::of($this->committedQuantity)->plus($quantity)->toScale(6)->__toString();$this->touchBalance();
+ }
+ public function releaseCommitment(string $quantity):void
+ {
+  $quantity=self::positiveDecimal($quantity);
+  $committed=BigDecimal::of($this->committedQuantity);
+  if(BigDecimal::of($quantity)->isGreaterThan($committed))throw new \DomainException('La liberación supera el material comprometido.');
+  $this->committedQuantity=$committed->minus($quantity)->toScale(6)->__toString();$this->touchBalance();
+ }
+ private function touchBalance():void{$this->updatedAt=new \DateTimeImmutable('now',new \DateTimeZone('UTC'));}
+ private static function positiveDecimal(string $value):string{$value=trim(str_replace(',','.',$value));if(preg_match('/^(?:0|[1-9]\d{0,13})(?:\.\d{1,6})?$/D',$value)!==1||BigDecimal::of($value)->isLessThanOrEqualTo(BigDecimal::zero()))throw new \InvalidArgumentException('La cantidad física debe ser mayor que cero y tener máximo seis decimales.');return BigDecimal::of($value)->toScale(6)->__toString();}
 }

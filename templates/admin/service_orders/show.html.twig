@@ -194,6 +194,65 @@
                         {% endif %}
         </div>
 
+        {% if materialRequirements is not empty %}
+            <section class="pf-card mb-4" aria-labelledby="material-coverage-title">
+                <header class="pf-card__header d-flex flex-column flex-lg-row gap-3 justify-content-between align-items-lg-center">
+                    <div>
+                        <h2 id="material-coverage-title" class="pf-card__title">Cobertura de materiales</h2>
+                        <p class="pf-card__subtitle">Cantidades previstas convertidas a la unidad de inventario de cada variante.</p>
+                    </div>
+                    {% if canCommitMaterials %}
+                        <form method="post" action="{{ path('admin_service_orders_commit_materials', {id: serviceOrder.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('service-order-commit-materials-' ~ serviceOrder.id) }}">
+                            <button type="submit" class="btn pf-button pf-button--primary">Apartar materiales</button>
+                        </form>
+                    {% endif %}
+                </header>
+                <div class="pf-card__body">
+                    <div class="table-responsive"><table class="table pf-table mb-0"><thead><tr><th>Material</th><th>Necesidad</th><th>Apartado</th><th>Faltante</th><th>Estado</th></tr></thead><tbody>
+                    {% for requirement in materialRequirements %}
+                        <tr>
+                            <td><strong>{{ requirement.variant.material.name }}</strong><div class="small text-body-secondary">{{ requirement.variant.code }} · {{ requirement.variant.inventoryUnit.symbol }}</div></td>
+                            <td>{{ requirement.requiredQuantity|number_format(6, '.', ',') }}</td>
+                            <td>{{ requirement.committedQuantity|number_format(6, '.', ',') }}</td>
+                            <td>{{ requirement.shortageQuantity|number_format(6, '.', ',') }}</td>
+                            <td>
+                                {% if requirement.shortageQuantity != '0.000000' %}
+                                    <span class="text-warning d-block">{{ requirement.status == 'PARTIAL' ? 'Cobertura parcial' : 'Material faltante' }}</span>
+                                    {% if requirement.shortageDecision %}<span class="small text-body-secondary d-block">{{ requirement.shortageDecision.type.label }}</span>{% endif %}
+                                    {% if is_granted('inventory.substitutions.manage') and requirement.commitment and requirement.substitutionRules is not empty %}
+                                        <details class="mt-2"><summary class="small">Usar sustituto viable</summary>
+                                            {% for rule in requirement.substitutionRules %}
+                                                <form method="post" action="{{ path('admin_service_orders_substitute_material_shortage', {id: serviceOrder.id, commitment: requirement.commitment.id, rule: rule.id}) }}" class="mt-2 border-top pt-2">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('inventory-shortage-substitute-' ~ requirement.commitment.id ~ '-' ~ rule.id) }}">
+                                                    <div class="small mb-2"><strong>{{ rule.substituteVariant.material.name }}</strong> · {{ rule.substituteVariant.code }}<br>1 {{ requirement.variant.inventoryUnit.symbol }} = {{ rule.substitutePerOriginal }} {{ rule.substituteVariant.inventoryUnit.symbol }}</div>
+                                                    <textarea class="form-control form-control-sm mb-2" name="reason" rows="2" minlength="5" maxlength="2000" required placeholder="Motivo técnico de la sustitución"></textarea>
+                                                    <button type="submit" class="btn pf-button pf-button--secondary btn-sm">Aplicar sustituto</button>
+                                                </form>
+                                            {% endfor %}
+                                        </details>
+                                    {% endif %}
+                                    {% if is_granted('inventory.substitutions.manage') and requirement.commitment and requirement.substitutionRules is empty %}<a class="small d-inline-block mt-2" href="{{ path('admin_inventory_substitutions_index') }}">Configurar sustitutos viables</a>{% endif %}
+                                    {% if is_granted('inventory.shortage.approve') and requirement.commitment %}
+                                        <details class="mt-2"><summary class="small">Resolver faltante</summary>
+                                            <form method="post" action="{{ path('admin_service_orders_resolve_material_shortage', {id: serviceOrder.id, commitment: requirement.commitment.id}) }}" class="mt-2">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('inventory-shortage-resolve-' ~ requirement.commitment.id) }}">
+                                                <select class="form-select form-select-sm mb-2" name="decision" required>{% for type in shortageDecisionTypes %}<option value="{{ type.value }}" {{ requirement.shortageDecision and requirement.shortageDecision.type.value == type.value ? 'selected' : '' }}>{{ type.label }}</option>{% endfor %}</select>
+                                                <textarea class="form-control form-control-sm mb-2" name="reason" rows="2" minlength="5" maxlength="2000" required placeholder="Motivo y alcance de la decisión">{{ requirement.shortageDecision ? requirement.shortageDecision.reason : '' }}</textarea>
+                                                <button type="submit" class="btn pf-button pf-button--secondary btn-sm">Guardar decisión</button>
+                                            </form>
+                                        </details>
+                                    {% endif %}
+                                {% elseif requirement.status == 'SUBSTITUTED' %}<span class="text-success">Parte original cubierta; faltante sustituido</span>{% elseif requirement.isCommitted %}<span class="text-success">Apartado</span>{% else %}<span class="text-body-secondary">Disponible para apartar</span>{% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody></table></div>
+                    {% if not serviceOrder.isPlanned %}<p class="small text-body-secondary mt-3 mb-0">La cobertura se puede consultar desde ahora; el apartado se habilita al completar la planificación de la orden.</p>{% endif %}
+                </div>
+            </section>
+        {% endif %}
+
         {% if is_granted('service_orders.view_commercial') %}
             <section class="pf-card service-order-provenance mb-4">
                 <header class="pf-card__header">

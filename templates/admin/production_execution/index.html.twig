@@ -164,10 +164,10 @@
                                         <input type="hidden" name="_token" value="{{ csrf_token('production-material-planned-' ~ plan.id) }}">
                                         <input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}">
                                         <input type="hidden" name="command_id" value="{{ commandIds.plan[plan.id].plan_material }}">
-                                        <div class="col-md-4"><label class="form-label small">Material previsto<input class="form-control form-control-sm" name="material_name" minlength="2" maxlength="180" required></label></div>
+                                        <div class="col-md-6"><label class="form-label small">Variante prevista<select class="form-select form-select-sm" name="material_variant_id" required><option value="">Selecciona material</option>{% for material in materialChoices %}<option value="{{ material.id }}">{{ material.material.name }} · {{ material.code }} · {{ material.consumptionUnit.symbol }}</option>{% endfor %}</select></label></div>
                                         <div class="col-md-2"><label class="form-label small">Cantidad<input class="form-control form-control-sm" name="quantity" inputmode="decimal" required></label></div>
-                                        <div class="col-md-2"><label class="form-label small">Unidad<input class="form-control form-control-sm" name="unit" maxlength="40" required placeholder="m², m, kg"></label></div>
-                                        <div class="col-md-2"><button class="btn pf-button pf-button--secondary btn-sm" type="submit">Agregar previsto</button></div>
+                                        <div class="col-md-3"><p class="small text-body-secondary mb-0">La cantidad se registra en la unidad de consumo de la variante.</p></div>
+                                        <div class="col-md-1"><button class="btn pf-button pf-button--secondary btn-sm" type="submit">Agregar previsto</button></div>
                                     </form>
                                 {% endif %}
 

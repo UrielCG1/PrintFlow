@@ -54,9 +54,28 @@ class MaterialVariant
     }
     /** @return array<string, mixed> */
     public function getSpecifications():array{return $this->specifications;}
+    public function getPurchaseUnit():MeasurementUnit{return $this->purchaseUnit;}
+    public function getInventoryUnit():MeasurementUnit{return $this->inventoryUnit;}
     public function getConsumptionUnit():MeasurementUnit{return $this->consumptionUnit;}
+    public function getInventoryToConsumptionFactor():string{return $this->inventoryToConsumptionFactor;}
+    public function getMinimumStock():string{return $this->minimumStock;}
+    public function getReorderPoint():string{return $this->reorderPoint;}
+    public function getReorderQuantity():string{return $this->reorderQuantity;}
+    public function setInventoryThresholds(string $minimumStock,string $reorderPoint,string $reorderQuantity):self
+    {
+        $this->minimumStock=$this->nonNegativeDecimal($minimumStock,'El stock mínimo');
+        $this->reorderPoint=$this->nonNegativeDecimal($reorderPoint,'El punto de reabasto');
+        $this->reorderQuantity=$this->nonNegativeDecimal($reorderQuantity,'La cantidad de reabasto');
+        return $this;
+    }
     public function isActive():bool{return $this->isActive;}
     public function isConsumable():bool{return $this->material->isConsumable();}
     public function isLotControlled():bool{return $this->lotControlled;}
     public function isExpirationControlled():bool{return $this->expirationControlled;}
+    private function nonNegativeDecimal(string $value,string $label):string
+    {
+        $value=trim(str_replace(',','.',$value));
+        if(preg_match('/^(?:0|[1-9]\d{0,13})(?:\.\d{1,6})?$/D',$value)!==1)throw new \InvalidArgumentException($label.' no tiene un formato válido.');
+        return \Brick\Math\BigDecimal::of($value)->toScale(6)->__toString();
+    }
 }

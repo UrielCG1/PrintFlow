@@ -1,0 +1,120 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Unit\Entity\Inventory;
+
+use App\Entity\Catalog\MeasurementUnit;
+use App\Entity\Inventory\InventoryStockUnit;
+use App\Entity\Inventory\InventoryLot;
+use App\Entity\Inventory\MaterialVariantCost;
+use App\Entity\Materials\Material;
+use App\Entity\Materials\MaterialVariant;
+use App\Enum\Catalog\MeasurementDimensionType;
+use App\Enum\Inventory\InventoryStockUnitKind;
+use App\Enum\Inventory\InventoryStockUnitStatus;
+use PHPUnit\Framework\TestCase;
+
+final class InventoryStockUnitTest extends TestCase
+{
+    public function testItGeneratesAnOpaqueQrPayloadAndTracksThePhysicalBalance(): void
+    {
+        $stockUnit = new InventoryStockUnit($this->variant(), '10');
+
+        self::assertStringStartsWith('IMU-', $stockUnit->getUnitCode());
+        self::assertMatchesRegularExpression('/^PF:MAT:1:[a-f0-9]{48}$/', $stockUnit->getQrPayload());
+        self::assertSame('10.000000', $stockUnit->getRemainingQuantity());
+        self::assertTrue($stockUnit->isAvailable());
+
+        $stockUnit->consume('3.25');
+
+        self::assertSame('6.750000', $stockUnit->getRemainingQuantity());
+        self::assertSame(InventoryStockUnitStatus::AVAILABLE, $stockUnit->getStatus());
+
+        $stockUnit->consume('6.75');
+
+        self::assertSame('0.000000', $stockUnit->getRemainingQuantity());
+        self::assertSame(InventoryStockUnitStatus::EXHAUSTED, $stockUnit->getStatus());
+    }
+
+    public function testItRequiresAParentForARecoverableSurplus(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('unidad física de origen');
+
+        new InventoryStockUnit($this->variant(), '1', InventoryStockUnitKind::SURPLUS);
+    }
+
+    public function testItRejectsConsumptionBeyondThePhysicalBalance(): void
+    {
+        $stockUnit = new InventoryStockUnit($this->variant(), '2');
+
+        $this->expectException(\DomainException::class);
+        $this->expectExceptionMessage('supera el saldo');
+
+        $stockUnit->consume('2.01');
+    }
+
+    public function testItRejectsALotFromAnotherVariant(): void
+    {
+        $stockUnit = new InventoryStockUnit($this->variant(), '2');
+        $otherLot = new InventoryLot($this->variant('VINIL-NEGRO-152'), 'LOT-NEGRO-001');
+
+        $this->expectException(\DomainException::class);
+        $this->expectExceptionMessage('misma variante');
+
+        $stockUnit->assignLot($otherLot);
+    }
+
+    public function testItKeepsPhysicalAndAvailableBalancesSeparate(): void
+    {
+        $balance = new MaterialVariantCost($this->variant());
+
+        $balance->increaseOnHand('12.5');
+
+        self::assertSame('12.500000', $balance->getOnHandQuantity());
+        self::assertSame('0.000000', $balance->getBlockedQuantity());
+        self::assertSame('0.000000', $balance->getCommittedQuantity());
+        self::assertSame('12.500000', $balance->getAvailableQuantity());
+    }
+
+    public function testItStoresThresholdsOnTheConcreteMaterialVariant(): void
+    {
+        $variant = $this->variant();
+
+        $variant->setInventoryThresholds('10', '12.5', '30');
+
+        self::assertSame('10.000000', $variant->getMinimumStock());
+        self::assertSame('12.500000', $variant->getReorderPoint());
+        self::assertSame('30.000000', $variant->getReorderQuantity());
+    }
+
+    public function testItCommitsAndReleasesAvailableMaterialWithoutReducingPhysicalStock(): void
+    {
+        $balance = new MaterialVariantCost($this->variant());
+        $balance->increaseOnHand('12');
+
+        $balance->commit('5.5');
+
+        self::assertSame('12.000000', $balance->getOnHandQuantity());
+        self::assertSame('5.500000', $balance->getCommittedQuantity());
+        self::assertSame('6.500000', $balance->getAvailableQuantity());
+
+        $balance->releaseCommitment('2');
+
+        self::assertSame('3.500000', $balance->getCommittedQuantity());
+        self::assertSame('8.500000', $balance->getAvailableQuantity());
+    }
+
+    private function variant(string $code = 'VINIL-BLANCO-152'): MaterialVariant
+    {
+        $unit = (new MeasurementUnit())
+            ->setCode('ML')
+            ->setName('Metro lineal')
+            ->setSymbol('m')
+            ->setDimensionType(MeasurementDimensionType::LENGTH)
+            ->setConversionFactor('1');
+
+        return new MaterialVariant(new Material(), $code, $unit, $unit, $unit);
+    }
+}

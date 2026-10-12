@@ -17,6 +17,8 @@ use App\Repository\Orders\ServiceOrderOperationPlanRepository;
 use App\Repository\Orders\ServiceOrderTraceabilityEventRepository;
 use App\Repository\Production\ProductionOperationExecutionRepository;
 use App\Repository\Production\ProductionMaterialUsageRepository;
+use App\Repository\Materials\MaterialVariantRepository;
+use App\Repository\Inventory\InventoryCommitmentRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -31,6 +33,7 @@ final class ProductionExecutionController extends AbstractController
         PrintingManager $printingManager,
         ServiceOrderTraceabilityEventRepository $eventRepository,
         ProductionMaterialUsageRepository $materialUsageRepository,
+        MaterialVariantRepository $materialVariantRepository,
     ): Response {
         $this->denyAccessUnlessGranted('production.view');
         $plans = [];
@@ -125,6 +128,7 @@ final class ProductionExecutionController extends AbstractController
             'startBlocks' => $startBlocks,
             'commandIds' => $commandIds,
             'materialUsages' => $materialUsages,
+            'materialChoices' => $this->isGranted('production.assign') ? $materialVariantRepository->findActiveConsumable() : [],
             'canExecute' => $this->isGranted('production.execute'),
             'canManageIncidents' => $this->isGranted('production.assign'),
             'actorId' => $this->authenticatedUser()->getId(),
@@ -214,18 +218,26 @@ final class ProductionExecutionController extends AbstractController
         ServiceOrderOperationPlan $plan,
         ProductionMaterialUsageManager $manager,
         PrintingManager $printingManager,
+        MaterialVariantRepository $materialVariantRepository,
+        InventoryCommitmentRepository $inventoryCommitmentRepository,
     ): Response {
         $this->denyAccessUnlessGranted('production.assign');
         $this->assertGeneralPlan($plan, $printingManager);
         $this->assertCsrf($request, 'production-material-planned-'.$plan->getId());
         try {
+            if ($inventoryCommitmentRepository->findForOrder($plan->getServiceOrderItem()->getServiceOrder()) !== []) {
+                throw new \DomainException('La orden ya tiene materiales apartados. Libera o concilia sus apartados antes de cambiar la previsión.');
+            }
+            $variant = $materialVariantRepository->find($this->positiveId($request->request->getString('material_variant_id')));
+            if (!$variant instanceof \App\Entity\Materials\MaterialVariant) {
+                throw new \DomainException('Selecciona una variante de material válida.');
+            }
             $manager->addPlanned(
                 $plan,
                 $this->authenticatedUser(),
                 $this->commandFromRequest($request),
-                $request->request->getString('material_name'),
+                $variant,
                 $request->request->getString('quantity'),
-                $request->request->getString('unit'),
             );
             $this->addFlash('success', 'El material previsto quedó registrado para esta operación.');
         } catch (\DomainException|\InvalidArgumentException $exception) {
@@ -328,5 +340,10 @@ final class ProductionExecutionController extends AbstractController
             $version,
             $request->request->getString('note') ?: null,
         );
+    }
+
+    private function positiveId(string $value): ?int
+    {
+        return preg_match('/^[1-9]\d*$/D', trim($value)) === 1 ? (int) $value : null;
     }
 }

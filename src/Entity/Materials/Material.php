@@ -214,6 +214,11 @@ class Material
         return $this->isConsumable;
     }
 
+    public function isStockItem(): bool
+    {
+        return $this->isStockItem;
+    }
+
     public function setDescription(?string $description): self
     {
         $description = trim((string) $description);

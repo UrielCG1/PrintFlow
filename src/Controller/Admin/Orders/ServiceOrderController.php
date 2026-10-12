@@ -8,6 +8,11 @@ use App\Application\Orders\ServiceOrderItemOperationData;
 use App\Application\Orders\ServiceOrderItemOperationEquipmentData;
 use App\Application\Orders\ServiceOrderManager;
 use App\Application\Orders\ServiceOrderPlanningData;
+use App\Application\Inventory\InventoryCoverageEvaluator;
+use App\Application\Inventory\InventoryOrderCommitmentManager;
+use App\Application\Inventory\InventoryOrderRequirementCollector;
+use App\Application\Inventory\InventoryShortageDecisionManager;
+use App\Application\Inventory\InventorySubstitutionManager;
 use App\Application\Production\ProductionCommitmentForecaster;
 use App\Application\Production\ProductionEquipmentAvailabilityAdvisor;
 use App\Application\Production\ProductionLoadResolver;
@@ -16,10 +21,13 @@ use App\Application\Production\ProductionPriorityRescheduler;
 use App\Entity\Orders\ServiceOrder;
 use App\Entity\Orders\ServiceOrderItem;
 use App\Entity\Orders\ServiceOrderOperationPlan;
+use App\Entity\Inventory\InventoryCommitment;
+use App\Entity\Inventory\MaterialSubstitutionRule;
 use App\Entity\Quotations\Quotation;
 use App\Entity\Users\User;
 use App\Enum\Orders\ProductionPriority;
 use App\Enum\Equipment\ProductionLoadUnit;
+use App\Enum\Inventory\InventoryShortageDecisionType;
 use App\Form\Admin\Orders\ServiceOrderItemOperationEquipmentType;
 use App\Form\Admin\Orders\ServiceOrderItemOperationType;
 use App\Form\Admin\Orders\ServiceOrderPlanningType;
@@ -29,6 +37,10 @@ use App\Repository\Orders\ServiceOrderOperationPlanRepository;
 use App\Repository\Orders\ServiceOrderRepository;
 use App\Repository\Production\ProductionCalendarExceptionRepository;
 use App\Repository\Production\ProductionReservationRepository;
+use App\Repository\Inventory\InventoryCommitmentRepository;
+use App\Repository\Inventory\MaterialVariantCostRepository;
+use App\Repository\Inventory\InventoryShortageDecisionRepository;
+use App\Repository\Inventory\MaterialSubstitutionRuleRepository;
 use App\Repository\Users\UserRepository;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -648,6 +660,72 @@ final class ServiceOrderController extends AbstractController
         return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
     }
 
+    #[Route('/{id}/apartar-materiales', name: 'commit_materials', requirements: ['id' => '\\d+'], methods: ['POST'])]
+    public function commitMaterials(
+        Request $request,
+        ServiceOrder $serviceOrder,
+        InventoryOrderCommitmentManager $commitmentManager,
+    ): Response {
+        $this->denyAccessUnlessGranted('service_orders.plan');
+        if (!$this->isCsrfTokenValid('service-order-commit-materials-'.$serviceOrder->getId(), $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('La solicitud no es válida.');
+        }
+        if (!$serviceOrder->isPlanned()) {
+            $this->addFlash('warning', 'Planifica la orden antes de apartar sus materiales.');
+            return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+        }
+
+        try {
+            $commitments = $commitmentManager->commitForOrder($serviceOrder, $this->authenticatedUser());
+            $shortages = array_filter($commitments, static fn ($commitment): bool => $commitment->getShortageQuantity() !== '0.000000');
+            $this->addFlash(
+                $shortages === [] ? 'success' : 'warning',
+                $shortages === []
+                    ? sprintf('Se apartaron los materiales de la orden (%d variante(s)).', count($commitments))
+                    : sprintf('Se registraron %d faltante(s) de material. Administración debe autorizar sustitución, compra o producción parcial.', count($shortages)),
+            );
+        } catch (\DomainException|\InvalidArgumentException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        }
+
+        return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+    }
+
+    #[Route('/{id}/faltantes/{commitment}/resolver', name: 'resolve_material_shortage', requirements: ['id' => '\\d+', 'commitment' => '\\d+'], methods: ['POST'])]
+    public function resolveMaterialShortage(Request $request, ServiceOrder $serviceOrder, InventoryCommitment $commitment, InventoryShortageDecisionManager $decisionManager): Response
+    {
+        $this->denyAccessUnlessGranted('inventory.shortage.approve');
+        if ($commitment->getServiceOrder()->getId() !== $serviceOrder->getId()) { throw $this->createNotFoundException(); }
+        if (!$this->isCsrfTokenValid('inventory-shortage-resolve-'.$commitment->getId(), $request->request->getString('_token'))) { throw $this->createAccessDeniedException('La solicitud no es válida.'); }
+        $type = InventoryShortageDecisionType::tryFrom($request->request->getString('decision'));
+        if ($type === null) {
+            $this->addFlash('error', 'Selecciona una decisión válida para el faltante.');
+            return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+        }
+        try {
+            $decisionManager->decide($commitment, $type, $request->request->getString('reason'), $this->authenticatedUser());
+            $this->addFlash('success', $type === InventoryShortageDecisionType::WAIT_FOR_PURCHASE ? 'La orden quedó en espera de compra para este material.' : 'La producción parcial quedó autorizada para este faltante.');
+        } catch (\DomainException|\InvalidArgumentException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        }
+        return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+    }
+
+    #[Route('/{id}/faltantes/{commitment}/sustituir/{rule}', name: 'substitute_material_shortage', requirements: ['id' => '\\d+', 'commitment' => '\\d+', 'rule' => '\\d+'], methods: ['POST'])]
+    public function substituteMaterialShortage(Request $request, ServiceOrder $serviceOrder, InventoryCommitment $commitment, MaterialSubstitutionRule $rule, InventorySubstitutionManager $substitutionManager): Response
+    {
+        $this->denyAccessUnlessGranted('inventory.substitutions.manage');
+        if ($commitment->getServiceOrder()->getId() !== $serviceOrder->getId()) { throw $this->createNotFoundException(); }
+        if (!$this->isCsrfTokenValid('inventory-shortage-substitute-'.$commitment->getId().'-'.$rule->getId(), $request->request->getString('_token'))) { throw $this->createAccessDeniedException('La solicitud no es válida.'); }
+        try {
+            $substitutionManager->substitute($commitment, $rule, $request->request->getString('reason'), $this->authenticatedUser());
+            $this->addFlash('success', 'El sustituto quedó apartado y el faltante original fue resuelto.');
+        } catch (\DomainException|\InvalidArgumentException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        }
+        return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+    }
+
     #[Route('/{id}/partidas/{item}/dividir', name: 'split_item', requirements: ['id' => '\\d+', 'item' => '\\d+'], methods: ['POST'])]
     public function splitItem(
         Request $request,
@@ -748,6 +826,12 @@ final class ServiceOrderController extends AbstractController
         ProductionCommitmentForecaster $commitmentForecaster,
         ProductionLoadResolver $loadResolver,
         ProductionEquipmentAvailabilityAdvisor $equipmentAvailabilityAdvisor,
+        InventoryOrderRequirementCollector $requirementCollector,
+        MaterialVariantCostRepository $balanceRepository,
+        InventoryCommitmentRepository $inventoryCommitmentRepository,
+        InventoryShortageDecisionRepository $shortageDecisionRepository,
+        MaterialSubstitutionRuleRepository $substitutionRuleRepository,
+        InventoryCoverageEvaluator $coverageEvaluator,
     ): Response {
         $this->denyAccessUnlessGranted('service_orders.view');
 
@@ -783,6 +867,43 @@ final class ServiceOrderController extends AbstractController
         }
 
         $canPlan = $serviceOrder->isPendingPlanning() && $this->isGranted('service_orders.plan');
+        $existingMaterialCommitments = [];
+        foreach ($inventoryCommitmentRepository->findForOrder($serviceOrder) as $commitment) {
+            $existingMaterialCommitments[(int) $commitment->getVariant()->getId()] = $commitment;
+        }
+        $shortageDecisions = [];
+        foreach ($shortageDecisionRepository->findActiveForOrder($serviceOrder) as $decision) {
+            $shortageDecisions[(int) $decision->getCommitment()->getId()] = $decision;
+        }
+        $substitutionRules = [];
+        foreach ($existingMaterialCommitments as $commitment) {
+            if ($commitment->getShortageQuantity() !== '0.000000' && $commitment->getStatus()->value !== 'SUBSTITUTED') {
+                $substitutionRules[(int) $commitment->getId()] = $substitutionRuleRepository->findActiveForOriginal($commitment->getVariant());
+            }
+        }
+        $materialRequirements = [];
+        foreach ($requirementCollector->collect($serviceOrder) as $requirement) {
+            $variant = $requirement['variant'];
+            $existing = $existingMaterialCommitments[(int) $variant->getId()] ?? null;
+            $balance = $balanceRepository->findOneBy(['variant' => $variant]);
+            $coverage = $existing === null
+                ? $coverageEvaluator->evaluate($requirement['requiredQuantity'], $balance?->getAvailableQuantity() ?? '0')
+                : null;
+            $isSubstituted = $existing?->getStatus()->value === 'SUBSTITUTED';
+            $materialRequirements[] = [
+                'variant' => $variant,
+                'requiredQuantity' => $requirement['requiredQuantity'],
+                'availableQuantity' => $existing?->getCommittedQuantity() ?? $coverage?->availableQuantity ?? '0.000000',
+                'committedQuantity' => $existing?->getCommittedQuantity() ?? $coverage?->coveredQuantity ?? '0.000000',
+                'shortageQuantity' => $isSubstituted ? '0.000000' : ($existing?->getShortageQuantity() ?? $coverage?->shortageQuantity ?? '0.000000'),
+                'status' => $existing?->getStatus()->value ?? ($coverage?->isFullyCovered() ? 'PENDIENTE_CUBIERTO' : 'PENDIENTE_FALTANTE'),
+                'isCommitted' => $existing !== null,
+                'commitment' => $existing,
+                'shortageDecision' => $existing === null ? null : ($shortageDecisions[(int) $existing->getId()] ?? null),
+                'substitutionRules' => $existing === null ? [] : ($substitutionRules[(int) $existing->getId()] ?? []),
+            ];
+        }
+        $canCommitMaterials = $serviceOrder->isPlanned() && $this->isGranted('service_orders.plan') && $materialRequirements !== [];
         $canAssignProduction = $this->isGranted('production.assign');
         $assignableOperatorPlans = 0;
         $operatorAssignmentWindowOpen = ($serviceOrder->isPendingPlanning() || $serviceOrder->isPlanned())
@@ -1057,6 +1178,9 @@ final class ServiceOrderController extends AbstractController
             'canReserveFullPlan' => $canReserveFullPlan,
             'canMarkPlanned' => $canMarkPlanned,
             'canPlan' => $canPlan,
+            'materialRequirements' => $materialRequirements,
+            'canCommitMaterials' => $canCommitMaterials,
+            'shortageDecisionTypes' => InventoryShortageDecisionType::cases(),
             'canAssignProduction' => $canAssignProduction,
             'operatorAssignmentWindowOpen' => $operatorAssignmentWindowOpen,
             'assignableOperatorPlans' => $assignableOperatorPlans,

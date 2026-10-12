@@ -1,0 +1,121 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Inventario | OoxCorp{% endblock %}
+{% block app_navigation_active %}inventory{% endblock %}
+{% block app_breadcrumb %}Operación / Inventario{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page__content">
+        <div class="pf-page-header">
+            <div class="pf-page-header__content">
+                <h1 class="pf-page-header__title">Inventario físico</h1>
+                <p class="pf-page-header__description">Consulta cada rollo, envase, paquete o sobrante por su código, saldo y ubicación.</p>
+            </div>
+            {% if is_granted('inventory.receive') %}
+                <div class="pf-page-header__actions">
+                    <a href="{{ path('admin_inventory_receipts_new') }}" class="btn pf-button pf-button--primary">
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                        <span>Registrar material</span>
+                    </a>
+                    {% if is_granted('inventory.adjust_stock') %}
+                        <a href="{{ path('admin_inventory_receipts_initial_count') }}" class="btn pf-button pf-button--secondary">
+                            <i class="bi bi-clipboard-check" aria-hidden="true"></i>
+                            <span>Conteo inicial</span>
+                        </a>
+                    {% endif %}
+                    {% if is_granted('inventory.configure') %}
+                        <a href="{{ path('admin_inventory_receipts_minimums') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-sliders" aria-hidden="true"></i><span>Configurar mínimos</span></a>
+                    {% endif %}
+                </div>
+            {% elseif is_granted('inventory.adjust_stock') %}
+                <div class="pf-page-header__actions"><a href="{{ path('admin_inventory_receipts_initial_count') }}" class="btn pf-button pf-button--primary"><i class="bi bi-clipboard-check" aria-hidden="true"></i><span>Conteo inicial</span></a></div>
+            {% endif %}
+        </div>
+
+        <form method="get" class="pf-card pf-form mb-4">
+            <div class="pf-card__body row g-3 align-items-end">
+                <div class="col-md-7 pf-form-field">
+                    <label for="inventory-search" class="form-label">Buscar</label>
+                    <input id="inventory-search" type="search" name="q" value="{{ search }}" class="form-control" placeholder="Código QR, material, presentación, lote o ubicación">
+                </div>
+                <div class="col-md-3 pf-form-field">
+                    <label for="inventory-status" class="form-label">Estado</label>
+                    <select id="inventory-status" name="status" class="form-select">
+                        <option value="">Todos</option>
+                        {% for itemStatus in statuses %}
+                            <option value="{{ itemStatus.value }}" {{ status == itemStatus.value ? 'selected' : '' }}>{{ itemStatus.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn pf-button pf-button--primary">Filtrar</button>
+                    <a href="{{ path('admin_inventory_receipts_index') }}" class="btn pf-button pf-button--secondary">Limpiar</a>
+                </div>
+            </div>
+        </form>
+
+        <div class="pf-card">
+            <div class="pf-card__body p-0">
+                <div class="table-responsive">
+                    <table class="table pf-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Unidad física</th>
+                                <th>Material</th>
+                                <th>Saldo</th>
+                                <th>Ubicación</th>
+                                <th>Registro</th>
+                                <th>Estado</th>
+                                <th class="pf-table__actions-cell">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stockUnit in page.items %}
+                                {% set statusClass = {
+                                    'AVAILABLE': 'success',
+                                    'BLOCKED': 'warning',
+                                    'EXHAUSTED': 'secondary',
+                                    'DISPOSED': 'danger'
+                                }[stockUnit.status.value] %}
+                                <tr>
+                                    <td>
+                                        <code class="pf-table__code">{{ stockUnit.unitCode }}</code>
+                                        {% if stockUnit.lot %}<div class="small text-body-secondary">Lote {{ stockUnit.lot.internalLotNumber }}</div>{% endif %}
+                                    </td>
+                                    <td>
+                                        <strong class="pf-table__primary">{{ stockUnit.variant.material.name }}</strong>
+                                        <div class="small text-body-secondary">{{ stockUnit.variant.material.code }} · {{ stockUnit.variant.code }}</div>
+                                    </td>
+                                    <td class="pf-table__cell--right pf-table__cell--nowrap">
+                                        {{ stockUnit.remainingQuantity|number_format(6, '.', ',') }} {{ stockUnit.variant.inventoryUnit.symbol }}
+                                        <div class="small text-body-secondary">de {{ stockUnit.initialQuantity|number_format(6, '.', ',') }}</div>
+                                    </td>
+                                    <td>{{ stockUnit.storageLocation ?: 'Sin asignar' }}</td>
+                                    <td class="pf-table__cell--nowrap">{{ stockUnit.receivedAt|date('d/m/Y H:i') }}</td>
+                                    <td><span class="pf-status-badge pf-status-badge--{{ statusClass }}">{{ stockUnit.status.label }}</span></td>
+                                    <td class="pf-table__actions-cell">
+                                        {% if is_granted('inventory.labels.print') %}
+                                            <a href="{{ path('admin_inventory_receipts_stock_unit_label', { id: stockUnit.id }) }}" class="btn pf-button pf-button--secondary pf-button--sm">
+                                                <i class="bi bi-printer" aria-hidden="true"></i>
+                                                <span>Etiqueta</span>
+                                            </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="7" class="pf-table__empty">No hay unidades físicas que coincidan con los filtros.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% if page.pageCount > 1 %}
+                <div class="pf-card__footer d-flex justify-content-between align-items-center">
+                    <a class="btn pf-button pf-button--secondary pf-button--sm {{ page.currentPage == 1 ? 'disabled' : '' }}" href="{{ path('admin_inventory_receipts_index', { q: search, status: status, page: page.currentPage - 1 }) }}">Anterior</a>
+                    <span class="pf-table-footer__summary">Página {{ page.currentPage }} de {{ page.pageCount }} · {{ page.total }} unidades</span>
+                    <a class="btn pf-button pf-button--secondary pf-button--sm {{ page.currentPage == page.pageCount ? 'disabled' : '' }}" href="{{ path('admin_inventory_receipts_index', { q: search, status: status, page: page.currentPage + 1 }) }}">Siguiente</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

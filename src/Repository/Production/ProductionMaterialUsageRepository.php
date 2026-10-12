@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository\Production;
 
 use App\Entity\Orders\ServiceOrderOperationPlan;
+use App\Entity\Orders\ServiceOrder;
 use App\Entity\Production\ProductionMaterialUsage;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -41,6 +42,26 @@ final class ProductionMaterialUsageRepository extends ServiceEntityRepository
             ->andWhere('usage.operationExecution IS NULL')
             ->setParameter('plan', $plan)
             ->orderBy('usage.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $usages;
+    }
+
+    /** @return list<ProductionMaterialUsage> */
+    public function findPlannedForServiceOrder(ServiceOrder $order): array
+    {
+        /** @var list<ProductionMaterialUsage> $usages */
+        $usages = $this->createQueryBuilder('usage')
+            ->innerJoin('usage.serviceOrderItem', 'item')
+            ->innerJoin('usage.variant', 'variant')
+            ->addSelect('item', 'variant')
+            ->andWhere('item.serviceOrder = :order')
+            ->andWhere('usage.operationExecution IS NULL')
+            ->andWhere('usage.plannedQuantity IS NOT NULL')
+            ->setParameter('order', $order)
+            ->orderBy('variant.id', 'ASC')
+            ->addOrderBy('usage.id', 'ASC')
             ->getQuery()
             ->getResult();
 

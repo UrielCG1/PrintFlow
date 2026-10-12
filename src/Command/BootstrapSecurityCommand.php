@@ -87,6 +87,12 @@ final class BootstrapSecurityCommand extends Command
         'materials.toggle_status' => ['materials', 'toggle_status', 'Activar o desactivar materiales'],
 
         'inventory.adjust_stock' => ['inventory', 'adjust_stock', 'Ajustar existencias'],
+        'inventory.view' => ['inventory', 'view', 'Consultar inventario'],
+        'inventory.receive' => ['inventory', 'receive', 'Registrar recepciones de material'],
+        'inventory.labels.print' => ['inventory', 'labels_print', 'Imprimir etiquetas de material'],
+        'inventory.shortage.approve' => ['inventory', 'shortage_approve', 'Resolver faltantes de inventario'],
+        'inventory.substitutions.manage' => ['inventory', 'substitutions_manage', 'Configurar y autorizar sustituciones'],
+        'inventory.configure' => ['inventory', 'configure', 'Configurar mínimos de inventario'],
 
         'equipment.view' => ['equipment', 'view', 'Consultar equipos'],
         'equipment.manage' => ['equipment', 'manage', 'Administrar equipos'],
@@ -178,6 +184,9 @@ final class BootstrapSecurityCommand extends Command
             'traceability.assign',
             'traceability.update_stage',
             'materials.view',
+            'inventory.view',
+            'inventory.receive',
+            'inventory.labels.print',
             'equipment.view',
             'production.view',
             'production.plan',

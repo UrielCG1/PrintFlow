@@ -1,0 +1,46 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Conteo inicial | OoxCorp{% endblock %}
+{% block app_navigation_active %}inventory{% endblock %}
+{% block app_breadcrumb %}Operación / Inventario / Conteo inicial{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page__content">
+        <div class="pf-page-header">
+            <div class="pf-page-header__content">
+                <h1 class="pf-page-header__title">Cargar conteo inicial</h1>
+                <p class="pf-page-header__description">Registra una unidad física contada para iniciar su control. Esta acción solo está disponible antes del primer movimiento de cada presentación.</p>
+            </div>
+        </div>
+
+        <div class="alert alert-warning" role="alert">
+            No captures el mínimo configurado como existencia. Cuenta el objeto físico y registra su cantidad real. Las correcciones posteriores requieren un ajuste auditado.
+        </div>
+
+        {% if variants is empty %}
+            <div class="alert alert-warning" role="alert">No hay presentaciones activas que puedan controlar existencias.</div>
+        {% else %}
+            <form method="post" class="pf-card pf-form" novalidate>
+                <div class="pf-card__body row g-3">
+                    <input type="hidden" name="_token" value="{{ csrf_token('inventory_initial_count') }}">
+                    <input type="hidden" name="idempotency_key" value="{{ formData.idempotency_key }}">
+                    <div class="col-12 pf-form-field">
+                        <label for="initial-variant" class="form-label">Material y presentación contada</label>
+                        <select id="initial-variant" name="variant_id" class="form-select" required>
+                            <option value="">Selecciona la unidad física contada</option>
+                            {% for variant in variants %}
+                                <option value="{{ variant.id }}" {{ formData.variant_id == variant.id ? 'selected' : '' }}>{{ variant.material.name }} · {{ variant.code }} · saldo en {{ variant.inventoryUnit.symbol }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 pf-form-field"><label for="initial-quantity" class="form-label">Cantidad contada</label><input id="initial-quantity" name="quantity" value="{{ formData.quantity }}" class="form-control" inputmode="decimal" placeholder="Ej. 20 o 1.5" required></div>
+                    <div class="col-md-4 pf-form-field"><label for="initial-location" class="form-label">Ubicación en bodega</label><input id="initial-location" name="storage_location" value="{{ formData.storage_location }}" class="form-control" maxlength="100" placeholder="Ej. RACK-A / NIVEL-02"></div>
+                    <div class="col-md-4 pf-form-field"><label for="initial-reference" class="form-label">Folio de conteo</label><input id="initial-reference" name="reference" value="{{ formData.reference }}" class="form-control" maxlength="100"></div>
+                    <div class="col-12 pf-form-field"><label for="initial-physical" class="form-label">Datos físicos de la unidad</label><input id="initial-physical" name="physical_description" value="{{ formData.physical_description }}" class="form-control" maxlength="255" placeholder="Ej. Rollo abierto, ancho 1.52 m"></div>
+                    <div class="col-12 pf-form-field"><label for="initial-notes" class="form-label">Notas del conteo</label><textarea id="initial-notes" name="notes" class="form-control" rows="3" maxlength="4000">{{ formData.notes }}</textarea></div>
+                </div>
+                <div class="pf-card__footer d-flex justify-content-end gap-2"><a href="{{ path('admin_inventory_receipts_index') }}" class="btn pf-button pf-button--secondary">Cancelar</a><button type="submit" class="btn pf-button pf-button--primary"><i class="bi bi-clipboard-check" aria-hidden="true"></i><span>Confirmar conteo e imprimir etiqueta</span></button></div>
+            </form>
+        {% endif %}
+    </div>
+{% endblock %}

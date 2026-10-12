@@ -1,0 +1,33 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Etiqueta pendiente | OoxCorp{% endblock %}
+{% block app_navigation_active %}inventory{% endblock %}
+{% block app_breadcrumb %}Operación / Inventario / Etiqueta pendiente{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page__content">
+        <div class="pf-page-header">
+            <div class="pf-page-header__content">
+                <h1 class="pf-page-header__title">Etiqueta pendiente de generar</h1>
+                <p class="pf-page-header__description">
+                    La recepción {{ receipt.receiptCode }} ya fue registrada una sola vez. Su inventario no se modificará al reintentar la etiqueta.
+                </p>
+            </div>
+        </div>
+
+        <div class="alert alert-warning" role="alert">
+            El servicio de generación QR aún no está disponible en este ambiente. Conserva la unidad separada e identificada con el folio de recepción hasta imprimir su etiqueta.
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ path('admin_inventory_receipts_label', { id: receipt.id }) }}" class="btn pf-button pf-button--primary">
+                <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+                <span>Reintentar etiqueta</span>
+            </a>
+            <a href="{{ path('admin_inventory_receipts_new') }}" class="btn pf-button pf-button--secondary">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                <span>Registrar otra unidad</span>
+            </a>
+        </div>
+    </div>
+{% endblock %}

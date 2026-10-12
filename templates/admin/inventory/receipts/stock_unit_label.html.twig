@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Etiqueta {{ stockUnit.unitCode }} | OoxCorp</title>
+    <style>
+        @page { margin: 6mm; } * { box-sizing: border-box; } body { margin: 0; color: #17212b; font: 11px/1.35 Arial, sans-serif; }
+        .label { width: 96mm; min-height: 64mm; padding: 4mm; border: 1px solid #17212b; } .header { display: flex; justify-content: space-between; align-items: center; gap: 5mm; padding-bottom: 2mm; border-bottom: 1px solid #c9d2d9; }
+        .logo { max-width: 32mm; max-height: 11mm; object-fit: contain; } h1 { margin: 0; font-size: 13px; } .subtitle { margin: 0; color: #51606d; font-size: 9px; }
+        .body { display: grid; grid-template-columns: 39mm 1fr; gap: 4mm; padding-top: 3mm; } .qr svg { display: block; width: 37mm; height: 37mm; } dl { margin: 0; } dt { margin-top: 1mm; color: #51606d; font-size: 8px; text-transform: uppercase; } dd { margin: 0; font-weight: 700; word-break: break-word; }
+        .unit-code { margin: 3mm 0 0; font: 700 12px/1 monospace; letter-spacing: .3px; } .payload { margin: 2mm 0 0; color: #51606d; font: 7px/1.2 monospace; word-break: break-all; } .actions { margin: 8mm; } @media print { .actions { display: none; } }
+    </style>
+</head>
+<body>
+    <section class="label">
+        <header class="header"><img class="logo" src="{{ asset('images/brand/logo.png') }}" alt="OoxCorp"><div><h1>Etiqueta de material</h1><p class="subtitle">Unidad física identificable</p></div></header>
+        <div class="body"><div class="qr">{{ qrSvg|raw }}</div><div><dl>
+            <dt>Material</dt><dd>{{ stockUnit.variant.material.name }}</dd>
+            <dt>Código de material</dt><dd>{{ stockUnit.variant.material.code }}</dd>
+            <dt>Presentación</dt><dd>{{ stockUnit.variant.code }}</dd>
+            <dt>Saldo actual</dt><dd>{{ stockUnit.remainingQuantity|number_format(6, '.', ',') }} {{ stockUnit.variant.inventoryUnit.symbol }}</dd>
+            <dt>Registro</dt><dd>{{ stockUnit.receivedAt|date('d/m/Y H:i') }}</dd>
+            {% if stockUnit.storageLocation %}<dt>Ubicación</dt><dd>{{ stockUnit.storageLocation }}</dd>{% endif %}
+            {% if stockUnit.physicalAttributes.description|default(false) %}<dt>Datos físicos</dt><dd>{{ stockUnit.physicalAttributes.description }}</dd>{% endif %}
+        </dl><p class="unit-code">{{ stockUnit.unitCode }}</p><p class="payload">{{ stockUnit.qrPayload }}</p></div></div>
+    </section>
+    <p class="actions"><button type="button" onclick="window.print()">Imprimir etiqueta</button></p>
+</body>
+</html>

@@ -25,6 +25,25 @@
         </span>
     </section>
 
+    {% if is_granted('inventory.configure') %}
+        <section class="pf-dashboard-section">
+            <div class="pf-dashboard-section__header"><div><h2>Avisos de inventario</h2><p>Variantes cuyo saldo utilizable alcanzó el mínimo configurado.</p></div><a href="{{ path('admin_inventory_receipts_minimums') }}" class="btn pf-button pf-button--secondary pf-button--sm">Configurar mínimos</a></div>
+            {% if materialShortageAlerts is not empty %}
+                <twig:Ui:Card class="mb-3">
+                    <div class="d-flex align-items-start gap-2 mb-3"><i class="bi bi-exclamation-triangle-fill text-warning" aria-hidden="true"></i><div><strong>Órdenes con material insuficiente</strong><p class="mb-0 small text-body-secondary">Revisa cada orden para autorizar una sustitución, esperar compra o permitir producción parcial.</p></div></div>
+                    <div class="table-responsive"><table class="table pf-table mb-0"><thead><tr><th>Orden</th><th>Material</th><th>Faltante</th><th>Estado</th></tr></thead><tbody>{% for alert in materialShortageAlerts %}<tr><td><a href="{{ path('admin_service_orders_show', {id: alert.serviceOrder.id}) }}">{{ alert.serviceOrder.folio }}</a></td><td><strong>{{ alert.variant.material.name }}</strong><div class="small text-body-secondary">{{ alert.variant.code }}</div></td><td>{{ alert.shortageQuantity|number_format(6, '.', ',') }} {{ alert.variant.inventoryUnit.symbol }}</td><td>{{ alert.status.value == 'PARTIAL' ? 'Cobertura parcial' : 'Sin cobertura' }}</td></tr>{% endfor %}</tbody></table></div>
+                </twig:Ui:Card>
+            {% endif %}
+            <twig:Ui:Card>
+                {% if lowStockAlerts is empty %}
+                    <p class="mb-0">No hay materiales en mínimo o por debajo de él.</p>
+                {% else %}
+                    <div class="table-responsive"><table class="table pf-table mb-0"><thead><tr><th>Material</th><th>Disponible</th><th>Mínimo</th></tr></thead><tbody>{% for alert in lowStockAlerts %}<tr><td><strong>{{ alert.variant.material.name }}</strong><div class="small text-body-secondary">{{ alert.variant.code }}</div></td><td>{{ alert.availableQuantity|number_format(6, '.', ',') }} {{ alert.variant.inventoryUnit.symbol }}</td><td>{{ alert.variant.minimumStock|number_format(6, '.', ',') }} {{ alert.variant.inventoryUnit.symbol }}</td></tr>{% endfor %}</tbody></table></div>
+                {% endif %}
+            </twig:Ui:Card>
+        </section>
+    {% endif %}
+
     {% set has_administration_access =
         is_granted('user.view')
         or is_granted('role.view')
