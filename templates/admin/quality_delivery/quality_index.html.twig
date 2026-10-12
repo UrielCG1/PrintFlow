@@ -5,13 +5,71 @@
 {% block app_breadcrumb %}Operación / Calidad{% endblock %}
 
 {% block app_content %}
-    <section class="pf-page__content">
-        <header class="pf-page-header"><div class="pf-page-header__content"><p class="pf-page-header__eyebrow">Operación</p><h1 class="pf-page-header__title">Revisión de Calidad</h1><p class="pf-page-header__description">Revisa las partidas y las últimas operaciones. La liberación cierra Producción; una no conformidad abre un retrabajo trazable.</p></div></header>
-        <section class="pf-card"><div class="pf-card__body">
-            {% if orders is empty %}<p class="mb-0">No hay órdenes pendientes de revisión integral.</p>
-            {% else %}<div class="table-responsive"><table class="pf-table"><thead><tr><th>Orden</th><th>Cliente</th><th>Partidas</th><th>Compromiso</th><th>Acción</th></tr></thead><tbody>
-                {% for order in orders %}<tr><td><strong>{{ order.folio }}</strong></td><td>{{ order.clientSnapshot.business_name|default(order.clientSnapshot.legal_name|default('Cliente')) }}</td><td>{{ order.items|length }}</td><td>{{ order.commitmentDate ? order.commitmentDate|date('d/m/Y') : 'Sin fecha' }}</td><td><a class="btn pf-button pf-button--secondary btn-sm" href="{{ path('admin_production_quality_delivery_quality_show', {id: order.id}) }}">Revisar orden</a></td></tr>{% endfor %}
-            </tbody></table></div>{% endif %}
-        </div></section>
+    <section class="pf-page__content quality-page quality-queue" data-controller="admin--quality-queue">
+        <header class="pf-page-header quality-page__header">
+            <div class="pf-page-header__content">
+                <p class="pf-page-header__eyebrow">Operación</p>
+                <h1 class="pf-page-header__title">Calidad</h1>
+                <p class="pf-page-header__description">Revisa la producción terminada y valida que cumpla con el arte aprobado antes de liberarla para entrega.</p>
+            </div>
+        </header>
+
+        <section class="quality-metrics" aria-label="Resumen de órdenes en calidad">
+            <article class="quality-metric quality-metric--blue">
+                <span class="quality-metric__icon" aria-hidden="true"><i class="bi bi-clock-history"></i></span>
+                <div><h2>Pendientes</h2><strong>{{ qualitySummary.pending }}</strong><p>órdenes en revisión</p></div>
+            </article>
+            <article class="quality-metric quality-metric--orange">
+                <span class="quality-metric__icon" aria-hidden="true"><i class="bi bi-calendar-event"></i></span>
+                <div><h2>Vencen hoy</h2><strong>{{ qualitySummary.due_today }}</strong><p>órdenes con compromiso hoy</p></div>
+            </article>
+            <article class="quality-metric quality-metric--red">
+                <span class="quality-metric__icon" aria-hidden="true"><i class="bi bi-exclamation-triangle"></i></span>
+                <div><h2>Con incidencias</h2><strong>{{ qualitySummary.incidents }}</strong><p>órdenes que requieren atención</p></div>
+            </article>
+        </section>
+
+        <section class="pf-card quality-filter-card" aria-label="Filtros de órdenes de calidad">
+            <div class="quality-filters">
+                <label class="quality-search">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <span class="visually-hidden">Buscar por número de orden o cliente</span>
+                    <input type="search" placeholder="Buscar por número de orden o cliente..." autocomplete="off" data-admin--quality-queue-target="search" data-action="input->admin--quality-queue#filter">
+                </label>
+                <label class="quality-filter"><span>Estado</span><select data-admin--quality-queue-target="status" data-action="change->admin--quality-queue#filter"><option value="">Todos</option><option value="ready">Listo</option><option value="today">Vence hoy</option><option value="overdue">Atrasada</option><option value="incident">Bloqueada</option></select></label>
+                <label class="quality-filter"><span>Fecha compromiso</span><select data-admin--quality-queue-target="commitment" data-action="change->admin--quality-queue#filter"><option value="">Todas</option><option value="today">Vence hoy</option><option value="overdue">Vencida</option><option value="future">Próxima</option><option value="unassigned">Sin fecha</option></select></label>
+                <label class="quality-filter"><span>Con incidencia</span><select data-admin--quality-queue-target="incident" data-action="change->admin--quality-queue#filter"><option value="">Todas</option><option value="yes">Sí</option><option value="no">No</option></select></label>
+            </div>
+        </section>
+
+        <section class="pf-card quality-table-card" aria-labelledby="quality-orders-title">
+            <div class="pf-card__header quality-table-card__header">
+                <h2 class="pf-card__title" id="quality-orders-title">Órdenes en calidad <span>({{ orders|length }})</span></h2>
+                <button type="button" class="quality-clear" data-action="click->admin--quality-queue#clear">Limpiar filtros</button>
+            </div>
+            <div class="quality-table-scroll">
+                <table class="quality-table">
+                    <thead><tr><th scope="col">Orden</th><th scope="col">Cliente / partidas</th><th scope="col">Avance</th><th scope="col">Compromiso</th><th scope="col">Riesgo</th><th scope="col"><span class="visually-hidden">Siguiente acción</span></th></tr></thead>
+                    <tbody data-admin--quality-queue-target="rows">
+                    {% for qualityRow in qualityRows %}
+                        {% set order = qualityRow.order %}
+                        {% set clientName = order.clientSnapshot.business_name|default(order.clientSnapshot.legal_name|default('Cliente')) %}
+                        {% set risk = qualityRow.risk %}
+                        <tr data-quality-row data-status="{{ risk }}" data-commitment="{{ qualityRow.commitmentState }}" data-incident="{{ qualityRow.progress.incidents > 0 ? 'yes' : 'no' }}">
+                            <td data-label="Orden"><a class="quality-order-link" href="{{ path('admin_production_quality_delivery_quality_show', {id: order.id}) }}">{{ order.folio }}</a></td>
+                            <td data-label="Cliente / partidas"><strong class="quality-client-name">{{ clientName }}</strong><span class="quality-order-detail">{{ order.items|length }} {{ order.items|length == 1 ? 'partida' : 'partidas' }}{% if order.items|length > 0 %} · {% for item in order.items|slice(0, 2) %}{{ item.commercialItemSnapshot.name|default(item.commercialItem.name) }}{% if not loop.last %} · {% endif %}{% endfor %}{% endif %}</span></td>
+                            <td data-label="Avance"><div class="quality-progress"><span class="quality-progress__track"><span style="width: {{ qualityRow.progress.percent }}%"></span></span><span class="quality-progress__count">{{ qualityRow.progress.completed }}/{{ qualityRow.progress.operations }}</span></div></td>
+                            <td data-label="Compromiso">{% if order.commitmentDate %}<time datetime="{{ order.commitmentDate|date('Y-m-d', 'America/Mexico_City') }}">{{ order.commitmentDate|date('d/m/Y', 'America/Mexico_City') }}</time>{% else %}<span class="quality-muted">Sin fecha</span>{% endif %}</td>
+                            <td data-label="Riesgo"><span class="quality-risk quality-risk--{{ risk }}"><i aria-hidden="true"></i>{% if risk == 'incident' %}Bloqueada{% elseif risk == 'today' %}Vence hoy{% elseif risk == 'overdue' %}Atrasada{% else %}Listo{% endif %}</span></td>
+                            <td data-label="Siguiente acción"><a class="quality-review-action" href="{{ path('admin_production_quality_delivery_quality_show', {id: order.id}) }}">Revisar<i class="bi bi-arrow-right" aria-hidden="true"></i></a></td>
+                        </tr>
+                    {% else %}
+                        <tr class="quality-empty"><td colspan="6"><span class="quality-empty__icon"><i class="bi bi-patch-check" aria-hidden="true"></i></span><strong>No hay órdenes pendientes de revisión.</strong><span>Las órdenes aparecerán aquí cuando Producción termine su trabajo.</span></td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                <p class="quality-no-results" hidden data-admin--quality-queue-target="noResults">No hay órdenes que coincidan con los filtros.</p>
+            </div>
+        </section>
     </section>
 {% endblock %}
