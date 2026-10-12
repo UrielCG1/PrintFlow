@@ -364,7 +364,7 @@
                                     {% set state = operationStates[plan.id]|default('scheduled') %}
                                     {% set planReservations = reservationsByPlan[plan.id]|default([]) %}
                                     {% set stateTone = state == 'complete' ? 'complete' : (state in ['active', 'paused'] ? 'active' : ((state in ['equipment', 'estimate', 'blocked'] or planReservations is empty) ? 'attention' : 'scheduled')) %}
-                                    {% set stateLabel = state == 'complete' ? 'Completada' : (state == 'active' ? 'En curso' : (state == 'paused' ? 'Pausada' : (state == 'equipment' ? 'Falta máquina' : (state == 'estimate' ? 'Falta tiempo' : (state == 'blocked' ? 'Bloqueada' : (planReservations is empty ? 'Falta agenda' : 'Programada')))))) %}
+                                    {% set stateLabel = state == 'complete' ? 'Completada' : (state == 'active' ? 'En curso' : (state == 'paused' ? 'Pausada' : (state == 'equipment' ? 'Máquina pendiente' : (state == 'estimate' ? 'Falta tiempo' : (state == 'blocked' ? 'Bloqueada' : (planReservations is empty ? 'Falta agenda' : 'Programada')))))) %}
                                     <li class="service-order-route__step service-order-route__step--{{ stateTone }}">
                                         <span class="service-order-route__number">{{ plan.sequenceNumber }}</span>
                                         <span class="service-order-route__copy">
@@ -420,6 +420,7 @@
                                                 {% if canPlan %}
                                                     {% set planReservations = reservationsByPlan[plan.id]|default([]) %}
                                                     {% set planChoices = equipmentChoicesByPlan[plan.id]|default([]) %}
+                                                    {% set planAvailability = equipmentAvailabilityByPlan[plan.id]|default(null) %}
                                                     {% if plan.equipment %}
                                                         <strong>{{ plan.equipmentSnapshot.name ?? plan.equipment.name }}</strong>
                                                         <span class="d-block text-muted small">{{ plan.equipment.code }}</span>
@@ -440,16 +441,39 @@
                                                         {% endif %}
                                                     {% elseif recommendedEquipmentByPlan[plan.id]|default(null) %}
                                                         <strong>Recomendada: {{ recommendedEquipmentByPlan[plan.id].name }}</strong>
-                                                        <span class="d-block text-muted small">{{ recommendedEquipmentByPlan[plan.id].code }} · única máquina compatible disponible</span>
+                                                        <span class="d-block text-muted small">{{ recommendedEquipmentByPlan[plan.id].code }} · {% if planAvailability.recommendation_reason|default(null) == 'earliest_completion' %}termina antes según la agenda actual{% elseif planAvailability.recommendation_reason|default(null) == 'earliest_slot' %}tiene el primer espacio disponible{% else %}única máquina compatible{% endif %}</span>
+                                                        {% if planChoices|length > 1 %}
+                                                            {{ form_start(equipmentForms[plan.id], {action: path('admin_service_orders_assign_item_operation_equipment', {id: serviceOrder.id, plan: plan.id}), method: 'POST', attr: {class: 'pf-form mt-2'}}) }}
+                                                                {{ form_errors(equipmentForms[plan.id]) }}
+                                                                {{ form_widget(equipmentForms[plan.id].equipment, {attr: {class: 'form-select form-select-sm mb-2'}}) }}
+                                                                <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Guardar máquina seleccionada</button>
+                                                            {{ form_end(equipmentForms[plan.id]) }}
+                                                        {% endif %}
                                                     {% elseif planChoices is empty %}
                                                         <span class="text-warning">No hay máquina compatible disponible.</span>
                                                     {% else %}
                                                         <span class="d-block text-muted small mb-1">Elige una máquina compatible</span>
+                                                        {% if planAvailability.recommendation_reason|default(null) == 'same_completion' %}<span class="d-block text-muted small mb-1">Las opciones tienen el mismo término estimado; elige según material y preferencia del taller.</span>{% elseif planAvailability.recommendation_reason|default(null) == 'same_first_slot' %}<span class="d-block text-muted small mb-1">Las opciones tienen la misma disponibilidad estimada; elige según material y preferencia del taller.</span>{% endif %}
+                                                        {% if planAvailability.blocked_by|default(null) %}<span class="d-block text-muted small mb-1">El horario de este paso depende de completar {{ planAvailability.blocked_by }}.</span>{% endif %}
                                                         {{ form_start(equipmentForms[plan.id], {action: path('admin_service_orders_assign_item_operation_equipment', {id: serviceOrder.id, plan: plan.id}), method: 'POST', attr: {class: 'pf-form'}}) }}
                                                             {{ form_errors(equipmentForms[plan.id]) }}
                                                             {{ form_widget(equipmentForms[plan.id].equipment, {attr: {class: 'form-select form-select-sm mb-2'}}) }}
                                                             <button type="submit" class="btn pf-button pf-button--secondary pf-button--sm">Guardar máquina</button>
                                                         {{ form_end(equipmentForms[plan.id]) }}
+                                                    {% endif %}
+                                                    {% if planReservations is empty and planAvailability.options|default([])|length > 0 %}
+                                                        <ul class="service-order-machine-options list-unstyled mb-0 mt-2">
+                                                            {% for machineOption in planAvailability.options %}
+                                                                <li class="{% if machineOption.recommended %}is-recommended{% endif %}">
+                                                                    <span class="fw-semibold">{{ machineOption.equipment.name }}</span>
+                                                                    {% if machineOption.recommended %}<span class="badge text-bg-success ms-1">Recomendada</span>{% endif %}
+                                                                    {% if machineOption.starts_at %}
+                                                                        <span class="d-block">{% if planAvailability.blocked_by|default(null) %}Primer espacio del equipo: {{ machineOption.starts_at|date('d/m H:i', 'America/Mexico_City') }} · espera a {{ planAvailability.blocked_by }}{% elseif machineOption.ends_at %}Inicio estimado: {{ machineOption.starts_at|date('d/m H:i', 'America/Mexico_City') }} · término: {{ machineOption.ends_at|date('d/m H:i', 'America/Mexico_City') }}{% if machineOption.estimated_minutes %} · ~{{ (machineOption.estimated_minutes / 60)|number_format(1, ',', '.') }} h{% endif %}{% else %}Primer espacio del equipo: {{ machineOption.starts_at|date('d/m H:i', 'America/Mexico_City') }}{% endif %}{% if machineOption.estimate_source %}<span class="d-block text-muted">Según {% if machineOption.estimate_source == 'validated_capacity' %}capacidad validada{% elseif machineOption.estimate_source == 'product_standard' %}estándar del Producto{% elseif machineOption.estimate_source == 'manual' %}tiempo manual{% else %}estimación guardada{% endif %}.</span>{% endif %}</span>
+                                                                    {% endif %}
+                                                                    {% if machineOption.unavailable_reason %}<span class="d-block text-warning">{{ machineOption.unavailable_reason }}</span>{% endif %}
+                                                                </li>
+                                                            {% endfor %}
+                                                        </ul>
                                                     {% endif %}
                                                 {% elseif plan.equipment %}
                                                     <strong>{{ plan.equipmentSnapshot.name ?? plan.equipment.name }}</strong>

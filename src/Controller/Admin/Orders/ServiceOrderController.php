@@ -9,6 +9,7 @@ use App\Application\Orders\ServiceOrderItemOperationEquipmentData;
 use App\Application\Orders\ServiceOrderManager;
 use App\Application\Orders\ServiceOrderPlanningData;
 use App\Application\Production\ProductionCommitmentForecaster;
+use App\Application\Production\ProductionEquipmentAvailabilityAdvisor;
 use App\Application\Production\ProductionLoadResolver;
 use App\Application\Production\ProductionPlanManager;
 use App\Application\Production\ProductionPriorityRescheduler;
@@ -26,6 +27,7 @@ use App\Repository\Equipment\EquipmentRepository;
 use App\Repository\Operations\OperationRepository;
 use App\Repository\Orders\ServiceOrderOperationPlanRepository;
 use App\Repository\Orders\ServiceOrderRepository;
+use App\Repository\Production\ProductionCalendarExceptionRepository;
 use App\Repository\Production\ProductionReservationRepository;
 use App\Repository\Users\UserRepository;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
@@ -741,9 +743,11 @@ final class ServiceOrderController extends AbstractController
         EquipmentRepository $equipmentRepository,
         ServiceOrderOperationPlanRepository $operationPlanRepository,
         ProductionReservationRepository $reservationRepository,
+        ProductionCalendarExceptionRepository $calendarExceptionRepository,
         UserRepository $userRepository,
         ProductionCommitmentForecaster $commitmentForecaster,
         ProductionLoadResolver $loadResolver,
+        ProductionEquipmentAvailabilityAdvisor $equipmentAvailabilityAdvisor,
     ): Response {
         $this->denyAccessUnlessGranted('service_orders.view');
 
@@ -876,6 +880,7 @@ final class ServiceOrderController extends AbstractController
         $itemOperationForms = [];
         $equipmentForms = [];
         $equipmentChoicesByPlan = [];
+        $equipmentAvailabilityByPlan = [];
         $recommendedEquipmentByPlan = [];
         $automaticEstimateByPlan = [];
         $physicalEstimateByPlan = [];
@@ -933,20 +938,81 @@ final class ServiceOrderController extends AbstractController
                     $planId = (int) $plan->getId();
                     $choices = $this->equipmentChoicesForPlan($plan, $equipmentRepository);
                     $equipmentChoicesByPlan[$planId] = $choices;
-                    if ($plan->getEquipment() === null && count($choices) === 1) {
-                        $recommendedEquipmentByPlan[$planId] = $choices[0];
+                }
+
+                $productionDimensions[(int) $item->getId()] = [
+                    'finished_width_cm' => $this->snapshotDimension($item->getProductionSpecificationsSnapshot(), 'finished_width_cm'),
+                    'finished_height_cm' => $this->snapshotDimension($item->getProductionSpecificationsSnapshot(), 'finished_height_cm'),
+                ];
+
+                $hasChildren = false;
+                foreach ($itemsForDisplay as $candidate) {
+                    if ($candidate->getSplitParentItem() === $item) {
+                        $hasChildren = true;
+                        break;
+                    }
+                }
+                if ($item->getSplitParentItem() === null && $item->getSplitPosition() === null && !$hasChildren) {
+                    $splitEligibleItems[(int) $item->getId()] = true;
+                }
+            }
+
+            $busyWindowsByEquipment = [];
+            $exceptionsByEquipment = [];
+            $forecastHorizonEnd = $nowForCapacity->modify('+730 days');
+            foreach ($equipmentChoicesByPlan as $choices) {
+                foreach ($choices as $equipment) {
+                    $equipmentId = (int) $equipment->getId();
+                    if (isset($busyWindowsByEquipment[$equipmentId])) {
+                        continue;
+                    }
+                    $busyWindowsByEquipment[$equipmentId] = array_map(
+                        static fn ($reservation): array => [
+                            'start' => $reservation->getStartsAt(),
+                            'end' => $reservation->getEndsAt(),
+                        ],
+                        $reservationRepository->findActiveForEquipmentBetween($equipment, $nowForCapacity, $forecastHorizonEnd),
+                    );
+                    $exceptionsByEquipment[$equipmentId] = array_map(
+                        static fn ($exception): array => [
+                            'type' => $exception->getType(),
+                            'start' => $exception->getStartsAt(),
+                            'end' => $exception->getEndsAt(),
+                        ],
+                        $calendarExceptionRepository->findActiveForEquipmentBetween($equipment, $nowForCapacity, $forecastHorizonEnd),
+                    );
+                }
+            }
+
+            $equipmentAvailabilityByPlan = $equipmentAvailabilityAdvisor->advise(
+                $allPlans,
+                $equipmentChoicesByPlan,
+                $reservationsByPlan,
+                $busyWindowsByEquipment,
+                $exceptionsByEquipment,
+                $nowForCapacity,
+            );
+
+            foreach ($itemsForDisplay as $item) {
+                foreach ($plansByItem[(int) $item->getId()] ?? [] as $plan) {
+                    $planId = (int) $plan->getId();
+                    $choices = $equipmentChoicesByPlan[$planId] ?? [];
+                    $advice = $equipmentAvailabilityByPlan[$planId] ?? null;
+                    $recommended = $advice['recommended_equipment'] ?? null;
+                    if ($plan->getEquipment() === null && $recommended !== null) {
+                        $recommendedEquipmentByPlan[$planId] = $recommended;
                     }
 
                     $equipmentData = new ServiceOrderItemOperationEquipmentData();
-                    $equipmentData->equipment = $plan->getEquipment();
-                    $equipmentForms[(int) $plan->getId()] = $this->createEquipmentForm(
+                    $equipmentData->equipment = $plan->getEquipment() ?? $recommended;
+                    $equipmentForms[$planId] = $this->createEquipmentForm(
                         $equipmentData,
                         $serviceOrder,
                         $plan,
                         $choices,
                     )->createView();
 
-                    $effectiveEquipment = $plan->getEquipment() ?? ($recommendedEquipmentByPlan[$planId] ?? null);
+                    $effectiveEquipment = $plan->getEquipment() ?? $recommended;
                     $capacityUnit = $effectiveEquipment?->getCapacityUnit();
                     $loadUnit = $capacityUnit?->loadUnit();
                     $automaticLoad = $loadUnit !== null ? $loadResolver->automaticLoad($item, $loadUnit) : null;
@@ -965,22 +1031,6 @@ final class ServiceOrderController extends AbstractController
                         || (!$hasEstimate && $effectiveEquipment !== null && $automaticEstimateByPlan[$planId])) {
                         ++$planningProgress['auto_actions'];
                     }
-                }
-
-                $productionDimensions[(int) $item->getId()] = [
-                    'finished_width_cm' => $this->snapshotDimension($item->getProductionSpecificationsSnapshot(), 'finished_width_cm'),
-                    'finished_height_cm' => $this->snapshotDimension($item->getProductionSpecificationsSnapshot(), 'finished_height_cm'),
-                ];
-
-                $hasChildren = false;
-                foreach ($itemsForDisplay as $candidate) {
-                    if ($candidate->getSplitParentItem() === $item) {
-                        $hasChildren = true;
-                        break;
-                    }
-                }
-                if ($item->getSplitParentItem() === null && $item->getSplitPosition() === null && !$hasChildren) {
-                    $splitEligibleItems[(int) $item->getId()] = true;
                 }
             }
         }
@@ -1020,6 +1070,7 @@ final class ServiceOrderController extends AbstractController
             'itemOperationForms' => $itemOperationForms,
             'equipmentForms' => $equipmentForms,
             'equipmentChoicesByPlan' => $equipmentChoicesByPlan,
+            'equipmentAvailabilityByPlan' => $equipmentAvailabilityByPlan,
             'recommendedEquipmentByPlan' => $recommendedEquipmentByPlan,
             'automaticEstimateByPlan' => $automaticEstimateByPlan,
             'physicalEstimateByPlan' => $physicalEstimateByPlan,

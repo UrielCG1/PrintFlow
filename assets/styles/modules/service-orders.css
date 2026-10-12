@@ -687,6 +687,23 @@
     font-size: 1rem !important;
 }
 
+.service-order-machine-options {
+    display: grid;
+    gap: .4rem;
+    color: var(--pf-muted, #65738b);
+    font-size: .78rem;
+}
+
+.service-order-machine-options li {
+    border-left: 2px solid var(--pf-border, #dbe2ea);
+    padding-left: .55rem;
+}
+
+.service-order-machine-options li.is-recommended {
+    border-left-color: var(--pf-success, #198754);
+    color: var(--pf-text, #17324d);
+}
+
 .service-order-route {
     margin: 0.9rem 0 0.75rem;
 }
