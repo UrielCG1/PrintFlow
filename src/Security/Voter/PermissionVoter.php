@@ -34,6 +34,13 @@ final class PermissionVoter extends Voter
         }
 
         foreach ($user->getAssignedRoles() as $role) {
+            // ROLE_ADMIN es el rol reservado de administración completa.
+            // Sus permisos no deben depender de que una migración posterior ya
+            // haya creado cada permiso de un módulo nuevo.
+            if ($role->isActive() && $role->getCode() === 'ROLE_ADMIN') {
+                return true;
+            }
+
             if ($role->isActive() && $role->hasPermission($attribute)) {
                 return true;
             }
