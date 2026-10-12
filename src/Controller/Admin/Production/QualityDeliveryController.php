@@ -29,22 +29,65 @@ final class QualityDeliveryController extends AbstractController
     public function qualityIndex(ServiceOrderRepository $orders): Response
     {
         $this->denyAccessUnlessGranted('quality.review');
-        $pending = array_values(array_filter(
-            $orders->findRecentForAdministration(),
-            static fn (ServiceOrder $order): bool => $order->getProductionStatus() === ProductionOrderStatus::WAITING_QUALITY,
-        ));
+        $pending = $orders->findRecentForQualityReview();
 
-        return $this->render('admin/quality_delivery/quality_index.html.twig', ['orders' => $pending]);
+        $timezone = new \DateTimeZone('America/Mexico_City');
+        $today = new \DateTimeImmutable('today', $timezone);
+        $summary = [
+            'pending' => count($pending),
+            'due_today' => 0,
+            'incidents' => 0,
+        ];
+        $qualityRows = [];
+
+        foreach ($pending as $order) {
+            $progress = $this->qualityProgress($order);
+            $commitment = $order->getCommitmentDate()?->setTimezone($timezone);
+            $commitmentState = $commitment === null
+                ? 'unassigned'
+                : ($commitment->format('Y-m-d') < $today->format('Y-m-d')
+                    ? 'overdue'
+                    : ($commitment->format('Y-m-d') === $today->format('Y-m-d') ? 'today' : 'future'));
+            $hasIncident = $progress['incidents'] > 0;
+            $risk = $hasIncident
+                ? 'incident'
+                : ($commitmentState === 'today' ? 'today' : ($commitmentState === 'overdue' ? 'overdue' : 'ready'));
+
+            if ($commitmentState === 'today') {
+                ++$summary['due_today'];
+            }
+            if ($hasIncident) {
+                ++$summary['incidents'];
+            }
+
+            $qualityRows[] = [
+                'order' => $order,
+                'progress' => $progress,
+                'commitmentState' => $commitmentState,
+                'risk' => $risk,
+            ];
+        }
+
+        return $this->render('admin/quality_delivery/quality_index.html.twig', [
+            'orders' => $pending,
+            'qualityRows' => $qualityRows,
+            'qualitySummary' => $summary,
+        ]);
     }
 
     #[Route('/calidad/ordenes/{id}', name: 'quality_show', requirements: ['id' => '\\d+'], methods: ['GET'])]
     public function qualityShow(ServiceOrder $order, ServiceOrderTraceabilityEventRepository $events): Response
     {
         $this->denyAccessUnlessGranted('quality.review');
+        $qualityProgress = $this->qualityProgress($order);
+
         return $this->render('admin/quality_delivery/quality_show.html.twig', [
             'order' => $order,
             'events' => $events->findRecentForServiceOrder($order),
-            'canRelease' => $this->qualityReady($order),
+            'canRelease' => $order->getProductionStatus() === ProductionOrderStatus::WAITING_QUALITY
+                && $qualityProgress['operations'] > 0
+                && $qualityProgress['incidents'] === 0,
+            'qualityProgress' => $qualityProgress,
             'commandId' => bin2hex(random_bytes(24)),
             'releaseCommandId' => bin2hex(random_bytes(24)),
         ]);
@@ -169,21 +212,44 @@ final class QualityDeliveryController extends AbstractController
         return $this->redirectToRoute('admin_production_quality_delivery_delivery_show', ['id' => $order->getId()]);
     }
 
-    private function qualityReady(ServiceOrder $order): bool
+    /** @return array{operations: int, completed: int, incidents: int, blocked: int, open: int, percent: int} */
+    private function qualityProgress(ServiceOrder $order): array
     {
-        if ($order->getProductionStatus() !== ProductionOrderStatus::WAITING_QUALITY) {
-            return false;
-        }
-        $hasOperations = false;
+        $operations = 0;
+        $completed = 0;
+        $incidents = 0;
+        $blocked = 0;
+        $open = 0;
+
         foreach ($order->getItems() as $item) {
             foreach ($item->getActiveOperationPlans() as $plan) {
-                $hasOperations = true;
-                if ($plan->getBlockedReason() !== null || $plan->hasOpenExecution() || !$plan->hasCompletedLatestExecution()) {
-                    return false;
+                ++$operations;
+                $isBlocked = $plan->getBlockedReason() !== null;
+                $isOpen = $plan->hasOpenExecution();
+                $isCompleted = $plan->hasCompletedLatestExecution();
+
+                if ($isBlocked) {
+                    ++$blocked;
+                }
+                if ($isOpen) {
+                    ++$open;
+                }
+                if ($isCompleted && !$isBlocked && !$isOpen) {
+                    ++$completed;
+                } else {
+                    ++$incidents;
                 }
             }
         }
-        return $hasOperations;
+
+        return [
+            'operations' => $operations,
+            'completed' => $completed,
+            'incidents' => $incidents + ($operations === 0 ? 1 : 0),
+            'blocked' => $blocked,
+            'open' => $open,
+            'percent' => $operations > 0 ? (int) round(($completed / $operations) * 100) : 0,
+        ];
     }
 
     private function assertDeliveryAccess(): void
