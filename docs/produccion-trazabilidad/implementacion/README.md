@@ -10,5 +10,6 @@ Estos registros conservan las decisiones técnicas, migraciones y verificaciones
 | 11 oct 2026 | [Diseño y archivos](2026-10-11-diseno-y-archivos.md) | Revisión de arte, evidencia por partida y almacenamiento privado. |
 | 11 oct 2026 | [Agenda y permisos](2026-10-11-agenda-y-permisos.md) | Pausas, recálculo, permisos de entrega y equipos manuales de taller. |
 | 11 oct 2026 | [Operadores y estándares de tiempo](2026-10-11-operadores-y-estandares.md) | Asignación antes del inicio, tiempos estándar por Producto, medición automática y migración asociada. |
+| 11 oct 2026 | [Disponibilidad y recomendación de equipos](2026-10-11-disponibilidad-y-recomendacion-de-equipos.md) | Proyección por secuencia, reservas, excepciones y comparación transparente de máquinas compatibles. |
 
 Para identificar lo ya incorporado, los pendientes y el estado de verificación productiva, consulta [estado actual](../estado-actual.md). Para saber qué sigue, usa el [roadmap del producto](../roadmap/fases-y-historias.md).
