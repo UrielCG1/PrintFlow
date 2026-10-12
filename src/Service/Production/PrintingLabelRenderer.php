@@ -26,14 +26,10 @@ final class PrintingLabelRenderer
         $completedAt = $output->getExecution()->getCompletedAt();
         $completedAtLabel = $completedAt?->setTimezone(new \DateTimeZone('America/Mexico_City'))->format('d/m/Y H:i');
 
-        $qr = Builder::create()
-            ->writer(new SvgWriter())
-            ->writerOptions([SvgWriter::WRITER_OPTION_EXCLUDE_XML_DECLARATION => true])
-            ->data($output->getQrPayload())
-            ->size(320)
-            ->margin(16)
-            ->build()
-            ->getString();
+        $qr = $this->renderQrSvg($output, 320, 16);
+        if ($qr === null) {
+            throw new \RuntimeException('No está instalada la biblioteca QR. La salida queda pendiente de etiqueta y puede reintentarse sin duplicar la impresión.');
+        }
 
         return sprintf(<<<'HTML'
 <!doctype html>
@@ -148,6 +144,22 @@ HTML,
             $output->getVersionNumber(),
             $completedAtLabel !== null ? ' · '.$this->escape($completedAtLabel) : '',
         );
+    }
+
+    public function renderQrSvg(ProductionPrintedOutput $output, int $size = 160, int $margin = 8): ?string
+    {
+        if (!class_exists(SvgWriter::class)) {
+            return null;
+        }
+
+        return Builder::create()
+            ->writer(new SvgWriter())
+            ->writerOptions([SvgWriter::WRITER_OPTION_EXCLUDE_XML_DECLARATION => true])
+            ->data($output->getQrPayload())
+            ->size($size)
+            ->margin($margin)
+            ->build()
+            ->getString();
     }
 
     private function formatQuantity(string $quantity): string

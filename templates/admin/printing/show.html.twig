@@ -1,93 +1,154 @@
 {% extends 'layouts/app.html.twig' %}
 
-{% block title %}Imprimir partida | OoxCorp{% endblock %}
+{% block title %}Trabajo de impresión · {{ item.serviceOrder.folio }} | OoxCorp{% endblock %}
 {% block app_navigation_active %}printing{% endblock %}
-{% block app_breadcrumb %}Operación / Impresión / {{ item.serviceOrder.folio }} · partida {{ item.displayLineNumber }}{% endblock %}
+{% block app_breadcrumb %}Operación / Impresión / {{ item.serviceOrder.folio }} / P{{ item.displayLineNumber }}{% endblock %}
 
 {% block app_content %}
-    <section class="pf-page__content">
-        <header class="pf-page-header">
-            <div class="pf-page-header__content">
-                <p class="pf-page-header__eyebrow">{{ item.serviceOrder.folio }} · {{ item.trackingCode }}</p>
-                <h1 class="pf-page-header__title">Impresión · partida {{ item.displayLineNumber }}</h1>
-                <p class="pf-page-header__description">{{ item.commercialItemSnapshot.name ?? item.commercialItem.name }} · Cantidad contratada: {{ item.quantity|number_format(6, '.', ',')|trim('0', 'right')|trim('.', 'right') }} {{ item.commercialItemSnapshot.measurement_unit.code|default('') }}</p>
+    {% set productName = item.commercialItemSnapshot.name ?? item.commercialItem.name %}
+    {% set scanIsDone = activeExecution or output or (currentScan and currentScan.available) %}
+    {% set activeStep = output and output.labelPlaced ? 6 : (output ? 5 : (activeExecution ? 4 : (currentScan and currentScan.available ? 3 : (release ? 2 : 1)))) %}
+    <section class="pf-page__content printing-page printing-detail">
+        <header class="printing-detail-header">
+            <div class="printing-detail-heading">
+                <p class="pf-page-header__eyebrow">Trabajo de impresión</p>
+                <h1>{{ item.serviceOrder.folio }} <span>· Partida {{ item.displayLineNumber }}</span></h1>
+                <p>{{ productName }} <span>·</span> {{ item.quantity|number_format(6, '.', ',')|trim('0', 'right')|trim('.', 'right') }} {{ item.commercialItemSnapshot.measurement_unit.code|default('') }}</p>
             </div>
-            <div class="pf-page-header__actions"><a href="{{ path('admin_printing_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-arrow-left" aria-hidden="true"></i> Cola de Impresión</a></div>
+            <a href="{{ path('admin_printing_index') }}" class="btn pf-button pf-button--secondary printing-back"><i class="bi bi-arrow-left" aria-hidden="true"></i> Volver a cola</a>
         </header>
 
-        <div class="row g-4">
-            <div class="col-xl-7">
-                <section class="pf-card mb-4">
-                    <div class="pf-card__header"><h2 class="pf-card__title">Resultado esperado y arte vigente</h2></div>
-                    <div class="pf-card__body">
-                        {% if release %}
-                            <dl class="row mb-0">
-                                <dt class="col-sm-4">Liberación de Diseño</dt><dd class="col-sm-8">Versión {{ release.versionNumber }} · {{ release.authorizationType.label }}</dd>
-                                <dt class="col-sm-4">Archivo de impresión</dt><dd class="col-sm-8"><a href="{{ path('admin_design_download_file', {id: release.artworkFile.id}) }}">{{ release.artworkFile.originalName }}</a></dd>
-                                <dt class="col-sm-4">Captura guía</dt><dd class="col-sm-8"><a href="{{ path('admin_design_download_file', {id: release.referenceFile.id}) }}">{{ release.referenceFile.originalName }}</a></dd>
-                                {% if release.instructions %}<dt class="col-sm-4">Indicaciones</dt><dd class="col-sm-8">{{ release.instructions|nl2br }}</dd>{% endif %}
-                            </dl>
-                        {% else %}
-                            <p class="mb-0 text-warning">No hay una liberación vigente de Diseño; no puede iniciarse la impresión.</p>
-                        {% endif %}
-                        {% if item.productionSpecificationsSnapshot is not empty %}<details class="mt-3"><summary>Especificaciones técnicas congeladas</summary><pre class="small mt-2 mb-0">{{ item.productionSpecificationsSnapshot|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></details>{% endif %}
-                    </div>
-                </section>
+        <ol class="printing-stepper" style="--printing-progress: {{ activeStep > 5 ? 100 : (activeStep - 1) * 25 }}%" aria-label="Etapas del trabajo de impresión">
+            {% set stepLabels = ['Arte liberado', 'Validar máquina y material', 'Iniciar impresión', 'Registrar consumo', 'Etiqueta QR'] %}
+            {% for label in stepLabels %}
+                {% set stepNumber = loop.index %}
+                <li class="{{ stepNumber < activeStep ? 'is-complete' : (stepNumber == activeStep ? 'is-current' : '') }}">
+                    <span class="printing-stepper__node">{% if stepNumber < activeStep %}<i class="bi bi-check-lg" aria-hidden="true"></i>{% else %}{{ stepNumber }}{% endif %}</span>
+                    <strong>{{ label }}</strong>
+                    <small>{{ stepNumber < activeStep ? 'Completado' : (stepNumber == activeStep ? (stepNumber == 4 and activeExecution ? 'En curso' : 'Siguiente paso') : 'Pendiente') }}</small>
+                </li>
+            {% endfor %}
+        </ol>
 
-                <section class="pf-card">
-                    <div class="pf-card__header"><h2 class="pf-card__title">Requisitos técnicos vigentes</h2></div>
-                    <div class="pf-card__body">
-                        <dl class="row mb-0">
-                            <dt class="col-sm-4">Máquina</dt><dd class="col-sm-8">{{ plan.equipment ? plan.equipment.name ~ ' · ' ~ plan.equipment.code : 'Sin configurar' }}</dd>
-                            <dt class="col-sm-4">Material</dt><dd class="col-sm-8">{% if plan.materialVariant %}{{ plan.materialVariant.material.name }} · {{ plan.materialVariant.code }}<span class="d-block text-muted small">Código: {{ plan.materialVariant.barcode ?? 'sin código de barras' }} · Unidad: {{ plan.materialVariant.consumptionUnit.symbol }}</span>{% else %}Sin configurar{% endif %}</dd>
-                        </dl>
-                        {% if plan.materialSnapshot %}<details class="mt-3"><summary>Características técnicas del material</summary><pre class="small mt-2 mb-0">{{ plan.materialSnapshot.specifications|default({})|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></details>{% endif %}
-                        <div class="mt-3"><h3 class="h6">Material usado</h3>{% if materialUsages is empty %}<p class="small text-body-secondary mb-0">El consumo real aparecerá aquí cuando se cierre una impresión. Este registro no modifica inventario.</p>{% else %}<ul class="small mb-0">{% for usage in materialUsages %}<li>Intento {{ usage.operationExecution.attemptNumber }} · {{ usage.materialNameSnapshot }} · {{ usage.actualQuantity }} {{ usage.unitLabelSnapshot }} usados · {{ usage.wasteQuantity }} {{ usage.unitLabelSnapshot }} de desperdicio · {{ usage.measuredAt|date('d/m/Y H:i', 'America/Mexico_City') }}</li>{% endfor %}</ul><p class="form-text mb-0">Consulta operativa; no implica salida o ajuste de existencias.</p>{% endif %}</div>
-                    </div>
-                </section>
-            </div>
+        <div class="printing-overview-grid">
+            <section class="pf-card printing-detail-card printing-art-card">
+                <div class="printing-card-heading"><h2>Arte aprobado</h2>{% if release %}<span class="printing-inline-status printing-inline-status--success"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Liberado para impresión</span>{% endif %}</div>
+                <div class="printing-art-file">
+                    <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+                    <div>{% if release %}<a href="{{ path('admin_design_download_file', {id: release.artworkFile.id}) }}">{{ release.artworkFile.originalName }}</a><small>{{ release.artworkFile.mimeType|split('/')|last|upper }}{% if release.artworkFile.byteSize %} · {{ (release.artworkFile.byteSize / 1048576)|number_format(1) }} MB{% endif %}</small>{% else %}<span class="printing-art-pending">Arte pendiente de liberación</span><small>Diseño aún no libera esta partida</small>{% endif %}</div>
+                    {% if release %}<a class="printing-file-button" href="{{ path('admin_design_download_file', {id: release.artworkFile.id}) }}" aria-label="Ver arte aprobado"><i class="bi bi-eye" aria-hidden="true"></i><span>Ver arte</span></a>{% endif %}
+                </div>
+                {% if release %}
+                    <div class="printing-callout printing-callout--success"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><p><strong>El arte fue revisado y aprobado por Diseño.</strong><span>Versión {{ release.versionNumber }} · {{ release.authorizationType.label }} · {{ release.authorizedAt|date('d/m/Y H:i', 'America/Mexico_City') }}</span></p></div>
+                    {% if release.referenceFile %}<a class="printing-reference-link" href="{{ path('admin_design_download_file', {id: release.referenceFile.id}) }}"><i class="bi bi-images" aria-hidden="true"></i>Ver captura guía</a>{% endif %}
+                {% else %}<div class="printing-callout printing-callout--warning"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i><p>No hay liberación vigente de Diseño. La impresión no puede iniciar.</p></div>{% endif %}
+            </section>
 
-            <div class="col-xl-5">
+            <section class="pf-card printing-detail-card">
+                <div class="printing-card-heading"><h2>Requerimientos de producción</h2></div>
+                <dl class="printing-requirements">
+                    <div><dt><i class="bi bi-printer" aria-hidden="true"></i>Máquina asignada</dt><dd>{{ plan.equipment ? plan.equipment.name : 'Pendiente de configurar' }}{% if plan.equipment %}<small>{{ plan.equipment.code }}</small>{% endif %}</dd></div>
+                    <div><dt><i class="bi bi-layers" aria-hidden="true"></i>Material</dt><dd>{{ plan.materialVariant ? plan.materialVariant.material.name : 'Pendiente de configurar' }}{% if plan.materialVariant %}<small>{{ plan.materialVariant.code }}</small>{% endif %}</dd></div>
+                    <div><dt><i class="bi bi-box-seam" aria-hidden="true"></i>Cantidad a producir</dt><dd>{{ item.quantity|number_format(6, '.', ',')|trim('0', 'right')|trim('.', 'right') }} {{ item.commercialItemSnapshot.measurement_unit.code|default('') }}</dd></div>
+                </dl>
                 {% if canConfigure and not activeExecution and not plan.hasCompletedExecution %}
-                    <section class="pf-card mb-4">
-                        <div class="pf-card__header"><h2 class="pf-card__title">Configurar requisitos</h2></div>
-                        <form class="pf-card__body pf-form" method="post" action="{{ path('admin_printing_configure', {id: plan.id}) }}">
+                    <details class="printing-configure-details">
+                        <summary><i class="bi bi-sliders" aria-hidden="true"></i>Ajustar requerimientos</summary>
+                        <form class="pf-form printing-configure-form" method="post" action="{{ path('admin_printing_configure', {id: plan.id}) }}">
                             <input type="hidden" name="_token" value="{{ csrf_token('printing-configure-' ~ plan.id) }}">
-                            <div class="mb-3"><label class="form-label" for="printing-equipment">Máquina prevista</label><select id="printing-equipment" name="equipment_id" class="form-select"><option value="">{{ plan.equipment ? 'Conservar ' ~ plan.equipment.name : 'Selecciona una máquina' }}</option>{% for equipment in equipmentChoices %}<option value="{{ equipment.id }}" {{ plan.equipment and plan.equipment.id == equipment.id ? 'selected' : '' }}>{{ equipment.name }} · {{ equipment.code }}</option>{% endfor %}</select></div>
-                            <div class="mb-3"><label class="form-label" for="printing-material">Material previsto</label><select id="printing-material" name="material_variant_id" class="form-select" required><option value="">Selecciona un material</option>{% for material in materialChoices %}<option value="{{ material.id }}" {{ plan.materialVariant and plan.materialVariant.id == material.id ? 'selected' : '' }}>{{ material.material.name }} · {{ material.code }} · {{ material.barcode ?? 'sin código' }}</option>{% endfor %}</select></div>
-                            <div class="mb-3"><label class="form-label" for="printing-reason">Motivo técnico</label><textarea id="printing-reason" name="reason" class="form-control" rows="2" minlength="5" maxlength="500" required>{{ plan.materialVariant ? 'Ajuste técnico autorizado de requisitos.' : 'Definición inicial de requisitos de Impresión.' }}</textarea></div>
+                            <div><label class="form-label" for="printing-equipment">Máquina prevista</label><select id="printing-equipment" name="equipment_id" class="form-select"><option value="">{{ plan.equipment ? 'Conservar ' ~ plan.equipment.name : 'Selecciona una máquina' }}</option>{% for equipment in equipmentChoices %}<option value="{{ equipment.id }}" {{ plan.equipment and plan.equipment.id == equipment.id ? 'selected' : '' }}>{{ equipment.name }} · {{ equipment.code }}</option>{% endfor %}</select></div>
+                            <div><label class="form-label" for="printing-material">Material previsto</label><select id="printing-material" name="material_variant_id" class="form-select" required><option value="">Selecciona un material</option>{% for material in materialChoices %}<option value="{{ material.id }}" {{ plan.materialVariant and plan.materialVariant.id == material.id ? 'selected' : '' }}>{{ material.material.name }} · {{ material.code }} · {{ material.barcode ?? 'sin código' }}</option>{% endfor %}</select></div>
+                            <div><label class="form-label" for="printing-reason">Motivo técnico</label><textarea id="printing-reason" name="reason" class="form-control" rows="2" minlength="5" maxlength="500" required>{{ plan.materialVariant ? 'Ajuste técnico autorizado de requisitos.' : 'Definición inicial de requisitos de Impresión.' }}</textarea></div>
                             <button class="btn pf-button pf-button--secondary" type="submit">Guardar requisitos</button>
                         </form>
-                    </section>
+                    </details>
                 {% endif %}
+                {% if plan.materialSnapshot %}<details class="printing-configure-details"><summary>Características técnicas del material</summary><pre class="small mt-2 mb-0">{{ plan.materialSnapshot.specifications|default({})|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></details>{% endif %}
+            </section>
 
-                {% if canExecute and not activeExecution and canStartPrinting %}
-                    <section class="pf-card mb-4" data-controller="ui--printing-scanner">
-                        <div class="pf-card__header"><h2 class="pf-card__title">1. Validar escaneos</h2></div>
-                        <form class="pf-card__body pf-form" method="post" action="{{ path('admin_printing_validate_scans', {id: plan.id}) }}">
-                            <input type="hidden" name="_token" value="{{ csrf_token('printing-scan-' ~ plan.id) }}">
-                            <input type="hidden" name="capture_mode" value="SCANNER" data-ui--printing-scanner-target="mode">
-                            <p class="small text-body-secondary">Escanea primero la máquina y luego el material. La cámara es una alternativa al lector externo; la captura manual requiere autorización.</p>
-                            <div class="mb-3"><label class="form-label" for="scan-equipment">Código de máquina</label><div class="input-group"><input id="scan-equipment" name="equipment_code" class="form-control" maxlength="40" required autocomplete="off" data-ui--printing-scanner-target="equipment"><button class="btn btn-outline-secondary" type="button" data-ui--printing-scanner-target="cameraButton" data-action="ui--printing-scanner#scanEquipment">Usar cámara</button></div></div>
-                            <div class="mb-3"><label class="form-label" for="scan-material">Código de material</label><div class="input-group"><input id="scan-material" name="material_barcode" class="form-control" maxlength="80" required autocomplete="off" data-ui--printing-scanner-target="material"><button class="btn btn-outline-secondary" type="button" data-ui--printing-scanner-target="cameraButton" data-action="ui--printing-scanner#scanMaterial">Usar cámara</button></div></div>
-                            <p class="small mb-3" data-ui--printing-scanner-target="message" aria-live="polite"></p>
-                            <button class="btn pf-button pf-button--primary" type="submit">Validar máquina y material</button>
-                        </form>
-                    </section>
-                {% endif %}
-
-                {% if canExecute and currentScan and currentScan.available and not activeExecution and canStartPrinting %}
-                    <section class="pf-card mb-4"><div class="pf-card__header"><h2 class="pf-card__title">2. Iniciar impresión</h2></div><form class="pf-card__body" method="post" action="{{ path('admin_printing_start', {id: plan.id}) }}"><input type="hidden" name="_token" value="{{ csrf_token('printing-start-' ~ plan.id) }}"><input type="hidden" name="expected_order_version" value="{{ orderVersion }}"><input type="hidden" name="command_id" value="{{ startCommandId }}"><p class="small text-success">{% if reworkOrigin %}Calidad autorizó el retrabajo del intento {{ reworkOrigin.attemptNumber }}. {% endif %}Escaneos validados para esta partida. Iniciar consume esta validación y deja trazabilidad del intento.</p><button class="btn pf-button pf-button--primary" type="submit">{{ reworkOrigin ? 'Iniciar retrabajo de impresión' : 'Iniciar impresión' }}</button></form></section>
-                {% endif %}
-
-                {% if canExecute and activeExecution %}
-                    <section class="pf-card mb-4"><div class="pf-card__header"><h2 class="pf-card__title">3. Cerrar impresión y consumo</h2></div><form class="pf-card__body pf-form" method="post" action="{{ path('admin_printing_complete', {id: activeExecution.id}) }}"><input type="hidden" name="_token" value="{{ csrf_token('printing-complete-' ~ activeExecution.id) }}"><input type="hidden" name="expected_order_version" value="{{ orderVersion }}"><input type="hidden" name="command_id" value="{{ completeCommandId }}"><div class="mb-3"><label class="form-label" for="printing-total">Material total consumido, incluido desperdicio</label><input id="printing-total" class="form-control" name="total_consumed" inputmode="decimal" required></div><div class="mb-3"><label class="form-label" for="printing-waste">De ese total, desperdicio</label><input id="printing-waste" class="form-control" name="waste" inputmode="decimal" value="0" required></div><div class="mb-3"><label class="form-label" for="printing-method">Método de medición</label><select id="printing-method" class="form-select" name="measurement_method" required><option value="medición manual">Medición manual</option><option value="lectura de máquina">Lectura de máquina</option></select></div><div class="mb-3"><label class="form-label" for="printing-waste-reason">Motivo de desperdicio</label><input id="printing-waste-reason" class="form-control" name="waste_reason" maxlength="255"><div class="form-text">Obligatorio si el desperdicio es mayor que cero.</div></div><div class="mb-3"><label class="form-label" for="printing-note">Nota de cierre</label><input id="printing-note" class="form-control" name="note" maxlength="500"></div><button class="btn pf-button pf-button--primary" type="submit">Terminar impresión y crear etiqueta</button></form></section>
-                {% endif %}
-
-                {% if output %}
-                    <section class="pf-card"><div class="pf-card__header"><h2 class="pf-card__title">4. Etiqueta de salida</h2></div><div class="pf-card__body"><p><strong>{{ output.labelCode }}</strong> · salida versión {{ output.versionNumber }}</p>{% if output.labelReadyAt %}<p class="text-success">Etiqueta generada {{ output.labelReadyAt|date('d/m/Y H:i', 'America/Mexico_City') }}.</p><form class="mb-3" method="post" action="{{ path('admin_printing_confirm_label_placed', {id: output.id}) }}"><input type="hidden" name="_token" value="{{ csrf_token('printing-label-placed-' ~ output.id) }}"><button class="btn pf-button pf-button--primary" type="submit" {{ output.labelPlaced ? 'disabled' : '' }}>{{ output.labelPlaced ? 'Etiqueta colocada' : 'Confirmar colocación' }}</button></form><form class="pf-form" method="post" action="{{ path('admin_printing_reprint_label', {id: output.id}) }}" target="_blank"><input type="hidden" name="_token" value="{{ csrf_token('printing-reprint-label-' ~ output.id) }}"><label class="form-label" for="reprint-reason">Motivo de reimpresión</label><input id="reprint-reason" class="form-control mb-2" name="reason" minlength="5" required><button class="btn pf-button pf-button--secondary" type="submit">Reimprimir etiqueta</button></form>{% else %}<p class="text-warning">Pendiente de etiqueta. Generarla no duplica la impresión ni el consumo.</p><a class="btn pf-button pf-button--primary" href="{{ path('admin_printing_label', {id: output.id}) }}" target="_blank">Generar e imprimir etiqueta QR</a>{% endif %}</div></section>
-                {% endif %}
-            </div>
+            <section class="pf-card printing-detail-card printing-instructions-card">
+                <div class="printing-card-heading"><h2>Instrucciones</h2></div>
+                {% if release and release.instructions %}<div class="printing-instructions"><i class="bi bi-shield-check" aria-hidden="true"></i><p>{{ release.instructions|nl2br }}</p></div>{% else %}<p class="printing-muted-copy">Sigue el perfil de impresión definido para este producto y confirma la alineación antes de iniciar.</p>{% endif %}
+                {% if item.productionSpecificationsSnapshot is not empty %}<details class="printing-configure-details"><summary>Especificaciones técnicas de la partida</summary><pre class="small mt-2 mb-0">{{ item.productionSpecificationsSnapshot|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></details>{% endif %}
+            </section>
         </div>
+
+        <div class="printing-workflow-grid">
+            <section class="pf-card printing-detail-card printing-validation-card" data-controller="ui--printing-scanner">
+                <div class="printing-card-heading"><div><h2>Validar máquina y material</h2><p>Escanea los códigos o ingrésalos manualmente.</p></div><span class="printing-step-number">1</span></div>
+                {% if canExecute and release and not activeExecution and canStartPrinting %}
+                    <form class="pf-form" method="post" action="{{ path('admin_printing_validate_scans', {id: plan.id}) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('printing-scan-' ~ plan.id) }}">
+                        <input type="hidden" name="capture_mode" value="SCANNER" data-ui--printing-scanner-target="mode">
+                        <div class="printing-scan-fields">
+                            <div><label class="form-label" for="scan-equipment">Código de máquina <span>*</span></label><div class="input-group"><input id="scan-equipment" name="equipment_code" class="form-control" placeholder="Escanea o ingresa el código" maxlength="40" required autocomplete="off" data-ui--printing-scanner-target="equipment"><button class="btn printing-scan-camera" type="button" aria-label="Usar cámara para máquina" data-ui--printing-scanner-target="cameraButton" data-action="ui--printing-scanner#scanEquipment"><i class="bi bi-upc-scan" aria-hidden="true"></i></button></div></div>
+                            <div><label class="form-label" for="scan-material">Código de material <span>*</span></label><div class="input-group"><input id="scan-material" name="material_barcode" class="form-control" placeholder="Escanea o ingresa el código" maxlength="80" required autocomplete="off" data-ui--printing-scanner-target="material"><button class="btn printing-scan-camera" type="button" aria-label="Usar cámara para material" data-ui--printing-scanner-target="cameraButton" data-action="ui--printing-scanner#scanMaterial"><i class="bi bi-upc-scan" aria-hidden="true"></i></button></div></div>
+                        </div>
+                        <p class="printing-scan-message" data-ui--printing-scanner-target="message" aria-live="polite"></p>
+                        <button class="btn pf-button pf-button--primary printing-wide-button" type="submit"><i class="bi bi-upc-scan" aria-hidden="true"></i>Validar escaneos</button>
+                        <p class="printing-form-hint">La captura manual requiere autorización del jefe de Producción.</p>
+                    </form>
+                {% elseif currentScan and currentScan.available %}
+                    <div class="printing-callout printing-callout--success"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><p><strong>Máquina y material validados.</strong><span>Validación {{ currentScan.validatedAt|date('d/m/Y H:i', 'America/Mexico_City') }}.</span></p></div>
+                {% else %}
+                    <div class="printing-callout printing-callout--muted"><i class="bi bi-lock-fill" aria-hidden="true"></i><p>{% if not release %}Se requiere un arte liberado por Diseño antes de validar.{% elseif activeExecution %}La impresión está en curso.{% elseif not canExecute %}Necesitas permiso de ejecución para validar.{% elseif not canStartPrinting %}Esta impresión ya se completó. Un retrabajo requiere autorización de Calidad.{% else %}Configura máquina y material para continuar.{% endif %}</p></div>
+                    <button class="btn pf-button pf-button--secondary printing-wide-button" type="button" disabled>Validar máquina y material</button>
+                {% endif %}
+            </section>
+
+            <section class="pf-card printing-detail-card printing-next-card">
+                <div class="printing-card-heading"><h2>Siguiente paso</h2></div>
+                {% if canExecute and currentScan and currentScan.available and not activeExecution and canStartPrinting %}
+                    <form method="post" action="{{ path('admin_printing_start', {id: plan.id}) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('printing-start-' ~ plan.id) }}"><input type="hidden" name="expected_order_version" value="{{ orderVersion }}"><input type="hidden" name="command_id" value="{{ startCommandId }}">
+                        {% if reworkOrigin %}<p class="printing-next-note">Calidad autorizó el retrabajo del intento {{ reworkOrigin.attemptNumber }}.</p>{% else %}<p class="printing-next-note">La máquina y el material están validados para esta partida.</p>{% endif %}
+                        <button class="btn pf-button pf-button--primary printing-wide-button" type="submit"><i class="bi bi-play-circle-fill" aria-hidden="true"></i>Iniciar impresión</button>
+                    </form>
+                {% else %}
+                    <button class="btn pf-button pf-button--primary printing-wide-button" type="button" disabled><i class="bi bi-play-circle-fill" aria-hidden="true"></i>Iniciar impresión</button>
+                    <p class="printing-form-hint">Valida la máquina y el material para habilitar el inicio.</p>
+                {% endif %}
+            </section>
+
+            <section class="pf-card printing-detail-card printing-close-card">
+                <div class="printing-card-heading"><div><h2>Cerrar impresión</h2><p>Registra el consumo al finalizar.</p></div><i class="bi bi-lock printing-locked-icon" aria-hidden="true"></i></div>
+                {% if canExecute and activeExecution %}
+                    <form class="pf-form" method="post" action="{{ path('admin_printing_complete', {id: activeExecution.id}) }}">
+                        <input type="hidden" name="_token" value="{{ csrf_token('printing-complete-' ~ activeExecution.id) }}"><input type="hidden" name="expected_order_version" value="{{ orderVersion }}"><input type="hidden" name="command_id" value="{{ completeCommandId }}">
+                        <div class="printing-consumption-grid"><div><label class="form-label" for="printing-total">Total consumido ({{ plan.materialVariant ? plan.materialVariant.consumptionUnit.symbol : 'unidad' }})</label><input id="printing-total" class="form-control" name="total_consumed" inputmode="decimal" placeholder="Ej. 78" required></div><div><label class="form-label" for="printing-waste">Merma</label><input id="printing-waste" class="form-control" name="waste" inputmode="decimal" value="0" required></div></div>
+                        <p class="printing-form-hint">El consumo incluye la merma y queda trazado sin descontar existencias.</p>
+                        <details class="printing-configure-details"><summary>Agregar datos de cierre</summary><div class="mt-3"><label class="form-label" for="printing-method">Método de medición</label><select id="printing-method" class="form-select" name="measurement_method" required><option value="medición manual">Medición manual</option><option value="lectura de máquina">Lectura de máquina</option></select><label class="form-label mt-3" for="printing-waste-reason">Motivo de merma</label><input id="printing-waste-reason" class="form-control" name="waste_reason" maxlength="255"><div class="form-text">Obligatorio si la merma es mayor que cero.</div><label class="form-label mt-3" for="printing-note">Nota de cierre</label><input id="printing-note" class="form-control" name="note" maxlength="500"></div></details>
+                        <button class="btn pf-button pf-button--primary printing-wide-button" type="submit">Terminar impresión y crear etiqueta</button>
+                    </form>
+                {% else %}
+                    <div class="printing-disabled-fields"><span>Total consumido (m²)<b>Ej. 78</b></span><span>Merma (m²)<b>0</b></span></div>
+                    <p class="printing-form-hint">El registro estará disponible cuando finalice la impresión.</p>
+                    <button class="btn pf-button pf-button--secondary printing-wide-button" type="button" disabled>Cerrar impresión</button>
+                {% endif %}
+            </section>
+        </div>
+
+        <div class="printing-bottom-grid">
+            <section class="pf-card printing-detail-card printing-label-card">
+                <div class="printing-card-heading"><h2>Etiqueta QR de producción</h2></div>
+                {% if output %}
+                    <div class="printing-label-preview"><div class="printing-label-mark"><img src="{{ asset('images/brand/logo.png') }}" alt="OoxCorp" class="printing-label-logo">{% if outputQrSvg %}<div class="printing-label-qr">{{ outputQrSvg|raw }}</div>{% else %}<i class="bi bi-qr-code printing-label-qr-fallback" aria-hidden="true"></i>{% endif %}<strong>{{ output.labelCode }}</strong><small>{{ item.serviceOrder.folio }} · P{{ item.displayLineNumber }}</small><span>PRODUCCIÓN</span></div><div class="printing-label-actions"><small>Código de etiqueta</small><code>{{ output.labelCode }}</code><p>Salida versión {{ output.versionNumber }}{% if output.labelReadyAt %} · generada {{ output.labelReadyAt|date('d/m/Y H:i', 'America/Mexico_City') }}{% endif %}</p>{% if canPrintLabels %}{% if output.labelReadyAt %}<a class="btn pf-button pf-button--primary printing-wide-button" href="{{ path('admin_printing_label', {id: output.id}) }}" target="_blank"><i class="bi bi-printer" aria-hidden="true"></i>Imprimir etiqueta</a>{% else %}<a class="btn pf-button pf-button--primary printing-wide-button" href="{{ path('admin_printing_label', {id: output.id}) }}" target="_blank"><i class="bi bi-printer" aria-hidden="true"></i>Generar e imprimir etiqueta</a>{% endif %}{% endif %}{% if canExecute %}<form method="post" action="{{ path('admin_printing_confirm_label_placed', {id: output.id}) }}"><input type="hidden" name="_token" value="{{ csrf_token('printing-label-placed-' ~ output.id) }}"><button class="btn pf-button pf-button--secondary printing-wide-button" type="submit" {{ output.labelPlaced ? 'disabled' : '' }}><i class="bi bi-check2" aria-hidden="true"></i>{{ output.labelPlaced ? 'Etiqueta colocada' : 'Confirmar colocación' }}</button></form>{% endif %}{% if canPrintLabels and output.labelReadyAt %}<details class="printing-reprint-details"><summary>Reimprimir etiqueta</summary><form class="pf-form mt-2" method="post" action="{{ path('admin_printing_reprint_label', {id: output.id}) }}" target="_blank"><input type="hidden" name="_token" value="{{ csrf_token('printing-reprint-label-' ~ output.id) }}"><label class="form-label" for="reprint-reason">Motivo de reimpresión</label><input id="reprint-reason" class="form-control mb-2" name="reason" minlength="5" required><button class="btn pf-button pf-button--secondary" type="submit">Reimprimir</button></form></details>{% endif %}</div></div>
+                    {% if output.labelPlaced %}<div class="printing-callout printing-callout--success mt-3"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><p><strong>Etiqueta colocada</strong><span>La colocación quedó confirmada.</span></p></div>{% elseif not output.labelReadyAt %}<p class="printing-form-hint">Generar la etiqueta no duplica la impresión ni el consumo.</p>{% endif %}
+                {% else %}<div class="printing-label-placeholder"><i class="bi bi-qr-code" aria-hidden="true"></i><strong>Etiqueta pendiente</strong><span>Se generará al cerrar la impresión y registrar el consumo.</span></div>{% endif %}
+            </section>
+
+            <section class="pf-card printing-detail-card printing-trace-card">
+                <div class="printing-card-heading"><h2>Trazabilidad del trabajo</h2><span class="printing-trace-order">{{ item.serviceOrder.folio }} · P{{ item.displayLineNumber }}</span></div>
+                <ol class="printing-timeline">
+                    <li class="{{ release ? 'is-complete' : '' }}"><span class="printing-timeline__node"></span><div><strong>Arte liberado por Diseño</strong>{% if release %}<small>{{ release.authorizedAt|date('d/m/Y H:i', 'America/Mexico_City') }} · {{ release.authorizedBy.userIdentifier }}</small>{% else %}<small>Pendiente</small>{% endif %}</div></li>
+                    <li class="{{ scanIsDone ? 'is-complete' : '' }}"><span class="printing-timeline__node"></span><div><strong>Validación de máquina y material</strong>{% if currentScan %}<small>{{ currentScan.validatedAt|date('d/m/Y H:i', 'America/Mexico_City') }} · {{ currentScan.operator.userIdentifier }}</small>{% else %}<small>Pendiente</small>{% endif %}</div></li>
+                    {% for execution in plan.executions %}<li class="{{ execution.completedAt ? 'is-complete' : 'is-current' }}"><span class="printing-timeline__node"></span><div><strong>Inicio de impresión · intento {{ execution.attemptNumber }}</strong><small>{{ execution.startedAt|date('d/m/Y H:i', 'America/Mexico_City') }} · {{ execution.assignedOperator.userIdentifier }}</small>{% if execution.completedAt %}<small>Terminado {{ execution.completedAt|date('d/m/Y H:i', 'America/Mexico_City') }}{% if execution.completionNote %} · {{ execution.completionNote }}{% endif %}</small>{% endif %}</div></li>{% endfor %}
+                    {% for usage in materialUsages %}<li class="is-complete"><span class="printing-timeline__node"></span><div><strong>Consumo registrado · {{ usage.actualQuantity }} {{ usage.unitLabelSnapshot }}</strong><small>{{ usage.measuredAt|date('d/m/Y H:i', 'America/Mexico_City') }} · merma {{ usage.wasteQuantity }} {{ usage.unitLabelSnapshot }}</small></div></li>{% endfor %}
+                    {% if output %}<li class="{{ output.labelReadyAt ? 'is-complete' : '' }}"><span class="printing-timeline__node"></span><div><strong>Etiqueta QR generada</strong><small>{{ output.labelReadyAt ? output.labelReadyAt|date('d/m/Y H:i', 'America/Mexico_City') : 'Pendiente' }}</small></div></li><li class="{{ output.labelPlaced ? 'is-complete' : '' }}"><span class="printing-timeline__node"></span><div><strong>Etiqueta colocada</strong><small>{{ output.labelPlaced ? 'Confirmada' : 'Pendiente' }}</small></div></li>{% else %}<li><span class="printing-timeline__node"></span><div><strong>Registro de consumo</strong><small>{{ activeExecution ? 'Impresión en curso' : 'Pendiente' }}</small></div></li><li><span class="printing-timeline__node"></span><div><strong>Etiqueta QR colocada</strong><small>Pendiente</small></div></li>{% endif %}
+                </ol>
+            </section>
+        </div>
+
+        {% if materialUsages is not empty %}<section class="pf-card printing-usage-history"><div class="printing-card-heading"><h2>Consumos registrados</h2><span>Este registro no modifica inventario.</span></div><div class="printing-usage-list">{% for usage in materialUsages %}<article><strong>Intento {{ usage.operationExecution.attemptNumber }} · {{ usage.materialNameSnapshot }}</strong><span>{{ usage.actualQuantity }} {{ usage.unitLabelSnapshot }} usados · {{ usage.wasteQuantity }} {{ usage.unitLabelSnapshot }} de merma</span><time>{{ usage.measuredAt|date('d/m/Y H:i', 'America/Mexico_City') }}</time></article>{% endfor %}</div></section>{% endif %}
     </section>
 {% endblock %}

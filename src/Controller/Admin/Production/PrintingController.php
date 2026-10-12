@@ -39,11 +39,61 @@ final class PrintingController extends AbstractController
             static fn (ServiceOrderOperationPlan $plan): bool => $printingManager->isPrintingPlan($plan),
         ));
         $outputs = [];
+        $summary = [
+            'ready' => 0,
+            'in_progress' => 0,
+            'pending_configuration' => 0,
+            'requiring_action' => 0,
+            'at_risk' => 0,
+            'completed' => 0,
+        ];
+        $machineNames = [];
+        $timezone = new \DateTimeZone('America/Mexico_City');
+        $today = new \DateTimeImmutable('today', $timezone);
         foreach ($plans as $plan) {
-            $outputs[(int) $plan->getId()] = $outputRepository->findCurrent($plan->getServiceOrderItem());
-        }
+            $output = $outputRepository->findCurrent($plan->getServiceOrderItem());
+            $outputs[(int) $plan->getId()] = $output;
+            $isCompleted = $output?->isLabelPlaced() ?? false;
+            $isOverdue = $plan->getServiceOrderItem()->getServiceOrder()->getCommitmentDate() !== null
+                && $plan->getServiceOrderItem()->getServiceOrder()->getCommitmentDate()->setTimezone($timezone) < $today
+                && !$isCompleted;
+            $isBlocked = $plan->getServiceOrderItem()->getDesignStatus()->value === 'BLOCKED';
+            if ($isCompleted) {
+                ++$summary['completed'];
+            } else {
+                ++$summary['requiring_action'];
+            }
+            if ($isOverdue || $isBlocked) {
+                ++$summary['at_risk'];
+            }
 
-        return $this->render('admin/printing/index.html.twig', ['plans' => $plans, 'outputs' => $outputs]);
+            $isConfigured = $plan->getEquipment() !== null && $plan->getMaterialVariant() !== null;
+            if ($plan->hasOpenExecution()) {
+                ++$summary['in_progress'];
+            } elseif (!$isConfigured && $output === null) {
+                ++$summary['pending_configuration'];
+            } elseif (
+                $isConfigured
+                && $output === null
+                && !$plan->hasCompletedExecution()
+                && $plan->getServiceOrderItem()->getDesignStatus()->value === 'READY_FOR_PRINT'
+            ) {
+                ++$summary['ready'];
+            }
+
+            if ($plan->getEquipment() !== null) {
+                $machineNames[$plan->getEquipment()->getName()] = $plan->getEquipment()->getName();
+            }
+        }
+        natcasesort($machineNames);
+
+        return $this->render('admin/printing/index.html.twig', [
+            'plans' => $plans,
+            'outputs' => $outputs,
+            'printingSummary' => $summary,
+            'printingMachines' => array_values($machineNames),
+            'printingToday' => $today,
+        ]);
     }
 
     #[Route('/operaciones/{id}', name: 'show', requirements: ['id' => '\d+'], methods: ['GET'])]
@@ -56,6 +106,7 @@ final class PrintingController extends AbstractController
         ProductionPrintingScanRepository $scanRepository,
         ProductionPrintedOutputRepository $outputRepository,
         ProductionMaterialUsageRepository $usageRepository,
+        PrintingLabelRenderer $labelRenderer,
     ): Response {
         $this->denyAccessUnlessGranted('production.view');
         if (!$printingManager->isPrintingPlan($plan)) {
@@ -71,6 +122,8 @@ final class PrintingController extends AbstractController
             }
         }
 
+        $output = $outputRepository->findCurrent($item);
+
         return $this->render('admin/printing/show.html.twig', [
             'plan' => $plan,
             'item' => $item,
@@ -79,13 +132,15 @@ final class PrintingController extends AbstractController
             'activeExecution' => $activeExecution,
             'reworkOrigin' => $reworkOrigin,
             'canStartPrinting' => !$plan->hasCompletedExecution() || $reworkOrigin !== null,
-            'output' => $outputRepository->findCurrent($item),
+            'output' => $output,
+            'outputQrSvg' => $output !== null ? $labelRenderer->renderQrSvg($output) : null,
             'materialUsages' => $usageRepository->findForPlan($plan),
             'equipmentChoices' => $equipmentRepository->findAvailableForFutureExecution($plan->getOperation()),
             'materialChoices' => $materialVariantRepository->findActiveConsumable(),
             'canConfigure' => $this->isGranted('production.assign'),
             'canSubstitute' => $this->isGranted('production.substitution.approve'),
             'canExecute' => $this->isGranted('production.execute'),
+            'canPrintLabels' => $this->isGranted('production.labels.print'),
             'orderVersion' => $item->getServiceOrder()->getTraceabilityVersion(),
             'startCommandId' => bin2hex(random_bytes(24)),
             'completeCommandId' => bin2hex(random_bytes(24)),

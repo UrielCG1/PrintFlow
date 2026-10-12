@@ -1,57 +1,84 @@
 {% extends 'layouts/app.html.twig' %}
 
-{% block title %}Impresión | OoxCorp{% endblock %}
+{% block title %}Cola de impresión | OoxCorp{% endblock %}
 {% block app_navigation_active %}printing{% endblock %}
 {% block app_breadcrumb %}Operación / Impresión{% endblock %}
 
 {% block app_content %}
-    <section class="pf-page__content">
-        <header class="pf-page-header">
+    <section class="pf-page__content printing-page printing-queue" data-controller="admin--printing-queue">
+        <header class="pf-page-header printing-page__header">
             <div class="pf-page-header__content">
-                <p class="pf-page-header__eyebrow">Segunda etapa de producción</p>
-                <h1 class="pf-page-header__title">Impresión</h1>
-                <p class="pf-page-header__description">Valida la máquina y el material contra la ruta, imprime la partida completa y registra el consumo real antes de cerrarla.</p>
+                <p class="pf-page-header__eyebrow">Operación</p>
+                <h1 class="pf-page-header__title">Cola de impresión</h1>
+                <p class="pf-page-header__description">Gestiona los trabajos listos para imprimir, en proceso o pendientes de configuración.</p>
             </div>
         </header>
 
-        <section class="pf-card pf-card--padding-none">
-            <div class="pf-table-responsive pf-table-responsive--flat">
-                <table class="pf-table">
-                    <thead><tr><th>Orden</th><th>Partida</th><th>Producto</th><th>Requisitos</th><th>Estado</th><th class="pf-table__actions-cell">Acciones</th></tr></thead>
-                    <tbody>
-                        {% for plan in plans %}
-                            {% set output = outputs[plan.id] ?? null %}
-                            <tr>
-                                <td class="text-nowrap"><strong class="pf-table__primary">{{ plan.serviceOrderItem.serviceOrder.folio }}</strong><span class="d-block text-muted small">{{ plan.serviceOrderItem.trackingCode }}</span></td>
-                                <td>{{ plan.serviceOrderItem.displayLineNumber }}</td>
-                                <td>{{ plan.serviceOrderItem.commercialItemSnapshot.name ?? plan.serviceOrderItem.commercialItem.name }}</td>
-                                <td>
-                                    {% if plan.equipment and plan.materialVariant %}
-                                        <span>{{ plan.equipment.name }} · {{ plan.materialVariant.material.name }}</span>
-                                    {% else %}
-                                        <span class="text-warning">Pendientes de configurar</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if output %}
-                                        <span class="pf-status-badge pf-status-badge--{{ output.labelPlaced ? 'success' : 'warning' }}">{{ output.labelPlaced ? 'Impresa y etiquetada' : 'Pendiente de etiqueta' }}</span>
-                                    {% elseif plan.hasOpenExecution %}
-                                        <span class="pf-status-badge pf-status-badge--info">Imprimiendo</span>
-                                    {% elseif plan.hasCompletedExecution %}
-                                        <span class="pf-status-badge pf-status-badge--warning">Revisar salida</span>
-                                    {% elseif plan.serviceOrderItem.designStatus.value == 'READY_FOR_PRINT' %}
-                                        <span class="pf-status-badge pf-status-badge--neutral">Lista para validar</span>
-                                    {% else %}
-                                        <span class="pf-status-badge pf-status-badge--neutral">Esperando Diseño</span>
-                                    {% endif %}
-                                </td>
-                                <td class="pf-table__actions-cell"><a class="btn pf-button pf-button--secondary pf-button--sm" href="{{ path('admin_printing_show', {id: plan.id}) }}"><i class="bi bi-printer" aria-hidden="true"></i> Abrir</a></td>
-                            </tr>
-                        {% else %}
-                            <tr><td colspan="6" class="pf-table__empty"><div class="pf-table__empty-content"><i class="bi bi-printer pf-table__empty-icon" aria-hidden="true"></i><strong class="pf-table__empty-title">No hay partidas en Impresión.</strong><span class="pf-table__empty-description">Las partidas aparecerán aquí cuando su ruta tenga una operación del área Impresión.</span></div></td></tr>
-                        {% endfor %}
+        <section class="printing-metrics" aria-label="Resumen de la cola de impresión">
+            <article class="printing-metric printing-metric--green">
+                <span class="printing-metric__icon" aria-hidden="true"><i class="bi bi-printer"></i></span>
+                <div><strong>{{ printingSummary.ready }}</strong><h2>Listas para imprimir</h2><p>con arte liberado</p></div>
+            </article>
+            <article class="printing-metric printing-metric--blue">
+                <span class="printing-metric__icon" aria-hidden="true"><i class="bi bi-play-circle-fill"></i></span>
+                <div><strong>{{ printingSummary.in_progress }}</strong><h2>En curso</h2><p>imprimiendo actualmente</p></div>
+            </article>
+            <article class="printing-metric printing-metric--orange">
+                <span class="printing-metric__icon" aria-hidden="true"><i class="bi bi-gear-fill"></i></span>
+                <div><strong>{{ printingSummary.pending_configuration }}</strong><h2>Pendiente de configurar</h2><p>sin máquina o material</p></div>
+            </article>
+        </section>
+
+        <section class="pf-card printing-queue-card" aria-label="Trabajos de impresión">
+            <div class="printing-filters">
+                <label class="printing-search">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <span class="visually-hidden">Buscar en la cola</span>
+                    <input type="search" placeholder="Orden, producto o partida..." autocomplete="off" data-admin--printing-queue-target="search" data-action="input->admin--printing-queue#filter">
+                </label>
+                <label class="printing-filter"><span>Estado</span><select data-admin--printing-queue-target="status" data-action="change->admin--printing-queue#filter"><option value="">Todos</option><option value="ready">Lista para validar</option><option value="in_progress">Imprimiendo</option><option value="configuration">Pendiente de configurar</option><option value="design">Esperando Diseño</option><option value="label">Pendiente de etiqueta</option><option value="review">Revisar salida</option><option value="completed">Completada</option></select></label>
+                <label class="printing-filter"><span>Máquina</span><select data-admin--printing-queue-target="machine" data-action="change->admin--printing-queue#filter"><option value="">Todas</option>{% for machine in printingMachines %}<option value="{{ machine|lower }}">{{ machine }}</option>{% endfor %}</select></label>
+                <label class="printing-filter"><span>Compromiso</span><select data-admin--printing-queue-target="commitment" data-action="change->admin--printing-queue#filter"><option value="">Todos</option><option value="late">Atrasado</option><option value="week">Esta semana</option><option value="future">A tiempo</option><option value="unassigned">Sin fecha</option></select></label>
+                <button type="button" class="printing-clear" data-action="click->admin--printing-queue#clear">Limpiar</button>
+            </div>
+
+            <div class="printing-tabs" role="tablist" aria-label="Filtrar trabajos">
+                <button class="is-active" type="button" role="tab" aria-selected="true" data-filter="all" data-action="click->admin--printing-queue#selectTab">Todas <span>({{ plans|length }})</span></button>
+                <button type="button" role="tab" aria-selected="false" data-filter="action" data-action="click->admin--printing-queue#selectTab">Requieren acción <span>({{ printingSummary.requiring_action }})</span></button>
+                <button type="button" role="tab" aria-selected="false" data-filter="risk" data-action="click->admin--printing-queue#selectTab">En riesgo <span>({{ printingSummary.at_risk }})</span></button>
+                <button type="button" role="tab" aria-selected="false" data-filter="completed" data-action="click->admin--printing-queue#selectTab">Completadas <span>({{ printingSummary.completed }})</span></button>
+            </div>
+
+            <div class="printing-table-scroll">
+                <table class="printing-table">
+                    <thead><tr><th>Orden / partida</th><th>Producto</th><th>Arte liberado</th><th>Equipo</th><th>Estado / riesgo</th><th>Acción</th></tr></thead>
+                    <tbody data-admin--printing-queue-target="rows">
+                    {% for plan in plans %}
+                        {% set item = plan.serviceOrderItem %}
+                        {% set order = item.serviceOrder %}
+                        {% set output = outputs[plan.id] ?? null %}
+                        {% set productName = item.commercialItemSnapshot.name ?? item.commercialItem.name %}
+                        {% set hasRequirements = plan.equipment and plan.materialVariant %}
+                        {% set designState = item.designStatus.value %}
+                        {% set statusKey = output ? (output.labelPlaced ? 'completed' : 'label') : (plan.hasOpenExecution ? 'in_progress' : (plan.hasCompletedExecution ? 'review' : (not hasRequirements ? 'configuration' : (designState == 'READY_FOR_PRINT' ? 'ready' : 'design')))) %}
+                        {% set statusLabel = statusKey == 'completed' ? 'Impresa y etiquetada' : (statusKey == 'label' ? 'Pendiente de etiqueta' : (statusKey == 'in_progress' ? 'Imprimiendo' : (statusKey == 'review' ? 'Revisar salida' : (statusKey == 'configuration' ? 'Pendiente de configurar' : (statusKey == 'ready' ? 'Lista para validar' : (designState == 'BLOCKED' ? 'Con observaciones' : 'Esperando Diseño')))))) %}
+                        {% set commitmentState = order.commitmentDate is null ? 'unassigned' : (order.commitmentDate|date('Y-m-d', 'America/Mexico_City') < printingToday|date('Y-m-d') and statusKey != 'completed' ? 'late' : (order.commitmentDate|date('W', 'America/Mexico_City') == printingToday|date('W') and order.commitmentDate|date('o', 'America/Mexico_City') == printingToday|date('o') ? 'week' : 'future')) %}
+                        {% set trackingText = item.trackingCode ~ ' ' ~ item.displayLineNumber %}
+                        {% set searchText = (order.folio ~ ' ' ~ trackingText ~ ' ' ~ productName)|lower %}
+                        <tr data-print-row data-search="{{ searchText }}" data-status="{{ statusKey }}" data-machine="{{ plan.equipment ? plan.equipment.name|lower : '' }}" data-commitment="{{ commitmentState }}" data-tab-action="{{ statusKey == 'completed' ? '0' : '1' }}" data-tab-risk="{{ commitmentState == 'late' or designState == 'BLOCKED' ? '1' : '0' }}" data-tab-completed="{{ statusKey == 'completed' ? '1' : '0' }}">
+                            <td data-label="Orden / partida"><a class="printing-order-folio" href="{{ path('admin_printing_show', {id: plan.id}) }}">{{ order.folio }}</a><span class="printing-order-line">{{ item.trackingCode }} · {{ item.quantity|number_format(6, '.', ',')|trim('0', 'right')|trim('.', 'right') }} {{ item.commercialItemSnapshot.measurement_unit.code|default('') }}</span></td>
+                            <td data-label="Producto"><strong class="printing-product-name">{{ productName }}</strong></td>
+                            <td data-label="Arte liberado">{% if designState == 'READY_FOR_PRINT' %}<span class="printing-approval printing-approval--yes"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Aprobado</span>{% elseif designState == 'BLOCKED' %}<span class="printing-approval printing-approval--no"><i class="bi bi-x-circle-fill" aria-hidden="true"></i>Con observaciones</span>{% else %}<span class="printing-approval printing-approval--pending"><i class="bi bi-clock-fill" aria-hidden="true"></i>Pendiente</span>{% endif %}</td>
+                            <td data-label="Equipo">{% if plan.equipment %}<span class="printing-machine-name">{{ plan.equipment.name }}</span>{% else %}<span class="printing-muted">Por asignar</span>{% endif %}</td>
+                            <td data-label="Estado / riesgo"><span class="printing-status printing-status--{{ statusKey }}"><i aria-hidden="true"></i>{{ statusLabel }}</span><span class="printing-commitment printing-commitment--{{ commitmentState }}">{% if order.commitmentDate %}Compromiso {{ order.commitmentDate|date('d/m/Y', 'America/Mexico_City') }}{% else %}Sin fecha compromiso{% endif %}</span></td>
+                            <td data-label="Acción"><a class="printing-open-action" href="{{ path('admin_printing_show', {id: plan.id}) }}">Abrir trabajo<i class="bi bi-arrow-right" aria-hidden="true"></i></a></td>
+                        </tr>
+                    {% else %}
+                        <tr class="printing-empty"><td colspan="6"><i class="bi bi-printer" aria-hidden="true"></i><strong>No hay partidas en Impresión.</strong><span>Las partidas aparecerán cuando su ruta tenga una operación del área Impresión.</span></td></tr>
+                    {% endfor %}
                     </tbody>
                 </table>
+                <p class="printing-no-results" hidden data-admin--printing-queue-target="empty">No hay trabajos que coincidan con los filtros.</p>
             </div>
         </section>
     </section>
