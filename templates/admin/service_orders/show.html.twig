@@ -7,7 +7,7 @@
 {% block app_breadcrumb %}Operación / Órdenes de servicio / Detalle{% endblock %}
 
 {% block app_content %}
-    <section class="pf-page__content service-order-page">
+    <section class="pf-page__content service-order-page" data-controller="ui--scroll-position" data-action="submit->ui--scroll-position#remember">
         <header class="pf-page-header">
             <div class="pf-page-header__content">
                 <p class="pf-page-header__eyebrow">Operación / Órdenes de servicio</p>

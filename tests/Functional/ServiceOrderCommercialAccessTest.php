@@ -826,6 +826,10 @@ final class ServiceOrderCommercialAccessTest extends TestCase
             foreach ($visibleText as $text) {
                 self::assertStringContainsString($text, $html, $path.' for '.$username);
             }
+            if ($path === '/admin/ordenes-servicio/'.$this->serviceOrder->getId()) {
+                self::assertStringContainsString('data-controller="ui--scroll-position"', $html);
+                self::assertStringContainsString('ui--scroll-position#remember', $html);
+            }
             $this->assertNoCommercialData($html, $path.' for '.$username);
         }
 
