@@ -25,13 +25,28 @@ final class ServiceOrderRepository extends ServiceEntityRepository
     /** @return list<ServiceOrder> */
     public function findRecentForAdministration(): array
     {
-        /** @var list<ServiceOrder> $orders */
-        $orders = $this->createQueryBuilder('serviceOrder')
-            ->innerJoin('serviceOrder.sourceQuotation', 'quotation')
-            ->addSelect('quotation')
+        $idRows = $this->createQueryBuilder('serviceOrder')
+            ->select('serviceOrder.id')
             ->orderBy('serviceOrder.createdAt', 'DESC')
             ->addOrderBy('serviceOrder.id', 'DESC')
             ->setMaxResults(200)
+            ->getQuery()
+            ->getScalarResult();
+        $ids = array_column($idRows, 'id');
+
+        if ($ids === []) {
+            return [];
+        }
+
+        /** @var list<ServiceOrder> $orders */
+        $orders = $this->createQueryBuilder('serviceOrder')
+            ->innerJoin('serviceOrder.sourceQuotation', 'quotation')
+            ->leftJoin('serviceOrder.items', 'item')
+            ->addSelect('quotation', 'item')
+            ->andWhere('serviceOrder.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->orderBy('serviceOrder.createdAt', 'DESC')
+            ->addOrderBy('serviceOrder.id', 'DESC')
             ->getQuery()
             ->getResult();
 

@@ -115,7 +115,7 @@ final class DesignController extends AbstractController
     {
         $this->denyAccessUnlessGranted('production.files.download');
         $response = new BinaryFileResponse($storage->absolutePath($file->getInternalPath()));
-        $response->setContentType($file->getMimeType());
+        $response->headers->set('Content-Type', $file->getMimeType());
         $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_ATTACHMENT, $file->getOriginalName());
         $response->headers->set('Cache-Control', 'private, no-store');
         $response->headers->set('X-Content-Type-Options', 'nosniff');

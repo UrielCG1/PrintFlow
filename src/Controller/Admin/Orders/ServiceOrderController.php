@@ -64,8 +64,78 @@ final class ServiceOrderController extends AbstractController
     {
         $this->denyAccessUnlessGranted('service_orders.view');
 
+        $serviceOrders = $serviceOrderRepository->findRecentForAdministration();
+        $timezone = new \DateTimeZone('America/Mexico_City');
+        $today = new \DateTimeImmutable('today', $timezone);
+        $weekEnd = $today->modify('sunday this week')->setTime(23, 59, 59);
+        $summary = [
+            'in_production' => 0,
+            'pending_planning' => 0,
+            'due_this_week' => 0,
+            'overdue' => 0,
+            'completed' => 0,
+            'requiring_action' => 0,
+            'at_risk' => 0,
+        ];
+        $clientNames = [];
+        $searchTermsByOrderId = [];
+
+        foreach ($serviceOrders as $serviceOrder) {
+            $clientName = trim((string) ($serviceOrder->getClientSnapshot()['business_name'] ?? 'Cliente no disponible'));
+            $clientNames[$clientName] = $clientName;
+            $searchTerms = [$serviceOrder->getFolio(), $clientName];
+            if ($this->isGranted('service_orders.view_commercial')) {
+                $searchTerms[] = $serviceOrder->getSourceQuotationFolio();
+            }
+            foreach ($serviceOrder->getItems() as $item) {
+                $searchTerms[] = (string) ($item->getCommercialItemSnapshot()['name'] ?? '');
+            }
+            $searchTermsByOrderId[(string) $serviceOrder->getId()] = implode(' ', $searchTerms);
+
+            $productionState = $serviceOrder->getProductionStatus()->value;
+            $isDelivered = $serviceOrder->getDeliveryStatus()->value === 'DELIVERED';
+            $needsAction = $serviceOrder->isPendingPlanning()
+                || in_array($productionState, ['WAITING_QUALITY', 'QUALITY_REWORK'], true)
+                || ($productionState === 'PRODUCTION_COMPLETED' && !$isDelivered);
+            if ($needsAction) {
+                ++$summary['requiring_action'];
+            }
+            if ($productionState === 'QUALITY_REWORK') {
+                ++$summary['at_risk'];
+            }
+
+            if ($productionState === 'IN_PRODUCTION') {
+                ++$summary['in_production'];
+            }
+            if ($serviceOrder->isPendingPlanning()) {
+                ++$summary['pending_planning'];
+            }
+            if ($isDelivered) {
+                ++$summary['completed'];
+            }
+
+            $commitmentDate = $serviceOrder->getCommitmentDate();
+            if ($commitmentDate !== null) {
+                $commitmentDate = $commitmentDate->setTimezone($timezone);
+                if (!$isDelivered && $commitmentDate >= $today && $commitmentDate <= $weekEnd) {
+                    ++$summary['due_this_week'];
+                }
+                if ($commitmentDate < $today && $serviceOrder->getDeliveryStatus()->value !== 'DELIVERED') {
+                    ++$summary['overdue'];
+                    if ($productionState !== 'QUALITY_REWORK') {
+                        ++$summary['at_risk'];
+                    }
+                }
+            }
+        }
+        natcasesort($clientNames);
+
         return $this->render('admin/service_orders/index.html.twig', [
-            'serviceOrders' => $serviceOrderRepository->findRecentForAdministration(),
+            'serviceOrders' => $serviceOrders,
+            'serviceOrderSummary' => $summary,
+            'serviceOrderToday' => $today,
+            'serviceOrderClients' => array_values($clientNames),
+            'serviceOrderSearchTerms' => $searchTermsByOrderId,
         ]);
     }
 

@@ -1,5 +1,227 @@
 /* Detalle de órdenes de servicio: jerarquía de acciones y controles plegables. */
 
+/* Tablero de órdenes: resumen operativo y seguimiento del ciclo de trabajo. */
+.service-orders-board {
+    gap: 1rem;
+}
+
+.service-orders-board__header {
+    margin: 0 0 0.2rem;
+}
+
+.service-orders-board .pf-page-header__eyebrow {
+    margin-bottom: 0.35rem;
+}
+
+.service-orders-board .pf-page-header__title {
+    margin: 0;
+    color: #075b1c;
+    font-size: clamp(1.75rem, 2.4vw, 2rem);
+    font-weight: 700;
+}
+
+.service-orders-board .pf-page-header__description {
+    margin-top: 0.3rem;
+    color: #52627f;
+}
+
+.service-order-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.service-order-metric {
+    display: flex;
+    min-width: 0;
+    min-height: 7.25rem;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem 1.1rem;
+    background: #fff;
+    border: 1px solid #e0e6f0;
+    border-radius: 0.7rem;
+    box-shadow: 0 1px 2px rgba(19, 37, 68, 0.025);
+}
+
+.service-order-metric__icon {
+    display: grid;
+    width: 3.5rem;
+    height: 3.5rem;
+    flex: 0 0 3.5rem;
+    place-items: center;
+    border-radius: 0.7rem;
+    font-size: 1.65rem;
+}
+
+.service-order-metric--green .service-order-metric__icon { color: #078528; background: #e6f8e9; }
+.service-order-metric--blue .service-order-metric__icon { color: #1474e8; background: #e4f0ff; }
+.service-order-metric--orange .service-order-metric__icon { color: #e98300; background: #fff2df; }
+.service-order-metric--red .service-order-metric__icon { color: #e32929; background: #ffebeb; }
+
+.service-order-metric h2 {
+    margin: 0.25rem 0 0.05rem;
+    color: #3e4e6d;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.service-order-metric strong {
+    display: block;
+    color: #101a2d;
+    font-size: 1.85rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.service-order-metric p {
+    margin: 0.3rem 0 0;
+    color: #596985;
+    font-size: 0.82rem;
+}
+
+.service-orders-panel {
+    min-width: 0;
+    padding: 1.25rem 1.1rem 0.9rem;
+    border: 1px solid #e0e6f0;
+    border-radius: 0.7rem;
+    box-shadow: none;
+}
+
+.service-orders-filters {
+    display: grid;
+    grid-template-columns: minmax(16rem, 2.2fr) repeat(5, minmax(7rem, 1fr)) auto;
+    align-items: end;
+    gap: 0.75rem;
+}
+
+.service-orders-search {
+    display: flex;
+    min-width: 0;
+    height: 2.8rem;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0 0.9rem;
+    color: #52627f;
+    background: #fff;
+    border: 1px solid #cbd6e7;
+    border-radius: 0.45rem;
+}
+
+.service-orders-search:focus-within,
+.service-orders-select select:focus-visible {
+    border-color: #4f8dff;
+    outline: 3px solid rgba(79, 141, 255, 0.15);
+}
+
+.service-orders-search > .bi { flex: 0 0 auto; font-size: 1.1rem; }
+.service-orders-search input { width: 100%; min-width: 0; padding: 0; color: #172742; background: transparent; border: 0; outline: 0; font-size: 0.82rem; }
+.service-orders-search input::placeholder { color: #61718c; opacity: 1; }
+
+.service-orders-select { display: grid; min-width: 0; gap: 0.28rem; }
+.service-orders-select > span { overflow: hidden; color: #18263d; font-size: 0.72rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.service-orders-select select { width: 100%; height: 2.3rem; padding: 0 1.8rem 0 0.75rem; color: #243550; background-color: #fff; border: 1px solid #cbd6e7; border-radius: 0.4rem; font-size: 0.8rem; }
+
+.service-orders-clear {
+    height: 2.3rem;
+    padding: 0 1rem;
+    color: #24477e;
+    background: #edf1ff;
+    border: 0;
+    border-radius: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+.service-orders-clear:hover { background: #dfe7ff; }
+
+.service-orders-tabs { display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 1.2rem 0 0.85rem; }
+.service-orders-tabs [role="tab"] { padding: 0.48rem 0.9rem; color: #465978; background: #f1f4fc; border: 1px solid transparent; border-radius: 999px; font-size: 0.78rem; font-weight: 600; white-space: nowrap; }
+.service-orders-tabs [role="tab"] span { font-weight: 500; }
+.service-orders-tabs [role="tab"].is-active { color: #075d1c; background: #e6f8e9; border-color: #bdebc4; box-shadow: inset 0 -2px #078528; }
+
+.service-orders-table-scroll { width: 100%; overflow-x: auto; }
+.service-orders-table { width: 100%; min-width: 930px; border-collapse: collapse; color: #14233b; font-size: 0.8rem; }
+.service-orders-table thead { background: #f0f4fc; }
+.service-orders-table th { height: 2.55rem; padding: 0.55rem 0.85rem; color: #394b6a; font-size: 0.67rem; font-weight: 700; letter-spacing: 0.025em; text-align: left; text-transform: uppercase; white-space: nowrap; }
+.service-orders-table td { height: 4.15rem; padding: 0.55rem 0.85rem; border-bottom: 1px solid #e0e5ed; vertical-align: middle; }
+.service-orders-table tbody tr[hidden] { display: none; }
+.service-orders-folio, .service-orders-client, .service-orders-date, .service-orders-origin, .service-orders-detail { display: block; }
+.service-orders-folio { color: #111d31; font-weight: 700; text-decoration: none; }
+.service-orders-folio:hover { color: #086f24; text-decoration: underline; }
+.service-orders-origin, .service-orders-detail { margin-top: 0.2rem; color: #596985; }
+.service-orders-item-detail { display: block; max-width: 15rem; overflow: hidden; margin-top: 0.15rem; color: #596985; font-size: 0.7rem; text-overflow: ellipsis; white-space: nowrap; }
+.service-orders-client { max-width: 14rem; overflow: hidden; color: #17253d; text-overflow: ellipsis; white-space: nowrap; }
+.service-orders-progress { position: relative; display: grid; grid-template-columns: repeat(5, minmax(3.7rem, 1fr)); min-width: 18rem; margin: 0; padding: 0; list-style: none; }
+.service-orders-progress::before { position: absolute; top: 0.48rem; right: 10%; left: 10%; height: 2px; content: ""; background: #d8deea; }
+.service-orders-progress li { position: relative; z-index: 1; display: flex; min-width: 0; align-items: center; flex-direction: column; gap: 0.25rem; color: #596985; text-align: center; }
+.service-orders-progress li > span { display: grid; width: 1.05rem; height: 1.05rem; place-items: center; color: #fff; background: #fff; border: 2px solid #c8d0df; border-radius: 50%; font-size: 0.62rem; }
+.service-orders-progress li.is-complete > span { background: #078528; border-color: #078528; }
+.service-orders-progress li.is-current > span { border: 3px solid #2780ff; box-shadow: 0 0 0 3px #e4f0ff; }
+.service-orders-progress li small { font-size: 0.65rem; white-space: nowrap; }
+.service-orders-stage { display: inline-flex; min-width: 6.2rem; min-height: 1.9rem; align-items: center; justify-content: center; padding: 0.25rem 0.65rem; border-radius: 999px; font-size: 0.69rem; font-weight: 600; white-space: nowrap; }
+.service-orders-stage--planning, .service-orders-stage--design { color: #1760bb; background: #e8f1ff; }
+.service-orders-stage--production { color: #075ab8; background: #e1efff; }
+.service-orders-stage--quality, .service-orders-stage--delivery { color: #087229; background: #e6f8e9; }
+.service-orders-date { font-weight: 500; white-space: nowrap; }
+.service-orders-risk { display: flex; align-items: center; gap: 0.38rem; margin-top: 0.2rem; font-size: 0.72rem; white-space: nowrap; }
+.service-orders-risk > i { width: 0.55rem; height: 0.55rem; background: #1bad47; border-radius: 50%; }
+.service-orders-risk--late { color: #c63700; }
+.service-orders-risk--late > i { background: #e74e12; }
+.service-orders-risk--week { color: #bb6700; }
+.service-orders-risk--week > i { background: #f39a00; }
+.service-orders-risk--unassigned { color: #69768c; }
+.service-orders-risk--unassigned > i { background: #aab3c3; }
+.service-orders-risk--future { color: #07802c; }
+.service-orders-action { display: flex; min-width: 9.5rem; min-height: 2.25rem; align-items: center; gap: 0.55rem; padding: 0.35rem 0.6rem; color: #21477e; background: #f0f4ff; border: 1px solid #dce5fb; border-radius: 0.45rem; font-size: 0.75rem; font-weight: 600; text-decoration: none; }
+.service-orders-action:hover { color: #075d1c; background: #eaf8ec; border-color: #c5ebca; }
+.service-orders-action--planning, .service-orders-action--quality { color: #087229; background: #ebf9ed; border-color: #c9edce; }
+.service-orders-action__chevron { margin-left: auto; padding-left: 0.55rem; border-left: 1px solid rgba(71, 94, 133, 0.15); }
+.service-orders-empty td { height: 10rem; text-align: center; }
+.service-orders-empty td > * { display: block; margin: 0.35rem auto; }
+.service-orders-empty .bi { color: #6a7892; font-size: 1.5rem; }
+.service-orders-empty span, .service-orders-no-results { color: #596985; }
+.service-orders-no-results { padding: 2rem; text-align: center; }
+
+@media (max-width: 1199.98px) {
+    .service-orders-filters { grid-template-columns: minmax(15rem, 2fr) repeat(3, minmax(7rem, 1fr)); }
+    .service-orders-search { grid-column: span 2; }
+    .service-orders-select--client { grid-column: auto; }
+    .service-orders-clear { justify-self: start; }
+}
+
+@media (max-width: 767.98px) {
+    .service-order-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .service-order-metric { min-height: 6.3rem; gap: 0.7rem; padding: 0.8rem; }
+    .service-order-metric__icon { width: 2.7rem; height: 2.7rem; flex-basis: 2.7rem; font-size: 1.3rem; }
+    .service-order-metric h2 { font-size: 0.78rem; }
+    .service-order-metric strong { font-size: 1.55rem; }
+    .service-order-metric p { font-size: 0.72rem; }
+    .service-orders-panel { padding: 0.9rem; }
+    .service-orders-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .service-orders-search { grid-column: 1 / -1; }
+    .service-orders-select--client { grid-column: auto; }
+    .service-orders-clear { grid-column: 1 / -1; }
+    .service-orders-tabs { flex-wrap: nowrap; margin-inline: -0.1rem; overflow-x: auto; padding-bottom: 0.3rem; }
+    .service-orders-table { min-width: 0; }
+    .service-orders-table thead { display: none; }
+    .service-orders-table, .service-orders-table tbody, .service-orders-table tr, .service-orders-table td { display: block; width: 100%; }
+    .service-orders-table tbody tr[data-order-row] { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem 0.9rem; padding: 0.9rem 0; }
+    .service-orders-table td { height: auto; padding: 0; border: 0; }
+    .service-orders-table td::before { display: block; margin-bottom: 0.25rem; color: #687792; content: attr(data-label); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; }
+    .service-orders-table td:nth-child(3), .service-orders-table td:last-child { grid-column: 1 / -1; }
+    .service-orders-progress { min-width: 0; }
+    .service-orders-progress li small { font-size: 0.58rem; }
+    .service-orders-action { width: 100%; }
+    .service-orders-empty td { display: block; }
+}
+
+@media (max-width: 420px) {
+    .service-order-metrics { grid-template-columns: 1fr; }
+    .service-order-metric { min-height: 5.6rem; }
+    .service-orders-table tbody tr[data-order-row] { grid-template-columns: minmax(0, 1fr); }
+    .service-orders-table td, .service-orders-table td:nth-child(3), .service-orders-table td:last-child { grid-column: 1; }
+}
+
 .service-order-page .pf-card__header {
     align-items: center;
 }
