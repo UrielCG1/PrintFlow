@@ -13,6 +13,7 @@
             </div>
             <div class="pf-page-header__actions">
                 <a href="{{ path('admin_inventory_purchase_requests_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-truck" aria-hidden="true"></i><span>Compras en seguimiento</span></a>
+                <a href="{{ path('admin_inventory_indicators_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-graph-up" aria-hidden="true"></i><span>Indicadores</span></a>
                 <a href="{{ path('admin_inventory_receipts_minimums') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-sliders" aria-hidden="true"></i><span>Configurar mínimos</span></a>
                 {% if suggestions is not empty %}
                     <a href="{{ path('admin_inventory_replenishment_export') }}" class="btn pf-button pf-button--primary"><i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i><span>Exportar solicitud CSV</span></a>

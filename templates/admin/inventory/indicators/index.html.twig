@@ -1,0 +1,80 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Indicadores de inventario | OoxCorp{% endblock %}
+{% block app_navigation_active %}inventory{% endblock %}
+{% block app_breadcrumb %}Operación / Inventario / Indicadores{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page__content">
+        <div class="pf-page-header">
+            <div class="pf-page-header__content">
+                <h1 class="pf-page-header__title">Indicadores de inventario</h1>
+                <p class="pf-page-header__description">Seguimiento de diferencias, merma, esperas de compra y entregas pendientes de material físico.</p>
+            </div>
+            <div class="pf-page-header__actions">
+                <a href="{{ path('admin_inventory_replenishment_index') }}" class="btn pf-button pf-button--primary"><i class="bi bi-cart-plus" aria-hidden="true"></i><span>Preparar reposición</span></a>
+                <a href="{{ path('admin_inventory_cycle_counts_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-upc-scan" aria-hidden="true"></i><span>Conteo cíclico</span></a>
+            </div>
+        </div>
+
+        <section class="row g-3 mb-4" aria-label="Resumen operativo">
+            <div class="col-sm-6 col-xl"><div class="pf-card h-100"><div class="pf-card__body"><div class="small text-body-secondary">Conteos por revisar</div><div class="display-6 mb-0">{{ indicators.pendingCycleCounts }}</div></div></div></div>
+            <div class="col-sm-6 col-xl"><div class="pf-card h-100"><div class="pf-card__body"><div class="small text-body-secondary">Diferencias confirmadas<br>últimos 30 días</div><div class="display-6 mb-0">{{ indicators.confirmedDifferencesLastThirtyDays }}</div></div></div></div>
+            <div class="col-sm-6 col-xl"><div class="pf-card h-100"><div class="pf-card__body"><div class="small text-body-secondary">Registros de merma<br>últimos 30 días</div><div class="display-6 mb-0">{{ indicators.wasteEventsLastThirtyDays }}</div></div></div></div>
+            <div class="col-sm-6 col-xl"><div class="pf-card h-100"><div class="pf-card__body"><div class="small text-body-secondary">Esperas activas<br>por material</div><div class="display-6 mb-0">{{ indicators.ordersWaitingForPurchaseCount }}</div></div></div></div>
+            <div class="col-sm-6 col-xl"><div class="pf-card h-100"><div class="pf-card__body"><div class="small text-body-secondary">Compras en seguimiento</div><div class="display-6 mb-0">{{ indicators.purchasesInTrackingCount }}</div></div></div></div>
+        </section>
+
+        <div class="row g-4">
+            <div class="col-xl-6">
+                <section class="pf-card h-100" aria-labelledby="indicator-differences-title">
+                    <div class="px-4 pt-4"><h2 id="indicator-differences-title" class="h5 mb-1">Diferencias de conteo recientes</h2><p class="small text-body-secondary mb-3">Una diferencia solo cambia el saldo después de la revisión administrativa.</p></div>
+                    <div class="pf-card__body p-0"><div class="table-responsive"><table class="table pf-table mb-0"><thead><tr><th>Unidad QR</th><th>Material</th><th>Diferencia</th><th>Estado</th></tr></thead><tbody>
+                        {% for cycleCount in indicators.recentDifferences %}
+                            {% set statusClass = {'PENDING_REVIEW': 'warning', 'APPROVED': 'success', 'STALE': 'secondary'}[cycleCount.status.value] %}
+                            <tr><td><code class="pf-table__code">{{ cycleCount.stockUnit.unitCode }}</code></td><td><strong>{{ cycleCount.variant.material.name }}</strong><div class="small text-body-secondary">{{ cycleCount.variant.code }}</div></td><td class="pf-table__cell--right">{{ cycleCount.differenceQuantity|number_format(6, '.', ',') }} {{ cycleCount.variant.inventoryUnit.symbol }}</td><td><span class="pf-status-badge pf-status-badge--{{ statusClass }}">{{ cycleCount.status.label }}</span></td></tr>
+                        {% else %}
+                            <tr><td colspan="4" class="pf-table__empty">No hay diferencias de conteo pendientes ni recientes.</td></tr>
+                        {% endfor %}
+                    </tbody></table></div></div>
+                </section>
+            </div>
+            <div class="col-xl-6">
+                <section class="pf-card h-100" aria-labelledby="indicator-waste-title">
+                    <div class="px-4 pt-4"><h2 id="indicator-waste-title" class="h5 mb-1">Merma por material</h2><p class="small text-body-secondary mb-3">Cantidad física registrada como merma en los últimos 30 días. Cada fila conserva su unidad.</p></div>
+                    <div class="pf-card__body p-0"><div class="table-responsive"><table class="table pf-table mb-0"><thead><tr><th>Material</th><th>Presentación</th><th class="text-end">Merma</th></tr></thead><tbody>
+                        {% for waste in indicators.wasteByVariant %}
+                            <tr><td><strong>{{ waste.material_name }}</strong></td><td>{{ waste.variant_code }}</td><td class="pf-table__cell--right">{{ waste.waste_quantity|number_format(6, '.', ',') }} {{ waste.unit_symbol }}</td></tr>
+                        {% else %}
+                            <tr><td colspan="3" class="pf-table__empty">No hay mermas registradas en los últimos 30 días.</td></tr>
+                        {% endfor %}
+                    </tbody></table></div></div>
+                </section>
+            </div>
+            <div class="col-xl-6">
+                <section class="pf-card h-100" aria-labelledby="indicator-waiting-title">
+                    <div class="px-4 pt-4"><h2 id="indicator-waiting-title" class="h5 mb-1">Órdenes en espera de compra</h2><p class="small text-body-secondary mb-3">Se retiran de esta lista cuando la recepción física recupera cobertura.</p></div>
+                    <div class="pf-card__body p-0"><div class="table-responsive"><table class="table pf-table mb-0"><thead><tr><th>Orden</th><th>Material faltante</th><th class="text-end">Pendiente</th></tr></thead><tbody>
+                        {% for decision in indicators.ordersWaitingForPurchase %}
+                            <tr><td><a href="{{ path('admin_service_orders_show', {id: decision.commitment.serviceOrder.id}) }}">{{ decision.commitment.serviceOrder.folio }}</a></td><td><strong>{{ decision.commitment.variant.material.name }}</strong><div class="small text-body-secondary">{{ decision.commitment.variant.code }}</div></td><td class="pf-table__cell--right">{{ decision.commitment.shortageQuantity|number_format(6, '.', ',') }} {{ decision.commitment.variant.inventoryUnit.symbol }}</td></tr>
+                        {% else %}
+                            <tr><td colspan="3" class="pf-table__empty">No hay órdenes en espera de compra.</td></tr>
+                        {% endfor %}
+                    </tbody></table></div></div>
+                </section>
+            </div>
+            <div class="col-xl-6">
+                <section class="pf-card h-100" aria-labelledby="indicator-purchases-title">
+                    <div class="px-4 pt-4 d-flex justify-content-between align-items-start gap-3"><div><h2 id="indicator-purchases-title" class="h5 mb-1">Compras en seguimiento</h2><p class="small text-body-secondary mb-3">No forman parte del inventario hasta registrar la recepción física y la unidad QR.</p></div><a href="{{ path('admin_inventory_purchase_requests_index') }}" class="btn pf-button pf-button--secondary pf-button--sm">Ver compras</a></div>
+                    <div class="pf-card__body p-0"><div class="table-responsive"><table class="table pf-table mb-0"><thead><tr><th>Solicitud</th><th>Material pendiente</th><th>Seguimiento</th></tr></thead><tbody>
+                        {% for purchaseRequest in indicators.trackedPurchases %}
+                            <tr><td><a href="{{ path('admin_inventory_purchase_requests_show', {id: purchaseRequest.id}) }}">{{ purchaseRequest.requestCode }}</a></td><td>{% for line in purchaseRequest.lines %}{% if not line.fullyReceived %}<div>{{ line.variant.material.name }} · {{ line.remainingQuantity|number_format(6, '.', ',') }} {{ line.variant.inventoryUnit.symbol }}</div>{% endif %}{% endfor %}</td><td>{{ purchaseRequest.trackingReference ?: 'Sin referencia' }}</td></tr>
+                        {% else %}
+                            <tr><td colspan="3" class="pf-table__empty">No hay compras en seguimiento.</td></tr>
+                        {% endfor %}
+                    </tbody></table></div></div>
+                </section>
+            </div>
+        </div>
+    </div>
+{% endblock %}

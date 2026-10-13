@@ -72,4 +72,29 @@ final class InventoryPurchaseRequestRepository extends ServiceEntityRepository
 
         return $requests;
     }
+
+    public function countInProgress(): int
+    {
+        return (int) $this->createQueryBuilder('request')
+            ->select('COUNT(request.id)')
+            ->andWhere('request.status = :status')
+            ->setParameter('status', InventoryPurchaseRequestStatus::IN_PROGRESS)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /** @return list<InventoryPurchaseRequest> */
+    public function findInProgress(int $limit = 10): array
+    {
+        /** @var list<InventoryPurchaseRequest> $requests */
+        $requests = $this->createQueryBuilder('request')
+            ->andWhere('request.status = :status')
+            ->setParameter('status', InventoryPurchaseRequestStatus::IN_PROGRESS)
+            ->orderBy('request.trackingStartedAt', 'ASC')
+            ->setMaxResults(max(1, min($limit, 50)))
+            ->getQuery()
+            ->getResult();
+
+        return $requests;
+    }
 }

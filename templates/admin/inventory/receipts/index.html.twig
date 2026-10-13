@@ -32,6 +32,7 @@
                     {% if is_granted('inventory.configure') %}
                         <a href="{{ path('admin_inventory_receipts_minimums') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-sliders" aria-hidden="true"></i><span>Configurar mínimos</span></a>
                         <a href="{{ path('admin_inventory_replenishment_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-cart-plus" aria-hidden="true"></i><span>Preparar reposición</span></a>
+                        <a href="{{ path('admin_inventory_indicators_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-graph-up" aria-hidden="true"></i><span>Indicadores</span></a>
                     {% endif %}
                 </div>
             {% elseif is_granted('inventory.adjust_stock') %}

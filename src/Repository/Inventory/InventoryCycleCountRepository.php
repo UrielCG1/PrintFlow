@@ -86,6 +86,51 @@ final class InventoryCycleCountRepository extends ServiceEntityRepository
         return $counts;
     }
 
+    public function countPendingReview(): int
+    {
+        return (int) $this->createQueryBuilder('cycleCount')
+            ->select('COUNT(cycleCount.id)')
+            ->andWhere('cycleCount.status = :status')
+            ->setParameter('status', InventoryCycleCountStatus::PENDING_REVIEW)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    public function countApprovedDifferencesSince(\DateTimeInterface $since): int
+    {
+        return (int) $this->createQueryBuilder('cycleCount')
+            ->select('COUNT(cycleCount.id)')
+            ->andWhere('cycleCount.status = :status')
+            ->andWhere('cycleCount.differenceQuantity <> :zero')
+            ->andWhere('cycleCount.reviewedAt >= :since')
+            ->setParameter('status', InventoryCycleCountStatus::APPROVED)
+            ->setParameter('zero', '0.000000')
+            ->setParameter('since', $since)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /** @return list<InventoryCycleCount> */
+    public function findRecentDifferences(int $limit = 10): array
+    {
+        /** @var list<InventoryCycleCount> $counts */
+        $counts = $this->baseListQuery()
+            ->andWhere('cycleCount.differenceQuantity <> :zero')
+            ->andWhere('cycleCount.status IN (:statuses)')
+            ->setParameter('zero', '0.000000')
+            ->setParameter('statuses', [
+                InventoryCycleCountStatus::PENDING_REVIEW,
+                InventoryCycleCountStatus::APPROVED,
+                InventoryCycleCountStatus::STALE,
+            ])
+            ->orderBy('cycleCount.countedAt', 'DESC')
+            ->setMaxResults(max(1, min($limit, 50)))
+            ->getQuery()
+            ->getResult();
+
+        return $counts;
+    }
+
     private function baseListQuery(): \Doctrine\ORM\QueryBuilder
     {
         return $this->createQueryBuilder('cycleCount')

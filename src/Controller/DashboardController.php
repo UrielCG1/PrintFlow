@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Application\Inventory\InventoryOperationalIndicatorService;
 use App\Repository\Materials\MaterialVariantRepository;
 use App\Repository\Inventory\InventoryCommitmentRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -11,7 +12,11 @@ use Symfony\Component\Routing\Attribute\Route;
 final class DashboardController extends AbstractController
 {
     #[Route('/', name: 'app_dashboard', methods: ['GET'])]
-    public function index(MaterialVariantRepository $variantRepository, InventoryCommitmentRepository $commitmentRepository): Response
+    public function index(
+        MaterialVariantRepository $variantRepository,
+        InventoryCommitmentRepository $commitmentRepository,
+        InventoryOperationalIndicatorService $indicatorService,
+    ): Response
     {
         $this->denyAccessUnlessGranted('dashboard.view');
 
@@ -22,6 +27,9 @@ final class DashboardController extends AbstractController
             'materialShortageAlerts' => $this->isGranted('inventory.configure')
                 ? $commitmentRepository->findShortages()
                 : [],
+            'inventoryIndicators' => $this->isGranted('inventory.configure')
+                ? $indicatorService->collect(includeDetails: false)
+                : null,
         ]);
     }
 }

@@ -69,4 +69,37 @@ final class InventoryShortageDecisionRepository extends ServiceEntityRepository
 
         return array_values(array_map(static fn (array $row): int => (int) $row['commitment_id'], $rows));
     }
+
+    public function countActiveWaiting(): int
+    {
+        return (int) $this->createQueryBuilder('decision')
+            ->select('COUNT(decision.id)')
+            ->andWhere('decision.isActive = true')
+            ->andWhere('decision.type = :type')
+            ->setParameter('type', InventoryShortageDecisionType::WAIT_FOR_PURCHASE)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /** @return list<InventoryShortageDecision> */
+    public function findActiveWaitingForIndicators(int $limit = 10): array
+    {
+        /** @var list<InventoryShortageDecision> $decisions */
+        $decisions = $this->createQueryBuilder('decision')
+            ->innerJoin('decision.commitment', 'commitment')
+            ->innerJoin('commitment.serviceOrder', 'serviceOrder')
+            ->innerJoin('commitment.variant', 'variant')
+            ->innerJoin('variant.material', 'material')
+            ->innerJoin('variant.inventoryUnit', 'unit')
+            ->addSelect('commitment', 'serviceOrder', 'variant', 'material', 'unit')
+            ->andWhere('decision.isActive = true')
+            ->andWhere('decision.type = :type')
+            ->setParameter('type', InventoryShortageDecisionType::WAIT_FOR_PURCHASE)
+            ->orderBy('decision.createdAt', 'ASC')
+            ->setMaxResults(max(1, min($limit, 50)))
+            ->getQuery()
+            ->getResult();
+
+        return $decisions;
+    }
 }
