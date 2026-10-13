@@ -10,6 +10,7 @@ use App\Entity\Orders\ServiceOrderTraceabilityEvent;
 use App\Entity\Production\ProductionOperationExecution;
 use App\Entity\Users\User;
 use App\Application\Inventory\InventoryProductionAuthorizationGuard;
+use App\Application\Inventory\InventoryCommitmentReconciliationManager;
 use App\Enum\Orders\ProductionOrderStatus;
 use App\Enum\Orders\ServiceOrderItemDesignStatus;
 use App\Repository\Orders\ServiceOrderTraceabilityEventRepository;
@@ -35,6 +36,7 @@ final class ProductionExecutionManager
         private readonly ProductionPriorityRescheduler $rescheduler,
         private readonly \App\Repository\Orders\ServiceOrderOperationPlanRepository $planRepository,
         private readonly InventoryProductionAuthorizationGuard $inventoryAuthorizationGuard,
+        private readonly InventoryCommitmentReconciliationManager $inventoryCommitmentReconciliationManager,
     ) {
     }
 
@@ -179,7 +181,9 @@ final class ProductionExecutionManager
             $execution->complete($command->note);
             $this->rescheduler->recalculateAfterExecutionChange($plan, $actor, 'production.execution_completed');
 
+            $commitmentReconciliation = null;
             if ($this->allActiveOperationsAreCompleted($order)) {
+                $commitmentReconciliation = $this->inventoryCommitmentReconciliationManager->releaseUnusedForCompletedOrder($order, $actor);
                 $order->waitForQualityReview();
             }
             $order->touchTraceability();
@@ -195,7 +199,10 @@ final class ProductionExecutionManager
                 $plan,
                 $execution,
                 $command->note,
-                ['attempt_number' => $execution->getAttemptNumber()],
+                [
+                    'attempt_number' => $execution->getAttemptNumber(),
+                    'released_commitments' => $commitmentReconciliation?->releases ?? [],
+                ],
                 $command->commandId,
                 $command->commandId,
             );

@@ -1049,8 +1049,10 @@ final class ServiceOrderController extends AbstractController
             $materialRequirements[] = [
                 'variant' => $variant,
                 'requiredQuantity' => $requirement['requiredQuantity'],
-                'availableQuantity' => $existing?->getCommittedQuantity() ?? $coverage?->availableQuantity ?? '0.000000',
-                'committedQuantity' => $existing?->getCommittedQuantity() ?? $coverage?->coveredQuantity ?? '0.000000',
+                'availableQuantity' => $existing?->getPendingQuantity() ?? $coverage?->availableQuantity ?? '0.000000',
+                'committedQuantity' => $existing?->getPendingQuantity() ?? $coverage?->coveredQuantity ?? '0.000000',
+                'consumedQuantity' => $existing?->getConsumedQuantity() ?? '0.000000',
+                'releasedQuantity' => $existing?->getReleasedQuantity() ?? '0.000000',
                 'shortageQuantity' => $isSubstituted ? '0.000000' : ($existing?->getShortageQuantity() ?? $coverage?->shortageQuantity ?? '0.000000'),
                 'status' => $existing?->getStatus()->value ?? ($coverage?->isFullyCovered() ? 'PENDIENTE_CUBIERTO' : 'PENDIENTE_FALTANTE'),
                 'isCommitted' => $existing !== null,

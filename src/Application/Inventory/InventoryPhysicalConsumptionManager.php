@@ -13,7 +13,6 @@ use App\Entity\Orders\ServiceOrder;
 use App\Entity\Production\ProductionMaterialUsage;
 use App\Entity\Users\User;
 use App\Enum\Inventory\MovementType;
-use App\Repository\Inventory\InventoryCommitmentConsumptionRepository;
 use App\Repository\Inventory\InventoryCommitmentRepository;
 use App\Repository\Inventory\MaterialVariantCostRepository;
 use App\Service\Audit\AuditLogger;
@@ -29,7 +28,6 @@ final class InventoryPhysicalConsumptionManager
         private readonly EntityManagerInterface $entityManager,
         private readonly MaterialVariantCostRepository $balanceRepository,
         private readonly InventoryCommitmentRepository $commitmentRepository,
-        private readonly InventoryCommitmentConsumptionRepository $commitmentConsumptionRepository,
         private readonly AuditLogger $auditLogger,
     ) {
     }
@@ -63,8 +61,7 @@ final class InventoryPhysicalConsumptionManager
         $commitment = $this->commitmentRepository->findOneForOrderAndVariant($order, $variant);
         $releasedCommitmentQuantity = '0.000000';
         if ($commitment !== null) {
-            $alreadyAllocated = BigDecimal::of($this->commitmentConsumptionRepository->allocatedQuantityForCommitment($commitment));
-            $remainingCommitment = BigDecimal::of($commitment->getCommittedQuantity())->minus($alreadyAllocated);
+            $remainingCommitment = BigDecimal::of($commitment->getPendingQuantity());
             if ($remainingCommitment->isGreaterThan(BigDecimal::zero())) {
                 $consumed = BigDecimal::of($consumedInventoryQuantity);
                 $releasedCommitmentQuantity = ($consumed->isLessThan($remainingCommitment) ? $consumed : $remainingCommitment)
@@ -97,6 +94,7 @@ final class InventoryPhysicalConsumptionManager
         $usage->attachInventoryMovement($primaryMovement);
 
         if ($commitment !== null && !BigDecimal::of($releasedCommitmentQuantity)->isZero()) {
+            $commitment->recordConsumedQuantity($releasedCommitmentQuantity);
             $this->entityManager->persist(new InventoryCommitmentConsumption($commitment, $usage, $releasedCommitmentQuantity));
             $this->entityManager->persist((new InventoryMovement(
                 $variant,
@@ -135,6 +133,7 @@ final class InventoryPhysicalConsumptionManager
             'released_commitment_quantity' => $releasedCommitmentQuantity,
             'surplus_stock_unit_id' => $surplus?->getId(),
         ]);
+        $this->entityManager->flush();
 
         return new InventoryPhysicalConsumptionResult($consumedInventoryQuantity, $wasteInventoryQuantity, $releasedCommitmentQuantity, $surplus);
     }

@@ -9,6 +9,7 @@ use App\Entity\Materials\MaterialVariant;
 use App\Entity\Orders\ServiceOrder;
 use App\Enum\Inventory\InventoryCommitmentStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\LockMode;
 use Doctrine\Persistence\ManagerRegistry;
 
 /** @extends ServiceEntityRepository<InventoryCommitment> */
@@ -38,6 +39,25 @@ final class InventoryCommitmentRepository extends ServiceEntityRepository
             ->orderBy('material.name', 'ASC')
             ->addOrderBy('variant.code', 'ASC')
             ->getQuery()
+            ->getResult();
+
+        return $commitments;
+    }
+
+    /** @return list<InventoryCommitment> */
+    public function findForOrderForUpdate(ServiceOrder $order): array
+    {
+        /** @var list<InventoryCommitment> $commitments */
+        $commitments = $this->createQueryBuilder('commitment')
+            ->innerJoin('commitment.variant', 'variant')
+            ->innerJoin('variant.material', 'material')
+            ->innerJoin('variant.inventoryUnit', 'unit')
+            ->addSelect('variant', 'material', 'unit')
+            ->andWhere('commitment.serviceOrder = :order')
+            ->setParameter('order', $order)
+            ->orderBy('variant.id', 'ASC')
+            ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_WRITE)
             ->getResult();
 
         return $commitments;

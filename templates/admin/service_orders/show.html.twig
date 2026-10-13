@@ -209,12 +209,14 @@
                     {% endif %}
                 </header>
                 <div class="pf-card__body">
-                    <div class="table-responsive"><table class="table pf-table mb-0"><thead><tr><th>Material</th><th>Necesidad</th><th>Apartado</th><th>Faltante</th><th>Estado</th></tr></thead><tbody>
+                    <div class="table-responsive"><table class="table pf-table mb-0"><thead><tr><th>Material</th><th>Necesidad</th><th>Apartado pendiente</th><th>Consumido</th><th>Liberado</th><th>Faltante</th><th>Estado</th></tr></thead><tbody>
                     {% for requirement in materialRequirements %}
                         <tr>
                             <td><strong>{{ requirement.variant.material.name }}</strong><div class="small text-body-secondary">{{ requirement.variant.code }} · {{ requirement.variant.inventoryUnit.symbol }}</div></td>
                             <td>{{ requirement.requiredQuantity|number_format(6, '.', ',') }}</td>
                             <td>{{ requirement.committedQuantity|number_format(6, '.', ',') }}</td>
+                            <td>{{ requirement.consumedQuantity|number_format(6, '.', ',') }}</td>
+                            <td>{{ requirement.releasedQuantity|number_format(6, '.', ',') }}</td>
                             <td>{{ requirement.shortageQuantity|number_format(6, '.', ',') }}</td>
                             <td>
                                 {% if requirement.shortageQuantity != '0.000000' %}
@@ -243,7 +245,7 @@
                                             </form>
                                         </details>
                                     {% endif %}
-                                {% elseif requirement.status == 'SUBSTITUTED' %}<span class="text-success">Parte original cubierta; faltante sustituido</span>{% elseif requirement.isCommitted %}<span class="text-success">Apartado</span>{% else %}<span class="text-body-secondary">Disponible para apartar</span>{% endif %}
+                                {% elseif requirement.status == 'SUBSTITUTED' %}<span class="text-success">Parte original cubierta; faltante sustituido</span>{% elseif requirement.isCommitted and requirement.committedQuantity == '0.000000' %}<span class="text-success">Conciliado</span>{% elseif requirement.isCommitted %}<span class="text-success">Apartado pendiente de uso</span>{% else %}<span class="text-body-secondary">Disponible para apartar</span>{% endif %}
                             </td>
                         </tr>
                     {% endfor %}
