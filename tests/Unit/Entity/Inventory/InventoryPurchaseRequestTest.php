@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Entity\Inventory;
 
 use App\Entity\Catalog\MeasurementUnit;
+use App\Application\Inventory\InventoryCoverage;
+use App\Entity\Inventory\InventoryCommitment;
 use App\Entity\Inventory\InventoryPurchaseRequest;
 use App\Entity\Inventory\InventoryPurchaseRequestLine;
+use App\Entity\Inventory\InventoryPurchaseRequestLineDemand;
 use App\Entity\Materials\Material;
+use App\Entity\Orders\ServiceOrder;
 use App\Entity\Materials\MaterialVariant;
 use App\Entity\Users\User;
 use App\Enum\Catalog\MeasurementDimensionType;
@@ -55,6 +59,31 @@ final class InventoryPurchaseRequestTest extends TestCase
 
         self::assertTrue($line->isFullyReceived());
         self::assertSame(InventoryPurchaseRequestStatus::CLOSED, $request->getStatus());
+    }
+
+    public function testItKeepsTheWaitingOrderDemandLinkedToThePurchaseLine(): void
+    {
+        $actor = new User();
+        $variant = $this->variant();
+        $request = new InventoryPurchaseRequest(
+            'purchase-request-unit-test-0003',
+            hash('sha256', 'purchase-request-unit-test-3'),
+            $actor,
+        );
+        $line = new InventoryPurchaseRequestLine($request, 1, $variant, '10');
+        $request->addLine($line);
+        $commitment = new InventoryCommitment(
+            new ServiceOrder(),
+            $variant,
+            $actor,
+            new InventoryCoverage('5.000000', '0.000000', '0.000000', '5.000000'),
+        );
+        $demand = new InventoryPurchaseRequestLineDemand($line, $commitment, '5');
+        $line->addDemand($demand);
+
+        self::assertCount(1, $line->getDemands());
+        self::assertSame($commitment, $demand->getCommitment());
+        self::assertSame('5.000000', $demand->getPlannedQuantity());
     }
 
     private function variant(): MaterialVariant

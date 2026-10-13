@@ -10,10 +10,26 @@
         {% if purchaseRequest.isDraft %}
             <section class="pf-card mb-4"><div class="pf-card__body"><h2 class="h5">Confirmar compra en seguimiento</h2><p class="text-body-secondary small">Al iniciar seguimiento, esta cantidad se considera compra pendiente para evitar recomendarla de nuevo. El saldo físico permanece sin cambios.</p><form method="post" action="{{ path('admin_inventory_purchase_requests_begin_tracking', {id: purchaseRequest.id}) }}" class="pf-form row g-3 align-items-end"><input type="hidden" name="_token" value="{{ csrf_token('inventory_purchase_request_tracking_' ~ purchaseRequest.id) }}"><div class="col-md-6 pf-form-field"><label for="tracking-reference" class="form-label">Referencia de proveedor <span class="text-body-secondary">(opcional)</span></label><input id="tracking-reference" class="form-control" name="tracking_reference" maxlength="100" placeholder="OC, cotización o remisión"></div><div class="col-md-6"><button class="btn pf-button pf-button--primary" type="submit">Marcar compra en seguimiento</button></div></form></div></section>
         {% endif %}
-        <div class="pf-card"><div class="pf-card__body p-0"><div class="table-responsive"><table class="table pf-table mb-0"><thead><tr><th>Material</th><th>Solicitado</th><th>Recibido físico</th><th>Pendiente</th><th>Proveedor</th><th></th></tr></thead><tbody>
+
+        <div class="pf-card mb-4"><div class="pf-card__body p-0"><div class="table-responsive"><table class="table pf-table mb-0"><thead><tr><th>Material</th><th>Solicitado</th><th>Recibido físico</th><th>Pendiente</th><th>Proveedor</th><th></th></tr></thead><tbody>
             {% for line in purchaseRequest.lines %}
                 <tr><td><strong class="pf-table__primary">{{ line.variant.material.name }}</strong><div class="small text-body-secondary">{{ line.variant.code }}</div></td><td class="pf-table__cell--right">{{ line.requestedQuantity|number_format(6, '.', ',') }} {{ line.variant.inventoryUnit.symbol }}</td><td class="pf-table__cell--right">{{ line.receivedQuantity|number_format(6, '.', ',') }} {{ line.variant.inventoryUnit.symbol }}</td><td class="pf-table__cell--right"><strong>{{ line.remainingQuantity|number_format(6, '.', ',') }} {{ line.variant.inventoryUnit.symbol }}</strong></td><td>{% if line.supplierOffer %}{{ line.supplierOffer.supplier.businessName }}{% if line.supplierOffer.supplierSku %}<div class="small text-body-secondary">SKU {{ line.supplierOffer.supplierSku }}</div>{% endif %}{% else %}<span class="text-body-secondary">Sin proveedor configurado</span>{% endif %}</td><td>{% if purchaseRequest.isInProgress and not line.fullyReceived and is_granted('inventory.receive') %}<a class="btn pf-button pf-button--primary pf-button--sm" href="{{ path('admin_inventory_receipts_new', {purchase_request_line: line.id}) }}">Registrar recepción</a>{% endif %}</td></tr>
             {% endfor %}
         </tbody></table></div></div></div>
+
+        {% if demandReviews is not empty %}
+            <section class="pf-card" aria-labelledby="purchase-demand-title">
+                <div class="px-4 pt-4"><h2 id="purchase-demand-title" class="h5 mb-1">Demandas de órdenes en espera</h2><p class="small text-body-secondary mb-3">Estas necesidades se incluyeron al preparar la compra. La solicitud no modifica su cobertura hasta registrar una recepción física.</p></div>
+                {% if demandReviewCount > 0 %}<div class="alert alert-warning mx-4" role="alert">{{ demandReviewCount }} {{ demandReviewCount == 1 ? 'demanda requiere' : 'demandas requieren' }} revisión: la cobertura o la decisión de la orden cambió. Revisa con el proveedor antes de modificar o cancelar la compra.</div>{% endif %}
+                <div class="pf-card__body p-0"><div class="table-responsive"><table class="table pf-table mb-0"><thead><tr><th>Orden</th><th>Material</th><th class="text-end">Incluido al solicitar</th><th class="text-end">Faltante actual</th><th>Situación actual</th></tr></thead><tbody>
+                    {% for review in demandReviews %}
+                        {% set demand = review.demand %}
+                        <tr><td><a href="{{ path('admin_service_orders_show', {id: demand.commitment.serviceOrder.id}) }}">{{ demand.commitment.serviceOrder.folio }}</a></td><td><strong>{{ demand.commitment.variant.material.name }}</strong><div class="small text-body-secondary">{{ demand.commitment.variant.code }}</div></td><td class="pf-table__cell--right">{{ demand.plannedQuantity|number_format(6, '.', ',') }} {{ demand.commitment.variant.inventoryUnit.symbol }}</td><td class="pf-table__cell--right">{{ demand.commitment.shortageQuantity|number_format(6, '.', ',') }} {{ demand.commitment.variant.inventoryUnit.symbol }}</td><td><span class="pf-status-badge pf-status-badge--{{ review.requiresReview ? 'warning' : 'secondary' }}">{{ review.label }}</span>{% if review.activeDecision %}<div class="small text-body-secondary mt-1">{{ review.activeDecision.reason }}</div>{% endif %}</td></tr>
+                    {% endfor %}
+                </tbody></table></div></div>
+            </section>
+        {% else %}
+            <div class="alert alert-info mb-0" role="alert">Esta solicitud no contiene demandas de órdenes que estuvieran en espera de compra; puede corresponder a mínimos de bodega u otros faltantes sin espera registrada.</div>
+        {% endif %}
     </div>
 {% endblock %}

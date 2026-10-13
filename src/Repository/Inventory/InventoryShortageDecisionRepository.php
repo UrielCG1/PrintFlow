@@ -70,6 +70,52 @@ final class InventoryShortageDecisionRepository extends ServiceEntityRepository
         return array_values(array_map(static fn (array $row): int => (int) $row['commitment_id'], $rows));
     }
 
+    /** @return list<InventoryShortageDecision> */
+    public function findActiveWaitingForVariant(\App\Entity\Materials\MaterialVariant $variant): array
+    {
+        /** @var list<InventoryShortageDecision> $decisions */
+        $decisions = $this->createQueryBuilder('decision')
+            ->innerJoin('decision.commitment', 'commitment')
+            ->addSelect('commitment')
+            ->andWhere('decision.isActive = true')
+            ->andWhere('decision.type = :type')
+            ->andWhere('commitment.variant = :variant')
+            ->setParameter('type', InventoryShortageDecisionType::WAIT_FOR_PURCHASE)
+            ->setParameter('variant', $variant)
+            ->orderBy('commitment.createdAt', 'ASC')
+            ->addOrderBy('commitment.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $decisions;
+    }
+
+    /** @param list<InventoryCommitment> $commitments @return array<int, InventoryShortageDecision> */
+    public function findActiveForCommitments(array $commitments): array
+    {
+        if ($commitments === []) {
+            return [];
+        }
+
+        /** @var list<InventoryShortageDecision> $decisions */
+        $decisions = $this->createQueryBuilder('decision')
+            ->andWhere('decision.isActive = true')
+            ->andWhere('decision.commitment IN (:commitments)')
+            ->setParameter('commitments', $commitments)
+            ->getQuery()
+            ->getResult();
+
+        $byCommitment = [];
+        foreach ($decisions as $decision) {
+            $commitmentId = $decision->getCommitment()->getId();
+            if ($commitmentId !== null) {
+                $byCommitment[$commitmentId] = $decision;
+            }
+        }
+
+        return $byCommitment;
+    }
+
     public function countActiveWaiting(): int
     {
         return (int) $this->createQueryBuilder('decision')

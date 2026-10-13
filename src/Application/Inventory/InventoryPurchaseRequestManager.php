@@ -6,9 +6,11 @@ namespace App\Application\Inventory;
 
 use App\Entity\Inventory\InventoryPurchaseRequest;
 use App\Entity\Inventory\InventoryPurchaseRequestLine;
+use App\Entity\Inventory\InventoryPurchaseRequestLineDemand;
 use App\Entity\Users\User;
 use App\Repository\Inventory\InventoryPurchaseRequestLineRepository;
 use App\Repository\Inventory\InventoryPurchaseRequestRepository;
+use App\Repository\Inventory\InventoryShortageDecisionRepository;
 use App\Service\Audit\AuditLogger;
 use Brick\Math\BigDecimal;
 use Doctrine\DBAL\LockMode;
@@ -21,6 +23,7 @@ final class InventoryPurchaseRequestManager
         private readonly EntityManagerInterface $entityManager,
         private readonly InventoryPurchaseRequestRepository $requestRepository,
         private readonly InventoryPurchaseRequestLineRepository $lineRepository,
+        private readonly InventoryShortageDecisionRepository $decisionRepository,
         private readonly AuditLogger $auditLogger,
     ) {
     }
@@ -65,6 +68,7 @@ final class InventoryPurchaseRequestManager
                 $line = new InventoryPurchaseRequestLine($request, $position + 1, $input->variant, $input->quantity, $input->supplierOffer);
                 $request->addLine($line);
                 $this->entityManager->persist($line);
+                $this->linkWaitingOrderDemand($line);
             }
             $this->entityManager->flush();
 
@@ -107,6 +111,27 @@ final class InventoryPurchaseRequestManager
     {
         if ($request->getCommandFingerprint() !== $fingerprint) {
             throw new \DomainException('La clave de idempotencia ya se utilizó para una solicitud de compra con datos distintos.');
+        }
+    }
+
+    /** Records the waiting order shortages that the new line was prepared to cover. */
+    private function linkWaitingOrderDemand(InventoryPurchaseRequestLine $line): void
+    {
+        $remainingQuantity = BigDecimal::of($line->getRequestedQuantity());
+        foreach ($this->decisionRepository->findActiveWaitingForVariant($line->getVariant()) as $decision) {
+            if ($remainingQuantity->isZero()) {
+                break;
+            }
+            $commitment = $decision->getCommitment();
+            $shortage = BigDecimal::of($commitment->getShortageQuantity());
+            if ($shortage->isZero()) {
+                continue;
+            }
+            $plannedQuantity = $shortage->isLessThan($remainingQuantity) ? $shortage : $remainingQuantity;
+            $demand = new InventoryPurchaseRequestLineDemand($line, $commitment, $plannedQuantity->toScale(6)->__toString());
+            $line->addDemand($demand);
+            $this->entityManager->persist($demand);
+            $remainingQuantity = $remainingQuantity->minus($plannedQuantity);
         }
     }
 

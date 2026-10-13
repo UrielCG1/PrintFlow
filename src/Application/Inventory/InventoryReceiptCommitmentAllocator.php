@@ -11,6 +11,7 @@ use App\Entity\Users\User;
 use App\Enum\Inventory\MovementType;
 use App\Repository\Inventory\InventoryCommitmentRepository;
 use App\Repository\Inventory\MaterialVariantCostRepository;
+use App\Repository\Inventory\InventoryShortageDecisionRepository;
 use Brick\Math\BigDecimal;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -21,6 +22,7 @@ final class InventoryReceiptCommitmentAllocator
         private readonly EntityManagerInterface $entityManager,
         private readonly MaterialVariantCostRepository $balanceRepository,
         private readonly InventoryCommitmentRepository $commitmentRepository,
+        private readonly InventoryShortageDecisionRepository $decisionRepository,
     ) {
     }
 
@@ -46,6 +48,9 @@ final class InventoryReceiptCommitmentAllocator
             $quantity = $allocated->toScale(6)->__toString();
             $commitment->coverShortageQuantity($quantity);
             $balance->commit($quantity);
+            if (BigDecimal::of($commitment->getShortageQuantity())->isZero()) {
+                $this->decisionRepository->findActiveForCommitmentForUpdate($commitment)?->supersede();
+            }
             $this->entityManager->persist((new InventoryMovement(
                 $variant,
                 $variant->getInventoryUnit(),

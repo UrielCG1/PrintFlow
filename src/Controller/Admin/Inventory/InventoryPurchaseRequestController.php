@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Controller\Admin\Inventory;
 
 use App\Application\Inventory\InventoryPurchaseRequestCommand;
+use App\Application\Inventory\InventoryPurchaseRequestDemandReview;
+use App\Application\Inventory\InventoryPurchaseRequestDemandReviewService;
 use App\Application\Inventory\InventoryPurchaseRequestLineInput;
 use App\Application\Inventory\InventoryPurchaseRequestManager;
 use App\Entity\Inventory\InventoryPurchaseRequest;
@@ -21,12 +23,21 @@ use Symfony\Component\Routing\Attribute\Route;
 final class InventoryPurchaseRequestController extends AbstractController
 {
     #[Route('', name: 'index', methods: ['GET'])]
-    public function index(InventoryPurchaseRequestRepository $purchaseRequestRepository): Response
+    public function index(
+        InventoryPurchaseRequestRepository $purchaseRequestRepository,
+        InventoryPurchaseRequestDemandReviewService $demandReviewService,
+    ): Response
     {
         $this->denyAccessUnlessGranted('inventory.configure');
+        $requests = $purchaseRequestRepository->findOpen();
+        $demandReviewCounts = [];
+        foreach ($demandReviewService->reviewMany($requests) as $requestId => $reviews) {
+            $demandReviewCounts[$requestId] = count(array_filter($reviews, static fn (InventoryPurchaseRequestDemandReview $review): bool => $review->requiresReview));
+        }
 
         return $this->render('admin/inventory/purchase_requests/index.html.twig', [
-            'requests' => $purchaseRequestRepository->findOpen(),
+            'requests' => $requests,
+            'demandReviewCounts' => $demandReviewCounts,
         ]);
     }
 
@@ -78,12 +89,18 @@ final class InventoryPurchaseRequestController extends AbstractController
     }
 
     #[Route('/{id}', name: 'show', requirements: ['id' => '\\d+'], methods: ['GET'])]
-    public function show(InventoryPurchaseRequest $purchaseRequest): Response
+    public function show(
+        InventoryPurchaseRequest $purchaseRequest,
+        InventoryPurchaseRequestDemandReviewService $demandReviewService,
+    ): Response
     {
         $this->denyAccessUnlessGranted('inventory.configure');
+        $demandReviews = $demandReviewService->review($purchaseRequest);
 
         return $this->render('admin/inventory/purchase_requests/show.html.twig', [
             'purchaseRequest' => $purchaseRequest,
+            'demandReviews' => $demandReviews,
+            'demandReviewCount' => count(array_filter($demandReviews, static fn (InventoryPurchaseRequestDemandReview $review): bool => $review->requiresReview)),
         ]);
     }
 

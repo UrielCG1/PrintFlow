@@ -8,6 +8,8 @@ use App\Entity\Materials\MaterialVariant;
 use App\Entity\Suppliers\SupplierMaterialVariant;
 use App\Repository\Inventory\InventoryPurchaseRequestLineRepository;
 use Brick\Math\BigDecimal;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -46,6 +48,10 @@ class InventoryPurchaseRequestLine
     #[ORM\Column(name: 'created_at', type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
+    /** @var Collection<int, InventoryPurchaseRequestLineDemand> */
+    #[ORM\OneToMany(mappedBy: 'purchaseRequestLine', targetEntity: InventoryPurchaseRequestLineDemand::class, cascade: ['persist'])]
+    private Collection $demands;
+
     public function __construct(
         InventoryPurchaseRequest $purchaseRequest,
         int $lineNumber,
@@ -66,6 +72,7 @@ class InventoryPurchaseRequestLine
         $this->supplierOffer = $supplierOffer;
         $this->requestedQuantity = self::positiveDecimal($requestedQuantity, 'La cantidad solicitada');
         $this->createdAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+        $this->demands = new ArrayCollection();
     }
 
     public function getId(): ?int { return $this->id; }
@@ -76,6 +83,24 @@ class InventoryPurchaseRequestLine
     public function getReceivedQuantity(): string { return $this->receivedQuantity; }
     public function getRemainingQuantity(): string { return BigDecimal::of($this->requestedQuantity)->minus($this->receivedQuantity)->toScale(6)->__toString(); }
     public function isFullyReceived(): bool { return BigDecimal::of($this->getRemainingQuantity())->isZero(); }
+    /** @return Collection<int, InventoryPurchaseRequestLineDemand> */
+    public function getDemands(): Collection { return $this->demands; }
+
+    public function addDemand(InventoryPurchaseRequestLineDemand $demand): void
+    {
+        if ($demand->getPurchaseRequestLine() !== $this) {
+            throw new \DomainException('La demanda debe pertenecer a la misma partida de compra.');
+        }
+        if ($demand->getCommitment()->getVariant() !== $this->variant) {
+            throw new \DomainException('La demanda de la orden debe corresponder al mismo material solicitado.');
+        }
+        foreach ($this->demands as $existing) {
+            if ($existing->getCommitment() === $demand->getCommitment()) {
+                throw new \DomainException('La misma demanda de orden no puede vincularse dos veces a una partida de compra.');
+            }
+        }
+        $this->demands->add($demand);
+    }
 
     public function recordPhysicalReceipt(MaterialVariant $variant, string $quantity): void
     {
