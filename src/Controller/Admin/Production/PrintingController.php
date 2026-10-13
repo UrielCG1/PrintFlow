@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin\Production;
 
+use App\Application\Inventory\InventoryPrintingMaterialResolver;
 use App\Application\Production\PrintingManager;
 use App\Application\Production\ProductionExecutionCommand;
 use App\Entity\Equipment\Equipment;
@@ -100,6 +101,7 @@ final class PrintingController extends AbstractController
     public function show(
         ServiceOrderOperationPlan $plan,
         PrintingManager $printingManager,
+        InventoryPrintingMaterialResolver $printingMaterialResolver,
         EquipmentRepository $equipmentRepository,
         MaterialVariantRepository $materialVariantRepository,
         ServiceOrderItemDesignReleaseRepository $releaseRepository,
@@ -135,6 +137,7 @@ final class PrintingController extends AbstractController
             'output' => $output,
             'outputQrSvg' => $output !== null ? $labelRenderer->renderQrSvg($output) : null,
             'materialUsages' => $usageRepository->findForPlan($plan),
+            'allowedMaterialVariants' => $printingMaterialResolver->allowedVariantsForPlan($plan),
             'equipmentChoices' => $equipmentRepository->findAvailableForFutureExecution($plan->getOperation()),
             'materialChoices' => $materialVariantRepository->findActiveConsumable(),
             'canConfigure' => $this->isGranted('production.assign'),
@@ -180,7 +183,8 @@ final class PrintingController extends AbstractController
             if ($request->request->getString('capture_mode') === 'MANUAL' && !$this->isGranted('production.substitution.approve')) {
                 throw new \DomainException('La captura manual solo puede ser autorizada por el jefe de Producción o Administrador.');
             }
-            $result = $manager->validateScans($plan, $request->request->getString('equipment_code'), $request->request->getString('material_barcode'), $this->authenticatedUser());
+            $materialQrPayload = $request->request->getString('material_qr_payload') ?: $request->request->getString('material_barcode');
+            $result = $manager->validateScans($plan, $request->request->getString('equipment_code'), $materialQrPayload, $this->authenticatedUser());
             $this->addFlash($result->accepted ? 'success' : 'error', $result->message);
         } catch (\DomainException|\InvalidArgumentException $exception) {
             $this->addFlash('error', $exception->getMessage());

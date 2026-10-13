@@ -51,6 +51,9 @@
                     <div><dt><i class="bi bi-layers" aria-hidden="true"></i>Material</dt><dd>{{ plan.materialVariant ? plan.materialVariant.material.name : 'Pendiente de configurar' }}{% if plan.materialVariant %}<small>{{ plan.materialVariant.code }}</small>{% endif %}</dd></div>
                     <div><dt><i class="bi bi-box-seam" aria-hidden="true"></i>Cantidad a producir</dt><dd>{{ item.quantity|number_format(6, '.', ',')|trim('0', 'right')|trim('.', 'right') }} {{ item.commercialItemSnapshot.measurement_unit.code|default('') }}</dd></div>
                 </dl>
+                {% if allowedMaterialVariants is not empty %}
+                    <div class="printing-callout printing-callout--success"><i class="bi bi-qr-code-scan" aria-hidden="true"></i><p><strong>Material autorizado para etiqueta QR.</strong><span>{% for material in allowedMaterialVariants %}{{ material.material.name }} · {{ material.code }}{{ not loop.last ? ' / ' : '' }}{% endfor %}</span></p></div>
+                {% endif %}
                 {% if canConfigure and not activeExecution and not plan.hasCompletedExecution %}
                     <details class="printing-configure-details">
                         <summary><i class="bi bi-sliders" aria-hidden="true"></i>Ajustar requerimientos</summary>
@@ -82,11 +85,12 @@
                         <input type="hidden" name="capture_mode" value="SCANNER" data-ui--printing-scanner-target="mode">
                         <div class="printing-scan-fields">
                             <div><label class="form-label" for="scan-equipment">Código de máquina <span>*</span></label><div class="input-group"><input id="scan-equipment" name="equipment_code" class="form-control" placeholder="Escanea o ingresa el código" maxlength="40" required autocomplete="off" data-ui--printing-scanner-target="equipment"><button class="btn printing-scan-camera" type="button" aria-label="Usar cámara para máquina" data-ui--printing-scanner-target="cameraButton" data-action="ui--printing-scanner#scanEquipment"><i class="bi bi-upc-scan" aria-hidden="true"></i></button></div></div>
-                            <div><label class="form-label" for="scan-material">Código de material <span>*</span></label><div class="input-group"><input id="scan-material" name="material_barcode" class="form-control" placeholder="Escanea o ingresa el código" maxlength="80" required autocomplete="off" data-ui--printing-scanner-target="material"><button class="btn printing-scan-camera" type="button" aria-label="Usar cámara para material" data-ui--printing-scanner-target="cameraButton" data-action="ui--printing-scanner#scanMaterial"><i class="bi bi-upc-scan" aria-hidden="true"></i></button></div></div>
+                            <div><label class="form-label" for="scan-material">Etiqueta QR de unidad física <span>*</span></label><div class="input-group"><input id="scan-material" name="material_qr_payload" class="form-control" placeholder="Escanea el QR del rollo, envase o paquete" maxlength="80" required autocomplete="off" data-ui--printing-scanner-target="material"><button class="btn printing-scan-camera" type="button" aria-label="Usar cámara para etiqueta QR" data-ui--printing-scanner-target="cameraButton" data-action="ui--printing-scanner#scanMaterial"><i class="bi bi-upc-scan" aria-hidden="true"></i></button></div></div>
                         </div>
                         <p class="printing-scan-message" data-ui--printing-scanner-target="message" aria-live="polite"></p>
+                        <p class="printing-form-hint">Escanea la etiqueta QR de la unidad fÃ­sica; debe conservar saldo disponible.</p>
                         <button class="btn pf-button pf-button--primary printing-wide-button" type="submit"><i class="bi bi-upc-scan" aria-hidden="true"></i>Validar escaneos</button>
-                        <p class="printing-form-hint">La captura manual requiere autorización del jefe de Producción.</p>
+                        <p class="printing-form-hint">La etiqueta debe pertenecer a una unidad con saldo disponible. La captura manual requiere autorización del jefe de Producción.</p>
                     </form>
                 {% elseif currentScan and currentScan.available %}
                     <div class="printing-callout printing-callout--success"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><p><strong>Máquina y material validados.</strong><span>Validación {{ currentScan.validatedAt|date('d/m/Y H:i', 'America/Mexico_City') }}.</span></p></div>

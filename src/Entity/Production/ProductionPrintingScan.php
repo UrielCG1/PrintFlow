@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace App\Entity\Production;
 
 use App\Entity\Equipment\Equipment;
+use App\Entity\Inventory\InventoryStockUnit;
 use App\Entity\Materials\MaterialVariant;
 use App\Entity\Orders\ServiceOrderOperationPlan;
 use App\Entity\Users\User;
-use AppRepository\Production\ProductionPrintingScanRepository;
+use App\Repository\Production\ProductionPrintingScanRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-/** Evidencia de una validación de máquina y material anterior a Impresión. */
+/** Immutable evidence of the machine and physical material unit validated before printing. */
 #[ORM\Entity(repositoryClass: ProductionPrintingScanRepository::class)]
 #[ORM\Table(name: 'production_printing_scans')]
 #[ORM\UniqueConstraint(name: 'uniq_printing_scan_plan_current', columns: ['operation_plan_id', 'current_marker'])]
@@ -39,14 +40,19 @@ class ProductionPrintingScan
     private MaterialVariant $materialVariant;
 
     #[ORM\ManyToOne]
+    #[ORM\JoinColumn(name: 'stock_unit_id', nullable: true, onDelete: 'RESTRICT')]
+    private ?InventoryStockUnit $stockUnit = null;
+
+    #[ORM\ManyToOne]
     #[ORM\JoinColumn(name: 'operator_user_id', nullable: false, onDelete: 'RESTRICT')]
     private User $operator;
 
     #[ORM\Column(name: 'equipment_code', length: 40)]
     private string $equipmentCode;
 
+    // The persisted column keeps its original name for backward compatibility.
     #[ORM\Column(name: 'material_barcode', length: 80)]
-    private string $materialBarcode;
+    private string $materialQrPayload;
 
     /** @var array<string, mixed> */
     #[ORM\Column(name: 'requirements_snapshot', type: Types::JSON)]
@@ -72,21 +78,18 @@ class ProductionPrintingScan
         ServiceOrderOperationPlan $plan,
         ServiceOrderItemDesignRelease $designRelease,
         Equipment $equipment,
-        MaterialVariant $materialVariant,
+        InventoryStockUnit $stockUnit,
         User $operator,
         array $requirementsSnapshot,
     ) {
         $this->plan = $plan;
         $this->designRelease = $designRelease;
         $this->equipment = $equipment;
-        $this->materialVariant = $materialVariant;
+        $this->stockUnit = $stockUnit;
+        $this->materialVariant = $stockUnit->getVariant();
         $this->operator = $operator;
         $this->equipmentCode = $equipment->getCode();
-        $barcode = $materialVariant->getBarcode();
-        if ($barcode === null) {
-            throw new \DomainException('El material validado no tiene código de barras.');
-        }
-        $this->materialBarcode = $barcode;
+        $this->materialQrPayload = $stockUnit->getQrPayload();
         $this->requirementsSnapshot = $requirementsSnapshot;
         $this->scanToken = bin2hex(random_bytes(24));
         $this->validatedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
@@ -97,10 +100,19 @@ class ProductionPrintingScan
     public function getDesignRelease(): ServiceOrderItemDesignRelease { return $this->designRelease; }
     public function getEquipment(): Equipment { return $this->equipment; }
     public function getMaterialVariant(): MaterialVariant { return $this->materialVariant; }
+    public function getStockUnit(): ?InventoryStockUnit { return $this->stockUnit; }
+    public function getMaterialQrPayload(): string { return $this->materialQrPayload; }
     public function getOperator(): User { return $this->operator; }
     public function getScanToken(): string { return $this->scanToken; }
     public function getValidatedAt(): \DateTimeImmutable { return $this->validatedAt; }
-    public function isAvailable(): bool { return $this->currentMarker !== null && $this->consumedAt === null && $this->invalidatedAt === null; }
+
+    public function isAvailable(): bool
+    {
+        return $this->currentMarker !== null
+            && $this->consumedAt === null
+            && $this->invalidatedAt === null
+            && $this->stockUnit?->isAvailable() === true;
+    }
 
     public function consume(User $operator): void
     {

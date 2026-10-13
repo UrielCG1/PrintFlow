@@ -1,7 +1,7 @@
 # PrintFlow — estrategia de implementación del módulo de inventario
 
-**Fecha:** 11 de octubre de 2026.  
-**Estado:** Etapa 1 en implementación. Ya existen el diagnóstico de catálogo, las entidades transaccionales de recepción y unidades físicas, el registro operativo de una unidad por vez, la consulta de inventario físico, el conteo inicial controlado, la configuración de mínimos por variante y sus avisos, los permisos de Administración/Producción y la plantilla de etiqueta; faltan activar la librería QR, lotes configurables y ejecutar el conteo físico autorizado antes de operar con saldos reales.  
+**Fecha:** 12 de octubre de 2026.
+**Estado:** Implementados en código: diagnóstico de catálogo, unidades físicas y recepciones, conteo inicial, mínimos y avisos, compromisos de órdenes, decisiones ante faltantes, sustituciones autorizadas, etiquetas QR y validación de la unidad física por QR en Impresión. La fase de QR requiere ejecutar las migraciones pendientes hasta `Version20261011240000`; el consumo físico, sobrantes, conciliación de compromisos, reabasto y reportes siguen como etapas operativas pendientes.
 **Objetivo:** saber cuánto material existe, cuánto está comprometido, cuánto queda disponible y qué hace falta comprar; verificar mediante QR que Impresión utiliza el material correcto para cada orden.
 
 **Alcance general:** esta estrategia cubre todos los materiales existentes en la base y los que se den de alta posteriormente. Existencias, compromisos, mínimos, avisos, resolución de faltantes con sustitutos o espera de compra, autorización de producción parcial, QR y sobrantes se aplican a cada material controlado, según su variante y configuración. La lona identificada en las consultas es un caso de diagnóstico del estado actual; no define una lista exclusiva de materiales para el módulo.

@@ -18,6 +18,11 @@ final class InventoryStockUnitRepository extends ServiceEntityRepository
         parent::__construct($registry, InventoryStockUnit::class);
     }
 
+    public function findOneByQrToken(string $qrToken): ?InventoryStockUnit
+    {
+        return $this->findOneBy(['qrToken' => strtolower(trim($qrToken))]);
+    }
+
     public function paginateForInventory(
         ?string $search,
         ?InventoryStockUnitStatus $status,

@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Application\Production;
 
+use App\Application\Inventory\InventoryPrintingMaterialResolver;
+use App\Application\Inventory\InventoryStockUnitQrResolver;
 use App\Entity\Equipment\Equipment;
+use App\Entity\Inventory\InventoryStockUnit;
 use App\Entity\Materials\MaterialVariant;
 use App\Entity\Orders\ServiceOrder;
 use App\Entity\Orders\ServiceOrderItem;
@@ -43,6 +46,8 @@ final class PrintingManager
         private readonly ProductionExecutionManager $executionManager,
         private readonly ServiceOrderTraceabilityRecorder $traceabilityRecorder,
         private readonly AuditLogger $auditLogger,
+        private readonly InventoryStockUnitQrResolver $stockUnitQrResolver,
+        private readonly InventoryPrintingMaterialResolver $printingMaterialResolver,
     ) {
     }
 
@@ -100,10 +105,10 @@ final class PrintingManager
     public function validateScans(
         ServiceOrderOperationPlan $plan,
         string $equipmentCode,
-        string $materialBarcode,
+        string $materialQrPayload,
         User $actor,
     ): PrintingScanResult {
-        return $this->entityManager->wrapInTransaction(function () use ($plan, $equipmentCode, $materialBarcode, $actor): PrintingScanResult {
+        return $this->entityManager->wrapInTransaction(function () use ($plan, $equipmentCode, $materialQrPayload, $actor): PrintingScanResult {
             $order = $plan->getServiceOrderItem()->getServiceOrder();
             $this->lock($order, $plan);
             $this->assertPrintingPlan($plan);
@@ -111,13 +116,19 @@ final class PrintingManager
             $this->assertReadyForPrint($order, $plan);
 
             $equipmentCode = strtoupper(trim($equipmentCode));
-            $materialBarcode = strtoupper(trim($materialBarcode));
+            $materialQrPayload = trim($materialQrPayload);
             $equipment = $this->equipmentRepository->findAvailableByCode($equipmentCode);
-            $material = $this->materialVariantRepository->findActiveByBarcode($materialBarcode);
             $expectedEquipment = $plan->getEquipment();
-            $expectedMaterial = $plan->getMaterialVariant();
+            $allowedMaterials = $this->printingMaterialResolver->allowedVariantsForPlan($plan);
             $release = $this->releaseRepository->findCurrentForUpdate($plan->getServiceOrderItem());
-            $message = $this->scanMismatch($expectedEquipment, $expectedMaterial, $equipment, $material, $release);
+            try {
+                $stockUnit = $this->stockUnitQrResolver->resolve($materialQrPayload);
+                $resolutionError = null;
+            } catch (\DomainException $exception) {
+                $stockUnit = null;
+                $resolutionError = $exception->getMessage();
+            }
+            $message = $resolutionError ?? $this->scanMismatch($expectedEquipment, $allowedMaterials, $equipment, $stockUnit, $release);
             if ($message !== null) {
                 $this->traceabilityRecorder->record(
                     $order,
@@ -129,7 +140,7 @@ final class PrintingManager
                     $plan,
                     null,
                     $message,
-                    ['equipment_code' => $equipmentCode, 'material_barcode' => $materialBarcode],
+                    ['equipment_code' => $equipmentCode, 'stock_unit_code' => $stockUnit?->getUnitCode()],
                 );
                 $this->auditLogger->record($actor, 'printing.scan_rejected', 'service_order_operation_plan', $plan->getId(), null, ['reason' => $message]);
                 $this->entityManager->flush();
@@ -143,9 +154,9 @@ final class PrintingManager
                 $plan,
                 $release,
                 $equipment,
-                $material,
+                $stockUnit,
                 $actor,
-                $this->scanRequirementsSnapshot($plan, $release, $equipment, $material),
+                $this->scanRequirementsSnapshot($plan, $release, $equipment, $stockUnit, $allowedMaterials),
             );
             $this->entityManager->persist($scan);
             $order->touchTraceability();
@@ -161,7 +172,7 @@ final class PrintingManager
                 null,
                 ['scan_id' => $scan->getId(), 'design_release_version' => $release->getVersionNumber()],
             );
-            $this->auditLogger->record($actor, 'printing.scans_validated', 'service_order_operation_plan', $plan->getId(), null, ['equipment_id' => $equipment->getId(), 'material_variant_id' => $material->getId()]);
+            $this->auditLogger->record($actor, 'printing.scans_validated', 'service_order_operation_plan', $plan->getId(), null, ['equipment_id' => $equipment->getId(), 'material_variant_id' => $stockUnit->getVariant()->getId(), 'stock_unit_id' => $stockUnit->getId()]);
             $this->entityManager->flush();
 
             return new PrintingScanResult(true, 'Máquina y material validados. Ya puedes iniciar la impresión.', $scan);
@@ -392,14 +403,15 @@ final class PrintingManager
 
     private function assertMaterialUsable(MaterialVariant $material): void
     {
-        if (!$material->isActive() || !$material->isConsumable() || $material->getBarcode() === null || !$material->getConsumptionUnit()->isActive()) {
-            throw new \DomainException('El material debe estar activo, ser consumible y tener código de barras y unidad vigentes.');
+        if (!$material->isActive() || !$material->isConsumable() || !$material->getConsumptionUnit()->isActive()) {
+            throw new \DomainException('El material debe estar activo, ser consumible y tener una unidad de consumo vigente.');
         }
     }
 
-    private function scanMismatch(?Equipment $expectedEquipment, ?MaterialVariant $expectedMaterial, ?Equipment $scannedEquipment, ?MaterialVariant $scannedMaterial, ?ServiceOrderItemDesignRelease $release): ?string
+    /** @param list<MaterialVariant> $allowedMaterials */
+    private function scanMismatch(?Equipment $expectedEquipment, array $allowedMaterials, ?Equipment $scannedEquipment, ?InventoryStockUnit $scannedStockUnit, ?ServiceOrderItemDesignRelease $release): ?string
     {
-        if (!$expectedEquipment instanceof Equipment || !$expectedMaterial instanceof MaterialVariant) {
+        if (!$expectedEquipment instanceof Equipment || $allowedMaterials === []) {
             return 'Faltan la máquina o el material previstos. Pide al jefe o Administrador configurar los requisitos técnicos.';
         }
         if (!$release instanceof ServiceOrderItemDesignRelease) {
@@ -408,13 +420,13 @@ final class PrintingManager
         if (!$scannedEquipment instanceof Equipment) {
             return 'La máquina escaneada no existe, está inactiva o no está disponible.';
         }
-        if (!$scannedMaterial instanceof MaterialVariant) {
+        if (!$scannedStockUnit instanceof InventoryStockUnit) {
             return 'El material escaneado no existe, está inactivo o no es consumible.';
         }
         if ($scannedEquipment->getId() !== $expectedEquipment->getId()) {
             return 'La máquina escaneada no coincide con la planificada. Solicita una sustitución técnica autorizada.';
         }
-        if ($scannedMaterial->getId() !== $expectedMaterial->getId()) {
+        if (!$this->containsVariant($allowedMaterials, $scannedStockUnit->getVariant())) {
             return 'El material escaneado no coincide con el previsto. Solicita una sustitución técnica autorizada.';
         }
         return null;
@@ -426,7 +438,8 @@ final class PrintingManager
             && $this->sameUser($scan->getOperator(), $actor)
             && $scan->getDesignRelease()->getId() === $release->getId()
             && $scan->getEquipment()->getId() === $plan->getEquipment()?->getId()
-            && $scan->getMaterialVariant()->getId() === $plan->getMaterialVariant()?->getId();
+            && $scan->getStockUnit() instanceof InventoryStockUnit
+            && $this->printingMaterialResolver->isVariantAllowedForPlan($plan, $scan->getMaterialVariant());
     }
 
     private function lock(ServiceOrder $order, ServiceOrderOperationPlan $plan): void
@@ -448,9 +461,10 @@ final class PrintingManager
     }
 
     /** @return array<string, mixed> */
-    private function scanRequirementsSnapshot(ServiceOrderOperationPlan $plan, ServiceOrderItemDesignRelease $release, Equipment $equipment, MaterialVariant $material): array
+    /** @param list<MaterialVariant> $allowedMaterials */
+    private function scanRequirementsSnapshot(ServiceOrderOperationPlan $plan, ServiceOrderItemDesignRelease $release, Equipment $equipment, InventoryStockUnit $stockUnit, array $allowedMaterials): array
     {
-        return ['plan_id' => $plan->getId(), 'equipment' => $this->equipmentSnapshot($equipment), 'material' => $this->materialSnapshot($material), 'design_release_id' => $release->getId(), 'design_release_version' => $release->getVersionNumber()];
+        return ['plan_id' => $plan->getId(), 'equipment' => $this->equipmentSnapshot($equipment), 'material' => $this->materialSnapshot($stockUnit->getVariant()), 'allowed_material_variant_ids' => array_values(array_filter(array_map(static fn (MaterialVariant $variant): ?int => $variant->getId(), $allowedMaterials))), 'stock_unit' => ['id' => $stockUnit->getId(), 'code' => $stockUnit->getUnitCode(), 'remaining_quantity' => $stockUnit->getRemainingQuantity(), 'unit' => $stockUnit->getVariant()->getInventoryUnit()->getCode()], 'design_release_id' => $release->getId(), 'design_release_version' => $release->getVersionNumber()];
     }
 
     /** @return array<string, mixed> */
@@ -462,5 +476,17 @@ final class PrintingManager
     private function sameUser(User $left, User $right): bool
     {
         return $left === $right || ($left->getId() !== null && $left->getId() === $right->getId());
+    }
+
+    /** @param list<MaterialVariant> $variants */
+    private function containsVariant(array $variants, MaterialVariant $candidate): bool
+    {
+        foreach ($variants as $variant) {
+            if ($variant === $candidate || ($variant->getId() !== null && $variant->getId() === $candidate->getId())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
