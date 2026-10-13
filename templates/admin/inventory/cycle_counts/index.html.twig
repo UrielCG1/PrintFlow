@@ -1,0 +1,109 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Conteo cíclico | OoxCorp{% endblock %}
+{% block app_navigation_active %}inventory{% endblock %}
+{% block app_breadcrumb %}Operación / Inventario / Conteo cíclico{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page__content">
+        <div class="pf-page-header">
+            <div class="pf-page-header__content">
+                <h1 class="pf-page-header__title">Conteo cíclico por QR</h1>
+                <p class="pf-page-header__description">Escanea una unidad física, registra su saldo real y conserva la diferencia para revisión antes de ajustar existencias.</p>
+            </div>
+            <div class="pf-page-header__actions">
+                <a href="{{ path('admin_inventory_receipts_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-box-seam" aria-hidden="true"></i><span>Inventario físico</span></a>
+            </div>
+        </div>
+
+        {% if canCapture %}
+            <section class="pf-card mb-4" aria-labelledby="cycle-count-capture-title">
+                <div class="pf-card__body">
+                    <h2 id="cycle-count-capture-title" class="h5 mb-2">Registrar lectura</h2>
+                    <p class="text-body-secondary small mb-3">Usa el lector USB o pega el contenido del QR. El sistema toma una fotografía del saldo actual; Administración aplicará la diferencia solo si no hubo movimientos posteriores.</p>
+                    <form method="post" action="{{ path('admin_inventory_cycle_counts_capture') }}" class="pf-form row g-3 align-items-end">
+                        <input type="hidden" name="_token" value="{{ csrf_token('inventory_cycle_count_capture') }}">
+                        <input type="hidden" name="idempotency_key" value="{{ idempotencyKey }}">
+                        <div class="col-lg-5 pf-form-field">
+                            <label for="cycle-count-qr" class="form-label">Etiqueta QR de la unidad</label>
+                            <input id="cycle-count-qr" name="qr_payload" class="form-control" autocomplete="off" autofocus required placeholder="Escanea PF:MAT:1:...">
+                        </div>
+                        <div class="col-lg-3 pf-form-field">
+                            <label for="cycle-count-quantity" class="form-label">Saldo contado</label>
+                            <input id="cycle-count-quantity" name="counted_quantity" class="form-control" inputmode="decimal" required placeholder="0.000000">
+                        </div>
+                        <div class="col-lg-4 pf-form-field">
+                            <label for="cycle-count-note" class="form-label">Observación <span class="text-body-secondary">(opcional)</span></label>
+                            <input id="cycle-count-note" name="note" class="form-control" maxlength="500" placeholder="Ej. envase abierto, medición por peso">
+                        </div>
+                        <div class="col-12"><button type="submit" class="btn pf-button pf-button--primary"><i class="bi bi-upc-scan" aria-hidden="true"></i><span>Enviar conteo a revisión</span></button></div>
+                    </form>
+                </div>
+            </section>
+        {% endif %}
+
+        {% if canReview %}
+            <section class="pf-card mb-4" aria-labelledby="cycle-count-pending-title">
+                <div class="pf-card__body p-0">
+                    <div class="px-4 pt-4"><h2 id="cycle-count-pending-title" class="h5 mb-1">Pendientes de revisión</h2><p class="text-body-secondary small mb-3">Confirma la diferencia con un motivo. Si el saldo cambió desde la lectura, se solicitará reconteo sin sobrescribir el movimiento posterior.</p></div>
+                    <div class="table-responsive">
+                        <table class="table pf-table mb-0">
+                            <thead><tr><th>Unidad / material</th><th>Registró</th><th>Lectura</th><th>Contado</th><th>Diferencia</th><th>Revisión</th></tr></thead>
+                            <tbody>
+                                {% for cycleCount in pendingCounts %}
+                                    <tr>
+                                        <td><strong class="pf-table__primary">{{ cycleCount.stockUnit.unitCode }}</strong><div class="small text-body-secondary">{{ cycleCount.variant.material.name }} · {{ cycleCount.variant.code }}</div></td>
+                                        <td>{{ cycleCount.requestedBy.fullName }}<div class="small text-body-secondary">{{ cycleCount.countedAt|date('d/m/Y H:i', 'America/Mexico_City') }}</div></td>
+                                        <td class="pf-table__cell--right">{{ cycleCount.expectedQuantity|number_format(6, '.', ',') }} {{ cycleCount.variant.inventoryUnit.symbol }}</td>
+                                        <td class="pf-table__cell--right">{{ cycleCount.countedQuantity|number_format(6, '.', ',') }} {{ cycleCount.variant.inventoryUnit.symbol }}</td>
+                                        <td class="pf-table__cell--right {{ cycleCount.differenceQuantity starts with '-' ? 'text-danger' : (cycleCount.differenceQuantity == '0.000000' ? 'text-body-secondary' : 'text-success') }}">{{ cycleCount.differenceQuantity|number_format(6, '.', ',') }}{% if cycleCount.note %}<div class="small text-body-secondary">{{ cycleCount.note }}</div>{% endif %}</td>
+                                        <td>
+                                            <form method="post" action="{{ path('admin_inventory_cycle_counts_approve', {id: cycleCount.id}) }}" class="d-grid gap-2 mb-2">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('inventory_cycle_count_approve_' ~ cycleCount.id) }}">
+                                                <input name="review_note" class="form-control form-control-sm" maxlength="500" {% if cycleCount.differenceQuantity != '0.000000' %}required{% endif %} placeholder="{{ cycleCount.differenceQuantity != '0.000000' ? 'Motivo del ajuste' : 'Nota de revisión (opcional)' }}">
+                                                <button class="btn pf-button pf-button--primary pf-button--sm" type="submit">Confirmar</button>
+                                            </form>
+                                            <form method="post" action="{{ path('admin_inventory_cycle_counts_reject', {id: cycleCount.id}) }}" class="d-flex gap-2">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('inventory_cycle_count_reject_' ~ cycleCount.id) }}">
+                                                <input name="review_note" class="form-control form-control-sm" maxlength="500" required placeholder="Motivo del rechazo">
+                                                <button class="btn pf-button pf-button--secondary pf-button--sm" type="submit">Rechazar</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% else %}
+                                    <tr><td colspan="6" class="pf-table__empty">No hay conteos pendientes de revisión.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        {% endif %}
+
+        <section class="pf-card" aria-labelledby="cycle-count-history-title">
+            <div class="pf-card__body p-0">
+                <div class="px-4 pt-4"><h2 id="cycle-count-history-title" class="h5 mb-3">{{ canReview ? 'Actividad reciente' : 'Mis conteos recientes' }}</h2></div>
+                <div class="table-responsive">
+                    <table class="table pf-table mb-0">
+                        <thead><tr><th>Unidad</th><th>Material</th><th>Saldo contado</th><th>Diferencia</th><th>Estado</th><th>Fecha</th></tr></thead>
+                        <tbody>
+                            {% for cycleCount in recentCounts %}
+                                {% set statusClass = {'PENDING_REVIEW': 'warning', 'APPROVED': 'success', 'REJECTED': 'danger', 'STALE': 'secondary'}[cycleCount.status.value] %}
+                                <tr>
+                                    <td><code class="pf-table__code">{{ cycleCount.stockUnit.unitCode }}</code></td>
+                                    <td><strong class="pf-table__primary">{{ cycleCount.variant.material.name }}</strong><div class="small text-body-secondary">{{ cycleCount.variant.code }}</div></td>
+                                    <td class="pf-table__cell--right">{{ cycleCount.countedQuantity|number_format(6, '.', ',') }} {{ cycleCount.variant.inventoryUnit.symbol }}</td>
+                                    <td class="pf-table__cell--right">{{ cycleCount.differenceQuantity|number_format(6, '.', ',') }}</td>
+                                    <td><span class="pf-status-badge pf-status-badge--{{ statusClass }}">{{ cycleCount.status.label }}</span>{% if cycleCount.reviewNote %}<div class="small text-body-secondary mt-1">{{ cycleCount.reviewNote }}</div>{% endif %}</td>
+                                    <td class="pf-table__cell--nowrap">{{ cycleCount.countedAt|date('d/m/Y H:i', 'America/Mexico_City') }}</td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="6" class="pf-table__empty">Todavía no hay conteos registrados.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+{% endblock %}

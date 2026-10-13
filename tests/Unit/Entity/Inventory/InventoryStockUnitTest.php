@@ -55,6 +55,25 @@ final class InventoryStockUnitTest extends TestCase
         $stockUnit->consume('2.01');
     }
 
+    public function testItReconcilesAPhysicalCountAndCanRecoverAnExhaustedLabel(): void
+    {
+        $stockUnit = new InventoryStockUnit($this->variant(), '4');
+        self::assertSame(1, $stockUnit->getInventoryVersion());
+        $stockUnit->consume('4');
+
+        $stockUnit->reconcileCountedQuantity('1.25');
+
+        self::assertSame('1.250000', $stockUnit->getRemainingQuantity());
+        self::assertSame(InventoryStockUnitStatus::AVAILABLE, $stockUnit->getStatus());
+        self::assertSame(3, $stockUnit->getInventoryVersion());
+
+        $stockUnit->reconcileCountedQuantity('0');
+
+        self::assertSame('0.000000', $stockUnit->getRemainingQuantity());
+        self::assertSame(InventoryStockUnitStatus::EXHAUSTED, $stockUnit->getStatus());
+        self::assertSame(4, $stockUnit->getInventoryVersion());
+    }
+
     public function testItSeparatesARecoverableSurplusWithoutChangingTotalPhysicalStock(): void
     {
         $stockUnit = new InventoryStockUnit($this->variant(), '10');
@@ -140,6 +159,23 @@ final class InventoryStockUnitTest extends TestCase
         self::assertSame('5.000000', $balance->getOnHandQuantity());
         self::assertSame('2.000000', $balance->getCommittedQuantity());
         self::assertSame('3.000000', $balance->getAvailableQuantity());
+    }
+
+    public function testItAppliesCountAdjustmentsWithoutReducingCommittedOrBlockedStock(): void
+    {
+        $balance = new MaterialVariantCost($this->variant());
+        $balance->increaseOnHand('10');
+        $balance->commit('6');
+
+        $balance->applyCountAdjustment('-2');
+
+        self::assertSame('8.000000', $balance->getOnHandQuantity());
+        self::assertSame('6.000000', $balance->getCommittedQuantity());
+
+        $this->expectException(\DomainException::class);
+        $this->expectExceptionMessage('bloqueada o comprometida');
+
+        $balance->applyCountAdjustment('-3');
     }
 
     private function variant(string $code = 'VINIL-BLANCO-152'): MaterialVariant

@@ -62,6 +62,10 @@ class InventoryStockUnit
     #[ORM\Column(name: 'remaining_quantity', type: Types::DECIMAL, precision: 20, scale: 6)]
     private string $remainingQuantity;
 
+    /** Increments with every persisted operational change to detect stale counts. */
+    #[ORM\Column(name: 'inventory_version', options: ['default' => 1])]
+    private int $inventoryVersion = 1;
+
     /** @var array<string, mixed> */
     #[ORM\Column(name: 'physical_attributes', type: Types::JSON, nullable: true)]
     private ?array $physicalAttributes = null;
@@ -164,6 +168,11 @@ class InventoryStockUnit
         return $this->remainingQuantity;
     }
 
+    public function getInventoryVersion(): int
+    {
+        return $this->inventoryVersion;
+    }
+
     /** @return array<string, mixed>|null */
     public function getPhysicalAttributes(): ?array
     {
@@ -210,6 +219,7 @@ class InventoryStockUnit
             throw new \DomainException('Solo se puede bloquear una unidad física disponible.');
         }
         $this->status = InventoryStockUnitStatus::BLOCKED;
+        $this->advanceInventoryVersion();
     }
 
     public function release(): void
@@ -218,6 +228,7 @@ class InventoryStockUnit
             throw new \DomainException('Solo se puede liberar una unidad física bloqueada.');
         }
         $this->status = InventoryStockUnitStatus::AVAILABLE;
+        $this->advanceInventoryVersion();
     }
 
     public function consume(string $quantity): void
@@ -237,6 +248,7 @@ class InventoryStockUnit
         if (BigDecimal::of($this->remainingQuantity)->isZero()) {
             $this->status = InventoryStockUnitStatus::EXHAUSTED;
         }
+        $this->advanceInventoryVersion();
     }
 
     /** @param array<string, mixed>|null $physicalAttributes */
@@ -257,6 +269,7 @@ class InventoryStockUnit
         if (BigDecimal::of($this->remainingQuantity)->isZero()) {
             $this->status = InventoryStockUnitStatus::EXHAUSTED;
         }
+        $this->advanceInventoryVersion();
 
         $surplus = new self($this->variant, $quantity, InventoryStockUnitKind::SURPLUS, $this);
         $surplus->assignLot($this->lot);
@@ -275,6 +288,35 @@ class InventoryStockUnit
             throw new \DomainException('La unidad física ya fue desechada.');
         }
         $this->status = InventoryStockUnitStatus::DISPOSED;
+        $this->advanceInventoryVersion();
+    }
+
+    /**
+     * Applies a verified physical count to this specific QR unit.
+     *
+     * The caller is responsible for locking the unit and recording the
+     * corresponding immutable inventory movement in the same transaction.
+     */
+    public function reconcileCountedQuantity(string $countedQuantity): void
+    {
+        if ($this->status === InventoryStockUnitStatus::DISPOSED) {
+            throw new \DomainException('Una unidad física desechada no puede ajustarse mediante conteo.');
+        }
+
+        $countedQuantity = self::nonNegativeDecimal($countedQuantity, 'La cantidad contada');
+        $this->remainingQuantity = $countedQuantity;
+
+        if (BigDecimal::of($countedQuantity)->isZero()) {
+            $this->status = InventoryStockUnitStatus::EXHAUSTED;
+            $this->advanceInventoryVersion();
+
+            return;
+        }
+
+        if ($this->status === InventoryStockUnitStatus::EXHAUSTED) {
+            $this->status = InventoryStockUnitStatus::AVAILABLE;
+        }
+        $this->advanceInventoryVersion();
     }
 
     private static function positiveDecimal(string $value, string $field): string
@@ -290,5 +332,20 @@ class InventoryStockUnit
         }
 
         return $decimal->__toString();
+    }
+
+    private static function nonNegativeDecimal(string $value, string $field): string
+    {
+        $value = trim(str_replace(',', '.', $value));
+        if (preg_match('/^(?:0|[1-9]\d{0,13})(?:\.\d{1,6})?$/D', $value) !== 1) {
+            throw new \InvalidArgumentException($field.' no tiene un formato válido.');
+        }
+
+        return BigDecimal::of($value)->toScale(6)->__toString();
+    }
+
+    private function advanceInventoryVersion(): void
+    {
+        ++$this->inventoryVersion;
     }
 }

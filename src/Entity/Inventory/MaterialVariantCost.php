@@ -51,6 +51,17 @@ class MaterialVariantCost
   $this->committedQuantity=$committed->minus($release)->toScale(6)->__toString();
   $this->touchBalance();
  }
+ /** Ajusta el físico después de un conteo confirmado sin alterar apartados o bloqueos. */
+ public function applyCountAdjustment(string $signedQuantity):void
+ {
+  $signedQuantity=trim(str_replace(',','.',$signedQuantity));
+  if(preg_match('/^-?(?:0|[1-9]\d{0,13})(?:\.\d{1,6})?$/D',$signedQuantity)!==1||BigDecimal::of($signedQuantity)->isZero())throw new \InvalidArgumentException('La diferencia de conteo debe ser distinta de cero y tener máximo seis decimales.');
+  $next=BigDecimal::of($this->onHandQuantity)->plus($signedQuantity);
+  $protected=BigDecimal::of($this->blockedQuantity)->plus($this->committedQuantity);
+  if($next->isLessThan($protected))throw new \DomainException('El conteo dejaría menos existencia física que la bloqueada o comprometida. Reconcilia esos apartados antes de ajustar.');
+  $this->onHandQuantity=$next->toScale(6)->__toString();
+  $this->touchBalance();
+ }
  private function touchBalance():void{$this->updatedAt=new \DateTimeImmutable('now',new \DateTimeZone('UTC'));}
  private static function positiveDecimal(string $value):string{$value=trim(str_replace(',','.',$value));if(preg_match('/^(?:0|[1-9]\d{0,13})(?:\.\d{1,6})?$/D',$value)!==1||BigDecimal::of($value)->isLessThanOrEqualTo(BigDecimal::zero()))throw new \InvalidArgumentException('La cantidad física debe ser mayor que cero y tener máximo seis decimales.');return BigDecimal::of($value)->toScale(6)->__toString();}
 }
