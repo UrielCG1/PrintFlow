@@ -15,12 +15,14 @@ final class InventoryReplenishmentCalculator
         string $reorderPoint,
         string $reorderQuantity,
         string $orderShortageQuantity,
+        string $pendingPurchaseQuantity = '0',
     ): InventoryReplenishmentCalculation {
         $available = $this->nonNegative($availableQuantity, 'El saldo disponible');
         $minimum = $this->nonNegative($minimumStock, 'El stock mínimo');
         $point = $this->nonNegative($reorderPoint, 'El punto de reabasto');
         $configuredQuantity = $this->nonNegative($reorderQuantity, 'La cantidad de reabasto');
         $shortage = $this->nonNegative($orderShortageQuantity, 'El faltante de órdenes');
+        $pendingPurchase = $this->nonNegative($pendingPurchaseQuantity, 'La compra en seguimiento');
 
         $minimumGap = $minimum->isGreaterThan($available)
             ? $minimum->minus($available)
@@ -33,10 +35,13 @@ final class InventoryReplenishmentCalculator
             $suggested = $configuredQuantity;
         }
 
+        $suggested = $suggested->isGreaterThan($pendingPurchase) ? $suggested->minus($pendingPurchase) : BigDecimal::zero();
+
         return new InventoryReplenishmentCalculation(
             $available->toScale(6)->__toString(),
             $shortage->toScale(6)->__toString(),
             $minimumGap->toScale(6)->__toString(),
+            $pendingPurchase->toScale(6)->__toString(),
             $suggested->toScale(6)->__toString(),
             $reorderPointReached,
         );

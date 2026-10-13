@@ -24,6 +24,10 @@
                 <div class="pf-card__body row g-3">
                     <input type="hidden" name="_token" value="{{ csrf_token('inventory_receipt_new') }}">
                     <input type="hidden" name="idempotency_key" value="{{ formData.idempotency_key }}">
+                    {% if purchaseRequestLine %}
+                        <input type="hidden" name="purchase_request_line_id" value="{{ purchaseRequestLine.id }}">
+                        <div class="col-12"><div class="alert alert-info mb-0">Esta recepción se aplicará a la solicitud <strong>{{ purchaseRequestLine.purchaseRequest.requestCode }}</strong>. Pendiente: {{ purchaseRequestLine.remainingQuantity|number_format(6, '.', ',') }} {{ purchaseRequestLine.variant.inventoryUnit.symbol }}. Solo se completará al registrar físicamente el material.</div></div>
+                    {% endif %}
 
                     <div class="col-12 pf-form-field">
                         <label for="inventory-variant" class="form-label">Material y presentación</label>

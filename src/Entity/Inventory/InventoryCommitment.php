@@ -78,6 +78,23 @@ class InventoryCommitment
 
         return $pending;
     }
+    /** Cubre una parte del faltante con material físico recién recibido y lo deja apartado. */
+    public function coverShortageQuantity(string $quantity): void
+    {
+        if (!in_array($this->status, [InventoryCommitmentStatus::PARTIAL, InventoryCommitmentStatus::SHORTAGE], true)) {
+            throw new \DomainException('Solo un apartado con faltante puede recibir cobertura adicional.');
+        }
+        $quantity = self::positiveDecimal($quantity, 'La cobertura adicional');
+        $shortage = BigDecimal::of($this->shortageQuantity);
+        if (BigDecimal::of($quantity)->isGreaterThan($shortage)) {
+            throw new \DomainException('La cobertura adicional supera el faltante pendiente del apartado.');
+        }
+        $this->committedQuantity = BigDecimal::of($this->committedQuantity)->plus($quantity)->toScale(6)->__toString();
+        $this->shortageQuantity = $shortage->minus($quantity)->toScale(6)->__toString();
+        $this->status = BigDecimal::of($this->shortageQuantity)->isZero()
+            ? InventoryCommitmentStatus::COVERED
+            : InventoryCommitmentStatus::PARTIAL;
+    }
     public function markShortageSubstituted(): void
     {
         if ($this->shortageQuantity === '0.000000') { throw new \DomainException('Solo un faltante puede sustituirse.'); }

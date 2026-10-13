@@ -44,6 +44,10 @@ class InventoryReceiptLine
     #[ORM\JoinColumn(name: 'unit_id', nullable: false, onDelete: 'RESTRICT')]
     private MeasurementUnit $unit;
 
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(name: 'purchase_request_line_id', nullable: true, onDelete: 'RESTRICT')]
+    private ?InventoryPurchaseRequestLine $purchaseRequestLine = null;
+
     #[ORM\OneToOne]
     #[ORM\JoinColumn(name: 'inventory_movement_id', nullable: true, onDelete: 'RESTRICT')]
     private ?InventoryMovement $movement = null;
@@ -62,6 +66,7 @@ class InventoryReceiptLine
         InventoryStockUnit $stockUnit,
         string $receivedQuantity,
         ?string $unitCostMxn,
+        ?InventoryPurchaseRequestLine $purchaseRequestLine = null,
     ) {
         if ($lineNumber < 1) {
             throw new \InvalidArgumentException('La partida de recepción debe tener un número positivo.');
@@ -71,6 +76,9 @@ class InventoryReceiptLine
         }
         if ($stockUnit->getVariant() !== $variant) {
             throw new \DomainException('La unidad QR debe pertenecer a la variante recibida.');
+        }
+        if ($purchaseRequestLine !== null && $purchaseRequestLine->getVariant() !== $variant) {
+            throw new \DomainException('La solicitud de compra debe corresponder a la misma variante recibida.');
         }
 
         $quantity = self::positiveDecimal($receivedQuantity, 'La cantidad recibida');
@@ -86,6 +94,7 @@ class InventoryReceiptLine
         $this->unit = $variant->getInventoryUnit();
         $this->receivedQuantity = $quantity;
         $this->unitCostMxn = self::nullableNonNegativeDecimal($unitCostMxn, 'El costo unitario');
+        $this->purchaseRequestLine = $purchaseRequestLine;
     }
 
     public function getId(): ?int { return $this->id; }
@@ -95,6 +104,7 @@ class InventoryReceiptLine
     public function getStockUnit(): InventoryStockUnit { return $this->stockUnit; }
     public function getReceivedQuantity(): string { return $this->receivedQuantity; }
     public function getUnitCostMxn(): ?string { return $this->unitCostMxn; }
+    public function getPurchaseRequestLine(): ?InventoryPurchaseRequestLine { return $this->purchaseRequestLine; }
 
     public function attachMovement(InventoryMovement $movement): void
     {

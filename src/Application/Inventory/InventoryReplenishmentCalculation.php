@@ -11,6 +11,7 @@ final readonly class InventoryReplenishmentCalculation
         public string $availableQuantity,
         public string $orderShortageQuantity,
         public string $minimumGapQuantity,
+        public string $pendingPurchaseQuantity,
         public string $suggestedQuantity,
         public bool $reorderPointReached,
     ) {

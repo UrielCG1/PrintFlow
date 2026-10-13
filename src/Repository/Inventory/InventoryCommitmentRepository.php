@@ -104,6 +104,26 @@ final class InventoryCommitmentRepository extends ServiceEntityRepository
     }
 
     /** @return list<InventoryCommitment> */
+    public function findShortagesForVariantForUpdate(MaterialVariant $variant): array
+    {
+        /** @var list<InventoryCommitment> $commitments */
+        $commitments = $this->createQueryBuilder('commitment')
+            ->innerJoin('commitment.serviceOrder', 'serviceOrder')
+            ->addSelect('serviceOrder')
+            ->andWhere('commitment.variant = :variant')
+            ->andWhere('commitment.status IN (:statuses)')
+            ->setParameter('variant', $variant)
+            ->setParameter('statuses', [InventoryCommitmentStatus::PARTIAL, InventoryCommitmentStatus::SHORTAGE])
+            ->orderBy('commitment.createdAt', 'ASC')
+            ->addOrderBy('commitment.id', 'ASC')
+            ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_WRITE)
+            ->getResult();
+
+        return $commitments;
+    }
+
+    /** @return list<InventoryCommitment> */
     public function findShortagesForOrder(ServiceOrder $order): array
     {
         /** @var list<InventoryCommitment> $commitments */

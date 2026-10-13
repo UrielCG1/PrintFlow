@@ -53,4 +53,19 @@ final class InventoryReplenishmentCalculatorTest extends TestCase
         self::assertSame('0.000000', $calculation->suggestedQuantity);
         self::assertFalse($calculation->reorderPointReached);
     }
+
+    public function testItSubtractsOnlyAConfirmedPurchaseInProgress(): void
+    {
+        $calculation = (new InventoryReplenishmentCalculator())->calculate(
+            availableQuantity: '0',
+            minimumStock: '5',
+            reorderPoint: '5',
+            reorderQuantity: '0',
+            orderShortageQuantity: '4',
+            pendingPurchaseQuantity: '6',
+        );
+
+        self::assertSame('6.000000', $calculation->pendingPurchaseQuantity);
+        self::assertSame('3.000000', $calculation->suggestedQuantity);
+    }
 }

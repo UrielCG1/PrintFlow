@@ -6,6 +6,7 @@ namespace App\Application\Inventory;
 
 use App\Entity\Materials\MaterialVariant;
 use App\Entity\Suppliers\SupplierMaterialVariant;
+use App\Entity\Inventory\InventoryPurchaseRequestLine;
 
 /** One grouped material need shown on the replenishment tray. */
 final readonly class InventoryReplenishmentSuggestion
@@ -16,6 +17,7 @@ final readonly class InventoryReplenishmentSuggestion
         public int $shortageOrderCount,
         public int $waitingPurchaseOrderCount,
         public ?SupplierMaterialVariant $supplierOffer,
+        public ?InventoryPurchaseRequestLine $openPurchaseRequestLine,
     ) {
     }
 }

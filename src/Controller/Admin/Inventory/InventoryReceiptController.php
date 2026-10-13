@@ -8,11 +8,13 @@ use App\Application\Inventory\InventoryReceiptCommand;
 use App\Application\Inventory\InventoryReceiptLineInput;
 use App\Application\Inventory\InventoryReceiptManager;
 use App\Entity\Inventory\InventoryReceipt;
+use App\Entity\Inventory\InventoryPurchaseRequestLine;
 use App\Entity\Inventory\InventoryStockUnit;
 use App\Entity\Materials\MaterialVariant;
 use App\Entity\Users\User;
 use App\Enum\Inventory\InventoryStockUnitStatus;
 use App\Repository\Inventory\InventoryStockUnitRepository;
+use App\Repository\Inventory\InventoryPurchaseRequestLineRepository;
 use App\Repository\Materials\MaterialVariantRepository;
 use App\Service\Audit\AuditLogger;
 use Doctrine\ORM\EntityManagerInterface;
@@ -49,20 +51,31 @@ final class InventoryReceiptController extends AbstractController
     public function new(
         Request $request,
         MaterialVariantRepository $variantRepository,
+        InventoryPurchaseRequestLineRepository $purchaseRequestLineRepository,
         InventoryReceiptManager $receiptManager,
     ): Response {
         $this->denyAccessUnlessGranted('inventory.receive');
 
+        $linkedPurchaseRequestLine = null;
+        $purchaseRequestLineId = $this->positiveId($request->query->getString('purchase_request_line'));
+        if ($purchaseRequestLineId !== null) {
+            $linkedPurchaseRequestLine = $purchaseRequestLineRepository->find($purchaseRequestLineId);
+            if (!$linkedPurchaseRequestLine instanceof InventoryPurchaseRequestLine) {
+                $this->addFlash('error', 'La partida de solicitud de compra indicada no existe.');
+            }
+        }
+
         $formData = [
             'idempotency_key' => bin2hex(random_bytes(16)),
-            'variant_id' => '',
+            'variant_id' => $linkedPurchaseRequestLine?->getVariant()->getId() ?? '',
             'quantity' => '',
             'storage_location' => '',
             'physical_description' => '',
             'unit_cost_mxn' => '',
-            'reference' => '',
+            'reference' => $linkedPurchaseRequestLine?->getPurchaseRequest()->getRequestCode() ?? '',
             'notes' => '',
             'is_provisional' => false,
+            'purchase_request_line_id' => $linkedPurchaseRequestLine?->getId() ?? '',
         ];
 
         if ($request->isMethod('POST')) {
@@ -76,6 +89,7 @@ final class InventoryReceiptController extends AbstractController
                 'reference' => $request->request->getString('reference'),
                 'notes' => $request->request->getString('notes'),
                 'is_provisional' => $request->request->getBoolean('is_provisional'),
+                'purchase_request_line_id' => $request->request->getString('purchase_request_line_id'),
             ];
 
             if (!$this->isCsrfTokenValid('inventory_receipt_new', $request->request->getString('_token'))) {
@@ -84,7 +98,11 @@ final class InventoryReceiptController extends AbstractController
 
             $variantId = $this->positiveId($formData['variant_id']);
             $variant = $variantId === null ? null : $variantRepository->find($variantId);
-            if ($variant === null) {
+            $purchaseRequestLineId = $this->positiveId($formData['purchase_request_line_id']);
+            $linkedPurchaseRequestLine = $purchaseRequestLineId === null ? null : $purchaseRequestLineRepository->find($purchaseRequestLineId);
+            if ($purchaseRequestLineId !== null && !$linkedPurchaseRequestLine instanceof InventoryPurchaseRequestLine) {
+                $this->addFlash('error', 'La partida de solicitud de compra indicada no existe.');
+            } elseif ($variant === null) {
                 $this->addFlash('error', 'Selecciona una presentación de material válida.');
             } else {
                 try {
@@ -98,6 +116,7 @@ final class InventoryReceiptController extends AbstractController
                                 storageLocation: $formData['storage_location'],
                                 physicalAttributes: $physicalDescription === '' ? [] : ['description' => $physicalDescription],
                                 unitCostMxn: $formData['unit_cost_mxn'],
+                                purchaseRequestLine: $linkedPurchaseRequestLine,
                             )],
                             reference: $formData['reference'],
                             notes: $formData['notes'],
@@ -118,6 +137,7 @@ final class InventoryReceiptController extends AbstractController
         return $this->render('admin/inventory/receipts/new.html.twig', [
             'formData' => $formData,
             'variants' => $variantRepository->findActiveConsumable(),
+            'purchaseRequestLine' => $linkedPurchaseRequestLine,
         ]);
     }
 

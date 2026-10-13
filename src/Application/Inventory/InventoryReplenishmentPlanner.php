@@ -8,6 +8,7 @@ use App\Entity\Inventory\MaterialVariantCost;
 use App\Repository\Inventory\InventoryCommitmentRepository;
 use App\Repository\Inventory\InventoryShortageDecisionRepository;
 use App\Repository\Inventory\MaterialVariantCostRepository;
+use App\Repository\Inventory\InventoryPurchaseRequestLineRepository;
 use App\Repository\Materials\MaterialVariantRepository;
 use App\Repository\Suppliers\SupplierMaterialVariantRepository;
 use Brick\Math\BigDecimal;
@@ -20,6 +21,7 @@ final class InventoryReplenishmentPlanner
         private readonly MaterialVariantCostRepository $balanceRepository,
         private readonly InventoryCommitmentRepository $commitmentRepository,
         private readonly InventoryShortageDecisionRepository $decisionRepository,
+        private readonly InventoryPurchaseRequestLineRepository $purchaseRequestLineRepository,
         private readonly SupplierMaterialVariantRepository $supplierMaterialVariantRepository,
         private readonly InventoryReplenishmentCalculator $calculator,
     ) {
@@ -39,6 +41,11 @@ final class InventoryReplenishmentPlanner
         }
 
         $waitingCommitmentIds = array_fill_keys($this->decisionRepository->findActiveWaitingCommitmentIds(), true);
+        $trackedPurchaseQuantities = $this->purchaseRequestLineRepository->findTrackedPendingQuantitiesByVariant();
+        $openPurchaseLines = [];
+        foreach ($this->purchaseRequestLineRepository->findOpenForVariants($variants) as $line) {
+            $openPurchaseLines[(int) $line->getVariant()->getId()] = $line;
+        }
         $shortagesByVariant = [];
         foreach ($this->commitmentRepository->findShortagesForReplenishment() as $commitment) {
             $variantId = (int) $commitment->getVariant()->getId();
@@ -75,6 +82,7 @@ final class InventoryReplenishmentPlanner
                 $variant->getReorderPoint(),
                 $variant->getReorderQuantity(),
                 $shortage === null ? '0.000000' : $shortage['quantity']->toScale(6)->__toString(),
+                $trackedPurchaseQuantities[$variantId] ?? '0.000000',
             );
             if (BigDecimal::of($calculation->suggestedQuantity)->isZero()) {
                 continue;
@@ -86,6 +94,7 @@ final class InventoryReplenishmentPlanner
                 $shortage === null ? 0 : count($shortage['order_ids']),
                 $shortage === null ? 0 : count($shortage['waiting_order_ids']),
                 $offerByVariant[$variantId] ?? null,
+                $openPurchaseLines[$variantId] ?? null,
             );
         }
 

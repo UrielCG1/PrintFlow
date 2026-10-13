@@ -12,6 +12,7 @@ use App\Entity\Materials\MaterialVariant;
 use App\Entity\Orders\ServiceOrder;
 use App\Entity\Users\User;
 use App\Enum\Catalog\MeasurementDimensionType;
+use App\Enum\Inventory\InventoryCommitmentStatus;
 use PHPUnit\Framework\TestCase;
 
 final class InventoryCommitmentTest extends TestCase
@@ -51,6 +52,27 @@ final class InventoryCommitmentTest extends TestCase
         $this->expectExceptionMessage('saldo pendiente');
 
         $commitment->recordConsumedQuantity('1');
+    }
+
+    public function testItCanReserveFreshlyReceivedStockAgainstAnExistingShortage(): void
+    {
+        $commitment = new InventoryCommitment(
+            new ServiceOrder(),
+            $this->variant(),
+            new User(),
+            new InventoryCoverage('10', '4', '4', '6'),
+        );
+
+        $commitment->coverShortageQuantity('2.5');
+
+        self::assertSame('6.500000', $commitment->getCommittedQuantity());
+        self::assertSame('3.500000', $commitment->getShortageQuantity());
+        self::assertSame(InventoryCommitmentStatus::PARTIAL, $commitment->getStatus());
+
+        $commitment->coverShortageQuantity('3.5');
+
+        self::assertSame('0.000000', $commitment->getShortageQuantity());
+        self::assertSame(InventoryCommitmentStatus::COVERED, $commitment->getStatus());
     }
 
     private function variant(): MaterialVariant
