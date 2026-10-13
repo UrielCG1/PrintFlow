@@ -301,8 +301,8 @@
         <section id="planning-section" class="pf-card mb-4">
             <header class="pf-card__header">
                 <div>
-                    <h2 class="pf-card__title">Partidas y plan de producción</h2>
-                    <p class="pf-card__subtitle">Secuencia de operaciones y estado de planificación por partida.</p>
+                    <h2 class="pf-card__title">Planificación operativa</h2>
+                    <p class="pf-card__subtitle">Revisa por partida la ruta, el tiempo de trabajo y la fecha pronosticada de fin.</p>
                 </div>
             </header>
 
@@ -327,8 +327,8 @@
             {% if canPlan and planningProgress.auto_actions > 0 %}<div class="pf-card__body border-bottom service-order-auto-action">
                 <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
                     <div class="flex-grow-1">
-                        <strong>Completar datos disponibles</strong>
-                        <p class="mb-0 small text-muted">El sistema puede asignar equipos compatibles únicos y calcular tiempos a partir de las medidas existentes.</p>
+                        <strong>Preparar datos automáticamente</strong>
+                        <p class="mb-0 small text-muted">PrintFlow aplica las máquinas compatibles y los tiempos que puede calcular con los datos actuales.</p>
                     </div>
                         <form method="post" action="{{ path('admin_service_orders_prepare_automatically', {id: serviceOrder.id}) }}">
                             <input type="hidden" name="_token" value="{{ csrf_token('service-order-auto-prepare-' ~ serviceOrder.id) }}">
@@ -353,13 +353,17 @@
                                     <span class="d-block text-muted small mt-1">Ruta aplicada: {{ item.routeVersion.nameSnapshot }} v{{ item.routeVersion.versionNumber }}</span>
                                 {% endif %}
                                 {% set itemForecast = productionForecast.items[item.id]|default(null) %}
+                                {% set itemPlanningSummary = itemPlanningSummaryById[item.id]|default(null) %}
                                 <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
                                     <span class="badge {{ item.priority.value == 'urgent' ? 'text-bg-primary' : (item.priority.value == 'high' ? 'text-bg-info' : 'text-bg-light text-dark border') }}"><i class="bi {{ item.priority.value == 'urgent' ? 'bi-lightning-charge-fill' : (item.priority.value == 'high' ? 'bi-arrow-up-circle-fill' : 'bi-dash-circle') }}" aria-hidden="true"></i> Prioridad {{ item.priority.label }}</span>
-                                    {% if itemForecast %}
+                                    {% if itemPlanningSummary and itemPlanningSummary.finish_type == 'projected' %}
+                                        <span class="badge text-bg-info"><i class="bi bi-calendar2-week" aria-hidden="true"></i> Pronóstico preliminar</span>
+                                    {% elseif itemForecast and itemPlanningSummary and itemPlanningSummary.finish_at %}
                                         {% set itemRiskIcon = itemForecast.risk.value == 'late' ? 'bi-exclamation-triangle-fill' : (itemForecast.risk.value == 'tight' ? 'bi-clock-history' : (itemForecast.risk.value == 'on_track' ? 'bi-check-circle-fill' : 'bi-question-circle')) %}
                                         <span class="badge text-bg-{{ itemForecast.risk_tone }}"><i class="bi {{ itemRiskIcon }}" aria-hidden="true"></i> {{ itemForecast.risk_label }}</span>
+                                    {% elseif itemForecast %}
+                                        <span class="badge text-bg-{{ itemForecast.risk_tone }}">{{ itemForecast.risk_label }}</span>
                                     {% endif %}
-                                    {% if itemForecast and itemForecast.production_finish %}<span class="text-muted small">Fin previsto {{ itemForecast.production_finish|date('d/m/Y H:i', 'America/Mexico_City') }}</span>{% endif %}
                                 </div>
                                 {% if item.sourceFileSnapshot.status|default(null) == 'CLIENT_FILE_RECEIVED' %}
                                     <span class="d-block text-muted small mt-1"><i class="bi bi-paperclip" aria-hidden="true"></i> Archivo original del cliente registrado para revisión de Diseño.</span>
@@ -416,21 +420,105 @@
                             </form>
                         {% endif %}
 
+                        {% if itemPlanningSummary %}
+                            {% if itemPlanningSummary.operations > 0 %}
+                            <div class="service-order-item-planning-summary" aria-label="Resumen de planificación de la partida {{ item.displayLineNumber }}">
+                                <div class="service-order-item-planning-summary__fact">
+                                    <span class="service-order-item-planning-summary__label">Tiempo de trabajo estimado</span>
+                                    {% if itemPlanningSummary.duration_complete and itemPlanningSummary.estimated_minutes is not null %}
+                                        {% set totalHours = (itemPlanningSummary.estimated_minutes / 60)|round(0, 'floor') %}
+                                        {% set totalRemainder = itemPlanningSummary.estimated_minutes % 60 %}
+                                        <strong>{% if totalHours > 0 %}{{ totalHours }} h{% endif %}{% if totalRemainder > 0 %} {{ totalRemainder }} min{% endif %}{% if totalHours == 0 and totalRemainder == 0 %}0 min{% endif %}</strong>
+                                        <small>Horas de operación sumadas; los espacios entre jornadas se reflejan en la fecha de fin.</small>
+                                    {% else %}
+                                        <strong>{{ itemPlanningSummary.estimated }} de {{ itemPlanningSummary.operations }} operaciones estimadas</strong>
+                                        <small>Completa los tiempos pendientes para calcular el total.</small>
+                                    {% endif %}
+                                </div>
+                                <div class="service-order-item-planning-summary__fact service-order-item-planning-summary__fact--finish">
+                                    <span class="service-order-item-planning-summary__label">Fin de producción pronosticado</span>
+                                    {% if itemPlanningSummary.finish_at %}
+                                        <strong>{{ itemPlanningSummary.finish_at|date('d/m/Y · H:i', 'America/Mexico_City') }}</strong>
+                                        <small>
+                                            {% if itemPlanningSummary.finish_type == 'projected' %}
+                                                {% if itemPlanningSummary.machine_choice_required|default(false) %}
+                                                    Las opciones compatibles tienen un término similar; el fin se confirma al elegir equipo y reservar.
+                                                {% else %}
+                                                    Estimado con la máquina sugerida; se confirma al reservar la agenda.
+                                                {% endif %}
+                                            {% elseif itemPlanningSummary.finish_type == 'actual' %}
+                                                Fin real registrado al completar la última operación.
+                                            {% else %}
+                                                Calculado con la agenda reservada.
+                                            {% endif %}
+                                        </small>
+                                    {% else %}
+                                        <strong>Pendiente de pronóstico</strong>
+                                        <small>Se necesita completar y programar la secuencia de operaciones.</small>
+                                    {% endif %}
+                                </div>
+                                <div class="service-order-item-planning-summary__fact service-order-item-planning-summary__fact--progress">
+                                    <span class="service-order-item-planning-summary__label">Avance de planificación</span>
+                                    <strong>{{ itemPlanningSummary.ready }} / {{ itemPlanningSummary.operations }} listas</strong>
+                                    <small>{{ itemPlanningSummary.with_equipment }} con equipo · {{ itemPlanningSummary.estimated }} con tiempo · {{ itemPlanningSummary.reserved }} con agenda</small>
+                                </div>
+                            </div>
+                            {% else %}
+                                <div class="alert alert-warning py-2" role="status">Esta partida aún no tiene una ruta activa de producción.</div>
+                            {% endif %}
+                        {% endif %}
+
                         <div class="service-order-route" aria-label="Secuencia de operaciones de la partida {{ item.displayLineNumber }}">
-                            <strong class="service-order-route__heading">Secuencia de operaciones</strong>
+                            <div class="service-order-route__heading">
+                                <strong>Ruta de producción</strong>
+                                <span>Se conserva este orden. Agenda laboral: lunes a viernes, 08:00–18:00 (hora de Ciudad de México).</span>
+                            </div>
                             <ol class="service-order-route__steps{{ plans|length > 3 ? ' service-order-route__steps--many' : '' }}">
                                 {% for plan in plans %}
                                     {% set state = operationStates[plan.id]|default('scheduled') %}
                                     {% set planReservations = reservationsByPlan[plan.id]|default([]) %}
-                                    {% set stateTone = state == 'complete' ? 'complete' : (state in ['active', 'paused'] ? 'active' : ((state in ['equipment', 'estimate', 'blocked'] or planReservations is empty) ? 'attention' : 'scheduled')) %}
-                                    {% set stateLabel = state == 'complete' ? 'Completada' : (state == 'active' ? 'En curso' : (state == 'paused' ? 'Pausada' : (state == 'equipment' ? 'Máquina pendiente' : (state == 'estimate' ? 'Falta tiempo' : (state == 'blocked' ? 'Bloqueada' : (planReservations is empty ? 'Falta agenda' : 'Programada')))))) %}
+                                    {% set planPreview = operationSchedulePreviewByPlan[plan.id]|default(null) %}
+                                    {% set shownEquipment = plan.equipment ?? (planPreview ? planPreview.equipment : null) %}
+                                    {% set previewMinutes = plan.estimatedMinutes ?? (planPreview ? planPreview.estimated_minutes : null) %}
+                                    {% set stateTone = state == 'complete' ? 'complete' : (state in ['active', 'paused'] ? 'active' : ((state == 'equipment' and shownEquipment) ? 'suggested' : ((state in ['equipment', 'estimate', 'blocked'] or planReservations is empty) ? 'attention' : 'scheduled'))) %}
+                                    {% set stateLabel = state == 'complete' ? 'Completada' : (state == 'active' ? 'En curso' : (state == 'paused' ? 'Pausada' : (state == 'equipment' and shownEquipment ? 'Máquina sugerida · falta aplicar' : (state == 'equipment' ? 'Falta máquina' : (state == 'estimate' and previewMinutes ? 'Tiempo sugerido · falta aplicar' : (state == 'estimate' ? 'Falta tiempo' : (state == 'blocked' ? 'Bloqueada' : (planReservations is empty ? 'Falta agenda' : 'Programada')))))))) %}
                                     <li class="service-order-route__step service-order-route__step--{{ stateTone }}">
                                         <span class="service-order-route__number">{{ plan.sequenceNumber }}</span>
                                         <span class="service-order-route__copy">
                                             <strong>{{ plan.operationSnapshot.name ?? plan.operation.name }}</strong>
                                             <span class="service-order-route__state"><i class="bi {{ stateTone == 'complete' ? 'bi-check-circle' : (stateTone == 'attention' ? 'bi-exclamation-triangle' : 'bi-clock') }}" aria-hidden="true"></i> {{ stateLabel }}</span>
-                                            {% if plan.equipment %}<small>{{ plan.equipmentSnapshot.name ?? plan.equipment.name }}</small>{% endif %}
-                                            {% if plan.estimatedMinutes %}<small>{{ plan.estimatedMinutes }} min estimados</small>{% endif %}
+                                            {% if shownEquipment %}
+                                                <small>{{ plan.equipment ? (plan.equipmentSnapshot.name ?? plan.equipment.name) : shownEquipment.name }}{% if planPreview and planPreview.equipment_is_suggested %} · sugerida{% endif %}</small>
+                                            {% elseif planPreview and planPreview.machine_choice_required|default(false) %}
+                                                <small>Opciones compatibles con término similar</small>
+                                            {% elseif equipmentAvailabilityByPlan[plan.id].recommendation_reason|default(null) in ['same_completion', 'same_first_slot'] %}
+                                                <small>Varias máquinas compatibles; requiere elección.</small>
+                                            {% else %}
+                                                <small>Equipo por asignar</small>
+                                            {% endif %}
+                                            {% if previewMinutes is not null %}
+                                                {% set operationHours = (previewMinutes / 60)|round(0, 'floor') %}
+                                                {% set operationRemainder = previewMinutes % 60 %}
+                                                <small>Duración: {% if operationHours > 0 %}{{ operationHours }} h{% endif %}{% if operationRemainder > 0 %} {{ operationRemainder }} min{% endif %}{% if operationHours == 0 and operationRemainder == 0 %}0 min{% endif %}</small>
+                                            {% else %}
+                                                <small>Duración pendiente</small>
+                                            {% endif %}
+                                            {% if planReservations is not empty %}
+                                                <span class="service-order-route__schedule-label"><i class="bi bi-calendar-check" aria-hidden="true"></i> Agenda reservada</span>
+                                                <span class="service-order-route__slots">
+                                                    {% for reservation in planReservations %}
+                                                        <small>{{ reservation.startsAt|date('d/m H:i', 'America/Mexico_City') }}–{{ reservation.endsAt|date('H:i', 'America/Mexico_City') }}</small>
+                                                    {% endfor %}
+                                                </span>
+                                            {% elseif planPreview and planPreview.ends_at %}
+                                                <span class="service-order-route__schedule-label service-order-route__schedule-label--preview"><i class="bi bi-calendar2-week" aria-hidden="true"></i> Agenda estimada</span>
+                                                <span class="service-order-route__slots">
+                                                    <small>Inicio {{ planPreview.starts_at|date('d/m H:i', 'America/Mexico_City') }}</small>
+                                                    <small>Fin {{ planPreview.ends_at|date('d/m H:i', 'America/Mexico_City') }}</small>
+                                                </span>
+                                            {% else %}
+                                                <span class="service-order-route__schedule-label service-order-route__schedule-label--pending"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> Agenda pendiente</span>
+                                            {% endif %}
                                         </span>
                                     </li>
                                 {% else %}
@@ -439,7 +527,7 @@
                             </ol>
                         </div>
                         <details class="service-order-plan-details mb-3">
-                            <summary><i class="bi bi-sliders" aria-hidden="true"></i> {{ canPlan ? 'Completar o ajustar planificación' : 'Ver equipo, agenda y tiempos' }} <i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
+                            <summary><i class="bi bi-sliders" aria-hidden="true"></i> {{ canPlan ? 'Editar secuencia, equipos y tiempos' : 'Ver detalle de las operaciones' }} <i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
                         <div class="pf-table-responsive mb-3">
                             <table class="pf-table">
                                 <thead>
@@ -777,7 +865,22 @@
                             <p class="mb-0 small">{{ planningProgress.operations - planningProgress.ready }} operación(es) todavía necesitan datos o reserva.</p>
                         {% endif %}
                     </div>
-                    {% if canReserveFullPlan %}
+                    {% if canConfirmPlanning %}
+                        <form
+                            method="post"
+                            action="{{ path('admin_service_orders_confirm_planning', {id: serviceOrder.id}) }}"
+                            data-controller="ui--confirm-action"
+                            data-action="submit->ui--confirm-action#submit"
+                            data-ui--confirm-action-title-value="¿Confirmar la planificación de la orden?"
+                            data-ui--confirm-action-text-value="PrintFlow reservará los tramos pendientes en secuencia y confirmará la planificación en una sola operación. Si encuentra un bloqueo, no dejará reservas parciales."
+                            data-ui--confirm-action-confirm-button-text-value="Confirmar planificación"
+                            data-ui--confirm-action-cancel-button-text-value="Revisar orden"
+                            data-ui--confirm-action-icon-value="question"
+                        >
+                            <input type="hidden" name="_token" value="{{ csrf_token('service-order-confirm-planning-' ~ serviceOrder.id) }}">
+                            <button type="submit" class="btn pf-button pf-button--primary">Confirmar planificación</button>
+                        </form>
+                    {% elseif canReserveFullPlan %}
                         <form
                             method="post"
                             action="{{ path('admin_service_orders_reserve_full_plan', {id: serviceOrder.id}) }}"
@@ -790,22 +893,7 @@
                             data-ui--confirm-action-icon-value="question"
                         >
                             <input type="hidden" name="_token" value="{{ csrf_token('service-order-reserve-full-plan-' ~ serviceOrder.id) }}">
-                            <button type="submit" class="btn pf-button pf-button--primary">Reservar todas las operaciones</button>
-                        </form>
-                    {% elseif canMarkPlanned %}
-                        <form
-                            method="post"
-                            action="{{ path('admin_service_orders_mark_planned', {id: serviceOrder.id}) }}"
-                            data-controller="ui--confirm-action"
-                            data-action="submit->ui--confirm-action#submit"
-                            data-ui--confirm-action-title-value="¿Confirmar planificación de la orden?"
-                            data-ui--confirm-action-text-value="La ruta, fecha y equipos quedarán bloqueados para conservar su trazabilidad antes de iniciar ejecución."
-                            data-ui--confirm-action-confirm-button-text-value="Sí, confirmar"
-                            data-ui--confirm-action-cancel-button-text-value="Revisar orden"
-                            data-ui--confirm-action-icon-value="question"
-                        >
-                            <input type="hidden" name="_token" value="{{ csrf_token('service-order-mark-planned-' ~ serviceOrder.id) }}">
-                            <button type="submit" class="btn pf-button pf-button--primary">Confirmar planificación</button>
+                            <button type="submit" class="btn pf-button pf-button--primary">Reservar agenda completa</button>
                         </form>
                     {% endif %}
                 </footer>
