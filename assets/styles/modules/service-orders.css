@@ -1074,23 +1074,161 @@
     margin-top: 0.5rem;
 }
 
+.service-order-item-planning-summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: 0.75rem;
+    margin: 0.9rem 0 0.75rem;
+    padding: 0.75rem;
+    background: #f6f9fd;
+    border: 1px solid #dfe7f1;
+    border-radius: var(--pf-radius-md);
+}
+
+.service-order-item-planning-summary__fact {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.2rem;
+    padding: 0.25rem 0.6rem;
+    border-left: 2px solid #d5dfed;
+}
+
+.service-order-item-planning-summary__fact--finish {
+    border-left-color: var(--pf-success, #198754);
+}
+
+.service-order-item-planning-summary__label {
+    color: var(--pf-muted, #65738b);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+}
+
+.service-order-item-planning-summary__fact strong {
+    color: var(--pf-on-surface, #17324d);
+    font-size: 0.98rem;
+    line-height: 1.3;
+}
+
+.service-order-item-planning-summary__fact--finish strong {
+    color: #087b19;
+}
+
+.service-order-item-planning-summary__fact small {
+    color: var(--pf-text-muted, #65738b);
+    font-size: 0.73rem;
+    line-height: 1.4;
+}
+
+.service-order-route__heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 0.75rem;
+}
+
+.service-order-route__heading > span {
+    color: var(--pf-text-muted, #65738b);
+    font-size: 0.75rem;
+    font-weight: 400;
+}
+
+.service-order-route__steps,
+.service-order-route__steps--many {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.7rem;
+}
+
+.service-order-route__step,
+.service-order-route__steps--many .service-order-route__step {
+    align-items: flex-start;
+    min-height: 0;
+    padding: 0.8rem;
+}
+
+.service-order-route__step:not(:last-child)::after,
+.service-order-route__steps--many .service-order-route__step::after {
+    display: none;
+}
+
+.service-order-route__copy {
+    align-content: start;
+    gap: 0.28rem;
+}
+
+.service-order-route__copy > strong,
+.service-order-route__copy small {
+    overflow: visible;
+    white-space: normal;
+}
+
+.service-order-route__copy > strong {
+    font-size: 0.91rem;
+}
+
+.service-order-route__state {
+    font-size: 0.74rem;
+}
+
+.service-order-route__step--suggested {
+    background: #f1fbf3;
+    border-color: #aee6b3;
+}
+
+.service-order-route__step--suggested .service-order-route__number {
+    background: #dff7e2;
+}
+
+.service-order-route__step--suggested .service-order-route__state {
+    color: #087b19;
+}
+
+.service-order-route__schedule-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.15rem;
+    color: #087b19;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.service-order-route__schedule-label--preview {
+    color: #315fa8;
+}
+
+.service-order-route__schedule-label--pending {
+    color: #a65b00;
+}
+
+.service-order-route__slots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.service-order-route__slots small {
+    display: inline-flex;
+    width: fit-content;
+    padding: 0.18rem 0.42rem;
+    background: #fff;
+    border: 1px solid #d9e2ef;
+    border-radius: 0.35rem;
+    color: var(--pf-text, #17324d);
+    font-size: 0.69rem;
+}
+
 @media (max-width: 991.98px) {
     .service-order-page .pf-page-header__actions {
         flex-wrap: wrap;
     }
 
-    .service-order-route__steps {
-        flex-wrap: wrap;
-    }
-
-    .service-order-route__step {
-        flex-basis: calc(50% - 1.8rem);
-    }
-
-    .service-order-route__step::after {
-        display: none;
-    }
-
+    .service-order-route__steps,
     .service-order-route__steps--many {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -1127,10 +1265,16 @@
         grid-template-columns: 1fr;
     }
 
-    .service-order-route__step {
-        flex-basis: 100%;
+    .service-order-item-planning-summary {
+        grid-template-columns: 1fr;
+        gap: 0.35rem;
     }
 
+    .service-order-item-planning-summary__fact {
+        padding: 0.35rem 0.55rem;
+    }
+
+    .service-order-route__steps,
     .service-order-route__steps--many {
         grid-template-columns: 1fr;
     }

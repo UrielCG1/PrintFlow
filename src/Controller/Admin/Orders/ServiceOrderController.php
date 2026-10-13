@@ -43,6 +43,7 @@ use App\Repository\Inventory\InventoryShortageDecisionRepository;
 use App\Repository\Inventory\MaterialSubstitutionRuleRepository;
 use App\Repository\Users\UserRepository;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Form\FormInterface;
@@ -215,6 +216,9 @@ final class ServiceOrderController extends AbstractController
         ProductionPlanManager $productionPlanManager,
         ServiceOrderOperationPlanRepository $operationPlanRepository,
         EquipmentRepository $equipmentRepository,
+        ProductionEquipmentAvailabilityAdvisor $equipmentAvailabilityAdvisor,
+        ProductionReservationRepository $reservationRepository,
+        ProductionCalendarExceptionRepository $calendarExceptionRepository,
         ProductionLoadResolver $loadResolver,
     ): Response {
         $this->denyAccessUnlessGranted('service_orders.plan');
@@ -229,7 +233,44 @@ final class ServiceOrderController extends AbstractController
         $estimatesCalculated = 0;
         $pending = [];
         $now = new \DateTimeImmutable('now', new \DateTimeZone('America/Mexico_City'));
-        foreach ($operationPlanRepository->findActiveForServiceOrder($serviceOrder) as $plan) {
+        $plans = $operationPlanRepository->findActiveForServiceOrder($serviceOrder);
+        $equipmentChoicesByPlan = [];
+        $busyWindowsByEquipment = [];
+        $exceptionsByEquipment = [];
+        $reservationsByPlan = [];
+        $forecastHorizonEnd = $now->modify('+730 days');
+        foreach ($reservationRepository->findActiveForServiceOrder($serviceOrder) as $reservation) {
+            $reservationsByPlan[(int) $reservation->getPlan()->getId()][] = $reservation;
+        }
+        foreach ($plans as $plan) {
+            $planId = (int) $plan->getId();
+            $choices = $equipmentRepository->findAvailableForFutureExecution($plan->getOperation());
+            $equipmentChoicesByPlan[$planId] = $choices;
+            foreach ($choices as $equipment) {
+                $equipmentId = (int) $equipment->getId();
+                if (isset($busyWindowsByEquipment[$equipmentId])) {
+                    continue;
+                }
+                $busyWindowsByEquipment[$equipmentId] = array_map(
+                    static fn ($reservation): array => ['start' => $reservation->getStartsAt(), 'end' => $reservation->getEndsAt()],
+                    $reservationRepository->findActiveForEquipmentBetween($equipment, $now, $forecastHorizonEnd),
+                );
+                $exceptionsByEquipment[$equipmentId] = array_map(
+                    static fn ($exception): array => ['type' => $exception->getType(), 'start' => $exception->getStartsAt(), 'end' => $exception->getEndsAt()],
+                    $calendarExceptionRepository->findActiveForEquipmentBetween($equipment, $now, $forecastHorizonEnd),
+                );
+            }
+        }
+        $availabilityByPlan = $equipmentAvailabilityAdvisor->advise(
+            $plans,
+            $equipmentChoicesByPlan,
+            $reservationsByPlan,
+            $busyWindowsByEquipment,
+            $exceptionsByEquipment,
+            $now,
+        );
+
+        foreach ($plans as $plan) {
             $item = $plan->getServiceOrderItem();
             $label = sprintf('%s · partida %s', $plan->getOperationSnapshot()['name'] ?? $plan->getOperation()->getName(), $item->getDisplayLineNumber());
             if ($item->getPlanningIssue() !== null || $plan->getBlockedReason() !== null) {
@@ -238,18 +279,25 @@ final class ServiceOrderController extends AbstractController
             }
 
             if ($plan->getEquipment() === null) {
-                $choices = $equipmentRepository->findAvailableForFutureExecution($plan->getOperation());
-                if (count($choices) === 1) {
+                $recommended = $availabilityByPlan[(int) $plan->getId()]['recommended_equipment'] ?? null;
+                if ($recommended !== null) {
                     $data = new ServiceOrderItemOperationEquipmentData();
-                    $data->equipment = $choices[0];
+                    $data->equipment = $recommended;
                     try {
                         $serviceOrderManager->assignEquipmentToOperation($serviceOrder, $plan, $data, $this->authenticatedUser());
                         ++$equipmentAssigned;
                     } catch (\DomainException $exception) {
                         $pending[] = $label.': '.$exception->getMessage();
+                        continue;
                     }
                 } else {
-                    $pending[] = $label.($choices === [] ? ': no hay máquina compatible disponible.' : ': elige una de las máquinas compatibles.');
+                    $choices = $equipmentChoicesByPlan[(int) $plan->getId()] ?? [];
+                    $reason = $availabilityByPlan[(int) $plan->getId()]['recommendation_reason'] ?? null;
+                    $pending[] = $label.($choices === []
+                        ? ': no hay máquina compatible disponible.'
+                        : (in_array($reason, ['same_completion', 'same_first_slot'], true)
+                            ? ': hay máquinas compatibles con disponibilidad equivalente; elige según material o preferencia del taller.'
+                            : ': no se pudo elegir una máquina automáticamente; revisa las opciones compatibles.'));
                     continue;
                 }
             }
@@ -730,6 +778,44 @@ final class ServiceOrderController extends AbstractController
         return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
     }
 
+    #[Route('/{id}/confirmar-planificacion', name: 'confirm_planning', requirements: ['id' => '\\d+'], methods: ['POST'])]
+    public function confirmPlanning(
+        Request $request,
+        ServiceOrder $serviceOrder,
+        ProductionPlanManager $productionPlanManager,
+        ServiceOrderManager $serviceOrderManager,
+        EntityManagerInterface $entityManager,
+    ): Response {
+        $this->denyAccessUnlessGranted('service_orders.plan');
+        if (!$this->isCsrfTokenValid(
+            'service-order-confirm-planning-'.$serviceOrder->getId(),
+            $request->request->getString('_token'),
+        )) {
+            throw $this->createAccessDeniedException('La solicitud no es válida.');
+        }
+
+        try {
+            $result = $entityManager->wrapInTransaction(function () use ($serviceOrder, $productionPlanManager, $serviceOrderManager): array {
+                $reservationResult = $productionPlanManager->reserveServiceOrder($serviceOrder, $this->authenticatedUser());
+                $serviceOrderManager->markPlanned($serviceOrder, $this->authenticatedUser());
+
+                return $reservationResult;
+            });
+            $this->addFlash(
+                'success',
+                $result['operations'] > 0
+                    ? sprintf('Planificación confirmada: agenda reservada para %d operación(es) en %d tramo(s).', $result['operations'], $result['segments'])
+                    : 'Planificación confirmada con la agenda que ya estaba reservada.',
+            );
+        } catch (\DomainException|\InvalidArgumentException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        } catch (UniqueConstraintViolationException) {
+            $this->addFlash('error', 'La agenda cambió mientras se confirmaba la orden. Actualiza la página, revisa los avisos y vuelve a intentarlo.');
+        }
+
+        return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+    }
+
     #[Route('/{id}/apartar-materiales', name: 'commit_materials', requirements: ['id' => '\\d+'], methods: ['POST'])]
     public function commitMaterials(
         Request $request,
@@ -1073,6 +1159,8 @@ final class ServiceOrderController extends AbstractController
         $equipmentChoicesByPlan = [];
         $equipmentAvailabilityByPlan = [];
         $recommendedEquipmentByPlan = [];
+        $operationSchedulePreviewByPlan = [];
+        $itemPlanningSummaryById = [];
         $automaticEstimateByPlan = [];
         $physicalEstimateByPlan = [];
         $requiredLoadUnitByPlan = [];
@@ -1218,15 +1306,146 @@ final class ServiceOrderController extends AbstractController
 
                     $hasEquipment = $plan->getEquipment() !== null;
                     $hasEstimate = $plan->getEstimatedMinutes() !== null && $plan->getEstimateKind() !== null;
-                    if ((!$hasEquipment && count($choices) === 1)
+                    if ((!$hasEquipment && $recommended !== null)
                         || (!$hasEstimate && $effectiveEquipment !== null && $automaticEstimateByPlan[$planId])) {
                         ++$planningProgress['auto_actions'];
                     }
                 }
             }
+
+            foreach ($itemsForDisplay as $item) {
+                $itemId = (int) $item->getId();
+                $plans = $plansByItem[$itemId] ?? [];
+                $summary = [
+                    'operations' => count($plans),
+                    'with_equipment' => 0,
+                    'estimated' => 0,
+                    'reserved' => 0,
+                    'ready' => 0,
+                    'estimated_minutes' => 0,
+                    'duration_complete' => $plans !== [],
+                    'machine_choice_required' => false,
+                    'finish_at' => $productionForecast['items'][$itemId]['production_finish'] ?? null,
+                    'finish_type' => null,
+                ];
+                if ($summary['finish_at'] !== null) {
+                    $lastPlan = $plans !== [] ? $plans[array_key_last($plans)] : null;
+                    $summary['finish_type'] = $lastPlan?->hasCompletedLatestExecution() ? 'actual' : 'reserved';
+                }
+                $projectedFinish = null;
+                $canProjectFinish = $plans !== [];
+
+                foreach ($plans as $plan) {
+                    $planId = (int) $plan->getId();
+                    $reservations = $reservationsByPlan[$planId] ?? [];
+                    $availability = $equipmentAvailabilityByPlan[$planId] ?? [];
+                    $recommended = $recommendedEquipmentByPlan[$planId] ?? null;
+                    $effectiveEquipment = $plan->getEquipment() ?? $recommended;
+                    $selectedOption = null;
+                    $machineChoiceRequired = false;
+
+                    if ($effectiveEquipment !== null) {
+                        foreach ($availability['options'] ?? [] as $option) {
+                            if ((int) $option['equipment']->getId() === (int) $effectiveEquipment->getId()) {
+                                $selectedOption = $option;
+                                break;
+                            }
+                        }
+                    }
+
+                    if ($selectedOption === null
+                        && $effectiveEquipment === null
+                        && ($availability['recommendation_reason'] ?? null) === 'same_completion') {
+                        $options = array_values(array_filter(
+                            $availability['options'] ?? [],
+                            static fn (array $option): bool => $option['ends_at'] !== null && $option['unavailable_reason'] === null,
+                        ));
+                        if (isset($options[1]) && $options[0]['ends_at'] == $options[1]['ends_at']) {
+                            $selectedOption = $options[0];
+                            $machineChoiceRequired = true;
+                        }
+                    }
+
+                    $segments = [];
+                    $startsAt = null;
+                    $endsAt = null;
+                    if ($reservations !== []) {
+                        usort($reservations, static fn ($left, $right): int => $left->getStartsAt() <=> $right->getStartsAt());
+                        foreach ($reservations as $reservation) {
+                            $segments[] = [
+                                'start' => $reservation->getStartsAt(),
+                                'end' => $reservation->getEndsAt(),
+                            ];
+                            $startsAt ??= $reservation->getStartsAt();
+                            if ($endsAt === null || $reservation->getEndsAt() > $endsAt) {
+                                $endsAt = $reservation->getEndsAt();
+                            }
+                        }
+                    } elseif ($selectedOption !== null && $selectedOption['unavailable_reason'] === null) {
+                        $startsAt = $selectedOption['starts_at'];
+                        $endsAt = $selectedOption['ends_at'];
+                    }
+
+                    $estimatedMinutes = $plan->getEstimatedMinutes() ?? $selectedOption['estimated_minutes'] ?? null;
+                    $hasEstimate = $plan->getEstimatedMinutes() !== null && $plan->getEstimateKind() !== null;
+                    $hasEquipment = $plan->getEquipment() !== null;
+                    $hasReservation = $reservations !== [];
+                    $isReady = $plan->getEquipment() !== null
+                        && $plan->getEstimatedMinutes() !== null
+                        && $hasReservation
+                        && $plan->getBlockedReason() === null
+                        && $item->getPlanningIssue() === null;
+
+                    if ($hasEquipment) { ++$summary['with_equipment']; }
+                    if ($estimatedMinutes !== null) {
+                        $summary['estimated_minutes'] += $estimatedMinutes;
+                    } else {
+                        $summary['duration_complete'] = false;
+                    }
+                    if ($hasEstimate) {
+                        ++$summary['estimated'];
+                    }
+                    if ($hasReservation) { ++$summary['reserved']; }
+                    if ($isReady) { ++$summary['ready']; }
+                    if ($machineChoiceRequired) { $summary['machine_choice_required'] = true; }
+
+                    $operationSchedulePreviewByPlan[$planId] = [
+                        'equipment' => $effectiveEquipment,
+                        'equipment_is_suggested' => $plan->getEquipment() === null && $recommended !== null,
+                        'machine_choice_required' => $machineChoiceRequired,
+                        'estimated_minutes' => $estimatedMinutes,
+                        'starts_at' => $startsAt,
+                        'ends_at' => $endsAt,
+                        'segments' => $segments,
+                        'is_reserved' => $hasReservation,
+                    ];
+
+                    if ($endsAt === null || $plan->getBlockedReason() !== null || $item->getPlanningIssue() !== null) {
+                        $canProjectFinish = false;
+                    }
+                    $projectedFinish = $endsAt;
+                }
+
+                if ($summary['finish_at'] === null && $canProjectFinish) {
+                    $summary['finish_at'] = $projectedFinish;
+                    $summary['finish_type'] = 'projected';
+                }
+                if (!$summary['duration_complete']) {
+                    $summary['estimated_minutes'] = null;
+                }
+                $itemPlanningSummaryById[$itemId] = $summary;
+            }
         }
 
+        $allItemsHaveActivePlans = true;
+        foreach ($itemsForDisplay as $item) {
+            if (($plansByItem[(int) $item->getId()] ?? []) === []) {
+                $allItemsHaveActivePlans = false;
+                break;
+            }
+        }
         $allPlansReadyToReserve = $planningProgress['operations'] > 0
+            && $allItemsHaveActivePlans
             && $planningProgress['with_equipment'] === $planningProgress['operations']
             && $planningProgress['estimated'] === $planningProgress['operations']
             && !$planningHasIssues;
@@ -1236,6 +1455,9 @@ final class ServiceOrderController extends AbstractController
         $canMarkPlanned = $canPlan
             && $allPlansReadyToReserve
             && $allPlansReserved
+            && $serviceOrder->getCommitmentDate() !== null;
+        $canConfirmPlanning = $canPlan
+            && $allPlansReadyToReserve
             && $serviceOrder->getCommitmentDate() !== null;
 
         return $this->render('admin/service_orders/show.html.twig', [
@@ -1247,6 +1469,7 @@ final class ServiceOrderController extends AbstractController
             'planningHasIssues' => $planningHasIssues,
             'canReserveFullPlan' => $canReserveFullPlan,
             'canMarkPlanned' => $canMarkPlanned,
+            'canConfirmPlanning' => $canConfirmPlanning,
             'canPlan' => $canPlan,
             'materialRequirements' => $materialRequirements,
             'canCommitMaterials' => $canCommitMaterials,
@@ -1266,6 +1489,8 @@ final class ServiceOrderController extends AbstractController
             'equipmentChoicesByPlan' => $equipmentChoicesByPlan,
             'equipmentAvailabilityByPlan' => $equipmentAvailabilityByPlan,
             'recommendedEquipmentByPlan' => $recommendedEquipmentByPlan,
+            'operationSchedulePreviewByPlan' => $operationSchedulePreviewByPlan,
+            'itemPlanningSummaryById' => $itemPlanningSummaryById,
             'automaticEstimateByPlan' => $automaticEstimateByPlan,
             'physicalEstimateByPlan' => $physicalEstimateByPlan,
             'requiredLoadUnitByPlan' => $requiredLoadUnitByPlan,

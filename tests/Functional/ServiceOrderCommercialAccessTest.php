@@ -687,6 +687,7 @@ final class ServiceOrderCommercialAccessTest extends TestCase
 
         foreach ([
             '/admin/ordenes-servicio/'.$this->serviceOrder->getId().'/planificacion',
+            '/admin/ordenes-servicio/'.$this->serviceOrder->getId().'/confirmar-planificacion',
             '/admin/ordenes-servicio/'.$this->serviceOrder->getId().'/partidas/'.$item->getId().'/prioridad/vista-previa',
         ] as $path) {
             $this->browser->request('POST', $path);
@@ -740,9 +741,66 @@ final class ServiceOrderCommercialAccessTest extends TestCase
         self::assertSame(200, $this->browser->getResponse()->getStatusCode());
         $html = (string) $this->browser->getResponse()->getContent();
         self::assertStringContainsString('Progreso de la orden', $html);
-        self::assertStringNotContainsString('Reservar todas las operaciones', $html);
+        self::assertStringContainsString('Planificación operativa', $html);
+        self::assertStringNotContainsString('Reservar agenda completa', $html);
+        self::assertStringNotContainsString('Confirmar planificación', $html);
         self::assertStringNotContainsString('Marcar como planificada', $html);
         $this->assertNoCommercialData($html, 'unplanned order without route');
+    }
+
+    public function testProductionCanReserveAndConfirmThePlanInOneAction(): void
+    {
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $production = $em->getRepository(User::class)->findOneBy(['username' => 'qa-production']);
+        self::assertInstanceOf(User::class, $production);
+        $item = $this->serviceOrder->getItems()->first();
+        self::assertInstanceOf(ServiceOrderItem::class, $item);
+
+        $area = (new OperationArea())->setCode('QA-CONFIRM')->setName('Impresión QA');
+        $operation = (new Operation())->setOperationArea($area)->setCode('QA-CONFIRM-OP')->setName('Impresión QA');
+        $machine = (new \App\Entity\Equipment\Equipment())
+            ->setCode('QA-CONFIRM-EQ')
+            ->setName('Plotter QA')
+            ->setPrimaryOperation($operation);
+        $plan = (new ServiceOrderOperationPlan())
+            ->setSequenceNumber(1)
+            ->setOperation($operation)
+            ->setCreatedBy($production)
+            ->setOperationSnapshot(['code' => 'QA-CONFIRM-OP', 'name' => 'Impresión QA', 'area_name' => 'Impresión QA'])
+            ->setEquipment($machine, ['name' => 'Plotter QA']);
+        $item->addOperationPlan($plan);
+        $this->serviceOrder->setCommitmentDate(new \DateTimeImmutable('+5 days'));
+        foreach ([$area, $operation, $machine] as $entity) {
+            $em->persist($entity);
+        }
+        $em->flush();
+
+        $planManager = $this->kernel->getContainer()->get('test.service_container')->get(ProductionPlanManager::class);
+        $planManager->estimate($plan, null, null, '60', 'Estimación manual de QA', $production);
+
+        $this->browser->loginUser($production);
+        $this->browser->request('GET', '/admin/ordenes-servicio/'.$this->serviceOrder->getId());
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        $html = (string) $this->browser->getResponse()->getContent();
+        self::assertStringContainsString('Tiempo de trabajo estimado', $html);
+        self::assertStringContainsString('Fin de producción pronosticado', $html);
+        self::assertStringContainsString('Confirmar planificación', $html);
+        $this->assertNoCommercialData($html, 'planning confirmation view');
+
+        $form = $this->browser->getCrawler()->filter(sprintf(
+            'form[action="/admin/ordenes-servicio/%d/confirmar-planificacion"]',
+            $this->serviceOrder->getId(),
+        ))->form();
+        $this->browser->submit($form);
+        self::assertSame(302, $this->browser->getResponse()->getStatusCode());
+        $this->browser->followRedirect();
+        self::assertStringContainsString('Planificación confirmada', (string) $this->browser->getResponse()->getContent());
+
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $savedOrder = $em->getRepository(ServiceOrder::class)->find($this->serviceOrder->getId());
+        self::assertInstanceOf(ServiceOrder::class, $savedOrder);
+        self::assertTrue($savedOrder->isPlanned());
+        self::assertCount(1, $em->getRepository(\App\Entity\Production\ProductionReservation::class)->findActiveForServiceOrder($savedOrder));
     }
 
     public function testInitialCommitmentNeedsNoReasonButChangesRequireOne(): void

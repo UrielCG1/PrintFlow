@@ -354,3 +354,62 @@
     .printing-label-preview { grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr); }
     .printing-inline-status { font-size: 0.55rem; }
 }
+
+/* Escala de lectura del detalle de Impresión. */
+.printing-detail .pf-page-header__eyebrow { font-size: 0.76rem; }
+.printing-detail-heading > p:last-child { font-size: 0.92rem; }
+.printing-back { min-height: 2.5rem; font-size: 0.82rem; }
+.printing-stepper li strong { font-size: 0.82rem; }
+.printing-stepper li small { font-size: 0.74rem; }
+.printing-card-heading h2 { font-size: 1rem; }
+.printing-card-heading p { font-size: 0.82rem; }
+.printing-inline-status { font-size: 0.75rem; }
+.printing-art-file a,
+.printing-art-pending { font-size: 0.84rem; }
+.printing-art-file small { font-size: 0.74rem; }
+.printing-file-button { font-size: 0.78rem !important; }
+.printing-callout p { font-size: 0.8rem; }
+.printing-callout p span { font-size: 0.74rem; }
+.printing-reference-link { font-size: 0.8rem; }
+.printing-requirements dt { font-size: 0.78rem; }
+.printing-requirements dd { font-size: 0.85rem; }
+.printing-requirements dd small { font-size: 0.75rem; }
+.printing-configure-details > summary,
+.printing-reprint-details > summary { font-size: 0.78rem; }
+.printing-configure-details pre { font-size: 0.78rem !important; }
+.printing-configure-form .form-label,
+.printing-detail .form-label { font-size: 0.82rem; }
+.printing-configure-form .form-control,
+.printing-configure-form .form-select,
+.printing-detail .form-control,
+.printing-detail .form-select { min-height: 2.4rem; font-size: 0.84rem; }
+.printing-configure-form .pf-button { min-height: 2.25rem; font-size: 0.8rem; }
+.printing-instructions p,
+.printing-muted-copy { font-size: 0.8rem; }
+.printing-scan-fields .form-control { min-height: 2.4rem; font-size: 0.82rem; }
+.printing-scan-message { font-size: 0.78rem; }
+.printing-wide-button { min-height: 2.5rem; font-size: 0.82rem; }
+.printing-form-hint,
+.printing-next-note { font-size: 0.76rem; }
+.printing-disabled-fields span { font-size: 0.75rem; }
+.printing-disabled-fields b { font-size: 0.8rem; }
+.printing-label-mark > strong { font-size: 0.5rem; }
+.printing-label-mark > small { font-size: 0.47rem; }
+.printing-label-mark > span:last-child { font-size: 0.5rem; }
+.printing-label-actions > small { font-size: 0.76rem; }
+.printing-label-actions > code { font-size: 0.72rem; }
+.printing-label-actions > p { font-size: 0.75rem; }
+.printing-reprint-details .pf-button { min-height: 2.25rem; font-size: 0.78rem; }
+.printing-label-placeholder strong { font-size: 0.85rem; }
+.printing-label-placeholder span { font-size: 0.78rem; }
+.printing-trace-order { font-size: 0.75rem; }
+.printing-timeline { gap: 0.65rem; }
+.printing-timeline strong { font-size: 0.82rem; }
+.printing-timeline small { font-size: 0.72rem; }
+.printing-usage-history .printing-card-heading > span { font-size: 0.76rem; }
+.printing-usage-list article { font-size: 0.8rem; }
+
+@media (max-width: 767.98px) {
+    .printing-stepper li strong { font-size: 0.68rem; }
+    .printing-stepper li small { font-size: 0.64rem; }
+}
