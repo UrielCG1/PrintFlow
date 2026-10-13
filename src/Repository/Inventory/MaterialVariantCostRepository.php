@@ -27,4 +27,23 @@ final class MaterialVariantCostRepository extends ServiceEntityRepository
             ->setLockMode(LockMode::PESSIMISTIC_WRITE)
             ->getOneOrNullResult();
     }
+
+    /** @param list<MaterialVariant> $variants @return list<MaterialVariantCost> */
+    public function findForVariants(array $variants): array
+    {
+        if ($variants === []) {
+            return [];
+        }
+
+        /** @var list<MaterialVariantCost> $balances */
+        $balances = $this->createQueryBuilder('balance')
+            ->innerJoin('balance.variant', 'variant')
+            ->addSelect('variant')
+            ->andWhere('balance.variant IN (:variants)')
+            ->setParameter('variants', $variants)
+            ->getQuery()
+            ->getResult();
+
+        return $balances;
+    }
 }

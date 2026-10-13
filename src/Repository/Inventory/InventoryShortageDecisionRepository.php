@@ -7,6 +7,7 @@ namespace App\Repository\Inventory;
 use App\Entity\Inventory\InventoryCommitment;
 use App\Entity\Inventory\InventoryShortageDecision;
 use App\Entity\Orders\ServiceOrder;
+use App\Enum\Inventory\InventoryShortageDecisionType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\LockMode;
 use Doctrine\Persistence\ManagerRegistry;
@@ -53,5 +54,19 @@ final class InventoryShortageDecisionRepository extends ServiceEntityRepository
             ->getResult();
 
         return $decisions;
+    }
+
+    /** @return list<int> */
+    public function findActiveWaitingCommitmentIds(): array
+    {
+        $rows = $this->createQueryBuilder('decision')
+            ->select('IDENTITY(decision.commitment) AS commitment_id')
+            ->andWhere('decision.isActive = true')
+            ->andWhere('decision.type = :type')
+            ->setParameter('type', InventoryShortageDecisionType::WAIT_FOR_PURCHASE)
+            ->getQuery()
+            ->getScalarResult();
+
+        return array_values(array_map(static fn (array $row): int => (int) $row['commitment_id'], $rows));
     }
 }

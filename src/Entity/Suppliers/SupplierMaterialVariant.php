@@ -18,4 +18,12 @@ class SupplierMaterialVariant
  /** Fin UTC opcional de la vigencia comercial. */ #[ORM\Column(name:'valid_until',type:Types::DATETIME_IMMUTABLE,nullable:true)] private ?\DateTimeImmutable $validUntil=null;
  /** Indica si PRINTFLOW debe proponer esta oferta primero. */ #[ORM\Column(name:'is_preferred')] private bool $isPreferred=false; /** Orden relativo entre alternativas del mismo artículo. */ #[ORM\Column(name:'priority')] private int $priority=100; /** Indica si puede seleccionarse en nuevas compras. */ #[ORM\Column(name:'is_active')] private bool $isActive=true;
  public function __construct(Supplier $supplier,MaterialVariant $variant,MeasurementUnit $unit,string $cost){$this->supplier=$supplier;$this->variant=$variant;$this->purchaseUnit=$unit;$this->unitCostMxn=$cost;$this->validFrom=new \DateTimeImmutable('now',new \DateTimeZone('UTC'));$this->initializeTimestamps();}
+ public function getId():?int{return $this->id;}
+ public function getSupplier():Supplier{return $this->supplier;}
+ public function getVariant():MaterialVariant{return $this->variant;}
+ public function getPurchaseUnit():MeasurementUnit{return $this->purchaseUnit;}
+ public function getSupplierSku():?string{return $this->supplierSku;}
+ public function getUnitCostMxn():string{return $this->unitCostMxn;}
+ public function isPreferred():bool{return $this->isPreferred;}
+ public function getPriority():int{return $this->priority;}
 }

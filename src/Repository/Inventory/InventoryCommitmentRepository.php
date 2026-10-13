@@ -84,6 +84,26 @@ final class InventoryCommitmentRepository extends ServiceEntityRepository
     }
 
     /** @return list<InventoryCommitment> */
+    public function findShortagesForReplenishment(): array
+    {
+        /** @var list<InventoryCommitment> $commitments */
+        $commitments = $this->createQueryBuilder('commitment')
+            ->innerJoin('commitment.serviceOrder', 'serviceOrder')
+            ->innerJoin('commitment.variant', 'variant')
+            ->innerJoin('variant.material', 'material')
+            ->innerJoin('variant.inventoryUnit', 'unit')
+            ->addSelect('serviceOrder', 'variant', 'material', 'unit')
+            ->andWhere('commitment.status IN (:statuses)')
+            ->setParameter('statuses', [InventoryCommitmentStatus::PARTIAL, InventoryCommitmentStatus::SHORTAGE])
+            ->orderBy('variant.id', 'ASC')
+            ->addOrderBy('commitment.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $commitments;
+    }
+
+    /** @return list<InventoryCommitment> */
     public function findShortagesForOrder(ServiceOrder $order): array
     {
         /** @var list<InventoryCommitment> $commitments */

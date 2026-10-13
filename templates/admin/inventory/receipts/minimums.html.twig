@@ -6,7 +6,7 @@
 
 {% block app_content %}
     <div class="pf-page__content">
-        <div class="pf-page-header"><div class="pf-page-header__content"><h1 class="pf-page-header__title">Mínimos y reabasto</h1><p class="pf-page-header__description">Configura los umbrales por presentación y en su unidad de inventario. Estos valores no modifican las existencias.</p></div></div>
+        <div class="pf-page-header"><div class="pf-page-header__content"><h1 class="pf-page-header__title">Mínimos y reabasto</h1><p class="pf-page-header__description">Configura los umbrales por presentación y en su unidad de inventario. Estos valores no modifican las existencias.</p></div><div class="pf-page-header__actions"><a href="{{ path('admin_inventory_replenishment_index') }}" class="btn pf-button pf-button--primary"><i class="bi bi-cart-plus" aria-hidden="true"></i><span>Preparar reposición</span></a></div></div>
         <div class="alert alert-info" role="alert">El aviso se activa cuando el saldo utilizable es igual o menor al mínimo. El saldo utilizable descuenta material bloqueado o comprometido.</div>
         <div class="pf-card"><div class="pf-card__body p-0"><div class="table-responsive"><table class="table pf-table mb-0"><thead><tr><th>Material</th><th>Unidad</th><th>Mínimo</th><th>Punto de reabasto</th><th>Cantidad sugerida</th><th>Acción</th></tr></thead><tbody>
             {% for variant in variants %}

@@ -1,0 +1,84 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Reabasto | OoxCorp{% endblock %}
+{% block app_navigation_active %}inventory{% endblock %}
+{% block app_breadcrumb %}Operación / Inventario / Reabasto{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page__content">
+        <div class="pf-page-header">
+            <div class="pf-page-header__content">
+                <h1 class="pf-page-header__title">Bandeja de reposición</h1>
+                <p class="pf-page-header__description">Agrupa faltantes de órdenes y material bajo mínimo para preparar una solicitud de compra sin alterar el inventario físico.</p>
+            </div>
+            <div class="pf-page-header__actions">
+                <a href="{{ path('admin_inventory_receipts_minimums') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-sliders" aria-hidden="true"></i><span>Configurar mínimos</span></a>
+                {% if suggestions is not empty %}
+                    <a href="{{ path('admin_inventory_replenishment_export') }}" class="btn pf-button pf-button--primary"><i class="bi bi-file-earmark-spreadsheet" aria-hidden="true"></i><span>Exportar solicitud CSV</span></a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="alert alert-info" role="alert">
+            Esta bandeja es una recomendación. Exportarla o compartirla con un proveedor no registra una compra, no aumenta disponibilidad y no libera órdenes en espera. El material solo entra al inventario al registrar su recepción física.
+        </div>
+
+        <div class="pf-card">
+            <div class="pf-card__body p-0">
+                <div class="table-responsive">
+                    <table class="table pf-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Material</th>
+                                <th>Disponible</th>
+                                <th>Demanda de órdenes</th>
+                                <th>Mínimo</th>
+                                <th>Por reponer</th>
+                                <th>Proveedor propuesto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for suggestion in suggestions %}
+                                {% set unit = suggestion.variant.inventoryUnit.symbol %}
+                                <tr>
+                                    <td>
+                                        <strong class="pf-table__primary">{{ suggestion.variant.material.name }}</strong>
+                                        <div class="small text-body-secondary">{{ suggestion.variant.material.code }} · {{ suggestion.variant.code }}</div>
+                                    </td>
+                                    <td class="pf-table__cell--right pf-table__cell--nowrap">{{ suggestion.calculation.availableQuantity|number_format(6, '.', ',') }} {{ unit }}</td>
+                                    <td>
+                                        {% if suggestion.shortageOrderCount > 0 %}
+                                            <strong class="text-danger">{{ suggestion.calculation.orderShortageQuantity|number_format(6, '.', ',') }} {{ unit }}</strong>
+                                            <div class="small text-body-secondary">{{ suggestion.shortageOrderCount }} {{ suggestion.shortageOrderCount == 1 ? 'orden con faltante' : 'órdenes con faltante' }}{% if suggestion.waitingPurchaseOrderCount > 0 %} · {{ suggestion.waitingPurchaseOrderCount }} en espera de compra{% endif %}</div>
+                                        {% else %}
+                                            <span class="text-body-secondary">Sin faltantes de órdenes</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div>{{ suggestion.variant.minimumStock|number_format(6, '.', ',') }} {{ unit }}</div>
+                                        {% if suggestion.calculation.minimumGapQuantity != '0.000000' %}<div class="small text-warning">Faltan {{ suggestion.calculation.minimumGapQuantity|number_format(6, '.', ',') }} {{ unit }} para mínimo</div>{% endif %}
+                                        {% if suggestion.calculation.reorderPointReached %}<div class="small text-body-secondary">Punto de reabasto alcanzado</div>{% endif %}
+                                    </td>
+                                    <td class="pf-table__cell--right pf-table__cell--nowrap">
+                                        <strong class="text-danger">{{ suggestion.calculation.suggestedQuantity|number_format(6, '.', ',') }} {{ unit }}</strong>
+                                        {% if suggestion.variant.reorderQuantity != '0.000000' %}<div class="small text-body-secondary">Política: {{ suggestion.variant.reorderQuantity|number_format(6, '.', ',') }} {{ unit }}</div>{% endif %}
+                                    </td>
+                                    <td>
+                                        {% if suggestion.supplierOffer %}
+                                            <strong>{{ suggestion.supplierOffer.supplier.businessName }}</strong>
+                                            <div class="small text-body-secondary">{{ suggestion.supplierOffer.purchaseUnit.symbol }}{% if suggestion.supplierOffer.supplierSku %} · SKU {{ suggestion.supplierOffer.supplierSku }}{% endif %}</div>
+                                        {% else %}
+                                            <span class="text-body-secondary">Sin oferta de proveedor configurada</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="6" class="pf-table__empty">No hay materiales que requieran reposición con los saldos y mínimos actuales.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
