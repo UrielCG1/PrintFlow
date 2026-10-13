@@ -13,6 +13,7 @@ use App\Entity\Production\ProductionOperationExecution;
 use App\Entity\Production\ProductionPrintedOutput;
 use App\Entity\Users\User;
 use App\Repository\Equipment\EquipmentRepository;
+use App\Repository\Inventory\InventoryStockUnitRepository;
 use App\Repository\Materials\MaterialVariantRepository;
 use App\Repository\Orders\ServiceOrderOperationPlanRepository;
 use App\Repository\Production\ProductionPrintedOutputRepository;
@@ -106,6 +107,7 @@ final class PrintingController extends AbstractController
         MaterialVariantRepository $materialVariantRepository,
         ServiceOrderItemDesignReleaseRepository $releaseRepository,
         ProductionPrintingScanRepository $scanRepository,
+        InventoryStockUnitRepository $stockUnitRepository,
         ProductionPrintedOutputRepository $outputRepository,
         ProductionMaterialUsageRepository $usageRepository,
         PrintingLabelRenderer $labelRenderer,
@@ -125,12 +127,15 @@ final class PrintingController extends AbstractController
         }
 
         $output = $outputRepository->findCurrent($item);
+        $currentScan = $scanRepository->findCurrentForPlan($plan);
+        $scannedStockUnit = $currentScan?->getStockUnit();
 
         return $this->render('admin/printing/show.html.twig', [
             'plan' => $plan,
             'item' => $item,
             'release' => $releaseRepository->findCurrent($item),
-            'currentScan' => $scanRepository->findCurrentForPlan($plan),
+            'currentScan' => $currentScan,
+            'surplusStockUnits' => $scannedStockUnit !== null ? $stockUnitRepository->findSurplusesForParent($scannedStockUnit) : [],
             'activeExecution' => $activeExecution,
             'reworkOrigin' => $reworkOrigin,
             'canStartPrinting' => !$plan->hasCompletedExecution() || $reworkOrigin !== null,
@@ -144,6 +149,7 @@ final class PrintingController extends AbstractController
             'canSubstitute' => $this->isGranted('production.substitution.approve'),
             'canExecute' => $this->isGranted('production.execute'),
             'canPrintLabels' => $this->isGranted('production.labels.print'),
+            'canPrintInventoryLabels' => $this->isGranted('inventory.labels.print'),
             'orderVersion' => $item->getServiceOrder()->getTraceabilityVersion(),
             'startCommandId' => bin2hex(random_bytes(24)),
             'completeCommandId' => bin2hex(random_bytes(24)),
@@ -215,7 +221,7 @@ final class PrintingController extends AbstractController
         $this->assertPrintingPlan($plan, $manager);
         $this->assertCsrf($request, 'printing-complete-'.$execution->getId());
         try {
-            $output = $manager->complete(
+            $result = $manager->complete(
                 $execution,
                 $this->authenticatedUser(),
                 $this->commandFromRequest($request, 'Impresión completada con consumo registrado.'),
@@ -223,10 +229,17 @@ final class PrintingController extends AbstractController
                 $request->request->has('waste') ? $request->request->getString('waste') : null,
                 $request->request->getString('measurement_method'),
                 $request->request->getString('waste_reason'),
+                $request->request->getString('surplus_quantity'),
+                $request->request->getString('surplus_location'),
+                $request->request->getString('surplus_description'),
             );
-            if ($output instanceof ProductionPrintedOutput) {
+            if ($result->surplusStockUnit !== null) {
+                $this->addFlash('success', 'Impresión terminada. El sobrante '.$result->surplusStockUnit->getUnitCode().' tiene una etiqueta QR lista para imprimir.');
+                return $this->redirectToRoute('admin_printing_show', ['id' => $plan->getId()]);
+            }
+            if ($result->output instanceof ProductionPrintedOutput) {
                 $this->addFlash('success', 'Impresión terminada. Genera e imprime la etiqueta QR de esta salida.');
-                return $this->redirectToRoute('admin_printing_label', ['id' => $output->getId()]);
+                return $this->redirectToRoute('admin_printing_label', ['id' => $result->output->getId()]);
             }
         } catch (\DomainException|\InvalidArgumentException $exception) {
             $this->addFlash('error', $exception->getMessage());

@@ -36,6 +36,21 @@ class MaterialVariantCost
   if(BigDecimal::of($quantity)->isGreaterThan($committed))throw new \DomainException('La liberación supera el material comprometido.');
   $this->committedQuantity=$committed->minus($quantity)->toScale(6)->__toString();$this->touchBalance();
  }
+ public function consume(string $quantity,string $committedQuantityToRelease='0'):void
+ {
+  $quantity=self::positiveDecimal($quantity);
+  $release=trim(str_replace(',','.',$committedQuantityToRelease));
+  if(preg_match('/^(?:0|[1-9]\d{0,13})(?:\.\d{1,6})?$/D',$release)!==1)throw new \InvalidArgumentException('La liberación del apartado no tiene un formato válido.');
+  $release=BigDecimal::of($release)->toScale(6)->__toString();
+  $onHand=BigDecimal::of($this->onHandQuantity);
+  $committed=BigDecimal::of($this->committedQuantity);
+  if(BigDecimal::of($quantity)->isGreaterThan($onHand))throw new \DomainException('El consumo supera la existencia física registrada para la variante.');
+  if(BigDecimal::of($release)->isGreaterThan(BigDecimal::of($quantity)))throw new \InvalidArgumentException('La liberación del apartado no puede superar el consumo físico.');
+  if(BigDecimal::of($release)->isGreaterThan($committed))throw new \DomainException('La liberación del apartado supera el saldo pendiente de uso.');
+  $this->onHandQuantity=$onHand->minus($quantity)->toScale(6)->__toString();
+  $this->committedQuantity=$committed->minus($release)->toScale(6)->__toString();
+  $this->touchBalance();
+ }
  private function touchBalance():void{$this->updatedAt=new \DateTimeImmutable('now',new \DateTimeZone('UTC'));}
  private static function positiveDecimal(string $value):string{$value=trim(str_replace(',','.',$value));if(preg_match('/^(?:0|[1-9]\d{0,13})(?:\.\d{1,6})?$/D',$value)!==1||BigDecimal::of($value)->isLessThanOrEqualTo(BigDecimal::zero()))throw new \InvalidArgumentException('La cantidad física debe ser mayor que cero y tener máximo seis decimales.');return BigDecimal::of($value)->toScale(6)->__toString();}
 }

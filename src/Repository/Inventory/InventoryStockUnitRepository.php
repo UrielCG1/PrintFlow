@@ -23,6 +23,25 @@ final class InventoryStockUnitRepository extends ServiceEntityRepository
         return $this->findOneBy(['qrToken' => strtolower(trim($qrToken))]);
     }
 
+    /** @return list<InventoryStockUnit> */
+    public function findSurplusesForParent(InventoryStockUnit $parent): array
+    {
+        /** @var list<InventoryStockUnit> $stockUnits */
+        $stockUnits = $this->createQueryBuilder('stockUnit')
+            ->innerJoin('stockUnit.variant', 'variant')
+            ->innerJoin('variant.inventoryUnit', 'unit')
+            ->leftJoin('stockUnit.lot', 'lot')
+            ->addSelect('variant', 'unit', 'lot')
+            ->andWhere('stockUnit.parentStockUnit = :parent')
+            ->setParameter('parent', $parent)
+            ->orderBy('stockUnit.receivedAt', 'DESC')
+            ->addOrderBy('stockUnit.id', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        return $stockUnits;
+    }
+
     public function paginateForInventory(
         ?string $search,
         ?InventoryStockUnitStatus $status,

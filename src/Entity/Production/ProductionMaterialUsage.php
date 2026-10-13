@@ -19,7 +19,7 @@ use Brick\Math\BigDecimal;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-/** Registro inmutable de una captura de consumo; este flujo no mueve inventario. */
+/** Registro inmutable de un consumo; los cierres operativos enlazan su movimiento físico de inventario. */
 #[ORM\Entity(repositoryClass: ProductionMaterialUsageRepository::class)]
 #[ORM\Table(name: 'production_material_usages')]
 #[ORM\Index(name: 'idx_usage_plan_execution', columns: ['operation_plan_id', 'operation_execution_id'])]
@@ -228,6 +228,22 @@ class ProductionMaterialUsage
     public function getQuantitySource(): QuantitySource { return $this->quantitySource; }
     public function getMeasuredAt(): ?\DateTimeImmutable { return $this->measuredAt; }
     /** @return array<string, mixed>|null */ public function getMaterialSnapshot(): ?array { return $this->materialSnapshot; }
+    public function getMovement(): ?InventoryMovement { return $this->movement; }
+
+    public function attachInventoryMovement(InventoryMovement $movement): self
+    {
+        $movementVariant = $movement->getVariant();
+        if ($this->variant === null || ($movementVariant !== $this->variant && ($movementVariant->getId() === null || $movementVariant->getId() !== $this->variant->getId()))) {
+            throw new \DomainException('El movimiento de inventario debe corresponder al material consumido.');
+        }
+        if ($this->movement !== null) {
+            throw new \DomainException('El consumo ya tiene un movimiento físico de inventario.');
+        }
+
+        $this->movement = $movement;
+
+        return $this;
+    }
 
     private static function decimalOrNull(?string $value, string $field): ?string
     {

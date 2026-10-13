@@ -106,6 +106,11 @@ class ProductionPrintingScan
     public function getScanToken(): string { return $this->scanToken; }
     public function getValidatedAt(): \DateTimeImmutable { return $this->validatedAt; }
 
+    public function hasBeenConsumed(): bool
+    {
+        return $this->consumedAt !== null;
+    }
+
     public function isAvailable(): bool
     {
         return $this->currentMarker !== null

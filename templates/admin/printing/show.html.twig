@@ -6,6 +6,7 @@
 
 {% block app_content %}
     {% set productName = item.commercialItemSnapshot.name ?? item.commercialItem.name %}
+    {% set scannedMaterial = currentScan and currentScan.stockUnit ? currentScan.stockUnit.variant : plan.materialVariant %}
     {% set scanIsDone = activeExecution or output or (currentScan and currentScan.available) %}
     {% set activeStep = output and output.labelPlaced ? 6 : (output ? 5 : (activeExecution ? 4 : (currentScan and currentScan.available ? 3 : (release ? 2 : 1)))) %}
     <section class="pf-page__content printing-page printing-detail">
@@ -88,7 +89,7 @@
                             <div><label class="form-label" for="scan-material">Etiqueta QR de unidad física <span>*</span></label><div class="input-group"><input id="scan-material" name="material_qr_payload" class="form-control" placeholder="Escanea el QR del rollo, envase o paquete" maxlength="80" required autocomplete="off" data-ui--printing-scanner-target="material"><button class="btn printing-scan-camera" type="button" aria-label="Usar cámara para etiqueta QR" data-ui--printing-scanner-target="cameraButton" data-action="ui--printing-scanner#scanMaterial"><i class="bi bi-upc-scan" aria-hidden="true"></i></button></div></div>
                         </div>
                         <p class="printing-scan-message" data-ui--printing-scanner-target="message" aria-live="polite"></p>
-                        <p class="printing-form-hint">Escanea la etiqueta QR de la unidad fÃ­sica; debe conservar saldo disponible.</p>
+                        <p class="printing-form-hint">Escanea la etiqueta QR de la unidad física; debe conservar saldo disponible.</p>
                         <button class="btn pf-button pf-button--primary printing-wide-button" type="submit"><i class="bi bi-upc-scan" aria-hidden="true"></i>Validar escaneos</button>
                         <p class="printing-form-hint">La etiqueta debe pertenecer a una unidad con saldo disponible. La captura manual requiere autorización del jefe de Producción.</p>
                     </form>
@@ -119,13 +120,14 @@
                 {% if canExecute and activeExecution %}
                     <form class="pf-form" method="post" action="{{ path('admin_printing_complete', {id: activeExecution.id}) }}">
                         <input type="hidden" name="_token" value="{{ csrf_token('printing-complete-' ~ activeExecution.id) }}"><input type="hidden" name="expected_order_version" value="{{ orderVersion }}"><input type="hidden" name="command_id" value="{{ completeCommandId }}">
-                        <div class="printing-consumption-grid"><div><label class="form-label" for="printing-total">Total consumido ({{ plan.materialVariant ? plan.materialVariant.consumptionUnit.symbol : 'unidad' }})</label><input id="printing-total" class="form-control" name="total_consumed" inputmode="decimal" placeholder="Ej. 78" required></div><div><label class="form-label" for="printing-waste">Merma</label><input id="printing-waste" class="form-control" name="waste" inputmode="decimal" value="0" required></div></div>
-                        <p class="printing-form-hint">El consumo incluye la merma y queda trazado sin descontar existencias.</p>
+                        <div class="printing-consumption-grid"><div><label class="form-label" for="printing-total">Total consumido ({{ scannedMaterial ? scannedMaterial.consumptionUnit.symbol : 'unidad' }})</label><input id="printing-total" class="form-control" name="total_consumed" inputmode="decimal" placeholder="Ej. 78" required></div><div><label class="form-label" for="printing-waste">Merma ({{ scannedMaterial ? scannedMaterial.consumptionUnit.symbol : 'unidad' }})</label><input id="printing-waste" class="form-control" name="waste" inputmode="decimal" value="0" required></div></div>
+                        <p class="printing-form-hint">El total incluye la merma y descuenta el saldo de la unidad física validada por QR.</p>
                         <details class="printing-configure-details"><summary>Agregar datos de cierre</summary><div class="mt-3"><label class="form-label" for="printing-method">Método de medición</label><select id="printing-method" class="form-select" name="measurement_method" required><option value="medición manual">Medición manual</option><option value="lectura de máquina">Lectura de máquina</option></select><label class="form-label mt-3" for="printing-waste-reason">Motivo de merma</label><input id="printing-waste-reason" class="form-control" name="waste_reason" maxlength="255"><div class="form-text">Obligatorio si la merma es mayor que cero.</div><label class="form-label mt-3" for="printing-note">Nota de cierre</label><input id="printing-note" class="form-control" name="note" maxlength="500"></div></details>
+                        <details class="printing-configure-details"><summary>Separar sobrante reutilizable</summary><div class="mt-3"><p class="printing-form-hint">Regístralo solo si separaste físicamente un retazo o remanente. Se conserva el saldo total y se crea una etiqueta QR propia.</p><label class="form-label" for="printing-surplus-quantity">Cantidad separada ({{ scannedMaterial ? scannedMaterial.inventoryUnit.symbol : 'unidad de inventario' }})</label><input id="printing-surplus-quantity" class="form-control" name="surplus_quantity" inputmode="decimal" value="0"><label class="form-label mt-3" for="printing-surplus-location">Ubicación del sobrante</label><input id="printing-surplus-location" class="form-control" name="surplus_location" maxlength="100" placeholder="Conserva la ubicación actual si se deja vacío"><label class="form-label mt-3" for="printing-surplus-description">Descripción física</label><input id="printing-surplus-description" class="form-control" name="surplus_description" maxlength="500" placeholder="Ej. Retazo 1.20 m × 0.80 m, ancho útil 0.80 m"></div></details>
                         <button class="btn pf-button pf-button--primary printing-wide-button" type="submit">Terminar impresión y crear etiqueta</button>
                     </form>
                 {% else %}
-                    <div class="printing-disabled-fields"><span>Total consumido (m²)<b>Ej. 78</b></span><span>Merma (m²)<b>0</b></span></div>
+                    <div class="printing-disabled-fields"><span>Total consumido ({{ scannedMaterial ? scannedMaterial.consumptionUnit.symbol : 'unidad' }})<b>Ej. 78</b></span><span>Merma ({{ scannedMaterial ? scannedMaterial.consumptionUnit.symbol : 'unidad' }})<b>0</b></span></div>
                     <p class="printing-form-hint">El registro estará disponible cuando finalice la impresión.</p>
                     <button class="btn pf-button pf-button--secondary printing-wide-button" type="button" disabled>Cerrar impresión</button>
                 {% endif %}
@@ -141,6 +143,18 @@
                 {% else %}<div class="printing-label-placeholder"><i class="bi bi-qr-code" aria-hidden="true"></i><strong>Etiqueta pendiente</strong><span>Se generará al cerrar la impresión y registrar el consumo.</span></div>{% endif %}
             </section>
 
+            {% if surplusStockUnits is not empty %}
+                <section class="pf-card printing-detail-card printing-label-card">
+                    <div class="printing-card-heading"><h2>Etiquetas de sobrantes</h2></div>
+                    <p class="printing-form-hint">Estos remanentes conservan su procedencia y saldo como unidades físicas independientes.</p>
+                    <div class="printing-usage-list">
+                        {% for stockUnit in surplusStockUnits %}
+                            <article><strong>{{ stockUnit.unitCode }} · {{ stockUnit.remainingQuantity }} {{ stockUnit.variant.inventoryUnit.symbol }}</strong><span>{{ stockUnit.variant.material.name }}{% if stockUnit.storageLocation %} · {{ stockUnit.storageLocation }}{% endif %}</span>{% if canPrintInventoryLabels %}<a class="btn pf-button pf-button--secondary pf-button--sm" href="{{ path('admin_inventory_receipts_stock_unit_label', {id: stockUnit.id}) }}" target="_blank"><i class="bi bi-printer" aria-hidden="true"></i> Imprimir QR</a>{% endif %}</article>
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endif %}
+
             <section class="pf-card printing-detail-card printing-trace-card">
                 <div class="printing-card-heading"><h2>Trazabilidad del trabajo</h2><span class="printing-trace-order">{{ item.serviceOrder.folio }} · P{{ item.displayLineNumber }}</span></div>
                 <ol class="printing-timeline">
@@ -153,6 +167,6 @@
             </section>
         </div>
 
-        {% if materialUsages is not empty %}<section class="pf-card printing-usage-history"><div class="printing-card-heading"><h2>Consumos registrados</h2><span>Este registro no modifica inventario.</span></div><div class="printing-usage-list">{% for usage in materialUsages %}<article><strong>Intento {{ usage.operationExecution.attemptNumber }} · {{ usage.materialNameSnapshot }}</strong><span>{{ usage.actualQuantity }} {{ usage.unitLabelSnapshot }} usados · {{ usage.wasteQuantity }} {{ usage.unitLabelSnapshot }} de merma</span><time>{{ usage.measuredAt|date('d/m/Y H:i', 'America/Mexico_City') }}</time></article>{% endfor %}</div></section>{% endif %}
+        {% if materialUsages is not empty %}<section class="pf-card printing-usage-history"><div class="printing-card-heading"><h2>Consumos registrados</h2><span>Cada cierre descuenta la unidad QR validada.</span></div><div class="printing-usage-list">{% for usage in materialUsages %}<article><strong>Intento {{ usage.operationExecution.attemptNumber }} · {{ usage.materialNameSnapshot }}</strong><span>{{ usage.actualQuantity }} {{ usage.unitLabelSnapshot }} usados · {{ usage.wasteQuantity }} {{ usage.unitLabelSnapshot }} de merma</span><time>{{ usage.measuredAt|date('d/m/Y H:i', 'America/Mexico_City') }}</time></article>{% endfor %}</div></section>{% endif %}
     </section>
 {% endblock %}

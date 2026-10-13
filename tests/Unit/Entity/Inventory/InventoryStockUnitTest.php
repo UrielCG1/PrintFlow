@@ -55,6 +55,23 @@ final class InventoryStockUnitTest extends TestCase
         $stockUnit->consume('2.01');
     }
 
+    public function testItSeparatesARecoverableSurplusWithoutChangingTotalPhysicalStock(): void
+    {
+        $stockUnit = new InventoryStockUnit($this->variant(), '10');
+        $stockUnit->setStorageLocation('Bodega A / Rack 2');
+        $stockUnit->consume('2');
+
+        $surplus = $stockUnit->separateSurplus('3', 'Bodega A / Retazos', ['usable_width_cm' => 80]);
+
+        self::assertSame('5.000000', $stockUnit->getRemainingQuantity());
+        self::assertSame(InventoryStockUnitKind::SURPLUS, $surplus->getKind());
+        self::assertSame($stockUnit, $surplus->getParentStockUnit());
+        self::assertSame('3.000000', $surplus->getInitialQuantity());
+        self::assertSame('3.000000', $surplus->getRemainingQuantity());
+        self::assertSame('Bodega A / Retazos', $surplus->getStorageLocation());
+        self::assertSame(['usable_width_cm' => 80], $surplus->getPhysicalAttributes());
+    }
+
     public function testItRejectsALotFromAnotherVariant(): void
     {
         $stockUnit = new InventoryStockUnit($this->variant(), '2');
@@ -104,6 +121,25 @@ final class InventoryStockUnitTest extends TestCase
 
         self::assertSame('3.500000', $balance->getCommittedQuantity());
         self::assertSame('8.500000', $balance->getAvailableQuantity());
+    }
+
+    public function testItConsumesPhysicalStockAndOnlyTheRelatedCommittedQuantity(): void
+    {
+        $balance = new MaterialVariantCost($this->variant());
+        $balance->increaseOnHand('10');
+        $balance->commit('6');
+
+        $balance->consume('4', '4');
+
+        self::assertSame('6.000000', $balance->getOnHandQuantity());
+        self::assertSame('2.000000', $balance->getCommittedQuantity());
+        self::assertSame('4.000000', $balance->getAvailableQuantity());
+
+        $balance->consume('1');
+
+        self::assertSame('5.000000', $balance->getOnHandQuantity());
+        self::assertSame('2.000000', $balance->getCommittedQuantity());
+        self::assertSame('3.000000', $balance->getAvailableQuantity());
     }
 
     private function variant(string $code = 'VINIL-BLANCO-152'): MaterialVariant

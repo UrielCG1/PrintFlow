@@ -239,6 +239,33 @@ class InventoryStockUnit
         }
     }
 
+    /** @param array<string, mixed>|null $physicalAttributes */
+    public function separateSurplus(string $quantity, ?string $storageLocation = null, ?array $physicalAttributes = null): self
+    {
+        if (!$this->isAvailable()) {
+            throw new \DomainException('Solo se puede separar un sobrante de una unidad física disponible.');
+        }
+
+        $quantity = self::positiveDecimal($quantity, 'La cantidad del sobrante');
+        $remaining = BigDecimal::of($this->remainingQuantity);
+        $surplusQuantity = BigDecimal::of($quantity);
+        if ($surplusQuantity->isGreaterThan($remaining)) {
+            throw new \DomainException('El sobrante separado supera el saldo físico restante de la unidad.');
+        }
+
+        $this->remainingQuantity = $remaining->minus($surplusQuantity)->toScale(6)->__toString();
+        if (BigDecimal::of($this->remainingQuantity)->isZero()) {
+            $this->status = InventoryStockUnitStatus::EXHAUSTED;
+        }
+
+        $surplus = new self($this->variant, $quantity, InventoryStockUnitKind::SURPLUS, $this);
+        $surplus->assignLot($this->lot);
+        $surplus->setStorageLocation($storageLocation ?? $this->storageLocation);
+        $surplus->setPhysicalAttributes($physicalAttributes ?? $this->physicalAttributes);
+
+        return $surplus;
+    }
+
     public function dispose(): void
     {
         if ($this->status === InventoryStockUnitStatus::EXHAUSTED) {

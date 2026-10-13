@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Application\Production;
 
 use App\Application\Inventory\InventoryPrintingMaterialResolver;
+use App\Application\Inventory\InventoryPhysicalConsumptionManager;
+use App\Application\Inventory\InventoryPhysicalConsumptionResult;
 use App\Application\Inventory\InventoryStockUnitQrResolver;
 use App\Entity\Equipment\Equipment;
 use App\Entity\Inventory\InventoryStockUnit;
@@ -48,6 +50,7 @@ final class PrintingManager
         private readonly AuditLogger $auditLogger,
         private readonly InventoryStockUnitQrResolver $stockUnitQrResolver,
         private readonly InventoryPrintingMaterialResolver $printingMaterialResolver,
+        private readonly InventoryPhysicalConsumptionManager $physicalConsumptionManager,
     ) {
     }
 
@@ -215,14 +218,20 @@ final class PrintingManager
         ?string $waste,
         string $measurementMethod,
         ?string $wasteReason,
-    ): ?ProductionPrintedOutput {
-        $this->executionManager->complete($execution, $actor, $command, function (ServiceOrder $order, ServiceOrderOperationPlan $plan, ProductionOperationExecution $lockedExecution, User $lockedActor) use ($total, $waste, $measurementMethod, $wasteReason): void {
+        ?string $surplusQuantity = null,
+        ?string $surplusLocation = null,
+        ?string $surplusDescription = null,
+    ): PrintingCompletionResult {
+        $physicalConsumption = null;
+        $this->executionManager->complete($execution, $actor, $command, function (ServiceOrder $order, ServiceOrderOperationPlan $plan, ProductionOperationExecution $lockedExecution, User $lockedActor) use ($total, $waste, $measurementMethod, $wasteReason, $surplusQuantity, $surplusLocation, $surplusDescription, &$physicalConsumption): void {
             $this->assertPrintingPlan($plan);
-            $material = $plan->getMaterialVariant();
+            $scan = $this->scanRepository->findCurrentForPlanForUpdate($plan);
+            $stockUnit = $scan?->getStockUnit();
             $release = $this->releaseRepository->findCurrentForUpdate($plan->getServiceOrderItem());
-            if (!$material instanceof MaterialVariant || !$release instanceof ServiceOrderItemDesignRelease) {
-                throw new \DomainException('Faltan el material previsto o la liberación vigente de Diseño.');
+            if (!$release instanceof ServiceOrderItemDesignRelease || !$scan instanceof ProductionPrintingScan || !$scan->hasBeenConsumed() || !$stockUnit instanceof InventoryStockUnit) {
+                throw new \DomainException('Falta la validación consumida de la unidad física o la liberación vigente de Diseño. Escanea el material nuevamente antes de cerrar.');
             }
+            $material = $stockUnit->getVariant();
             if ($this->outputRepository->findOneBy(['execution' => $lockedExecution]) instanceof ProductionPrintedOutput) {
                 throw new \DomainException('Este intento ya tiene una salida impresa registrada.');
             }
@@ -259,6 +268,16 @@ final class PrintingManager
             }
             $output = new ProductionPrintedOutput($plan->getServiceOrderItem(), $lockedExecution, $release, $this->outputRepository->nextVersion($plan->getServiceOrderItem()));
             $this->entityManager->persist($usage);
+            $this->entityManager->flush();
+            $physicalConsumption = $this->physicalConsumptionManager->recordPrintingConsumption(
+                $order,
+                $usage,
+                $stockUnit,
+                $surplusQuantity,
+                $surplusLocation,
+                $surplusDescription,
+                $lockedActor,
+            );
             $this->entityManager->persist($output);
             $this->traceabilityRecorder->record(
                 $order,
@@ -270,7 +289,18 @@ final class PrintingManager
                 $plan,
                 $lockedExecution,
                 null,
-                ['material_variant_id' => $material->getId(), 'total' => $usage->getActualQuantity(), 'waste' => $usage->getWasteQuantity(), 'unit' => $material->getConsumptionUnit()->getCode()],
+                [
+                    'material_variant_id' => $material->getId(),
+                    'stock_unit_id' => $stockUnit->getId(),
+                    'stock_unit_code' => $stockUnit->getUnitCode(),
+                    'total' => $usage->getActualQuantity(),
+                    'waste' => $usage->getWasteQuantity(),
+                    'unit' => $material->getConsumptionUnit()->getCode(),
+                    'inventory_consumed_quantity' => $physicalConsumption->consumedInventoryQuantity,
+                    'inventory_waste_quantity' => $physicalConsumption->wasteInventoryQuantity,
+                    'released_commitment_quantity' => $physicalConsumption->releasedCommitmentQuantity,
+                    'surplus_stock_unit_id' => $physicalConsumption->surplusStockUnit?->getId(),
+                ],
             );
             $this->traceabilityRecorder->record(
                 $order,
@@ -284,10 +314,13 @@ final class PrintingManager
                 null,
                 ['label_code' => $output->getLabelCode(), 'output_version' => $output->getVersionNumber()],
             );
-            $this->auditLogger->record($lockedActor, 'printing.output_created', 'production_printed_output', null, null, ['label_code' => $output->getLabelCode()]);
+            $this->auditLogger->record($lockedActor, 'printing.output_created', 'production_printed_output', null, null, ['label_code' => $output->getLabelCode(), 'stock_unit_id' => $stockUnit->getId()]);
         });
 
-        return $this->outputRepository->findOneBy(['execution' => $execution]);
+        return new PrintingCompletionResult(
+            $this->outputRepository->findOneBy(['execution' => $execution]),
+            $physicalConsumption instanceof InventoryPhysicalConsumptionResult ? $physicalConsumption->surplusStockUnit : null,
+        );
     }
 
     public function recordLabelGenerated(ProductionPrintedOutput $output, User $actor, ?string $reason = null): void

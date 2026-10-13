@@ -19,6 +19,7 @@ class InventoryMovement
  /** Justificación obligatoria cuando existe una autorización excepcional de saldo negativo. */ #[ORM\Column(name:'negative_stock_reason',length:255,nullable:true)] private ?string $negativeStockReason=null;
  /** Momento UTC en que ocurrió el hecho físico. */ #[ORM\Column(name:'occurred_at',type:Types::DATETIME_IMMUTABLE)] private \DateTimeImmutable $occurredAt; /** Momento UTC en que se registró en PRINTFLOW. */ #[ORM\Column(name:'created_at',type:Types::DATETIME_IMMUTABLE)] private \DateTimeImmutable $createdAt;
  public function __construct(MaterialVariant $variant,MeasurementUnit $unit,User $user,MovementType $type,string $quantity,string $sourceType){$this->variant=$variant;$this->unit=$unit;$this->responsibleUser=$user;$this->type=$type;$this->quantity=$quantity;$this->sourceType=$sourceType;$this->occurredAt=$this->createdAt=new \DateTimeImmutable('now',new \DateTimeZone('UTC'));}
+ public function getId():?int{return $this->id;}
  public function getVariant():MaterialVariant{return $this->variant;}
  public function getStockUnit():?InventoryStockUnit{return $this->stockUnit;}
  public function assignStockUnit(?InventoryStockUnit $stockUnit):self{if($stockUnit!==null&&$stockUnit->getVariant()!==$this->variant)throw new \DomainException('La unidad física debe pertenecer a la misma variante del movimiento.');$this->stockUnit=$stockUnit;return $this;}
