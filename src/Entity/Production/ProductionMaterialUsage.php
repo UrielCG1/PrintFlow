@@ -19,7 +19,7 @@ use Brick\Math\BigDecimal;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-/** Registro inmutable de un consumo; los cierres operativos enlazan su movimiento físico de inventario. */
+/** El consumo real es inmutable; la previsión se puede corregir antes de iniciar la operación. */
 #[ORM\Entity(repositoryClass: ProductionMaterialUsageRepository::class)]
 #[ORM\Table(name: 'production_material_usages')]
 #[ORM\Index(name: 'idx_usage_plan_execution', columns: ['operation_plan_id', 'operation_execution_id'])]
@@ -158,6 +158,23 @@ class ProductionMaterialUsage
         return $this;
     }
 
+    /** Actualiza la previsión de una operación aún no iniciada; el cambio queda auditado por el caso de uso. */
+    public function revisePlanned(MaterialVariant $variant, string $quantity): self
+    {
+        if ($this->operationPlan === null || $this->operationExecution !== null || $this->actualQuantity !== null) {
+            throw new \DomainException('Solo se puede corregir material previsto antes de iniciar la operación.');
+        }
+        $normalized = self::positiveDecimal($quantity, 'La cantidad prevista');
+        $this->variant = $variant;
+        $this->unit = $variant->getConsumptionUnit();
+        $this->plannedQuantity = $this->postedQuantity = $normalized;
+        $this->materialNameSnapshot = $variant->getMaterial()->getName();
+        $this->unitLabelSnapshot = $variant->getConsumptionUnit()->getSymbol();
+        $this->calculationSnapshot = ['source' => 'printing-production-plan', 'version' => 1, 'variant_code' => $variant->getCode()];
+
+        return $this;
+    }
+
     /** @param array<string, mixed> $materialSnapshot */
     public function assignExecutionContext(
         ServiceOrderOperationPlan $plan,
@@ -222,6 +239,7 @@ class ProductionMaterialUsage
     public function getMaterialNameSnapshot(): string { return $this->materialNameSnapshot; }
     public function getUnitLabelSnapshot(): string { return $this->unitLabelSnapshot; }
     public function getPlannedQuantity(): ?string { return $this->plannedQuantity; }
+    /** @return array<string, mixed> */ public function getCalculationSnapshot(): array { return $this->calculationSnapshot; }
     public function getActualQuantity(): ?string { return $this->actualQuantity; }
     public function getPostedQuantity(): ?string { return $this->postedQuantity; }
     public function getWasteQuantity(): ?string { return $this->wasteQuantity; }

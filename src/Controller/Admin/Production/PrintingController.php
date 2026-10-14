@@ -129,6 +129,7 @@ final class PrintingController extends AbstractController
         $output = $outputRepository->findCurrent($item);
         $currentScan = $scanRepository->findCurrentForPlan($plan);
         $scannedStockUnit = $currentScan?->getStockUnit();
+        $plannedUsages = $usageRepository->findPlannedForPlan($plan);
 
         return $this->render('admin/printing/show.html.twig', [
             'plan' => $plan,
@@ -141,7 +142,9 @@ final class PrintingController extends AbstractController
             'canStartPrinting' => !$plan->hasCompletedExecution() || $reworkOrigin !== null,
             'output' => $output,
             'outputQrSvg' => $output !== null ? $labelRenderer->renderQrSvg($output) : null,
-            'materialUsages' => $usageRepository->findForPlan($plan),
+            'materialUsages' => array_values(array_filter($usageRepository->findForPlan($plan), static fn ($usage): bool => $usage->getOperationExecution() !== null)),
+            'plannedUsage' => count($plannedUsages) === 1 ? $plannedUsages[0] : null,
+            'multiplePlannedUsages' => count($plannedUsages) > 1,
             'allowedMaterialVariants' => $printingMaterialResolver->allowedVariantsForPlan($plan),
             'equipmentChoices' => $equipmentRepository->findAvailableForFutureExecution($plan->getOperation()),
             'materialChoices' => $materialVariantRepository->findActiveConsumable(),
@@ -171,8 +174,10 @@ final class PrintingController extends AbstractController
             if (($plan->getEquipment() !== $equipment || $plan->getMaterialVariant() !== $material) && !$this->isGranted('production.substitution.approve') && $plan->getMaterialVariant() !== null) {
                 throw new \DomainException('Solo el jefe de Producción o Administrador puede autorizar una sustitución.');
             }
-            $manager->configureRequirements($plan, $equipment, $material, $request->request->getString('reason'), $this->authenticatedUser());
-            $this->addFlash('success', 'Los requisitos técnicos de Impresión quedaron registrados. Escanea ambos códigos para validarlos.');
+            $manager->configureRequirements($plan, $equipment, $material, $request->request->getString('planned_quantity'), $request->request->getString('reason'), $this->authenticatedUser());
+            $this->addFlash('success', $plan->getServiceOrderItem()->getServiceOrder()->isPlanned()
+                ? 'Material y cantidad previstos registrados; el apartado se concilió con el saldo disponible. Revisa si hay faltantes en la orden.'
+                : 'Material y cantidad previstos registrados. El apartado se calculará al planificar la orden.');
         } catch (\DomainException|\InvalidArgumentException $exception) {
             $this->addFlash('error', $exception->getMessage());
         }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Production;
 
 use App\Application\Inventory\InventoryPrintingMaterialResolver;
+use App\Application\Inventory\InventoryOrderCommitmentManager;
 use App\Application\Inventory\InventoryPhysicalConsumptionManager;
 use App\Application\Inventory\InventoryPhysicalConsumptionResult;
 use App\Application\Inventory\InventoryStockUnitQrResolver;
@@ -25,12 +26,15 @@ use App\Enum\Orders\ServiceOrderItemDesignStatus;
 use App\Enum\Production\CalculationMethod;
 use App\Repository\Equipment\EquipmentRepository;
 use App\Repository\Materials\MaterialVariantRepository;
+use App\Repository\Inventory\InventoryCommitmentRepository;
 use App\Repository\Production\ProductionPrintedOutputRepository;
+use App\Repository\Production\ProductionMaterialUsageRepository;
 use App\Repository\Production\ProductionPrintingScanRepository;
 use App\Repository\Orders\ServiceOrderTraceabilityEventRepository;
 use App\Repository\Production\ServiceOrderItemDesignReleaseRepository;
 use App\Service\Audit\AuditLogger;
 use App\Service\Orders\ServiceOrderTraceabilityRecorder;
+use Brick\Math\BigDecimal;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -51,6 +55,9 @@ final class PrintingManager
         private readonly InventoryStockUnitQrResolver $stockUnitQrResolver,
         private readonly InventoryPrintingMaterialResolver $printingMaterialResolver,
         private readonly InventoryPhysicalConsumptionManager $physicalConsumptionManager,
+        private readonly ProductionMaterialUsageRepository $materialUsageRepository,
+        private readonly InventoryOrderCommitmentManager $orderCommitmentManager,
+        private readonly InventoryCommitmentRepository $inventoryCommitmentRepository,
     ) {
     }
 
@@ -58,10 +65,17 @@ final class PrintingManager
         ServiceOrderOperationPlan $plan,
         ?Equipment $equipment,
         MaterialVariant $material,
+        string $plannedQuantity,
         string $reason,
         User $actor,
     ): void {
-        $this->entityManager->wrapInTransaction(function () use ($plan, $equipment, $material, $reason, $actor): void {
+        $plannedQuantity = trim(str_replace(',', '.', $plannedQuantity));
+        if (preg_match('/^(?:0|[1-9]\\d{0,13})(?:\\.\\d{1,6})?$/D', $plannedQuantity) !== 1
+            || BigDecimal::of($plannedQuantity)->isLessThanOrEqualTo(BigDecimal::zero())) {
+            throw new \InvalidArgumentException('Indica una cantidad prevista positiva, en la unidad de consumo del material.');
+        }
+        $plannedQuantity = BigDecimal::of($plannedQuantity)->toScale(6)->__toString();
+        $this->entityManager->wrapInTransaction(function () use ($plan, $equipment, $material, $plannedQuantity, $reason, $actor): void {
             $order = $plan->getServiceOrderItem()->getServiceOrder();
             $this->lock($order, $plan);
             $this->assertPrintingPlan($plan);
@@ -78,16 +92,46 @@ final class PrintingManager
             }
             $this->assertEquipmentCompatible($plan, $machine);
             $this->assertMaterialUsable($material);
-            if (($plan->getEquipment() !== $machine || $plan->getMaterialVariant() !== $material) && mb_strlen($reason) < 5) {
-                throw new \DomainException('Explica el motivo de la asignación o sustitución técnica.');
+            $plannedUsages = $this->materialUsageRepository->findPlannedForPlan($plan);
+            if (count($plannedUsages) > 1) {
+                throw new \DomainException('Esta operación tiene varias previsiones de material. Revísalas antes de modificar sus requisitos.');
+            }
+            $plannedUsage = $plannedUsages[0] ?? null;
+            $quantityChanged = $plannedUsage?->getPlannedQuantity() !== $plannedQuantity;
+            if (($plan->getEquipment() !== $machine || $plan->getMaterialVariant() !== $material || $quantityChanged) && mb_strlen($reason) < 5) {
+                throw new \DomainException('Explica el motivo de la asignación o del cambio de material o cantidad prevista.');
+            }
+            $isQualityRework = $plannedUsage instanceof ProductionMaterialUsage
+                && ($plannedUsage->getCalculationSnapshot()['source'] ?? null) === 'quality-rework-demand';
+            if ($isQualityRework && ($plannedUsage->getVariant() !== $material || $quantityChanged)) {
+                throw new \DomainException('La previsión de este retrabajo procede de Calidad y requiere una revisión autorizada antes de cambiar su material o cantidad.');
             }
             $before = $this->requirementsState($plan);
+            $before['planned_quantity'] = $plannedUsage?->getPlannedQuantity();
+            $before['planned_unit'] = $plannedUsage?->getUnitLabelSnapshot();
             $plan->setEquipment($machine, $this->equipmentSnapshot($machine));
             $plan->setMaterialVariant($material, $this->materialSnapshot($material));
+            if ($plannedUsage instanceof ProductionMaterialUsage && !$isQualityRework) {
+                $plannedUsage->revisePlanned($material, $plannedQuantity);
+            } elseif (!($plannedUsage instanceof ProductionMaterialUsage)) {
+                $plannedUsage = new ProductionMaterialUsage(
+                    $plan->getServiceOrderItem(), $material, $material->getConsumptionUnit(), $plannedQuantity,
+                    CalculationMethod::FIXED, 1,
+                    ['source' => 'printing-production-plan', 'version' => 1, 'variant_code' => $material->getCode()],
+                );
+                $plannedUsage->assignPlanContext($plan);
+                $this->entityManager->persist($plannedUsage);
+            }
             $currentScan = $this->scanRepository->findCurrentForPlanForUpdate($plan);
             $currentScan?->invalidate();
             $order->touchTraceability();
             $after = $this->requirementsState($plan);
+            $after['planned_quantity'] = $plannedQuantity;
+            $after['planned_unit'] = $material->getConsumptionUnit()->getSymbol();
+            $this->entityManager->flush();
+            if ($order->isPlanned()) {
+                $this->orderCommitmentManager->commitForOrder($order, $actor);
+            }
             $this->traceabilityRecorder->record(
                 $order,
                 'printing.requirements_configured',
@@ -188,6 +232,7 @@ final class PrintingManager
         $origin = $this->reworkOriginForPlan($plan);
         return $this->executionManager->start($plan, $actor, $command, $origin, function (ServiceOrder $order, ServiceOrderOperationPlan $lockedPlan, User $lockedActor) use (&$scanId): void {
             $this->assertPrintingPlan($lockedPlan);
+            $this->assertReadyForPrint($order, $lockedPlan);
             $scan = $this->scanRepository->findCurrentForPlanForUpdate($lockedPlan);
             $release = $this->releaseRepository->findCurrentForUpdate($lockedPlan->getServiceOrderItem());
             if (!$scan instanceof ProductionPrintingScan || !$release instanceof ServiceOrderItemDesignRelease || !$this->scanMatchesCurrentRequirements($scan, $lockedPlan, $release, $lockedActor)) {
@@ -414,6 +459,22 @@ final class PrintingManager
         if (!$order->isPlanned() || $plan->getServiceOrderItem()->getDesignStatus() !== ServiceOrderItemDesignStatus::READY_FOR_PRINT) {
             throw new \DomainException('Diseño debe liberar el arte y su captura antes de validar Impresión.');
         }
+        $plannedVariant = $plan->getMaterialVariant();
+        $hasMatchingRequirement = false;
+        foreach ($this->materialUsageRepository->findPlannedForPlan($plan) as $usage) {
+            if ($plannedVariant instanceof MaterialVariant && $usage->getVariant()?->getId() === $plannedVariant->getId()
+                && $usage->getPlannedQuantity() !== null) {
+                $hasMatchingRequirement = true;
+                break;
+            }
+        }
+        $commitment = $plannedVariant instanceof MaterialVariant
+            ? $this->inventoryCommitmentRepository->findOneForOrderAndVariant($order, $plannedVariant)
+            : null;
+        if (!$hasMatchingRequirement || $commitment === null
+            || BigDecimal::of($commitment->getRequestedQuantity())->isLessThanOrEqualTo(BigDecimal::zero())) {
+            throw new \DomainException('Registra la cantidad prevista y actualiza el apartado de material antes de escanear para Impresión.');
+        }
         $qualityRework = $this->reworkOriginForPlan($plan) !== null;
         if ($plan->hasOpenExecution() || ($plan->hasCompletedExecution() && !$qualityRework)) {
             throw new \DomainException('La operación de Impresión ya fue iniciada o terminada.');
@@ -438,6 +499,9 @@ final class PrintingManager
     {
         if (!$material->isActive() || !$material->isConsumable() || !$material->getConsumptionUnit()->isActive()) {
             throw new \DomainException('El material debe estar activo, ser consumible y tener una unidad de consumo vigente.');
+        }
+        if (($material->getSpecifications()['legacy_migration'] ?? false) === true) {
+            throw new \DomainException('Esta presentación heredada no tiene unidades físicas confirmadas. Configura el ancho real antes de planear material.');
         }
     }
 

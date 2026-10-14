@@ -20,6 +20,8 @@ use App\Enum\Orders\ServiceOrderFulfillmentMethod;
 use App\Repository\Orders\ServiceOrderOperationPlanRepository;
 use App\Repository\Orders\ServiceOrderRepository;
 use App\Application\Production\ProductionScheduleLock;
+use App\Application\Inventory\InventoryOrderCommitmentManager;
+use App\Application\Inventory\InventoryOrderRequirementCollector;
 use App\Service\Audit\AuditLogger;
 use App\Service\Orders\ServiceOrderFolioGenerator;
 use App\Service\Orders\ServiceOrderTraceabilityRecorder;
@@ -39,6 +41,8 @@ final class ServiceOrderManager
         private readonly ProductionRouteApplicator $productionRouteApplicator,
         private readonly ProductionScheduleLock $scheduleLock,
         private readonly ServiceOrderTraceabilityRecorder $traceabilityRecorder,
+        private readonly InventoryOrderRequirementCollector $inventoryRequirementCollector,
+        private readonly InventoryOrderCommitmentManager $inventoryOrderCommitmentManager,
     ) {
     }
 
@@ -735,6 +739,9 @@ final class ServiceOrderManager
                 newValues: $this->planningSnapshot($serviceOrder),
             );
             $this->entityManager->flush();
+            if ($this->inventoryRequirementCollector->collect($serviceOrder) !== []) {
+                $this->inventoryOrderCommitmentManager->commitForOrder($serviceOrder, $actor);
+            }
         });
     }
 

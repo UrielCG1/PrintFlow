@@ -54,9 +54,11 @@ final class ProductionMaterialUsageRepository extends ServiceEntityRepository
         /** @var list<ProductionMaterialUsage> $usages */
         $usages = $this->createQueryBuilder('usage')
             ->innerJoin('usage.serviceOrderItem', 'item')
+            ->innerJoin('usage.operationPlan', 'plan')
             ->innerJoin('usage.variant', 'variant')
             ->addSelect('item', 'variant')
             ->andWhere('item.serviceOrder = :order')
+            ->andWhere('plan.isActive = true')
             ->andWhere('usage.operationExecution IS NULL')
             ->andWhere('usage.plannedQuantity IS NOT NULL')
             ->setParameter('order', $order)

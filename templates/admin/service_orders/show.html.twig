@@ -214,12 +214,12 @@
                 <header class="pf-card__header d-flex flex-column flex-lg-row gap-3 justify-content-between align-items-lg-center">
                     <div>
                         <h2 id="material-coverage-title" class="pf-card__title">Cobertura de materiales</h2>
-                        <p class="pf-card__subtitle">Cantidades previstas convertidas a la unidad de inventario de cada variante.</p>
+                        <p class="pf-card__subtitle">Las cantidades previstas se convierten a la unidad de inventario y se apartan al planificar la orden o ajustar la previsión de Impresión.</p>
                     </div>
                     {% if canCommitMaterials %}
                         <form method="post" action="{{ path('admin_service_orders_commit_materials', {id: serviceOrder.id}) }}">
                             <input type="hidden" name="_token" value="{{ csrf_token('service-order-commit-materials-' ~ serviceOrder.id) }}">
-                            <button type="submit" class="btn pf-button pf-button--primary">Apartar materiales</button>
+                            <button type="submit" class="btn pf-button pf-button--primary">Actualizar apartados</button>
                         </form>
                     {% endif %}
                 </header>
