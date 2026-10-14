@@ -4,17 +4,21 @@ declare(strict_types=1);
 
 namespace App\Application\Production;
 
+use App\Application\Inventory\InventoryOrderCommitmentManager;
 use App\Entity\Orders\ServiceOrder;
 use App\Entity\Orders\ServiceOrderItem;
 use App\Entity\Orders\ServiceOrderOperationPlan;
 use App\Entity\Orders\ServiceOrderTraceabilityEvent;
 use App\Entity\Production\ProductionOperationExecution;
+use App\Entity\Production\ProductionMaterialUsage;
 use App\Entity\Users\User;
 use App\Enum\Orders\ProductionOrderStatus;
 use App\Enum\Orders\ServiceOrderDeliveryStatus;
 use App\Enum\Orders\ServiceOrderFulfillmentMethod;
 use App\Enum\Production\ProductionOperationExecutionStatus;
+use App\Enum\Production\CalculationMethod;
 use App\Repository\Orders\ServiceOrderTraceabilityEventRepository;
+use App\Repository\Production\ProductionMaterialUsageRepository;
 use App\Service\Audit\AuditLogger;
 use App\Service\Orders\ServiceOrderTraceabilityRecorder;
 use Doctrine\DBAL\LockMode;
@@ -26,6 +30,8 @@ final class ProductionQualityDeliveryManager
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly ServiceOrderTraceabilityEventRepository $eventRepository,
+        private readonly ProductionMaterialUsageRepository $materialUsageRepository,
+        private readonly InventoryOrderCommitmentManager $inventoryCommitmentManager,
         private readonly ServiceOrderTraceabilityRecorder $traceabilityRecorder,
         private readonly AuditLogger $auditLogger,
     ) {
@@ -109,12 +115,14 @@ final class ProductionQualityDeliveryManager
 
             $previous = $order->traceabilityStateSnapshot();
             $order->returnForQualityRework();
+            $reworkMaterialRequirements = $this->createReworkMaterialRequirements($order, $plan, $execution, $actor);
             $order->touchTraceability();
             $new = $order->traceabilityStateSnapshot();
             $this->record($order, 'quality.operation_rejected', $actor, $previous, $new, $command, $reason, [
                 'operation_code' => $plan->getOperationSnapshot()['code'] ?? $plan->getOperation()->getCode(),
                 'attempt_number' => $execution->getAttemptNumber(),
                 'next_area' => $plan->getOperation()->getOperationArea()->getName(),
+                'rework_material_requirements' => $reworkMaterialRequirements,
             ], $item, $plan, $execution);
             $this->auditLogger->record($actor, 'quality.operation_rejected', 'production_operation_execution', $execution->getId(), $previous, $new);
             $this->entityManager->flush();
@@ -222,6 +230,65 @@ final class ProductionQualityDeliveryManager
             $this->auditLogger->record($actor, 'delivery.confirmed', 'service_order', $order->getId(), $previous, $new);
             $this->entityManager->flush();
         });
+    }
+
+    /**
+     * A quality rejection does not make material already consumed available
+     * again. It adds a fresh planned requirement for the next authorized
+     * attempt, then reconciles only the difference against the order reserve.
+     *
+     * @return list<array{variant_id: int|null, material_code: string, quantity: string, origin_usage_id: int|null}>
+     */
+    private function createReworkMaterialRequirements(
+        ServiceOrder $order,
+        ServiceOrderOperationPlan $plan,
+        ProductionOperationExecution $execution,
+        User $actor,
+    ): array {
+        $requirements = [];
+        foreach ($this->materialUsageRepository->findActualForExecution($execution) as $usage) {
+            $variant = $usage->getVariant();
+            $quantity = $usage->getActualQuantity();
+            if ($variant === null || $quantity === null || $usage->getMovement() === null) {
+                continue;
+            }
+
+            $reworkUsage = new ProductionMaterialUsage(
+                $plan->getServiceOrderItem(),
+                $variant,
+                $variant->getConsumptionUnit(),
+                $quantity,
+                CalculationMethod::FIXED,
+                1,
+                [
+                    'source' => 'quality-rework-demand',
+                    'version' => 1,
+                    'origin_execution_id' => $execution->getId(),
+                    'origin_usage_id' => $usage->getId(),
+                    'variant_code' => $variant->getCode(),
+                ],
+                $variant->getMaterial()->getName(),
+                $variant->getConsumptionUnit()->getSymbol(),
+            );
+            $reworkUsage->assignPlanContext($plan);
+            $this->entityManager->persist($reworkUsage);
+            $requirements[] = [
+                'variant_id' => $variant->getId(),
+                'material_code' => $variant->getCode(),
+                'quantity' => $quantity,
+                'origin_usage_id' => $usage->getId(),
+            ];
+        }
+
+        if ($requirements !== []) {
+            // The collector reads persisted planned usages. This flush remains
+            // inside the caller transaction, so a failed reserve rolls back
+            // both the new requirement and its audit trail.
+            $this->entityManager->flush();
+            $this->inventoryCommitmentManager->commitForOrder($order, $actor);
+        }
+
+        return $requirements;
     }
 
     private function assertAllOperationsComplete(ServiceOrder $order): void

@@ -53,6 +53,7 @@
                                         {% if suggestion.shortageOrderCount > 0 %}
                                             <strong class="text-danger">{{ suggestion.calculation.orderShortageQuantity|number_format(6, '.', ',') }} {{ unit }}</strong>
                                             <div class="small text-body-secondary">{{ suggestion.shortageOrderCount }} {{ suggestion.shortageOrderCount == 1 ? 'orden con faltante' : 'órdenes con faltante' }}{% if suggestion.waitingPurchaseOrderCount > 0 %} · {{ suggestion.waitingPurchaseOrderCount }} en espera de compra{% endif %}</div>
+                                            {% if suggestion.requiredByOn %}<div class="small text-warning">Fecha requerida: {{ suggestion.requiredByOn|date('d/m/Y', 'America/Mexico_City') }}</div>{% endif %}
                                         {% else %}
                                             <span class="text-body-secondary">Sin faltantes de órdenes</span>
                                         {% endif %}

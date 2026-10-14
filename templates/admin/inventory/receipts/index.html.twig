@@ -28,6 +28,10 @@
                             <i class="bi bi-clipboard-check" aria-hidden="true"></i>
                             <span>Conteo inicial</span>
                         </a>
+                        <a href="{{ path('admin_inventory_stock_unit_operations_index') }}" class="btn pf-button pf-button--secondary">
+                            <i class="bi bi-shield-check" aria-hidden="true"></i>
+                            <span>Operaciones de bodega</span>
+                        </a>
                     {% endif %}
                     {% if is_granted('inventory.configure') %}
                         <a href="{{ path('admin_inventory_receipts_minimums') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-sliders" aria-hidden="true"></i><span>Configurar mínimos</span></a>
@@ -36,7 +40,7 @@
                     {% endif %}
                 </div>
             {% elseif is_granted('inventory.adjust_stock') %}
-                <div class="pf-page-header__actions"><a href="{{ path('admin_inventory_receipts_initial_count') }}" class="btn pf-button pf-button--primary"><i class="bi bi-clipboard-check" aria-hidden="true"></i><span>Conteo inicial</span></a></div>
+                <div class="pf-page-header__actions"><a href="{{ path('admin_inventory_receipts_initial_count') }}" class="btn pf-button pf-button--primary"><i class="bi bi-clipboard-check" aria-hidden="true"></i><span>Conteo inicial</span></a><a href="{{ path('admin_inventory_stock_unit_operations_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-shield-check" aria-hidden="true"></i><span>Operaciones de bodega</span></a></div>
             {% elseif is_granted('inventory.count') %}
                 <div class="pf-page-header__actions"><a href="{{ path('admin_inventory_cycle_counts_index') }}" class="btn pf-button pf-button--primary"><i class="bi bi-upc-scan" aria-hidden="true"></i><span>Conteo cíclico</span></a></div>
             {% endif %}

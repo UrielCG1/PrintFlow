@@ -16,6 +16,7 @@ final readonly class InventoryReplenishmentSuggestion
         public InventoryReplenishmentCalculation $calculation,
         public int $shortageOrderCount,
         public int $waitingPurchaseOrderCount,
+        public ?\DateTimeImmutable $requiredByOn,
         public ?SupplierMaterialVariant $supplierOffer,
         public ?InventoryPurchaseRequestLine $openPurchaseRequestLine,
     ) {

@@ -7,6 +7,7 @@ namespace App\Controller\Admin\Orders;
 use App\Application\Orders\ServiceOrderItemOperationData;
 use App\Application\Orders\ServiceOrderItemOperationEquipmentData;
 use App\Application\Orders\ServiceOrderManager;
+use App\Application\Orders\ServiceOrderCancellationManager;
 use App\Application\Orders\ServiceOrderPlanningData;
 use App\Application\Inventory\InventoryCoverageEvaluator;
 use App\Application\Inventory\InventoryOrderCommitmentManager;
@@ -847,6 +848,39 @@ final class ServiceOrderController extends AbstractController
         return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
     }
 
+    #[Route('/{id}/cancelar-produccion', name: 'cancel_production', requirements: ['id' => '\\d+'], methods: ['POST'])]
+    public function cancelProduction(
+        Request $request,
+        ServiceOrder $serviceOrder,
+        ServiceOrderCancellationManager $cancellationManager,
+    ): Response {
+        $this->denyAccessUnlessGranted('service_orders.cancel');
+        if (!$this->isCsrfTokenValid('service-order-cancel-production-'.$serviceOrder->getId(), $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('La solicitud no es válida.');
+        }
+
+        try {
+            $result = $cancellationManager->cancel(
+                $serviceOrder,
+                $request->request->getString('reason'),
+                $this->authenticatedUser(),
+            );
+            $this->addFlash(
+                'success',
+                sprintf(
+                    'La orden se canceló. Se liberaron %d apartado(s), %d reserva(s) de agenda y se cerraron %d intento(s) abierto(s).',
+                    count($result->releasedCommitments),
+                    $result->releasedReservations,
+                    $result->cancelledExecutions,
+                ),
+            );
+        } catch (\DomainException|\InvalidArgumentException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        }
+
+        return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+    }
+
     #[Route('/{id}/faltantes/{commitment}/resolver', name: 'resolve_material_shortage', requirements: ['id' => '\\d+', 'commitment' => '\\d+'], methods: ['POST'])]
     public function resolveMaterialShortage(Request $request, ServiceOrder $serviceOrder, InventoryCommitment $commitment, InventoryShortageDecisionManager $decisionManager): Response
     {
@@ -1022,7 +1056,11 @@ final class ServiceOrderController extends AbstractController
             $reservationsByPlan[(int) $reservation->getPlan()->getId()][] = $reservation;
         }
 
-        $canPlan = $serviceOrder->isPendingPlanning() && $this->isGranted('service_orders.plan');
+        $canPlan = $serviceOrder->isPendingPlanning()
+            && !$serviceOrder->isCancelled()
+            && $this->isGranted('service_orders.plan');
+        $canCancelProduction = $serviceOrder->canCancelProduction()
+            && $this->isGranted('service_orders.cancel');
         $existingMaterialCommitments = [];
         foreach ($inventoryCommitmentRepository->findForOrder($serviceOrder) as $commitment) {
             $existingMaterialCommitments[(int) $commitment->getVariant()->getId()] = $commitment;
@@ -1061,7 +1099,8 @@ final class ServiceOrderController extends AbstractController
                 'substitutionRules' => $existing === null ? [] : ($substitutionRules[(int) $existing->getId()] ?? []),
             ];
         }
-        $canCommitMaterials = $serviceOrder->isPlanned() && $this->isGranted('service_orders.plan') && $materialRequirements !== [];
+        $canCommitMaterials = $serviceOrder->isPlanned() && !$serviceOrder->isCancelled()
+            && $this->isGranted('service_orders.plan') && $materialRequirements !== [];
         $canAssignProduction = $this->isGranted('production.assign');
         $assignableOperatorPlans = 0;
         $operatorAssignmentWindowOpen = ($serviceOrder->isPendingPlanning() || $serviceOrder->isPlanned())
@@ -1473,6 +1512,7 @@ final class ServiceOrderController extends AbstractController
             'canMarkPlanned' => $canMarkPlanned,
             'canConfirmPlanning' => $canConfirmPlanning,
             'canPlan' => $canPlan,
+            'canCancelProduction' => $canCancelProduction,
             'materialRequirements' => $materialRequirements,
             'canCommitMaterials' => $canCommitMaterials,
             'shortageDecisionTypes' => InventoryShortageDecisionType::cases(),

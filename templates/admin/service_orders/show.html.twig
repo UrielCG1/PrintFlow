@@ -47,6 +47,21 @@
             </div>
         </header>
 
+        {% if canCancelProduction %}
+            <details class="service-order-disclosure service-order-disclosure--action mb-4">
+                <summary>
+                    <span class="service-order-disclosure__label"><i class="bi bi-x-octagon" aria-hidden="true"></i> Cancelar producción</span>
+                    <span class="service-order-disclosure__hint">Libera solo el material no consumido y retira la agenda pendiente</span>
+                </summary>
+                <form method="post" action="{{ path('admin_service_orders_cancel_production', {id: serviceOrder.id}) }}" class="pf-form mt-3" data-controller="ui--confirm-action" data-action="submit->ui--confirm-action#submit" data-ui--confirm-action-title-value="¿Cancelar producción?" data-ui--confirm-action-text-value="Los consumos ya registrados se conservan. Se liberará el material pendiente y se cerrarán los intentos abiertos." data-ui--confirm-action-confirm-button-text-value="Sí, cancelar" data-ui--confirm-action-cancel-button-text-value="Volver" data-ui--confirm-action-icon-value="warning">
+                    <input type="hidden" name="_token" value="{{ csrf_token('service-order-cancel-production-' ~ serviceOrder.id) }}">
+                    <label class="form-label" for="cancel-production-reason">Motivo de cancelación</label>
+                    <textarea id="cancel-production-reason" class="form-control mb-3" name="reason" rows="3" minlength="5" maxlength="500" required placeholder="Explica por qué se cancela la orden"></textarea>
+                    <button type="submit" class="btn pf-button pf-button--danger">Cancelar producción</button>
+                </form>
+            </details>
+        {% endif %}
+
         {% set orderStages = [
             {key: 'planning', label: 'Planificación'},
             {key: 'design', label: 'Diseño'},

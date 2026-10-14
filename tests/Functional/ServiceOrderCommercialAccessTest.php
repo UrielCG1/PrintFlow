@@ -8,6 +8,7 @@ use App\Application\Quotations\QuotationData;
 use App\Application\Quotations\QuotationItemData;
 use App\Application\Quotations\QuotationManager;
 use App\Application\Orders\ServiceOrderManager;
+use App\Application\Orders\ServiceOrderCancellationManager;
 use App\Application\Production\ProductionExecutionCommand;
 use App\Application\Production\ProductionExecutionManager;
 use App\Application\Production\ProductionPlanManager;
@@ -84,6 +85,20 @@ final class ServiceOrderCommercialAccessTest extends TestCase
     public function testProductionCanSeeOperationalOrderButNoCommercialAmountsOrSourceDocuments(): void
     {
         $this->assertOperationalAccessWithoutCommercialData('qa-production');
+    }
+
+    public function testCancellingAnUnstartedOrderIsTraceableAndCannotBeRepeated(): void
+    {
+        $services = $this->kernel->getContainer()->get('test.service_container');
+        $manager = $services->get(ServiceOrderCancellationManager::class);
+
+        $result = $manager->cancel($this->serviceOrder, 'Trabajo cancelado por el cliente antes de producir.', $this->fixtures['user']);
+
+        self::assertSame([], $result->releasedCommitments);
+        self::assertTrue($this->serviceOrder->isCancelled());
+        self::assertFalse($this->serviceOrder->canCancelProduction());
+        $this->expectException(\DomainException::class);
+        $manager->cancel($this->serviceOrder, 'Intento de cancelación duplicado.', $this->fixtures['user']);
     }
 
     public function testOperatorCanSeeOperationalOrderButNoCommercialAmountsOrSourceDocuments(): void

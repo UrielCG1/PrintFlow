@@ -20,6 +20,9 @@ final class InventoryProductionAuthorizationGuard
 
     public function assertOrderCanStartProduction(ServiceOrder $order): void
     {
+        if ($order->isCancelled()) {
+            throw new \DomainException('La orden está cancelada y no puede iniciar ni reanudar producción.');
+        }
         foreach ($this->commitmentRepository->findShortagesForOrder($order) as $commitment) {
             $decision = $this->decisionRepository->findActiveForCommitment($commitment);
             if ($decision?->getType() === InventoryShortageDecisionType::WAIT_FOR_PURCHASE) {

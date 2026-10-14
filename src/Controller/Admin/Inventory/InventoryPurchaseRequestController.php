@@ -116,8 +116,65 @@ final class InventoryPurchaseRequestController extends AbstractController
         }
 
         try {
-            $purchaseRequestManager->beginTracking($purchaseRequest, $request->request->getString('tracking_reference'), $this->getActor());
+            $purchaseRequestManager->beginTracking(
+                $purchaseRequest,
+                $request->request->getString('tracking_reference'),
+                $request->request->getString('expected_receipt_on'),
+                $this->getActor(),
+            );
             $this->addFlash('success', 'La compra quedó en seguimiento. Su saldo pendiente ya se descuenta de la recomendación de reabasto, pero no del inventario físico.');
+        } catch (\DomainException|\InvalidArgumentException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        }
+
+        return $this->redirectToRoute('admin_inventory_purchase_requests_show', ['id' => $purchaseRequest->getId()]);
+    }
+
+    #[Route('/{id}/actualizar-seguimiento', name: 'update_tracking', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function updateTracking(
+        Request $request,
+        InventoryPurchaseRequest $purchaseRequest,
+        InventoryPurchaseRequestManager $purchaseRequestManager,
+    ): Response {
+        $this->denyAccessUnlessGranted('inventory.configure');
+        if (!$this->isCsrfTokenValid('inventory_purchase_request_update_tracking_'.$purchaseRequest->getId(), $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('La solicitud no es válida.');
+        }
+
+        try {
+            $purchaseRequestManager->updateTracking(
+                $purchaseRequest,
+                $request->request->getString('tracking_reference'),
+                $request->request->getString('expected_receipt_on'),
+                $request->request->getString('reason'),
+                $this->getActor(),
+            );
+            $this->addFlash('success', 'El seguimiento de compra se actualizó y quedó registrado en la bitácora.');
+        } catch (\DomainException|\InvalidArgumentException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+        }
+
+        return $this->redirectToRoute('admin_inventory_purchase_requests_show', ['id' => $purchaseRequest->getId()]);
+    }
+
+    #[Route('/{id}/cancelar', name: 'cancel', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function cancel(
+        Request $request,
+        InventoryPurchaseRequest $purchaseRequest,
+        InventoryPurchaseRequestManager $purchaseRequestManager,
+    ): Response {
+        $this->denyAccessUnlessGranted('inventory.configure');
+        if (!$this->isCsrfTokenValid('inventory_purchase_request_cancel_'.$purchaseRequest->getId(), $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('La solicitud no es válida.');
+        }
+
+        try {
+            $purchaseRequestManager->cancel(
+                $purchaseRequest,
+                $request->request->getString('reason'),
+                $this->getActor(),
+            );
+            $this->addFlash('success', 'La solicitud se canceló. El material no se considera comprado y podrá volver a aparecer en reabasto.');
         } catch (\DomainException|\InvalidArgumentException $exception) {
             $this->addFlash('error', $exception->getMessage());
         }

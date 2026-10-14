@@ -54,6 +54,7 @@ final class InventoryReplenishmentPlanner
                     'quantity' => BigDecimal::zero(),
                     'order_ids' => [],
                     'waiting_order_ids' => [],
+                    'required_by_on' => null,
                 ];
             }
             $shortagesByVariant[$variantId]['quantity'] = $shortagesByVariant[$variantId]['quantity']->plus($commitment->getShortageQuantity());
@@ -61,6 +62,10 @@ final class InventoryReplenishmentPlanner
             $shortagesByVariant[$variantId]['order_ids'][$orderId] = true;
             if (isset($waitingCommitmentIds[(int) $commitment->getId()])) {
                 $shortagesByVariant[$variantId]['waiting_order_ids'][$orderId] = true;
+            }
+            $commitmentDate = $commitment->getServiceOrder()->getCommitmentDate();
+            if ($commitmentDate !== null && ($shortagesByVariant[$variantId]['required_by_on'] === null || $commitmentDate < $shortagesByVariant[$variantId]['required_by_on'])) {
+                $shortagesByVariant[$variantId]['required_by_on'] = $commitmentDate;
             }
         }
 
@@ -93,12 +98,25 @@ final class InventoryReplenishmentPlanner
                 $calculation,
                 $shortage === null ? 0 : count($shortage['order_ids']),
                 $shortage === null ? 0 : count($shortage['waiting_order_ids']),
+                $shortage['required_by_on'] ?? null,
                 $offerByVariant[$variantId] ?? null,
                 $openPurchaseLines[$variantId] ?? null,
             );
         }
 
         usort($suggestions, static function (InventoryReplenishmentSuggestion $left, InventoryReplenishmentSuggestion $right): int {
+            if ($left->requiredByOn !== null && $right->requiredByOn === null) {
+                return -1;
+            }
+            if ($left->requiredByOn === null && $right->requiredByOn !== null) {
+                return 1;
+            }
+            if ($left->requiredByOn !== null && $right->requiredByOn !== null) {
+                $requiredByComparison = $left->requiredByOn <=> $right->requiredByOn;
+                if ($requiredByComparison !== 0) {
+                    return $requiredByComparison;
+                }
+            }
             $waitingComparison = $right->waitingPurchaseOrderCount <=> $left->waitingPurchaseOrderCount;
             if ($waitingComparison !== 0) {
                 return $waitingComparison;

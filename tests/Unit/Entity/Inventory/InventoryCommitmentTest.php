@@ -75,6 +75,47 @@ final class InventoryCommitmentTest extends TestCase
         self::assertSame(InventoryCommitmentStatus::COVERED, $commitment->getStatus());
     }
 
+    public function testReducingRequirementReleasesOnlyUnusedMaterialAndPreservesConsumption(): void
+    {
+        $commitment = new InventoryCommitment(
+            new ServiceOrder(),
+            $this->variant(),
+            new User(),
+            new InventoryCoverage('10', '10', '10', '0'),
+        );
+        $commitment->recordConsumedQuantity('4');
+
+        self::assertSame('5.000000', $commitment->reconcileRequestedQuantity('5'));
+        self::assertSame('4.000000', $commitment->getConsumedQuantity());
+        self::assertSame('1.000000', $commitment->getPendingQuantity());
+        self::assertSame('0.000000', $commitment->getShortageQuantity());
+        self::assertSame(InventoryCommitmentStatus::COVERED, $commitment->getStatus());
+
+        self::assertSame('1.000000', $commitment->reconcileRequestedQuantity('4'));
+        self::assertSame('0.000000', $commitment->getPendingQuantity());
+        self::assertSame('4.000000', $commitment->getConsumedQuantity());
+    }
+
+    public function testIncreasingRequirementKeepsExistingCoverageAndExposesNewShortage(): void
+    {
+        $commitment = new InventoryCommitment(
+            new ServiceOrder(),
+            $this->variant(),
+            new User(),
+            new InventoryCoverage('10', '6', '6', '4'),
+        );
+
+        self::assertSame('0.000000', $commitment->reconcileRequestedQuantity('12'));
+        self::assertSame('6.000000', $commitment->getPendingQuantity());
+        self::assertSame('6.000000', $commitment->getShortageQuantity());
+        self::assertSame(InventoryCommitmentStatus::PARTIAL, $commitment->getStatus());
+
+        $this->expectException(\DomainException::class);
+        $this->expectExceptionMessage('menor que el material ya consumido');
+        $commitment->recordConsumedQuantity('3');
+        $commitment->reconcileRequestedQuantity('2');
+    }
+
     private function variant(): MaterialVariant
     {
         $unit = (new MeasurementUnit())

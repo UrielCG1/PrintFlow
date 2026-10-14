@@ -1,0 +1,130 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Operaciones de bodega | OoxCorp{% endblock %}
+{% block app_navigation_active %}inventory{% endblock %}
+{% block app_breadcrumb %}Operación / Inventario / Operaciones de bodega{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page__content">
+        <div class="pf-page-header">
+            <div class="pf-page-header__content">
+                <h1 class="pf-page-header__title">Operaciones de bodega por QR</h1>
+                <p class="pf-page-header__description">Bloquea, libera o retira una unidad física conservando el motivo, responsable y movimiento de inventario.</p>
+            </div>
+            <div class="pf-page-header__actions">
+                <a href="{{ path('admin_inventory_cycle_counts_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-upc-scan" aria-hidden="true"></i><span>Conteo cíclico</span></a>
+                <a href="{{ path('admin_inventory_receipts_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-box-seam" aria-hidden="true"></i><span>Inventario físico</span></a>
+            </div>
+        </div>
+
+        {% if canManage %}
+            <section class="pf-card mb-4" aria-labelledby="warehouse-operation-title">
+                <div class="pf-card__body">
+                    <h2 id="warehouse-operation-title" class="h5 mb-2">Registrar condición o retiro</h2>
+                    <p class="text-body-secondary small mb-3">El bloqueo conserva el físico pero lo excluye de nuevas reservas. El retiro por daño, caducidad o devolución reduce la existencia y deja un movimiento inmutable. Las correcciones de saldo deben realizarse con conteo cíclico y revisión administrativa.</p>
+                    <form method="post" action="{{ path('admin_inventory_stock_unit_operations_create') }}" class="pf-form row g-3 align-items-end" data-stock-unit-operation-form>
+                        <input type="hidden" name="_token" value="{{ csrf_token('inventory_stock_unit_operation') }}">
+                        <div class="col-lg-5 pf-form-field">
+                            <label for="warehouse-operation-qr" class="form-label">Etiqueta QR de la unidad</label>
+                            <input id="warehouse-operation-qr" name="qr_payload" class="form-control" autocomplete="off" autofocus required placeholder="Escanea PF:MAT:1:...">
+                        </div>
+                        <div class="col-lg-3 pf-form-field">
+                            <label for="warehouse-operation-type" class="form-label">Operación</label>
+                            <select id="warehouse-operation-type" name="operation_type" class="form-select" required data-stock-unit-operation-type>
+                                {% for operationType in operationTypes %}
+                                    <option value="{{ operationType.value }}">{{ operationType.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-lg-4 pf-form-field">
+                            <label for="warehouse-operation-reason" class="form-label">Motivo</label>
+                            <select id="warehouse-operation-reason" name="reason" class="form-select" required data-stock-unit-operation-reason>
+                                {% for reason in reasons %}
+                                    {% set allowedTypes = {
+                                        'QUALITY_REVIEW': 'BLOCK,RELEASE',
+                                        'DAMAGE': 'BLOCK,DISPOSE',
+                                        'EXPIRED': 'BLOCK,DISPOSE',
+                                        'RETURN_TO_SUPPLIER': 'DISPOSE',
+                                        'CORRECTION': 'RELEASE',
+                                        'OTHER': 'BLOCK,RELEASE,DISPOSE'
+                                    }[reason.value] %}
+                                    <option value="{{ reason.value }}" data-operation-types="{{ allowedTypes }}">{{ reason.label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-lg-4 pf-form-field">
+                            <label for="warehouse-operation-reference" class="form-label">Folio externo <span class="text-body-secondary">(obligatorio para devolución)</span></label>
+                            <input id="warehouse-operation-reference" name="reference" class="form-control" maxlength="100" placeholder="Remisión, RMA o autorización">
+                        </div>
+                        <div class="col-lg-8 pf-form-field">
+                            <label for="warehouse-operation-note" class="form-label">Observación y motivo concreto</label>
+                            <input id="warehouse-operation-note" name="note" class="form-control" maxlength="500" required placeholder="Ej. Envase perforado detectado al surtir; se aparta para revisión">
+                        </div>
+                        <div class="col-12"><button type="submit" class="btn pf-button pf-button--primary"><i class="bi bi-shield-check" aria-hidden="true"></i><span>Confirmar operación de bodega</span></button></div>
+                    </form>
+                </div>
+            </section>
+        {% else %}
+            <section class="pf-card mb-4"><div class="pf-card__body text-body-secondary">Puedes consultar el historial. La operación de condiciones y retiros requiere el permiso de ajustar existencias.</div></section>
+        {% endif %}
+
+        <section class="pf-card" aria-labelledby="warehouse-operation-history-title">
+            <div class="pf-card__body p-0">
+                <div class="px-4 pt-4"><h2 id="warehouse-operation-history-title" class="h5 mb-3">Actividad reciente</h2></div>
+                <div class="table-responsive">
+                    <table class="table pf-table mb-0">
+                        <thead><tr><th>Unidad / material</th><th>Operación</th><th>Motivo y observación</th><th class="pf-table__cell--right">Cantidad</th><th>Responsable</th><th>Fecha</th></tr></thead>
+                        <tbody>
+                            {% for operation in recentOperations %}
+                                {% set typeClass = {'BLOCK': 'warning', 'RELEASE': 'success', 'DISPOSE': 'danger'}[operation.type.value] %}
+                                <tr>
+                                    <td><code class="pf-table__code">{{ operation.stockUnit.unitCode }}</code><div class="small text-body-secondary">{{ operation.variant.material.name }} · {{ operation.variant.code }}</div></td>
+                                    <td><span class="pf-status-badge pf-status-badge--{{ typeClass }}">{{ operation.type.label }}</span><div class="small text-body-secondary mt-1">{{ operation.previousStatus.label }} → {{ operation.resultingStatus.label }}</div></td>
+                                    <td><strong>{{ operation.reason.label }}</strong><div class="small text-body-secondary">{{ operation.note }}</div>{% if operation.reference %}<div class="small text-body-secondary">Folio: {{ operation.reference }}</div>{% endif %}</td>
+                                    <td class="pf-table__cell--right">{{ operation.quantity|number_format(6, '.', ',') }} {{ operation.variant.inventoryUnit.symbol }}</td>
+                                    <td>{{ operation.responsibleUser.fullName }}</td>
+                                    <td class="pf-table__cell--nowrap">{{ operation.occurredAt|date('d/m/Y H:i', 'America/Mexico_City') }}</td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="6" class="pf-table__empty">Todavía no hay operaciones de bodega registradas.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        (() => {
+            const form = document.querySelector('[data-stock-unit-operation-form]');
+            if (!form) return;
+
+            const type = form.querySelector('[data-stock-unit-operation-type]');
+            const reason = form.querySelector('[data-stock-unit-operation-reason]');
+            const reference = document.getElementById('warehouse-operation-reference');
+            const syncReasons = () => {
+                const selectedType = type.value;
+                let firstAllowed = null;
+                Array.from(reason.options).forEach((option) => {
+                    const allowed = (option.dataset.operationTypes || '').split(',').includes(selectedType);
+                    option.hidden = !allowed;
+                    option.disabled = !allowed;
+                    if (allowed && firstAllowed === null) firstAllowed = option;
+                });
+                if (reason.selectedOptions.length === 0 || reason.selectedOptions[0].disabled) {
+                    reason.value = firstAllowed ? firstAllowed.value : '';
+                }
+                const isSupplierReturn = reason.value === 'RETURN_TO_SUPPLIER';
+                reference.required = isSupplierReturn;
+                reference.setAttribute('aria-required', isSupplierReturn ? 'true' : 'false');
+            };
+            type.addEventListener('change', syncReasons);
+            reason.addEventListener('change', syncReasons);
+            syncReasons();
+        })();
+    </script>
+{% endblock %}

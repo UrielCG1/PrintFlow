@@ -6,6 +6,7 @@ namespace App\Controller\Admin\Inventory;
 
 use App\Application\Inventory\InventoryCycleCountCommand;
 use App\Application\Inventory\InventoryCycleCountManager;
+use App\Application\Inventory\InventoryCycleCountPlanner;
 use App\Entity\Inventory\InventoryCycleCount;
 use App\Entity\Users\User;
 use App\Repository\Inventory\InventoryCycleCountRepository;
@@ -18,14 +19,19 @@ use Symfony\Component\Routing\Attribute\Route;
 final class InventoryCycleCountController extends AbstractController
 {
     #[Route('', name: 'index', methods: ['GET'])]
-    public function index(InventoryCycleCountRepository $cycleCountRepository): Response
+    public function index(
+        InventoryCycleCountRepository $cycleCountRepository,
+        InventoryCycleCountPlanner $cycleCountPlanner,
+    ): Response
     {
         $this->denyAccessUnlessGranted('inventory.view');
         $canReview = $this->isGranted('inventory.adjust_stock');
+        $canCapture = $this->isGranted('inventory.count');
 
         return $this->render('admin/inventory/cycle_counts/index.html.twig', [
-            'canCapture' => $this->isGranted('inventory.count'),
+            'canCapture' => $canCapture,
             'canReview' => $canReview,
+            'priorityCounts' => $canCapture ? $cycleCountPlanner->suggest() : [],
             'pendingCounts' => $canReview ? $cycleCountRepository->findPendingForReview() : [],
             'recentCounts' => $canReview
                 ? $cycleCountRepository->findRecent()

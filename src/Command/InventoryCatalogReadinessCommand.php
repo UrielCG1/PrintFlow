@@ -9,6 +9,7 @@ use Doctrine\DBAL\Connection;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
@@ -23,6 +24,16 @@ final class InventoryCatalogReadinessCommand extends Command
         private readonly InventoryReadinessEvaluator $evaluator,
     ) {
         parent::__construct();
+    }
+
+    protected function configure(): void
+    {
+        $this->addOption(
+            'strict',
+            null,
+            InputOption::VALUE_NONE,
+            'Devuelve error si queda cualquier observación de preparación; útil como puerta de salida del piloto.',
+        );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -93,6 +104,12 @@ final class InventoryCatalogReadinessCommand extends Command
         );
         $io->table(['Nivel', 'Material', 'Variante', 'Regla', 'Acción requerida'], $rows);
         $io->warning('Resuelve o documenta las observaciones antes de activar saldos, compromisos, consumos y QR por unidad física.');
+
+        if ((bool) $input->getOption('strict')) {
+            $io->error('La revisión estricta no permite iniciar el piloto mientras existan observaciones de preparación.');
+
+            return Command::FAILURE;
+        }
 
         return Command::SUCCESS;
     }

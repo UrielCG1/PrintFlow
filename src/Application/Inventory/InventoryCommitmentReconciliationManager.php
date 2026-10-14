@@ -10,6 +10,7 @@ use App\Entity\Orders\ServiceOrder;
 use App\Entity\Users\User;
 use App\Enum\Inventory\MovementType;
 use App\Repository\Inventory\InventoryCommitmentRepository;
+use App\Repository\Inventory\InventoryShortageDecisionRepository;
 use App\Repository\Inventory\MaterialVariantCostRepository;
 use App\Service\Audit\AuditLogger;
 use App\Service\Orders\ServiceOrderTraceabilityRecorder;
@@ -24,12 +25,45 @@ final class InventoryCommitmentReconciliationManager
         private readonly EntityManagerInterface $entityManager,
         private readonly InventoryCommitmentRepository $commitmentRepository,
         private readonly MaterialVariantCostRepository $balanceRepository,
+        private readonly InventoryShortageDecisionRepository $decisionRepository,
         private readonly ServiceOrderTraceabilityRecorder $traceabilityRecorder,
         private readonly AuditLogger $auditLogger,
     ) {
     }
 
     public function releaseUnusedForCompletedOrder(ServiceOrder $order, User $actor): InventoryCommitmentReconciliationResult
+    {
+        return $this->releasePendingForOrder(
+            $order,
+            $actor,
+            'inventory.commitments_reconciled',
+            'inventory.commitments.reconciled',
+            'inventory_commitment_reconciliation',
+            false,
+        );
+    }
+
+    /** La cancelacion nunca revierte un consumo ya confirmado. */
+    public function releaseUnusedForCancelledOrder(ServiceOrder $order, User $actor): InventoryCommitmentReconciliationResult
+    {
+        return $this->releasePendingForOrder(
+            $order,
+            $actor,
+            'inventory.commitments_released_for_cancellation',
+            'inventory.commitments.released_for_cancellation',
+            'inventory_commitment_cancellation',
+            true,
+        );
+    }
+
+    private function releasePendingForOrder(
+        ServiceOrder $order,
+        User $actor,
+        string $traceabilityEvent,
+        string $auditAction,
+        string $movementSource,
+        bool $supersedeShortageDecisions,
+    ): InventoryCommitmentReconciliationResult
     {
         $releases = [];
         foreach ($this->commitmentRepository->findForOrderForUpdate($order) as $commitment) {
@@ -52,7 +86,7 @@ final class InventoryCommitmentReconciliationManager
                 $actor,
                 MovementType::RELEASE,
                 $quantity,
-                'inventory_commitment_reconciliation',
+                $movementSource,
             );
             $movement->setSourceId($commitment->getId());
             $this->entityManager->persist($movement);
@@ -61,24 +95,34 @@ final class InventoryCommitmentReconciliationManager
                 'variant_code' => $variant->getCode(),
                 'released_quantity' => $quantity,
             ];
+
+        }
+
+        if ($supersedeShortageDecisions) {
+            foreach ($this->commitmentRepository->findForOrderForUpdate($order) as $commitment) {
+                $this->decisionRepository->findActiveForCommitmentForUpdate($commitment)?->supersede();
+            }
         }
 
         if ($releases !== []) {
+            $message = $supersedeShortageDecisions
+                ? 'Se liberó el apartado pendiente por cancelación de la orden.'
+                : 'Se liberó el apartado no utilizado al terminar la producción.';
             $this->traceabilityRecorder->record(
                 $order,
-                'inventory.commitments_reconciled',
+                $traceabilityEvent,
                 $actor,
                 null,
                 null,
                 null,
                 null,
                 null,
-                'Se liberó el apartado no utilizado al terminar la producción.',
+                $message,
                 ['releases' => $releases],
             );
             $this->auditLogger->record(
                 $actor,
-                'inventory.commitments.reconciled',
+                $auditAction,
                 'service_order',
                 $order->getId(),
                 null,

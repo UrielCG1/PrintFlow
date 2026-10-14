@@ -8,6 +8,7 @@ use App\Application\Inventory\InventoryStockUnitPage;
 use App\Entity\Inventory\InventoryStockUnit;
 use App\Enum\Inventory\InventoryStockUnitStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\LockMode;
 use Doctrine\Persistence\ManagerRegistry;
 
 /** @extends ServiceEntityRepository<InventoryStockUnit> */
@@ -21,6 +22,16 @@ final class InventoryStockUnitRepository extends ServiceEntityRepository
     public function findOneByQrToken(string $qrToken): ?InventoryStockUnit
     {
         return $this->findOneBy(['qrToken' => strtolower(trim($qrToken))]);
+    }
+
+    public function findForUpdate(int $id): ?InventoryStockUnit
+    {
+        return $this->createQueryBuilder('stockUnit')
+            ->andWhere('stockUnit.id = :id')
+            ->setParameter('id', $id)
+            ->getQuery()
+            ->setLockMode(LockMode::PESSIMISTIC_WRITE)
+            ->getOneOrNullResult();
     }
 
     /** @return list<InventoryStockUnit> */

@@ -47,6 +47,21 @@ class InventoryCommitment
     public function getCommittedQuantity(): string { return $this->committedQuantity; }
     public function getConsumedQuantity(): string { return $this->consumedQuantity; }
     public function getReleasedQuantity(): string { return $this->releasedQuantity; }
+    /**
+     * Cantidad que sigue cubierta por el apartado, ya sea porque continúa
+     * reservada o porque ya se aplicó a un consumo real. Las liberaciones no
+     * cuentan como cobertura vigente.
+     */
+    public function getEffectiveCoveredQuantity(): string
+    {
+        $covered = BigDecimal::of($this->committedQuantity)->minus($this->releasedQuantity);
+        if ($covered->isLessThan(BigDecimal::zero())) {
+            throw new \LogicException('El apartado tiene más material liberado que material comprometido.');
+        }
+
+        return $covered->toScale(6)->__toString();
+    }
+
     public function getPendingQuantity(): string
     {
         $pending = BigDecimal::of($this->committedQuantity)->minus($this->consumedQuantity)->minus($this->releasedQuantity);
@@ -78,6 +93,51 @@ class InventoryCommitment
 
         return $pending;
     }
+
+    /**
+     * Ajusta una necesidad que todavía no ha terminado de consumirse.
+     *
+     * La reducción nunca modifica un consumo histórico: solamente libera la
+     * porción que continúa apartada. La ampliación deja el nuevo faltante
+     * visible para que el manager intente cubrirlo bajo bloqueo de saldo.
+     *
+     * @return string cantidad que debe devolverse al saldo comprometido de la variante
+     */
+    public function reconcileRequestedQuantity(string $requestedQuantity): string
+    {
+        if ($this->status === InventoryCommitmentStatus::SUBSTITUTED) {
+            throw new \DomainException('Un apartado sustituido requiere una nueva revisión técnica antes de modificar su necesidad.');
+        }
+
+        $requested = self::nonNegativeDecimal($requestedQuantity, 'La cantidad requerida conciliada');
+        $consumed = BigDecimal::of($this->consumedQuantity);
+        if (BigDecimal::of($requested)->isLessThan($consumed)) {
+            throw new \DomainException('La nueva necesidad no puede ser menor que el material ya consumido.');
+        }
+
+        $effectiveCovered = BigDecimal::of($this->getEffectiveCoveredQuantity());
+        $targetCovered = $effectiveCovered->isGreaterThan(BigDecimal::of($requested))
+            ? BigDecimal::of($requested)
+            : $effectiveCovered;
+        $released = $effectiveCovered->minus($targetCovered)->toScale(6);
+
+        if (!$released->isZero()) {
+            $this->releasedQuantity = BigDecimal::of($this->releasedQuantity)
+                ->plus($released)
+                ->toScale(6)
+                ->__toString();
+        }
+
+        $this->requestedQuantity = $requested;
+        $currentCovered = BigDecimal::of($this->getEffectiveCoveredQuantity());
+        $this->shortageQuantity = BigDecimal::of($requested)
+            ->minus($currentCovered)
+            ->toScale(6)
+            ->__toString();
+        $this->refreshCoverageStatus();
+
+        return $released->__toString();
+    }
     /** Cubre una parte del faltante con material físico recién recibido y lo deja apartado. */
     public function coverShortageQuantity(string $quantity): void
     {
@@ -91,9 +151,7 @@ class InventoryCommitment
         }
         $this->committedQuantity = BigDecimal::of($this->committedQuantity)->plus($quantity)->toScale(6)->__toString();
         $this->shortageQuantity = $shortage->minus($quantity)->toScale(6)->__toString();
-        $this->status = BigDecimal::of($this->shortageQuantity)->isZero()
-            ? InventoryCommitmentStatus::COVERED
-            : InventoryCommitmentStatus::PARTIAL;
+        $this->refreshCoverageStatus();
     }
     public function markShortageSubstituted(): void
     {
@@ -110,5 +168,32 @@ class InventoryCommitment
         }
 
         return BigDecimal::of($value)->toScale(6)->__toString();
+    }
+
+    private static function nonNegativeDecimal(string $value, string $field): string
+    {
+        $value = trim(str_replace(',', '.', $value));
+        if (preg_match('/^(?:0|[1-9]\d{0,13})(?:\.\d{1,6})?$/D', $value) !== 1) {
+            throw new \InvalidArgumentException($field.' debe ser una cantidad no negativa con máximo seis decimales.');
+        }
+
+        return BigDecimal::of($value)->toScale(6)->__toString();
+    }
+
+    private function refreshCoverageStatus(): void
+    {
+        if ($this->status === InventoryCommitmentStatus::SUBSTITUTED) {
+            return;
+        }
+
+        if (BigDecimal::of($this->shortageQuantity)->isZero()) {
+            $this->status = InventoryCommitmentStatus::COVERED;
+
+            return;
+        }
+
+        $this->status = BigDecimal::of($this->getEffectiveCoveredQuantity())->isZero()
+            ? InventoryCommitmentStatus::SHORTAGE
+            : InventoryCommitmentStatus::PARTIAL;
     }
 }

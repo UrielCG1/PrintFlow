@@ -10,6 +10,7 @@ use App\Entity\Inventory\InventoryStockUnit;
 use App\Entity\Inventory\MaterialVariantCost;
 use App\Entity\Users\User;
 use App\Enum\Inventory\MovementType;
+use App\Enum\Inventory\InventoryStockUnitStatus;
 use App\Repository\Inventory\InventoryCycleCountRepository;
 use App\Repository\Inventory\MaterialVariantCostRepository;
 use App\Service\Audit\AuditLogger;
@@ -132,8 +133,9 @@ final class InventoryCycleCountManager
                     $this->entityManager->persist($balance);
                 }
 
+                $wasBlocked = $stockUnit->getStatus() === InventoryStockUnitStatus::BLOCKED;
                 $stockUnit->reconcileCountedQuantity($cycleCount->getCountedQuantity());
-                $balance->applyCountAdjustment($difference);
+                $balance->applyCountAdjustment($difference, $wasBlocked ? $difference : '0');
                 $movement = (new InventoryMovement(
                     $variant,
                     $variant->getInventoryUnit(),
@@ -156,6 +158,7 @@ final class InventoryCycleCountManager
                 'difference_quantity' => $difference,
                 'movement_type' => $movement === null ? null : (BigDecimal::of($difference)->isGreaterThan(BigDecimal::zero()) ? MovementType::ADJUSTMENT_IN->value : MovementType::ADJUSTMENT_OUT->value),
                 'stock_unit_id' => $stockUnit->getId(),
+                'blocked_quantity_adjustment' => isset($wasBlocked) && $wasBlocked ? $difference : '0.000000',
             ]);
             $this->entityManager->flush();
 

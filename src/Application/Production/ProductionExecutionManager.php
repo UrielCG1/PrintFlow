@@ -241,6 +241,9 @@ final class ProductionExecutionManager
 
             $this->assertExpectedOrderVersion($order, $command);
             $this->assertExecutionActor($execution, $actor);
+            if ($eventType === 'production.execution_resumed') {
+                $this->inventoryAuthorizationGuard->assertOrderCanStartProduction($order);
+            }
             if ($plan->getBlockedReason() !== null && str_starts_with($plan->getBlockedReason(), 'Incidencia:')) {
                 $message = $eventType === 'production.execution_resumed'
                     ? 'Resuelve la incidencia antes de reanudar la operación.'

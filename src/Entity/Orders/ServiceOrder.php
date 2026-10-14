@@ -485,6 +485,18 @@ class ServiceOrder
         return $this->status === ServiceOrderStatus::PLANNED;
     }
 
+    public function isCancelled(): bool
+    {
+        return $this->productionStatus === ProductionOrderStatus::CANCELLED;
+    }
+
+    public function canCancelProduction(): bool
+    {
+        return !$this->isCancelled()
+            && $this->productionStatus !== ProductionOrderStatus::PRODUCTION_COMPLETED
+            && $this->deliveryStatus === ServiceOrderDeliveryStatus::NOT_READY;
+    }
+
     public function getPlannedBy(): ?User
     {
         return $this->plannedBy;
@@ -501,6 +513,9 @@ class ServiceOrder
      */
     public function markPlanned(User $actor): self
     {
+        if ($this->isCancelled()) {
+            throw new \DomainException('Una orden cancelada no puede volver a planificarse.');
+        }
         if (!$this->isPendingPlanning()) {
             throw new \DomainException('La orden ya fue planificada.');
         }
@@ -579,6 +594,18 @@ class ServiceOrder
         }
 
         $this->productionStatus = ProductionOrderStatus::PRODUCTION_COMPLETED;
+
+        return $this;
+    }
+
+    /** La cancelacion conserva la orden y sus consumos como evidencia historica. */
+    public function cancelProduction(): self
+    {
+        if (!$this->canCancelProduction()) {
+            throw new \DomainException('Solo se puede cancelar una orden sin produccion liberada ni entrega en curso.');
+        }
+
+        $this->productionStatus = ProductionOrderStatus::CANCELLED;
 
         return $this;
     }

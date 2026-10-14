@@ -8,6 +8,7 @@ use App\Entity\Inventory\InventoryCommitment;
 use App\Entity\Materials\MaterialVariant;
 use App\Entity\Orders\ServiceOrder;
 use App\Enum\Inventory\InventoryCommitmentStatus;
+use App\Enum\Orders\ProductionOrderStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\LockMode;
 use Doctrine\Persistence\ManagerRegistry;
@@ -74,7 +75,9 @@ final class InventoryCommitmentRepository extends ServiceEntityRepository
             ->innerJoin('variant.inventoryUnit', 'unit')
             ->addSelect('serviceOrder', 'variant', 'material', 'unit')
             ->andWhere('commitment.status IN (:statuses)')
+            ->andWhere('serviceOrder.productionStatus <> :cancelled')
             ->setParameter('statuses', [InventoryCommitmentStatus::PARTIAL, InventoryCommitmentStatus::SHORTAGE])
+            ->setParameter('cancelled', ProductionOrderStatus::CANCELLED)
             ->orderBy('commitment.createdAt', 'DESC')
             ->setMaxResults(max(1, min($limit, 50)))
             ->getQuery()
@@ -94,7 +97,9 @@ final class InventoryCommitmentRepository extends ServiceEntityRepository
             ->innerJoin('variant.inventoryUnit', 'unit')
             ->addSelect('serviceOrder', 'variant', 'material', 'unit')
             ->andWhere('commitment.status IN (:statuses)')
+            ->andWhere('serviceOrder.productionStatus <> :cancelled')
             ->setParameter('statuses', [InventoryCommitmentStatus::PARTIAL, InventoryCommitmentStatus::SHORTAGE])
+            ->setParameter('cancelled', ProductionOrderStatus::CANCELLED)
             ->orderBy('variant.id', 'ASC')
             ->addOrderBy('commitment.id', 'ASC')
             ->getQuery()
@@ -112,8 +117,10 @@ final class InventoryCommitmentRepository extends ServiceEntityRepository
             ->addSelect('serviceOrder')
             ->andWhere('commitment.variant = :variant')
             ->andWhere('commitment.status IN (:statuses)')
+            ->andWhere('serviceOrder.productionStatus <> :cancelled')
             ->setParameter('variant', $variant)
             ->setParameter('statuses', [InventoryCommitmentStatus::PARTIAL, InventoryCommitmentStatus::SHORTAGE])
+            ->setParameter('cancelled', ProductionOrderStatus::CANCELLED)
             ->orderBy('commitment.createdAt', 'ASC')
             ->addOrderBy('commitment.id', 'ASC')
             ->getQuery()

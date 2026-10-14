@@ -41,6 +41,10 @@ final class InventoryOrderRequirementCollector
         foreach ($this->substitutionRepository->findForOrder($order) as $substitution) {
             $original = $substitution->getOriginalCommitment();
             $originalKey = (int) $original->getVariant()->getId();
+            $plannedOriginal = $requirements[$originalKey]['requiredQuantity'] ?? null;
+            if ($plannedOriginal === null || !BigDecimal::of($plannedOriginal)->isEqualTo(BigDecimal::of($original->getRequestedQuantity()))) {
+                throw new \DomainException('La necesidad de '.$original->getVariant()->getCode().' cambió después de autorizar un sustituto. Revisa la sustitución antes de recalcular los apartados.');
+            }
             if ($original->getCommittedQuantity() === '0.000000') {
                 unset($requirements[$originalKey]);
             } else {

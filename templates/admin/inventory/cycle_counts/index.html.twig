@@ -42,6 +42,34 @@
             </section>
         {% endif %}
 
+        {% if priorityCounts is not empty %}
+            <section class="pf-card mb-4" aria-labelledby="cycle-count-priority-title">
+                <div class="pf-card__body p-0">
+                    <div class="px-4 pt-4">
+                        <h2 id="cycle-count-priority-title" class="h5 mb-1">Ruta sugerida de conteo</h2>
+                        <p class="text-body-secondary small mb-3">Ordenada por tiempo sin contar, movimientos físicos, diferencias previas y valor inventariado. El valor solo influye en la prioridad; no se muestra en esta pantalla.</p>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table pf-table mb-0">
+                            <thead><tr><th>Prioridad</th><th>Unidad / material</th><th>Saldo y ubicación</th><th>Último conteo</th><th>Motivos</th></tr></thead>
+                            <tbody>
+                                {% for priority in priorityCounts %}
+                                    {% set priorityClass = {'URGENTE': 'danger', 'ALTA': 'warning', 'NORMAL': 'secondary'}[priority.level] %}
+                                    <tr>
+                                        <td><span class="pf-status-badge pf-status-badge--{{ priorityClass }}">{{ priority.level }}</span><div class="small text-body-secondary mt-1">Puntaje {{ priority.score }}</div></td>
+                                        <td><strong class="pf-table__primary">{{ priority.stockUnit.unitCode }}</strong><div class="small text-body-secondary">{{ priority.stockUnit.variant.material.name }} · {{ priority.stockUnit.variant.code }}</div></td>
+                                        <td class="pf-table__cell--right">{{ priority.stockUnit.remainingQuantity|number_format(6, '.', ',') }} {{ priority.stockUnit.variant.inventoryUnit.symbol }}{% if priority.stockUnit.storageLocation %}<div class="small text-body-secondary">{{ priority.stockUnit.storageLocation }}</div>{% endif %}</td>
+                                        <td class="pf-table__cell--nowrap">{{ priority.lastCountedAt ? priority.lastCountedAt|date('d/m/Y H:i', 'America/Mexico_City') : 'Sin conteo' }}</td>
+                                        <td class="small">{{ priority.reasons is not empty ? priority.reasons|join(' · ') : 'Unidad activa para verificación periódica' }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        {% endif %}
+
         {% if canReview %}
             <section class="pf-card mb-4" aria-labelledby="cycle-count-pending-title">
                 <div class="pf-card__body p-0">

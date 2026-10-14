@@ -863,6 +863,9 @@ final class ServiceOrderManager
 
     private function assertPendingPlanning(ServiceOrder $serviceOrder): void
     {
+        if ($serviceOrder->isCancelled()) {
+            throw new \DomainException('La orden esta cancelada y ya no admite cambios de planificacion.');
+        }
         if (!$serviceOrder->isPendingPlanning()) {
             throw new \DomainException('La planificación está cerrada para esta orden.');
         }

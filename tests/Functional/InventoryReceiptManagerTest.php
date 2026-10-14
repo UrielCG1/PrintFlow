@@ -65,7 +65,7 @@ final class InventoryReceiptManagerTest extends TestCase
             $this->entityManager->persist($entity);
         }
         $this->entityManager->flush();
-        $this->manager = $this->kernel->getContainer()->get(InventoryReceiptManager::class);
+        $this->manager = $this->kernel->getContainer()->get('test.service_container')->get(InventoryReceiptManager::class);
     }
 
     protected function tearDown(): void

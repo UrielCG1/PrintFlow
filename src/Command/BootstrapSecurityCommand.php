@@ -127,6 +127,7 @@ final class BootstrapSecurityCommand extends Command
 
         'service_orders.view' => ['service_orders', 'view', 'Consultar órdenes operativas'],
         'service_orders.view_commercial' => ['service_orders', 'view_commercial', 'Consultar importes comerciales de órdenes'],
+        'service_orders.cancel' => ['service_orders', 'cancel', 'Cancelar producción de una orden'],
         'production_routes.manage' => ['production_routes', 'manage', 'Configurar rutas de producción'],
         'production.view' => ['production', 'view', 'Consultar producción'],
         'production.plan' => ['production', 'plan', 'Planificar producción'],

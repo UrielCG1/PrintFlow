@@ -82,24 +82,94 @@ final class InventoryPurchaseRequestManager
         });
     }
 
-    public function beginTracking(InventoryPurchaseRequest $submittedRequest, ?string $trackingReference, User $actor): InventoryPurchaseRequest
+    public function beginTracking(
+        InventoryPurchaseRequest $submittedRequest,
+        ?string $trackingReference,
+        ?string $expectedReceiptOn,
+        User $actor,
+    ): InventoryPurchaseRequest
     {
         $id = $submittedRequest->getId();
         if ($id === null) {
             throw new \InvalidArgumentException('La solicitud de compra indicada no está registrada.');
         }
 
-        return $this->entityManager->wrapInTransaction(function () use ($id, $trackingReference, $actor): InventoryPurchaseRequest {
+        $expectedReceiptDate = $this->optionalDate($expectedReceiptOn, 'La fecha estimada de recepción');
+
+        return $this->entityManager->wrapInTransaction(function () use ($id, $trackingReference, $expectedReceiptDate, $actor): InventoryPurchaseRequest {
             $request = $this->requestRepository->findForUpdate($id);
             if (!$request instanceof InventoryPurchaseRequest) {
                 throw new \DomainException('La solicitud de compra indicada ya no existe.');
             }
-            $request->beginTracking($trackingReference);
+            $request->beginTracking($trackingReference, $expectedReceiptDate);
             $this->auditLogger->record($actor, 'inventory.purchase_request.tracking_started', 'inventory_purchase_request', $request->getId(), [
                 'status' => 'DRAFT',
             ], [
                 'status' => $request->getStatus()->value,
                 'tracking_reference' => $request->getTrackingReference(),
+                'expected_receipt_on' => $request->getExpectedReceiptOn()?->format('Y-m-d'),
+            ]);
+            $this->entityManager->flush();
+
+            return $request;
+        });
+    }
+
+    public function updateTracking(
+        InventoryPurchaseRequest $submittedRequest,
+        ?string $trackingReference,
+        ?string $expectedReceiptOn,
+        string $reason,
+        User $actor,
+    ): InventoryPurchaseRequest {
+        $id = $submittedRequest->getId();
+        if ($id === null) {
+            throw new \InvalidArgumentException('La solicitud de compra indicada no está registrada.');
+        }
+        $expectedReceiptDate = $this->optionalDate($expectedReceiptOn, 'La fecha estimada de recepción');
+
+        return $this->entityManager->wrapInTransaction(function () use ($id, $trackingReference, $expectedReceiptDate, $reason, $actor): InventoryPurchaseRequest {
+            $request = $this->requestRepository->findForUpdate($id);
+            if (!$request instanceof InventoryPurchaseRequest) {
+                throw new \DomainException('La solicitud de compra indicada ya no existe.');
+            }
+            $oldValues = [
+                'tracking_reference' => $request->getTrackingReference(),
+                'expected_receipt_on' => $request->getExpectedReceiptOn()?->format('Y-m-d'),
+            ];
+            $request->updateTracking($trackingReference, $expectedReceiptDate, $reason);
+            $this->auditLogger->record($actor, 'inventory.purchase_request.tracking_updated', 'inventory_purchase_request', $request->getId(), $oldValues, [
+                'tracking_reference' => $request->getTrackingReference(),
+                'expected_receipt_on' => $request->getExpectedReceiptOn()?->format('Y-m-d'),
+                'reason' => trim($reason),
+            ]);
+            $this->entityManager->flush();
+
+            return $request;
+        });
+    }
+
+    public function cancel(InventoryPurchaseRequest $submittedRequest, string $reason, User $actor): InventoryPurchaseRequest
+    {
+        $id = $submittedRequest->getId();
+        if ($id === null) {
+            throw new \InvalidArgumentException('La solicitud de compra indicada no está registrada.');
+        }
+
+        return $this->entityManager->wrapInTransaction(function () use ($id, $reason, $actor): InventoryPurchaseRequest {
+            $request = $this->requestRepository->findForUpdate($id);
+            if (!$request instanceof InventoryPurchaseRequest) {
+                throw new \DomainException('La solicitud de compra indicada ya no existe.');
+            }
+            $oldValues = [
+                'status' => $request->getStatus()->value,
+                'tracking_reference' => $request->getTrackingReference(),
+                'expected_receipt_on' => $request->getExpectedReceiptOn()?->format('Y-m-d'),
+            ];
+            $request->cancel($actor, $reason);
+            $this->auditLogger->record($actor, 'inventory.purchase_request.cancelled', 'inventory_purchase_request', $request->getId(), $oldValues, [
+                'status' => $request->getStatus()->value,
+                'cancellation_reason' => $request->getCancellationReason(),
             ]);
             $this->entityManager->flush();
 
@@ -177,5 +247,20 @@ final class InventoryPurchaseRequestManager
         }
 
         return hash('sha256', json_encode(['lines' => $lines, 'notes' => $notes], JSON_THROW_ON_ERROR));
+    }
+
+    private function optionalDate(?string $value, string $field): ?\DateTimeImmutable
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+        $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $value, new \DateTimeZone('America/Mexico_City'));
+        $errors = \DateTimeImmutable::getLastErrors();
+        if (!$date instanceof \DateTimeImmutable || ($errors !== false && ($errors['warning_count'] > 0 || $errors['error_count'] > 0))) {
+            throw new \InvalidArgumentException($field.' debe usar el formato AAAA-MM-DD.');
+        }
+
+        return $date;
     }
 }

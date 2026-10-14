@@ -6,15 +6,52 @@
 
 {% block app_content %}
     <div class="pf-page__content">
-        <div class="pf-page-header"><div class="pf-page-header__content"><h1 class="pf-page-header__title">Solicitudes de compra</h1><p class="pf-page-header__description">Da seguimiento a los materiales solicitados. Estas solicitudes no son existencia física.</p></div><div class="pf-page-header__actions"><a href="{{ path('admin_inventory_replenishment_index') }}" class="btn pf-button pf-button--primary"><i class="bi bi-cart-plus" aria-hidden="true"></i><span>Preparar reposición</span></a></div></div>
-        <div class="pf-card"><div class="pf-card__body p-0"><div class="table-responsive"><table class="table pf-table mb-0"><thead><tr><th>Solicitud</th><th>Material pendiente</th><th>Estado</th><th>Registro</th><th></th></tr></thead><tbody>
-            {% for purchaseRequest in requests %}
-                {% set statusClass = {'DRAFT': 'secondary', 'IN_PROGRESS': 'warning', 'CLOSED': 'success', 'CANCELLED': 'danger'}[purchaseRequest.status.value] %}
-                {% set reviewCount = demandReviewCounts[purchaseRequest.id]|default(0) %}
-                <tr><td><strong class="pf-table__primary">{{ purchaseRequest.requestCode }}</strong>{% if purchaseRequest.trackingReference %}<div class="small text-body-secondary">Ref. {{ purchaseRequest.trackingReference }}</div>{% endif %}{% if reviewCount > 0 %}<div class="small text-warning mt-1"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {{ reviewCount }} {{ reviewCount == 1 ? 'demanda cambió' : 'demandas cambiaron' }}</div>{% endif %}</td><td>{% for line in purchaseRequest.lines %}<div>{{ line.variant.material.name }} · {{ line.remainingQuantity|number_format(6, '.', ',') }} {{ line.variant.inventoryUnit.symbol }} pendientes</div>{% endfor %}</td><td><span class="pf-status-badge pf-status-badge--{{ statusClass }}">{{ purchaseRequest.status.label }}</span></td><td>{{ purchaseRequest.createdAt|date('d/m/Y H:i', 'America/Mexico_City') }}</td><td><a class="btn pf-button pf-button--secondary pf-button--sm" href="{{ path('admin_inventory_purchase_requests_show', {id: purchaseRequest.id}) }}">Abrir</a></td></tr>
-            {% else %}
-                <tr><td colspan="5" class="pf-table__empty">No hay solicitudes preparadas ni compras en seguimiento.</td></tr>
-            {% endfor %}
-        </tbody></table></div></div></div>
+        <div class="pf-page-header">
+            <div class="pf-page-header__content">
+                <h1 class="pf-page-header__title">Solicitudes de compra</h1>
+                <p class="pf-page-header__description">Da seguimiento a los materiales solicitados. Estas solicitudes no son existencia física.</p>
+            </div>
+            <div class="pf-page-header__actions"><a href="{{ path('admin_inventory_replenishment_index') }}" class="btn pf-button pf-button--primary"><i class="bi bi-cart-plus" aria-hidden="true"></i><span>Preparar reposición</span></a></div>
+        </div>
+
+        <div class="pf-card">
+            <div class="pf-card__body p-0">
+                <div class="table-responsive">
+                    <table class="table pf-table mb-0">
+                        <thead><tr><th>Solicitud</th><th>Material pendiente</th><th>Compromiso de llegada</th><th>Estado</th><th>Registro</th><th></th></tr></thead>
+                        <tbody>
+                            {% for purchaseRequest in requests %}
+                                {% set statusClass = {'DRAFT': 'secondary', 'IN_PROGRESS': 'warning', 'CLOSED': 'success', 'CANCELLED': 'danger'}[purchaseRequest.status.value] %}
+                                {% set reviewCount = demandReviewCounts[purchaseRequest.id]|default(0) %}
+                                <tr>
+                                    <td>
+                                        <strong class="pf-table__primary">{{ purchaseRequest.requestCode }}</strong>
+                                        {% if purchaseRequest.trackingReference %}<div class="small text-body-secondary">Ref. {{ purchaseRequest.trackingReference }}</div>{% endif %}
+                                        {% if reviewCount > 0 %}<div class="small text-warning mt-1"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {{ reviewCount }} {{ reviewCount == 1 ? 'demanda cambió' : 'demandas cambiaron' }}</div>{% endif %}
+                                    </td>
+                                    <td>{% for line in purchaseRequest.lines %}<div>{{ line.variant.material.name }} · {{ line.remainingQuantity|number_format(6, '.', ',') }} {{ line.variant.inventoryUnit.symbol }} pendientes</div>{% endfor %}</td>
+                                    <td>
+                                        {% if purchaseRequest.expectedReceiptOn %}
+                                            <strong class="{{ purchaseRequest.expectedReceiptOverdue or purchaseRequest.expectedAfterRequiredDate ? 'text-danger' : '' }}">{{ purchaseRequest.expectedReceiptOn|date('d/m/Y', 'America/Mexico_City') }}</strong>
+                                            {% if purchaseRequest.expectedReceiptOverdue %}<div class="small text-danger">Recepción atrasada</div>{% elseif purchaseRequest.expectedAfterRequiredDate %}<div class="small text-danger">Posterior a la fecha requerida</div>{% endif %}
+                                        {% elseif purchaseRequest.isInProgress %}
+                                            <span class="text-warning">Sin fecha estimada</span>
+                                        {% else %}
+                                            <span class="text-body-secondary">Pendiente de confirmar</span>
+                                        {% endif %}
+                                        {% if purchaseRequest.requiredByOn %}<div class="small text-body-secondary">Requerida: {{ purchaseRequest.requiredByOn|date('d/m/Y', 'America/Mexico_City') }}</div>{% endif %}
+                                    </td>
+                                    <td><span class="pf-status-badge pf-status-badge--{{ statusClass }}">{{ purchaseRequest.status.label }}</span></td>
+                                    <td>{{ purchaseRequest.createdAt|date('d/m/Y H:i', 'America/Mexico_City') }}</td>
+                                    <td><a class="btn pf-button pf-button--secondary pf-button--sm" href="{{ path('admin_inventory_purchase_requests_show', {id: purchaseRequest.id}) }}">Abrir</a></td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="6" class="pf-table__empty">No hay solicitudes preparadas ni compras en seguimiento.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 {% endblock %}

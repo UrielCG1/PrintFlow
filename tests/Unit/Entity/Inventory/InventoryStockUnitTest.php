@@ -178,6 +178,48 @@ final class InventoryStockUnitTest extends TestCase
         $balance->applyCountAdjustment('-3');
     }
 
+    public function testItBlocksAndReleasesPhysicalBalanceBeforeChangingTheQrUnitCondition(): void
+    {
+        $balance = new MaterialVariantCost($this->variant());
+        $balance->increaseOnHand('10');
+
+        $balance->block('4.25');
+
+        self::assertSame('10.000000', $balance->getOnHandQuantity());
+        self::assertSame('4.250000', $balance->getBlockedQuantity());
+        self::assertSame('5.750000', $balance->getAvailableQuantity());
+
+        $balance->releaseBlocked('1.5');
+
+        self::assertSame('2.750000', $balance->getBlockedQuantity());
+        self::assertSame('7.250000', $balance->getAvailableQuantity());
+    }
+
+    public function testItKeepsBlockedBalanceAlignedWhenABlockedQrUnitIsRecounted(): void
+    {
+        $balance = new MaterialVariantCost($this->variant());
+        $balance->increaseOnHand('10');
+        $balance->block('4');
+
+        $balance->applyCountAdjustment('-1.25', '-1.25');
+
+        self::assertSame('8.750000', $balance->getOnHandQuantity());
+        self::assertSame('2.750000', $balance->getBlockedQuantity());
+        self::assertSame('6.000000', $balance->getAvailableQuantity());
+    }
+
+    public function testItDoesNotAllowAWithdrawalToInvalidateCommittedMaterial(): void
+    {
+        $balance = new MaterialVariantCost($this->variant());
+        $balance->increaseOnHand('10');
+        $balance->commit('6');
+
+        $this->expectException(\DomainException::class);
+        $this->expectExceptionMessage('bloqueada o comprometida');
+
+        $balance->removeOnHand('5');
+    }
+
     private function variant(string $code = 'VINIL-BLANCO-152'): MaterialVariant
     {
         $unit = (new MeasurementUnit())

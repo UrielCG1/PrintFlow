@@ -22,6 +22,35 @@ class MaterialVariantCost
  public function getCommittedQuantity():string{return $this->committedQuantity;}
  public function getAvailableQuantity():string{return BigDecimal::of($this->onHandQuantity)->minus($this->blockedQuantity)->minus($this->committedQuantity)->toScale(6)->__toString();}
  public function increaseOnHand(string $quantity):void{$this->onHandQuantity=BigDecimal::of($this->onHandQuantity)->plus(self::positiveDecimal($quantity))->toScale(6)->__toString();$this->touchBalance();}
+ /** Pasa existencia física disponible a revisión, daño o caducidad sin retirarla todavía. */
+ public function block(string $quantity):void
+ {
+  $quantity=self::positiveDecimal($quantity);
+  if(BigDecimal::of($quantity)->isGreaterThan(BigDecimal::of($this->getAvailableQuantity())))throw new \DomainException('El bloqueo supera el saldo disponible de la variante. Libera o reconcilia los apartados antes de continuar.');
+  $this->blockedQuantity=BigDecimal::of($this->blockedQuantity)->plus($quantity)->toScale(6)->__toString();$this->touchBalance();
+ }
+ /** Devuelve al disponible una cantidad previamente bloqueada. */
+ public function releaseBlocked(string $quantity):void
+ {
+  $quantity=self::positiveDecimal($quantity);
+  $blocked=BigDecimal::of($this->blockedQuantity);
+  if(BigDecimal::of($quantity)->isGreaterThan($blocked))throw new \DomainException('La liberación supera el saldo bloqueado de la variante.');
+  $this->blockedQuantity=$blocked->minus($quantity)->toScale(6)->__toString();$this->touchBalance();
+ }
+ /** Retira físico y, cuando aplica, libera la parte bloqueada de la proyección. */
+ public function removeOnHand(string $quantity,string $blockedQuantityToRelease='0'):void
+ {
+  $quantity=self::positiveDecimal($quantity);
+  $blockedQuantityToRelease=self::nonNegativeDecimal($blockedQuantityToRelease,'La liberación bloqueada');
+  $removed=BigDecimal::of($quantity);$released=BigDecimal::of($blockedQuantityToRelease);
+  if($released->isGreaterThan($removed))throw new \InvalidArgumentException('La liberación bloqueada no puede superar el físico retirado.');
+  $onHand=BigDecimal::of($this->onHandQuantity);$blocked=BigDecimal::of($this->blockedQuantity);
+  if($removed->isGreaterThan($onHand))throw new \DomainException('El retiro supera la existencia física registrada para la variante.');
+  if($released->isGreaterThan($blocked))throw new \DomainException('El retiro intenta liberar más material bloqueado del registrado.');
+  $nextOnHand=$onHand->minus($removed);$nextBlocked=$blocked->minus($released);
+  if($nextOnHand->isLessThan($nextBlocked->plus($this->committedQuantity)))throw new \DomainException('El retiro dejaría menos existencia física que la bloqueada o comprometida. Reconcilia los apartados antes de continuar.');
+  $this->onHandQuantity=$nextOnHand->toScale(6)->__toString();$this->blockedQuantity=$nextBlocked->toScale(6)->__toString();$this->touchBalance();
+ }
  public function commit(string $quantity):void
  {
   $quantity=self::positiveDecimal($quantity);
@@ -51,17 +80,22 @@ class MaterialVariantCost
   $this->committedQuantity=$committed->minus($release)->toScale(6)->__toString();
   $this->touchBalance();
  }
- /** Ajusta el físico después de un conteo confirmado sin alterar apartados o bloqueos. */
- public function applyCountAdjustment(string $signedQuantity):void
+ /** Ajusta el físico después de un conteo confirmado y conserva el bloqueo de la unidad contada. */
+ public function applyCountAdjustment(string $signedQuantity,string $blockedQuantityAdjustment='0'):void
  {
   $signedQuantity=trim(str_replace(',','.',$signedQuantity));
   if(preg_match('/^-?(?:0|[1-9]\d{0,13})(?:\.\d{1,6})?$/D',$signedQuantity)!==1||BigDecimal::of($signedQuantity)->isZero())throw new \InvalidArgumentException('La diferencia de conteo debe ser distinta de cero y tener máximo seis decimales.');
+  $blockedQuantityAdjustment=trim(str_replace(',','.',$blockedQuantityAdjustment));
+  if(preg_match('/^-?(?:0|[1-9]\d{0,13})(?:\.\d{1,6})?$/D',$blockedQuantityAdjustment)!==1)throw new \InvalidArgumentException('El ajuste bloqueado no tiene un formato válido.');
   $next=BigDecimal::of($this->onHandQuantity)->plus($signedQuantity);
-  $protected=BigDecimal::of($this->blockedQuantity)->plus($this->committedQuantity);
+  $nextBlocked=BigDecimal::of($this->blockedQuantity)->plus($blockedQuantityAdjustment);
+  if($nextBlocked->isLessThan(BigDecimal::zero()))throw new \DomainException('El conteo dejaría una cantidad bloqueada negativa.');
+  $protected=$nextBlocked->plus($this->committedQuantity);
   if($next->isLessThan($protected))throw new \DomainException('El conteo dejaría menos existencia física que la bloqueada o comprometida. Reconcilia esos apartados antes de ajustar.');
-  $this->onHandQuantity=$next->toScale(6)->__toString();
+  $this->onHandQuantity=$next->toScale(6)->__toString();$this->blockedQuantity=$nextBlocked->toScale(6)->__toString();
   $this->touchBalance();
  }
  private function touchBalance():void{$this->updatedAt=new \DateTimeImmutable('now',new \DateTimeZone('UTC'));}
  private static function positiveDecimal(string $value):string{$value=trim(str_replace(',','.',$value));if(preg_match('/^(?:0|[1-9]\d{0,13})(?:\.\d{1,6})?$/D',$value)!==1||BigDecimal::of($value)->isLessThanOrEqualTo(BigDecimal::zero()))throw new \InvalidArgumentException('La cantidad física debe ser mayor que cero y tener máximo seis decimales.');return BigDecimal::of($value)->toScale(6)->__toString();}
+ private static function nonNegativeDecimal(string $value,string $field):string{$value=trim(str_replace(',','.',$value));if(preg_match('/^(?:0|[1-9]\d{0,13})(?:\.\d{1,6})?$/D',$value)!==1)throw new \InvalidArgumentException($field.' no tiene un formato válido.');return BigDecimal::of($value)->toScale(6)->__toString();}
 }

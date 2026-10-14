@@ -288,6 +288,7 @@ class InventoryStockUnit
             throw new \DomainException('La unidad física ya fue desechada.');
         }
         $this->status = InventoryStockUnitStatus::DISPOSED;
+        $this->remainingQuantity = '0.000000';
         $this->advanceInventoryVersion();
     }
 
