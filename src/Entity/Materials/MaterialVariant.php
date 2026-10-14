@@ -58,6 +58,21 @@ class MaterialVariant
     public function getInventoryUnit():MeasurementUnit{return $this->inventoryUnit;}
     public function getConsumptionUnit():MeasurementUnit{return $this->consumptionUnit;}
     public function getInventoryToConsumptionFactor():string{return $this->inventoryToConsumptionFactor;}
+    /** Un ancho identifica una variante; la longitud de cada rollo se mide al recibirlo. */
+    public function configureRollWidth(string $widthMeters):self
+    {
+        if ($this->inventoryUnit->getCode() !== 'ML' || $this->consumptionUnit->getCode() !== 'M2') {
+            throw new \DomainException('El rollo por ancho requiere saldo en metros lineales y consumo en metros cuadrados.');
+        }
+        $widthMeters = trim(str_replace(',', '.', $widthMeters));
+        if (preg_match('/^(?:0|[1-9]\d{0,1})(?:\.\d{1,4})?$/D', $widthMeters) !== 1 || \Brick\Math\BigDecimal::of($widthMeters)->isLessThanOrEqualTo(\Brick\Math\BigDecimal::zero())) {
+            throw new \InvalidArgumentException('El ancho debe ser mayor que cero, en metros y con máximo cuatro decimales.');
+        }
+        $width = \Brick\Math\BigDecimal::of($widthMeters)->toScale(4);
+        $this->specifications = ['physical_form' => 'ROLLO', 'width_m' => $width->__toString(), 'variable_length' => true];
+        $this->inventoryToConsumptionFactor = $width->toScale(12)->__toString();
+        return $this;
+    }
     public function getMinimumStock():string{return $this->minimumStock;}
     public function getReorderPoint():string{return $this->reorderPoint;}
     public function getReorderQuantity():string{return $this->reorderQuantity;}

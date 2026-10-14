@@ -23,6 +23,35 @@
     align-items: flex-end;
 }
 
+.pf-inventory-origin-choice {
+    display: flex;
+    flex: 1 1 15rem;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-md);
+    cursor: pointer;
+}
+
+.pf-inventory-origin-choice:has(input:checked) {
+    border-color: var(--pf-primary);
+    background: rgba(var(--pf-primary-rgb), 0.06);
+}
+
+.pf-inventory-origin-choice input {
+    margin-top: 0.25rem;
+}
+
+.pf-inventory-origin-choice span,
+.pf-inventory-origin-choice small {
+    display: block;
+}
+
+.pf-inventory-origin-choice small {
+    color: var(--pf-on-surface-variant);
+}
+
 .pf-inventory-table-hint {
     display: none;
 }

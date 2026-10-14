@@ -1,29 +1,47 @@
 {% extends 'layouts/app.html.twig' %}
 
-{% block title %}Recibir material | OoxCorp{% endblock %}
+{% block title %}Registrar material | OoxCorp{% endblock %}
 {% block app_navigation_active %}inventory{% endblock %}
-{% block app_breadcrumb %}Operación / Inventario / Recepción{% endblock %}
+{% block app_breadcrumb %}Operación / Inventario / Registrar material{% endblock %}
 
 {% block app_content %}
     <div class="pf-page__content">
         <div class="pf-page-header">
             <div class="pf-page-header__content">
-                <h1 class="pf-page-header__title">Recibir material</h1>
+                <h1 class="pf-page-header__title">Registrar material</h1>
                 <p class="pf-page-header__description">
-                    Registra una unidad física que acaba de llegar para asignarle un QR y controlar su saldo. Para material que ya estaba en bodega antes de usar el sistema, utiliza Cargar existencias previas.
+                    Identifica cada objeto físico con un QR. Elige si ya estaba en bodega o si acaba de llegar; el sistema conserva ese origen en el historial.
                 </p>
             </div>
         </div>
 
         {% if variants is empty %}
             <div class="alert alert-warning" role="alert">
-                No hay presentaciones activas que puedan manejar existencias. Configura primero el material y su presentación.
+                No hay presentaciones activas que puedan manejar existencias. Configura primero el material y su presentación.{% if is_granted('inventory.configure') %} <a href="{{ path('admin_inventory_roll_variants_new') }}" class="alert-link">Configurar ancho de rollo</a>.{% endif %}
             </div>
         {% else %}
-            <form method="post" class="pf-card pf-form" novalidate>
+            <form method="post" class="pf-card pf-form" novalidate data-controller="ui--inventory-entry">
                 <div class="pf-card__body row g-3">
                     <input type="hidden" name="_token" value="{{ csrf_token('inventory_receipt_new') }}">
                     <input type="hidden" name="idempotency_key" value="{{ formData.idempotency_key }}">
+                    {% if canReceive and canLoadOpeningStock and not purchaseRequestLine %}
+                        <fieldset class="col-12">
+                            <legend class="form-label mb-2">Origen del material</legend>
+                            <div class="d-flex flex-wrap gap-3">
+                                <label class="pf-inventory-origin-choice">
+                                    <input type="radio" name="origin" value="RECEIPT" {{ formData.origin == 'RECEIPT' ? 'checked' : '' }} data-ui--inventory-entry-target="origin" data-action="change->ui--inventory-entry#updateOrigin">
+                                    <span><strong>Acaba de llegar</strong><small>Entrada o compra recibida.</small></span>
+                                </label>
+                                <label class="pf-inventory-origin-choice">
+                                    <input type="radio" name="origin" value="INITIAL_COUNT" {{ formData.origin == 'INITIAL_COUNT' ? 'checked' : '' }} data-ui--inventory-entry-target="origin" data-action="change->ui--inventory-entry#updateOrigin">
+                                    <span><strong>Ya estaba en bodega</strong><small>Saldo de arranque, antes de la primera entrada normal de esta presentación.</small></span>
+                                </label>
+                            </div>
+                        </fieldset>
+                    {% else %}
+                        <input type="hidden" name="origin" value="{{ formData.origin }}">
+                        {% if formData.origin == 'INITIAL_COUNT' %}<div class="col-12"><div class="alert alert-info mb-0">Origen: material que ya estaba en bodega antes de usar el sistema.</div></div>{% endif %}
+                    {% endif %}
                     {% if purchaseRequestLine %}
                         <input type="hidden" name="purchase_request_line_id" value="{{ purchaseRequestLine.id }}">
                         <div class="col-12"><div class="alert alert-info mb-0">Esta recepción se aplicará a la solicitud <strong>{{ purchaseRequestLine.purchaseRequest.requestCode }}</strong>. Pendiente: {{ purchaseRequestLine.remainingQuantity|number_format(6, '.', ',') }} {{ purchaseRequestLine.variant.inventoryUnit.symbol }}. Solo se completará al registrar físicamente el material.</div></div>
@@ -31,20 +49,39 @@
 
                     <div class="col-12 pf-form-field">
                         <label for="inventory-variant" class="form-label">Material y presentación</label>
-                        <select id="inventory-variant" name="variant_id" class="form-select" required>
-                            <option value="">Selecciona el material recibido</option>
+                        <select id="inventory-variant" name="variant_id" class="form-select" required data-ui--inventory-entry-target="variant" data-action="change->ui--inventory-entry#updateVariant">
+                            <option value="">Selecciona el material</option>
                             {% for variant in variants %}
-                                <option value="{{ variant.id }}" {{ formData.variant_id == variant.id ? 'selected' : '' }}>
-                                    {{ variant.material.name }} · {{ variant.code }} · saldo en {{ variant.inventoryUnit.symbol }}
+                                <option value="{{ variant.id }}" data-material-id="{{ variant.material.id }}" data-inventory-unit="{{ variant.inventoryUnit.symbol }}" data-default-physical-form="{{ defaultPhysicalForms[variant.id]|default('') }}" data-legacy-presentation="{{ variant.specifications.legacy_migration|default(false) ? '1' : '0' }}" {{ formData.variant_id == variant.id ? 'selected' : '' }}>
+                                    {{ variant.material.name }} · {{ variant.code }}{% if variant.specifications.width_m|default(false) %} · ancho {{ variant.specifications.width_m|number_format(2, '.', '') }} m{% endif %} · saldo en {{ variant.inventoryUnit.symbol }}
                                 </option>
                             {% endfor %}
                         </select>
-                        <div class="form-text">Cada registro representa un rollo, envase, paquete, pieza o sobrante identificable.</div>
+                        <div class="form-text">La unidad del saldo proviene de la presentación configurada; no se escribe manualmente.</div>
+                    </div>
+
+                    <div class="col-12" data-ui--inventory-entry-target="legacyWarning" hidden>
+                        <div class="alert alert-warning mb-0">Esta presentación heredada aún usa <strong data-ui--inventory-entry-target="legacyUnit">la unidad configurada</strong>. No registres metros como piezas ni otra unidad distinta a la mostrada. Configura primero la presentación real.{% if is_granted('inventory.configure') %} Para rollos de ancho variable: <a href="{{ path('admin_inventory_roll_variants_new') }}" class="alert-link" data-ui--inventory-entry-target="rollSetupLink">configurar ancho de rollo</a>.{% else %} Solicita esa configuración al administrador.{% endif %}</div>
                     </div>
 
                     <div class="col-md-4 pf-form-field">
-                        <label for="inventory-quantity" class="form-label">Cantidad inicial</label>
-                        <input id="inventory-quantity" name="quantity" value="{{ formData.quantity }}" class="form-control" inputmode="decimal" placeholder="Ej. 20 o 1.5" required>
+                        <label for="inventory-physical-form" class="form-label">Objeto físico que recibe el QR</label>
+                        <select id="inventory-physical-form" name="physical_form" class="form-select" required data-ui--inventory-entry-target="physicalForm">
+                            <option value="">Selecciona el tipo</option>
+                            {% for code, label in physicalForms %}
+                                <option value="{{ code }}" {{ formData.physical_form == code ? 'selected' : '' }}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Ej. un rollo. Registra cada rollo por separado.</div>
+                    </div>
+
+                    <div class="col-md-4 pf-form-field">
+                        <label for="inventory-quantity" class="form-label">Saldo dentro de este objeto</label>
+                        <div class="input-group">
+                            <input id="inventory-quantity" name="quantity" value="{{ formData.quantity }}" class="form-control" inputmode="decimal" placeholder="Cantidad medida" required>
+                            <span class="input-group-text" data-ui--inventory-entry-target="unit">Unidad configurada</span>
+                        </div>
+                        <div class="form-text">Ej. un rollo de 20 metros lineales: captura 20 si aquí se muestra m. No captures el número de rollos.</div>
                     </div>
 
                     <div class="col-md-4 pf-form-field">
@@ -52,19 +89,22 @@
                         <input id="inventory-location" name="storage_location" value="{{ formData.storage_location }}" class="form-control" maxlength="100" placeholder="Ej. RACK-A / NIVEL-02">
                     </div>
 
-                    <div class="col-md-4 pf-form-field">
-                        <label for="inventory-cost" class="form-label">Costo unitario MXN</label>
+                    <div class="col-md-6 pf-form-field" data-ui--inventory-entry-target="receiptOnly" {{ formData.origin == 'INITIAL_COUNT' ? 'hidden' : '' }}>
+                        <label for="inventory-cost" class="form-label">Costo por unidad de saldo (MXN)</label>
                         <input id="inventory-cost" name="unit_cost_mxn" value="{{ formData.unit_cost_mxn }}" class="form-control" inputmode="decimal" placeholder="Opcional">
+                        <div class="form-text">Si el saldo está en metros, captura costo por metro, no costo por rollo.</div>
                     </div>
 
                     <div class="col-md-6 pf-form-field">
-                        <label for="inventory-reference" class="form-label">Referencia de compra o recepción</label>
-                        <input id="inventory-reference" name="reference" value="{{ formData.reference }}" class="form-control" maxlength="100" placeholder="Factura, remisión o folio interno">
+                        <label for="inventory-reference" class="form-label">Documento o folio (opcional)</label>
+                        <input id="inventory-reference" name="reference" value="{{ formData.reference }}" class="form-control" maxlength="100" placeholder="Factura, remisión o folio de conteo">
+                        <div class="form-text">El origen elegido distingue la entrada; este folio solo ayuda a localizar su comprobante.</div>
                     </div>
 
                     <div class="col-md-6 pf-form-field">
-                        <label for="inventory-physical-description" class="form-label">Datos físicos de la unidad</label>
-                        <input id="inventory-physical-description" name="physical_description" value="{{ formData.physical_description }}" class="form-control" maxlength="255" placeholder="Ej. Rollo abierto, ancho 1.52 m">
+                        <label for="inventory-physical-description" class="form-label">Rasgos para identificarlo (opcional)</label>
+                        <input id="inventory-physical-description" name="physical_description" value="{{ formData.physical_description }}" class="form-control" maxlength="255" placeholder="Ej. ancho 1.52 m, rollo abierto">
+                        <div class="form-text">No repitas aquí el saldo ni el ancho de la presentación; anota color, daño o estado si ayuda a encontrarlo.</div>
                     </div>
 
                     <div class="col-12 pf-form-field">
@@ -72,7 +112,7 @@
                         <textarea id="inventory-notes" name="notes" class="form-control" rows="3" maxlength="4000" placeholder="Observaciones de recepción, estado del empaque o proveedor">{{ formData.notes }}</textarea>
                     </div>
 
-                    <div class="col-12">
+                    <div class="col-12" data-ui--inventory-entry-target="receiptOnly" {{ formData.origin == 'INITIAL_COUNT' ? 'hidden' : '' }}>
                         <div class="form-check">
                             <input id="inventory-provisional" name="is_provisional" type="checkbox" value="1" class="form-check-input" {{ formData.is_provisional ? 'checked' : '' }}>
                             <label for="inventory-provisional" class="form-check-label">Recepción provisional: requiere validación administrativa posterior.</label>
@@ -81,7 +121,7 @@
                 </div>
 
                 <div class="pf-card__footer d-flex justify-content-end gap-2">
-                    <button type="submit" class="btn pf-button pf-button--primary">
+                    <button type="submit" class="btn pf-button pf-button--primary" data-ui--inventory-entry-target="submit">
                         <i class="bi bi-qr-code" aria-hidden="true"></i>
                         <span>Registrar e imprimir etiqueta</span>
                     </button>

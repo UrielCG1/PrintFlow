@@ -15,7 +15,7 @@
                 <div class="pf-page-header__actions">
                     <a href="{{ path('admin_inventory_receipts_new') }}" class="btn pf-button pf-button--primary">
                         <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                        <span>Recibir material</span>
+                        <span>Registrar material</span>
                     </a>
                     {% if is_granted('inventory.count') %}
                         <a href="{{ path('admin_inventory_cycle_counts_index') }}" class="btn pf-button pf-button--secondary">
@@ -24,23 +24,20 @@
                         </a>
                     {% endif %}
                     {% if is_granted('inventory.adjust_stock') %}
-                        <a href="{{ path('admin_inventory_receipts_initial_count') }}" class="btn pf-button pf-button--secondary">
-                            <i class="bi bi-clipboard-check" aria-hidden="true"></i>
-                            <span>Cargar existencias previas</span>
-                        </a>
                         <a href="{{ path('admin_inventory_stock_unit_operations_index') }}" class="btn pf-button pf-button--secondary">
                             <i class="bi bi-shield-check" aria-hidden="true"></i>
                             <span>Operaciones de bodega</span>
                         </a>
                     {% endif %}
                     {% if is_granted('inventory.configure') %}
+                        <a href="{{ path('admin_inventory_roll_variants_new') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-rulers" aria-hidden="true"></i><span>Configurar anchos</span></a>
                         <a href="{{ path('admin_inventory_receipts_minimums') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-sliders" aria-hidden="true"></i><span>Configurar mínimos</span></a>
                         <a href="{{ path('admin_inventory_replenishment_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-cart-plus" aria-hidden="true"></i><span>Sugerencias de compra</span></a>
                         <a href="{{ path('admin_inventory_indicators_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-graph-up" aria-hidden="true"></i><span>Indicadores</span></a>
                     {% endif %}
                 </div>
             {% elseif is_granted('inventory.adjust_stock') %}
-                <div class="pf-page-header__actions"><a href="{{ path('admin_inventory_receipts_initial_count') }}" class="btn pf-button pf-button--primary"><i class="bi bi-clipboard-check" aria-hidden="true"></i><span>Cargar existencias previas</span></a><a href="{{ path('admin_inventory_stock_unit_operations_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-shield-check" aria-hidden="true"></i><span>Operaciones de bodega</span></a></div>
+                <div class="pf-page-header__actions"><a href="{{ path('admin_inventory_receipts_new', {origin: 'INITIAL_COUNT'}) }}" class="btn pf-button pf-button--primary"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Registrar material</span></a><a href="{{ path('admin_inventory_stock_unit_operations_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-shield-check" aria-hidden="true"></i><span>Operaciones de bodega</span></a></div>
             {% elseif is_granted('inventory.count') %}
                 <div class="pf-page-header__actions"><a href="{{ path('admin_inventory_cycle_counts_index') }}" class="btn pf-button pf-button--primary"><i class="bi bi-upc-scan" aria-hidden="true"></i><span>Conteo cíclico</span></a></div>
             {% endif %}
@@ -95,11 +92,13 @@
                                 <tr>
                                     <td>
                                         <code class="pf-table__code">{{ stockUnit.unitCode }}</code>
+                                        {% if stockUnit.physicalAttributes.physical_form|default(false) or stockUnit.variant.specifications.physical_form|default(false) %}<div class="small text-body-secondary">{{ stockUnit.physicalAttributes.physical_form|default(stockUnit.variant.specifications.physical_form)|lower|capitalize }}</div>{% endif %}
                                         {% if stockUnit.lot %}<div class="small text-body-secondary">Lote {{ stockUnit.lot.internalLotNumber }}</div>{% endif %}
                                     </td>
                                     <td>
                                         <strong class="pf-table__primary">{{ stockUnit.variant.material.name }}</strong>
                                         <div class="small text-body-secondary">{{ stockUnit.variant.material.code }} · {{ stockUnit.variant.code }}</div>
+                                        {% if stockUnit.variant.specifications.width_m|default(false) %}<div class="small text-body-secondary">Ancho {{ stockUnit.variant.specifications.width_m|number_format(2, '.', '') }} m</div>{% endif %}
                                     </td>
                                     <td class="pf-table__cell--right pf-table__cell--nowrap">
                                         {{ stockUnit.remainingQuantity|number_format(6, '.', ',') }} {{ stockUnit.variant.inventoryUnit.symbol }}

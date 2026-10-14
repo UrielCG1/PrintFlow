@@ -117,6 +117,35 @@ final class InventoryReceiptManagerTest extends TestCase
         $this->manager->receive($this->command('9'), $this->actor);
     }
 
+    public function testItRejectsAnUnconfiguredLegacyPresentationBeforeCreatingStock(): void
+    {
+        $this->entityManager->getConnection()->executeStatement(
+            'UPDATE material_variants SET specifications = :specifications WHERE id = :id',
+            ['specifications' => '{"legacy_migration":true}', 'id' => $this->variant->getId()],
+        );
+        $this->entityManager->refresh($this->variant);
+
+        try {
+            $this->manager->receive($this->command('20'), $this->actor);
+            self::fail('La presentación heredada no debe crear saldos.');
+        } catch (\DomainException $exception) {
+            self::assertStringContainsString('presentación heredada', $exception->getMessage());
+        }
+
+        self::assertSame(0, (int) $this->entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM inventory_stock_units'));
+    }
+
+    public function testItRejectsFractionalStockWhenTheConfiguredUnitOnlyAllowsWholeNumbers(): void
+    {
+        $this->variant->getInventoryUnit()->setAllowsFraction(false);
+        $this->entityManager->flush();
+
+        $this->expectException(\DomainException::class);
+        $this->expectExceptionMessage('solo admite cantidades enteras');
+
+        $this->manager->receive($this->command('1.5'), $this->actor);
+    }
+
     public function testItCountsSeveralOpeningUnitsButRejectsLateOpeningCounts(): void
     {
         $count = new InventoryReceiptCommand(

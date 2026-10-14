@@ -34,7 +34,7 @@
                 <img class="logo" src="{{ asset('images/brand/logo.png') }}" alt="OoxCorp">
                 <div>
                     <h1>Etiqueta de material</h1>
-                    <p class="subtitle">Recepción {{ receipt.receiptCode }}</p>
+                    <p class="subtitle">{{ receipt.type.label }} {{ receipt.receiptCode }}</p>
                 </div>
             </header>
             <div class="body">
@@ -47,6 +47,10 @@
                         <dd>{{ line.variant.material.code }}</dd>
                         <dt>Presentación</dt>
                         <dd>{{ line.variant.code }}</dd>
+                        {% if stockUnit.physicalAttributes.physical_form|default(false) or line.variant.specifications.width_m|default(false) %}
+                            <dt>Objeto físico</dt>
+                            <dd>{{ stockUnit.physicalAttributes.physical_form|default(line.variant.specifications.physical_form|default('Unidad'))|lower|capitalize }}{% if line.variant.specifications.width_m|default(false) %} · ancho {{ line.variant.specifications.width_m|number_format(2, '.', '') }} m{% endif %}</dd>
+                        {% endif %}
                         <dt>Saldo inicial</dt>
                         <dd>{{ line.receivedQuantity|number_format(6, '.', ',') }} {{ line.variant.inventoryUnit.symbol }}</dd>
                         <dt>Registro</dt>

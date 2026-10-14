@@ -221,6 +221,13 @@ final class InventoryReceiptManager
         if (!$line->variant->isActive() || !$material->isActive() || !$material->isStockItem() || !$line->variant->isConsumable()) {
             throw new \DomainException('La variante recibida debe estar activa, controlar existencias y ser consumible.');
         }
+        if (($line->variant->getSpecifications()['legacy_migration'] ?? false) === true) {
+            throw new \DomainException('Esta presentación heredada aún no tiene unidades físicas y conversiones confirmadas. Configura una presentación por ancho antes de registrar saldos.');
+        }
+        if (!$line->variant->getInventoryUnit()->allowsFraction()
+            && preg_match('/^(?:0|[1-9]\d*)(?:[.,]0+)?$/D', trim($line->quantity)) !== 1) {
+            throw new \DomainException('La unidad de inventario '.$line->variant->getInventoryUnit()->getSymbol().' solo admite cantidades enteras.');
+        }
         if ($line->lot !== null && $line->lot->getVariant() !== $line->variant) {
             throw new \DomainException('El lote indicado no pertenece a la variante recibida.');
         }

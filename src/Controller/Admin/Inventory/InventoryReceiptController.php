@@ -12,6 +12,7 @@ use App\Entity\Inventory\InventoryPurchaseRequestLine;
 use App\Entity\Inventory\InventoryStockUnit;
 use App\Entity\Materials\MaterialVariant;
 use App\Entity\Users\User;
+use App\Enum\Inventory\InventoryReceiptType;
 use App\Enum\Inventory\InventoryStockUnitStatus;
 use App\Repository\Inventory\InventoryStockUnitRepository;
 use App\Repository\Inventory\InventoryPurchaseRequestLineRepository;
@@ -27,6 +28,19 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/admin/inventario/recepciones', name: 'admin_inventory_receipts_')]
 final class InventoryReceiptController extends AbstractController
 {
+    private const PHYSICAL_FORMS = [
+        'ROLLO' => 'Rollo',
+        'ENVASE' => 'Envase',
+        'PAQUETE' => 'Paquete',
+        'PIEZA' => 'Pieza',
+        'HOJA' => 'Hoja',
+        'CAJA' => 'Caja',
+        'CARTUCHO' => 'Cartucho',
+        'BOTELLA' => 'Botella',
+        'JUEGO' => 'Juego',
+        'OTRO' => 'Otro',
+    ];
+
     #[Route('', name: 'index', methods: ['GET'])]
     public function index(Request $request, InventoryStockUnitRepository $stockUnitRepository): Response
     {
@@ -54,20 +68,50 @@ final class InventoryReceiptController extends AbstractController
         InventoryPurchaseRequestLineRepository $purchaseRequestLineRepository,
         InventoryReceiptManager $receiptManager,
     ): Response {
-        $this->denyAccessUnlessGranted('inventory.receive');
+        $canReceive = $this->isGranted('inventory.receive');
+        $canLoadOpeningStock = $this->isGranted('inventory.adjust_stock');
+        if (!$canReceive && !$canLoadOpeningStock) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $requestedOrigin = $request->isMethod('POST')
+            ? $request->request->getString('origin')
+            : $request->query->getString('origin');
+        $origin = InventoryReceiptType::tryFrom($requestedOrigin)
+            ?? ($canReceive ? InventoryReceiptType::RECEIPT : InventoryReceiptType::INITIAL_COUNT);
+        $validOrigin = !$request->isMethod('POST') || $requestedOrigin === $origin->value;
+        if ($origin === InventoryReceiptType::INITIAL_COUNT) {
+            $this->denyAccessUnlessGranted('inventory.adjust_stock');
+        } else {
+            $this->denyAccessUnlessGranted('inventory.receive');
+        }
 
         $linkedPurchaseRequestLine = null;
-        $purchaseRequestLineId = $this->positiveId($request->query->getString('purchase_request_line'));
+        $purchaseRequestLineId = $this->positiveId($request->isMethod('POST')
+            ? $request->request->getString('purchase_request_line_id')
+            : $request->query->getString('purchase_request_line'));
         if ($purchaseRequestLineId !== null) {
             $linkedPurchaseRequestLine = $purchaseRequestLineRepository->find($purchaseRequestLineId);
             if (!$linkedPurchaseRequestLine instanceof InventoryPurchaseRequestLine) {
                 $this->addFlash('error', 'La partida de solicitud de compra indicada no existe.');
             }
         }
+        if ($linkedPurchaseRequestLine instanceof InventoryPurchaseRequestLine && !$request->isMethod('POST')) {
+            $this->denyAccessUnlessGranted('inventory.receive');
+            $origin = InventoryReceiptType::RECEIPT;
+        }
+
+        $prefilledVariantId = $this->positiveId($request->query->getString('variant'));
+        $prefilledVariant = $linkedPurchaseRequestLine === null && $prefilledVariantId !== null
+            ? $variantRepository->find($prefilledVariantId) : null;
 
         $formData = [
             'idempotency_key' => bin2hex(random_bytes(16)),
-            'variant_id' => $linkedPurchaseRequestLine?->getVariant()->getId() ?? '',
+            'origin' => $origin->value,
+            'variant_id' => $linkedPurchaseRequestLine?->getVariant()->getId() ?? $prefilledVariant?->getId() ?? '',
+            'physical_form' => $linkedPurchaseRequestLine instanceof InventoryPurchaseRequestLine
+                ? ($this->defaultPhysicalForm($linkedPurchaseRequestLine->getVariant()) ?? '')
+                : ($prefilledVariant instanceof MaterialVariant ? ($this->defaultPhysicalForm($prefilledVariant) ?? '') : ''),
             'quantity' => '',
             'storage_location' => '',
             'physical_description' => '',
@@ -81,7 +125,9 @@ final class InventoryReceiptController extends AbstractController
         if ($request->isMethod('POST')) {
             $formData = [
                 'idempotency_key' => $request->request->getString('idempotency_key'),
+                'origin' => $origin->value,
                 'variant_id' => $request->request->getString('variant_id'),
+                'physical_form' => $request->request->getString('physical_form'),
                 'quantity' => $request->request->getString('quantity'),
                 'storage_location' => $request->request->getString('storage_location'),
                 'physical_description' => $request->request->getString('physical_description'),
@@ -98,34 +144,52 @@ final class InventoryReceiptController extends AbstractController
 
             $variantId = $this->positiveId($formData['variant_id']);
             $variant = $variantId === null ? null : $variantRepository->find($variantId);
-            $purchaseRequestLineId = $this->positiveId($formData['purchase_request_line_id']);
-            $linkedPurchaseRequestLine = $purchaseRequestLineId === null ? null : $purchaseRequestLineRepository->find($purchaseRequestLineId);
-            if ($purchaseRequestLineId !== null && !$linkedPurchaseRequestLine instanceof InventoryPurchaseRequestLine) {
+            if ($variant instanceof MaterialVariant && $formData['physical_form'] === '') {
+                $formData['physical_form'] = $this->defaultPhysicalForm($variant) ?? '';
+            }
+
+            if (!$validOrigin) {
+                $this->addFlash('error', 'Selecciona un origen de material válido.');
+            } elseif ($purchaseRequestLineId !== null && !$linkedPurchaseRequestLine instanceof InventoryPurchaseRequestLine) {
                 $this->addFlash('error', 'La partida de solicitud de compra indicada no existe.');
+            } elseif ($origin === InventoryReceiptType::INITIAL_COUNT && $purchaseRequestLineId !== null) {
+                $this->addFlash('error', 'Las existencias previas no se vinculan a solicitudes de compra nuevas.');
             } elseif ($variant === null) {
                 $this->addFlash('error', 'Selecciona una presentación de material válida.');
+            } elseif (!isset(self::PHYSICAL_FORMS[$formData['physical_form']])) {
+                $this->addFlash('error', 'Indica si la unidad física es un rollo, envase, paquete, pieza u otro objeto.');
+            } elseif (isset($variant->getSpecifications()['physical_form'])
+                && $variant->getSpecifications()['physical_form'] !== $formData['physical_form']) {
+                $this->addFlash('error', 'El objeto físico no corresponde a la presentación seleccionada.');
             } else {
                 try {
                     $physicalDescription = trim($formData['physical_description']);
-                    $receipt = $receiptManager->receive(
-                        new InventoryReceiptCommand(
-                            idempotencyKey: $formData['idempotency_key'],
-                            lines: [new InventoryReceiptLineInput(
-                                variant: $variant,
-                                quantity: $formData['quantity'],
-                                storageLocation: $formData['storage_location'],
-                                physicalAttributes: $physicalDescription === '' ? [] : ['description' => $physicalDescription],
-                                unitCostMxn: $formData['unit_cost_mxn'],
-                                purchaseRequestLine: $linkedPurchaseRequestLine,
-                            )],
-                            reference: $formData['reference'],
-                            notes: $formData['notes'],
-                            isProvisional: $formData['is_provisional'],
-                        ),
-                        $this->getActor(),
+                    $physicalAttributes = ['physical_form' => $formData['physical_form']];
+                    if ($physicalDescription !== '') {
+                        $physicalAttributes['description'] = $physicalDescription;
+                    }
+                    $command = new InventoryReceiptCommand(
+                        idempotencyKey: $formData['idempotency_key'],
+                        lines: [new InventoryReceiptLineInput(
+                            variant: $variant,
+                            quantity: $formData['quantity'],
+                            storageLocation: $formData['storage_location'],
+                            physicalAttributes: $physicalAttributes,
+                            unitCostMxn: $origin === InventoryReceiptType::RECEIPT ? $formData['unit_cost_mxn'] : null,
+                            purchaseRequestLine: $origin === InventoryReceiptType::RECEIPT ? $linkedPurchaseRequestLine : null,
+                        )],
+                        reference: $formData['reference'],
+                        notes: $formData['notes'],
+                        isProvisional: $origin === InventoryReceiptType::RECEIPT && $formData['is_provisional'],
                     );
+                    $receipt = $origin === InventoryReceiptType::INITIAL_COUNT
+                        ? $receiptManager->recordInitialCount($command, $this->getActor())
+                        : $receiptManager->receive($command, $this->getActor());
 
-                    $this->addFlash('success', sprintf('Recepción %s registrada. Imprime la etiqueta antes de llevar la unidad a bodega.', $receipt->getReceiptCode()));
+                    $message = $origin === InventoryReceiptType::INITIAL_COUNT
+                        ? 'Existencia previa %s registrada. Imprime la etiqueta antes de almacenar la unidad.'
+                        : 'Recepción %s registrada. Imprime la etiqueta antes de llevar la unidad a bodega.';
+                    $this->addFlash('success', sprintf($message, $receipt->getReceiptCode()));
 
                     return $this->redirectToRoute('admin_inventory_receipts_label', ['id' => $receipt->getId()]);
                 } catch (\DomainException|\InvalidArgumentException $exception) {
@@ -134,9 +198,19 @@ final class InventoryReceiptController extends AbstractController
             }
         }
 
+        $variants = $variantRepository->findActiveConsumable();
+        $defaultPhysicalForms = [];
+        foreach ($variants as $variant) {
+            $defaultPhysicalForms[$variant->getId()] = $this->defaultPhysicalForm($variant);
+        }
+
         return $this->render('admin/inventory/receipts/new.html.twig', [
             'formData' => $formData,
-            'variants' => $variantRepository->findActiveConsumable(),
+            'variants' => $variants,
+            'physicalForms' => self::PHYSICAL_FORMS,
+            'defaultPhysicalForms' => $defaultPhysicalForms,
+            'canReceive' => $canReceive,
+            'canLoadOpeningStock' => $canLoadOpeningStock,
             'purchaseRequestLine' => $linkedPurchaseRequestLine,
         ]);
     }
@@ -148,6 +222,10 @@ final class InventoryReceiptController extends AbstractController
         InventoryReceiptManager $receiptManager,
     ): Response {
         $this->denyAccessUnlessGranted('inventory.adjust_stock');
+
+        if ($request->isMethod('GET')) {
+            return $this->redirectToRoute('admin_inventory_receipts_new', ['origin' => InventoryReceiptType::INITIAL_COUNT->value]);
+        }
 
         $formData = [
             'idempotency_key' => bin2hex(random_bytes(16)),
@@ -317,5 +395,29 @@ final class InventoryReceiptController extends AbstractController
     private function positiveId(string $value): ?int
     {
         return ctype_digit($value) && (int) $value > 0 ? (int) $value : null;
+    }
+
+    private function defaultPhysicalForm(MaterialVariant $variant): ?string
+    {
+        $specifications = $variant->getSpecifications();
+        if (($specifications['legacy_migration'] ?? false) === true) {
+            return null;
+        }
+
+        if (isset(self::PHYSICAL_FORMS[$specifications['physical_form'] ?? ''])) {
+            return $specifications['physical_form'];
+        }
+
+        return match ($variant->getPurchaseUnit()->getCode()) {
+            'ROLLO' => 'ROLLO',
+            'PAQ' => 'PAQUETE',
+            'PZA' => 'PIEZA',
+            'HOJA' => 'HOJA',
+            'CAJA' => 'CAJA',
+            'CARTUCHO' => 'CARTUCHO',
+            'BOTELLA' => 'BOTELLA',
+            'JGO' => 'JUEGO',
+            default => null,
+        };
     }
 }

@@ -18,6 +18,7 @@
             <dt>Material</dt><dd>{{ stockUnit.variant.material.name }}</dd>
             <dt>Código de material</dt><dd>{{ stockUnit.variant.material.code }}</dd>
             <dt>Presentación</dt><dd>{{ stockUnit.variant.code }}</dd>
+            {% if stockUnit.physicalAttributes.physical_form|default(false) or stockUnit.variant.specifications.width_m|default(false) %}<dt>Objeto físico</dt><dd>{{ stockUnit.physicalAttributes.physical_form|default(stockUnit.variant.specifications.physical_form|default('Unidad'))|lower|capitalize }}{% if stockUnit.variant.specifications.width_m|default(false) %} · ancho {{ stockUnit.variant.specifications.width_m|number_format(2, '.', '') }} m{% endif %}</dd>{% endif %}
             {% if stockUnit.kind.value == 'SURPLUS' %}<dt>Tipo</dt><dd>Sobrante recuperable</dd>{% endif %}
             {% if stockUnit.parentStockUnit %}<dt>Unidad de origen</dt><dd>{{ stockUnit.parentStockUnit.unitCode }}</dd>{% endif %}
             <dt>Saldo actual</dt><dd>{{ stockUnit.remainingQuantity|number_format(6, '.', ',') }} {{ stockUnit.variant.inventoryUnit.symbol }}</dd>
