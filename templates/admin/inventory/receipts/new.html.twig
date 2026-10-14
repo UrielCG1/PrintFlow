@@ -20,21 +20,21 @@
                 No hay presentaciones activas que puedan manejar existencias. Configura primero el material y su presentación.{% if is_granted('inventory.configure') %} <a href="{{ path('admin_inventory_roll_variants_new') }}" class="alert-link">Configurar ancho de rollo</a>.{% endif %}
             </div>
         {% else %}
-            <form method="post" class="pf-card pf-form" novalidate data-controller="ui--inventory-entry">
-                <div class="pf-card__body row g-3">
+            <form method="post" class="pf-card pf-form pf-inventory-receipt-form" novalidate data-controller="ui--inventory-entry">
+                <div class="pf-card__body row g-3 pf-inventory-receipt-fields">
                     <input type="hidden" name="_token" value="{{ csrf_token('inventory_receipt_new') }}">
                     <input type="hidden" name="idempotency_key" value="{{ formData.idempotency_key }}">
                     {% if not purchaseRequestLine %}
                         <fieldset class="col-12">
                             <legend class="form-label mb-2">Origen del material</legend>
-                            <div class="d-flex flex-wrap gap-3">
-                                {% if canReceive %}<label class="pf-inventory-origin-choice">
+                            <div class="d-flex flex-wrap gap-3 pf-inventory-receipt-origins">
+                                {% if canReceive %}<label class="pf-inventory-origin-choice d-flex align-items-start gap-2 border rounded p-3 flex-fill">
                                     <input type="radio" name="origin" value="RECEIPT" {{ formData.origin == 'RECEIPT' ? 'checked' : '' }} data-ui--inventory-entry-target="origin" data-action="change->ui--inventory-entry#updateOrigin">
-                                    <span><strong>Acaba de llegar</strong><small>Compra o entrada nueva.</small></span>
+                                    <span class="d-block"><strong class="d-block">Acaba de llegar</strong><small class="d-block">Compra o entrada nueva.</small></span>
                                 </label>{% endif %}
-                                <label class="pf-inventory-origin-choice">
+                                <label class="pf-inventory-origin-choice d-flex align-items-start gap-2 border rounded p-3 flex-fill">
                                     <input type="radio" name="origin" value="INITIAL_COUNT" {{ formData.origin == 'INITIAL_COUNT' ? 'checked' : '' }} data-ui--inventory-entry-target="origin" data-action="change->ui--inventory-entry#updateOrigin">
-                                    <span><strong>Ya estaba en bodega</strong><small>Material existente antes de empezar a controlarlo en el sistema.</small></span>
+                                    <span class="d-block"><strong class="d-block">Ya estaba en bodega</strong><small class="d-block">Material existente antes de empezar a controlarlo en el sistema.</small></span>
                                 </label>
                             </div>
                         </fieldset>
