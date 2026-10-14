@@ -20,7 +20,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_inventory_stock_operation_unit_occurred', columns: ['stock_unit_id', 'occurred_at'])]
 #[ORM\Index(name: 'idx_inventory_stock_operation_variant_occurred', columns: ['material_variant_id', 'occurred_at'])]
 #[ORM\Index(name: 'idx_inventory_stock_operation_type_occurred', columns: ['operation_type', 'occurred_at'])]
-final class InventoryStockUnitOperation
+class InventoryStockUnitOperation
 {
     #[ORM\Id, ORM\GeneratedValue, ORM\Column]
     private ?int $id = null;
