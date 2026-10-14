@@ -6,7 +6,7 @@
 
 {% block app_content %}
     <div class="pf-page__content">
-        <div class="pf-page-header">
+        <div class="pf-page-header pf-inventory-page-header">
             <div class="pf-page-header__content">
                 <h1 class="pf-page-header__title">Inventario físico</h1>
                 <p class="pf-page-header__description">Consulta cada rollo, envase, paquete o sobrante por su código, saldo y ubicación.</p>
@@ -48,11 +48,11 @@
 
         <form method="get" class="pf-card pf-form mb-4">
             <div class="pf-card__body row g-3 align-items-end">
-                <div class="col-md-7 pf-form-field">
+                <div class="col-xl-6 col-lg-5 col-md-6 pf-form-field">
                     <label for="inventory-search" class="form-label">Buscar</label>
                     <input id="inventory-search" type="search" name="q" value="{{ search }}" class="form-control" placeholder="Código QR, material, presentación, lote o ubicación">
                 </div>
-                <div class="col-md-3 pf-form-field">
+                <div class="col-xl-3 col-lg-3 col-md-6 pf-form-field">
                     <label for="inventory-status" class="form-label">Estado</label>
                     <select id="inventory-status" name="status" class="form-select">
                         <option value="">Todos</option>
@@ -61,7 +61,7 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="col-md-2 d-flex gap-2">
+                <div class="col-xl-3 col-lg-4 col-12 d-flex flex-wrap gap-2 pf-inventory-filter-actions">
                     <button type="submit" class="btn pf-button pf-button--primary">Filtrar</button>
                     <a href="{{ path('admin_inventory_receipts_index') }}" class="btn pf-button pf-button--secondary">Limpiar</a>
                 </div>
@@ -70,7 +70,8 @@
 
         <div class="pf-card">
             <div class="pf-card__body p-0">
-                <div class="table-responsive">
+                <p class="pf-inventory-table-hint">Desliza la tabla para ver todas las columnas.</p>
+                <div class="table-responsive" role="region" aria-label="Unidades físicas de inventario" tabindex="0">
                     <table class="table pf-table mb-0">
                         <thead>
                             <tr>
@@ -124,7 +125,7 @@
                 </div>
             </div>
             {% if page.pageCount > 1 %}
-                <div class="pf-card__footer d-flex justify-content-between align-items-center">
+                <div class="pf-card__footer d-flex justify-content-between align-items-center pf-inventory-pagination">
                     <a class="btn pf-button pf-button--secondary pf-button--sm {{ page.currentPage == 1 ? 'disabled' : '' }}" href="{{ path('admin_inventory_receipts_index', { q: search, status: status, page: page.currentPage - 1 }) }}">Anterior</a>
                     <span class="pf-table-footer__summary">Página {{ page.currentPage }} de {{ page.pageCount }} · {{ page.total }} unidades</span>
                     <a class="btn pf-button pf-button--secondary pf-button--sm {{ page.currentPage == page.pageCount ? 'disabled' : '' }}" href="{{ path('admin_inventory_receipts_index', { q: search, status: status, page: page.currentPage + 1 }) }}">Siguiente</a>

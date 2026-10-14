@@ -1,0 +1,49 @@
+/* La pantalla de inventario puede mostrar siete acciones segun los permisos. */
+.pf-inventory-page-header {
+    align-items: stretch;
+    flex-direction: column;
+}
+
+.pf-inventory-page-header .pf-page-header__content,
+.pf-inventory-page-header .pf-page-header__actions {
+    width: 100%;
+    min-width: 0;
+}
+
+.pf-inventory-page-header .pf-page-header__actions {
+    justify-content: flex-start;
+}
+
+.pf-inventory-page-header .pf-page-header__actions .pf-button {
+    max-width: 100%;
+    white-space: normal;
+}
+
+.pf-inventory-filter-actions {
+    align-items: flex-end;
+}
+
+.pf-inventory-table-hint {
+    display: none;
+}
+
+.pf-inventory-pagination {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+@media (max-width: 767.98px) {
+    .pf-inventory-table-hint {
+        display: block;
+        margin: 0;
+        padding: 0.75rem 1rem 0;
+        color: var(--pf-on-surface-variant);
+        font-size: var(--pf-font-size-body-sm);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .pf-inventory-filter-actions .pf-button {
+        flex: 1 1 auto;
+    }
+}
