@@ -52,48 +52,25 @@
     color: var(--pf-on-surface-variant);
 }
 
-/* Recepcion: las columnas se adaptan al espacio disponible junto al menu. */
+/* Recepcion: Bootstrap define las columnas; los campos conservan su altura natural. */
 .pf-inventory-receipt-fields {
-    --bs-gutter-x: 0;
-    --bs-gutter-y: 0;
-
-    display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-    align-items: start;
-    gap: 1.25rem;
-    margin: 0;
+    align-items: flex-start;
 }
 
 .pf-inventory-receipt-fields > * {
     min-width: 0;
-    width: 100%;
-}
-
-.pf-inventory-receipt-fields > .col-12 {
-    grid-column: span 6;
-}
-
-.pf-inventory-receipt-fields > .col-md-6 {
-    grid-column: span 3;
-}
-
-.pf-inventory-receipt-fields > .col-md-4 {
-    grid-column: span 2;
 }
 
 .pf-inventory-receipt-form .pf-form-field {
-    align-self: start;
     align-content: start;
 }
 
-.pf-inventory-receipt-origins {
-    display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+.pf-inventory-receipt-origins > * {
+    min-width: 0;
 }
 
 .pf-inventory-receipt-origins .pf-inventory-origin-choice {
     min-width: 0;
-    width: 100%;
     margin: 0;
 }
 
@@ -135,15 +112,6 @@
 }
 
 @media (max-width: 767.98px) {
-    .pf-inventory-receipt-fields > .col-md-6,
-    .pf-inventory-receipt-fields > .col-md-4 {
-        grid-column: span 6;
-    }
-
-    .pf-inventory-receipt-origins {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
     .pf-inventory-table-hint {
         display: block;
         margin: 0;
@@ -153,17 +121,7 @@
     }
 }
 
-@media (min-width: 768px) and (max-width: 1199.98px) {
-    .pf-inventory-receipt-fields > .col-md-4 {
-        grid-column: span 3;
-    }
-}
-
 @media (max-width: 575.98px) {
-    .pf-inventory-receipt-fields {
-        gap: 1rem;
-    }
-
     .pf-inventory-receipt-form .pf-card__footer .pf-button {
         width: 100%;
         white-space: normal;
