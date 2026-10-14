@@ -1,14 +1,14 @@
 {% extends 'layouts/app.html.twig' %}
 
-{% block title %}Registrar material | OoxCorp{% endblock %}
+{% block title %}Recibir material | OoxCorp{% endblock %}
 {% block app_navigation_active %}inventory{% endblock %}
-{% block app_breadcrumb %}Operación / Inventario / Registrar material{% endblock %}
+{% block app_breadcrumb %}Operación / Inventario / Recibir material{% endblock %}
 
 {% block app_content %}
     <div class="pf-page__content">
         <div class="pf-page-header">
             <div class="pf-page-header__content">
-                <h1 class="pf-page-header__title">Registrar material</h1>
+                <h1 class="pf-page-header__title">Recibir material</h1>
                 <p class="pf-page-header__description">
                     Selecciona un material del catálogo y registra cuánto contiene cada rollo, envase o paquete. Cada unidad física recibe su propio QR.
                 </p>
@@ -24,17 +24,17 @@
                 <div class="pf-card__body row g-3">
                     <input type="hidden" name="_token" value="{{ csrf_token('inventory_receipt_new') }}">
                     <input type="hidden" name="idempotency_key" value="{{ formData.idempotency_key }}">
-                    {% if canReceive and canLoadOpeningStock and not purchaseRequestLine %}
+                    {% if not purchaseRequestLine %}
                         <fieldset class="col-12">
                             <legend class="form-label mb-2">Origen del material</legend>
                             <div class="d-flex flex-wrap gap-3">
-                                <label class="pf-inventory-origin-choice">
+                                {% if canReceive %}<label class="pf-inventory-origin-choice">
                                     <input type="radio" name="origin" value="RECEIPT" {{ formData.origin == 'RECEIPT' ? 'checked' : '' }} data-ui--inventory-entry-target="origin" data-action="change->ui--inventory-entry#updateOrigin">
-                                    <span><strong>Acaba de llegar</strong><small>Entrada o compra recibida.</small></span>
-                                </label>
+                                    <span><strong>Acaba de llegar</strong><small>Compra o entrada nueva.</small></span>
+                                </label>{% endif %}
                                 <label class="pf-inventory-origin-choice">
                                     <input type="radio" name="origin" value="INITIAL_COUNT" {{ formData.origin == 'INITIAL_COUNT' ? 'checked' : '' }} data-ui--inventory-entry-target="origin" data-action="change->ui--inventory-entry#updateOrigin">
-                                    <span><strong>Ya estaba en bodega</strong><small>Saldo de arranque, antes de la primera entrada normal de esta presentación.</small></span>
+                                    <span><strong>Ya estaba en bodega</strong><small>Material existente antes de empezar a controlarlo en el sistema.</small></span>
                                 </label>
                             </div>
                         </fieldset>

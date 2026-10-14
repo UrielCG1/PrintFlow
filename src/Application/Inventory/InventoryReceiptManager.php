@@ -13,7 +13,6 @@ use App\Enum\Inventory\InventoryReceiptType;
 use App\Enum\Inventory\MovementType;
 use App\Entity\Inventory\InventoryMovement;
 use App\Repository\Inventory\InventoryReceiptRepository;
-use App\Repository\Inventory\InventoryMovementRepository;
 use App\Repository\Inventory\MaterialVariantCostRepository;
 use App\Repository\Inventory\InventoryPurchaseRequestLineRepository;
 use App\Service\Audit\AuditLogger;
@@ -27,7 +26,6 @@ final class InventoryReceiptManager
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly InventoryReceiptRepository $receiptRepository,
-        private readonly InventoryMovementRepository $movementRepository,
         private readonly MaterialVariantCostRepository $balanceRepository,
         private readonly InventoryPurchaseRequestLineRepository $purchaseRequestLineRepository,
         private readonly InventoryReceiptCommitmentAllocator $commitmentAllocator,
@@ -43,7 +41,7 @@ final class InventoryReceiptManager
     public function recordInitialCount(InventoryReceiptCommand $command, User $actor): InventoryReceipt
     {
         if ($command->isProvisional) {
-            throw new \InvalidArgumentException('El conteo inicial no puede registrarse como provisional.');
+            throw new \InvalidArgumentException('El material que ya estaba en bodega no se registra como recepción provisional.');
         }
 
         return $this->register($command, $actor, InventoryReceiptType::INITIAL_COUNT);
@@ -87,10 +85,6 @@ final class InventoryReceiptManager
                     $this->entityManager->lock($purchaseRequestLine->getPurchaseRequest(), LockMode::PESSIMISTIC_WRITE);
                     $purchaseRequestLines[spl_object_id($line)] = $purchaseRequestLine;
                 }
-            }
-
-            if ($type === InventoryReceiptType::INITIAL_COUNT) {
-                $this->assertVariantsHaveNoNormalMovement($lines);
             }
 
             // Otra solicitud idéntica puede haber terminado mientras esta esperaba
@@ -230,20 +224,6 @@ final class InventoryReceiptManager
         }
         if ($line->lot !== null && $line->lot->getVariant() !== $line->variant) {
             throw new \DomainException('El lote indicado no pertenece a la variante recibida.');
-        }
-    }
-
-    /** @param list<InventoryReceiptLineInput> $lines */
-    private function assertVariantsHaveNoNormalMovement(array $lines): void
-    {
-        $variants = [];
-        foreach ($lines as $line) {
-            $variants[$line->variant->getId()] = $line->variant;
-        }
-        foreach ($variants as $variant) {
-            if ($this->movementRepository->hasNonInitialCountForVariant($variant)) {
-                throw new \DomainException('No se pueden cargar existencias previas de una variante que ya tiene movimientos normales. Registra una corrección auditada en su lugar.');
-            }
         }
     }
 

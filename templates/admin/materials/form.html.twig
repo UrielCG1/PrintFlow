@@ -17,7 +17,7 @@
 
         {% if not material and (is_granted('inventory.receive') or is_granted('inventory.adjust_stock')) %}
             <div class="alert alert-info" role="note">
-                ¿El material ya está en el catálogo y quieres dar de alta un rollo? Ve a <a href="{{ path('admin_inventory_receipts_new') }}" class="alert-link">Inventario → Registrar material</a>: selecciona el material y su ancho, y captura los metros que contiene ese rollo.
+                ¿El material ya está en el catálogo y quieres dar de alta un rollo? Ve a <a href="{{ path('admin_inventory_receipts_new') }}" class="alert-link">Inventario → Recibir material</a>: selecciona el material y su ancho, y captura los metros que contiene ese rollo.
             </div>
         {% endif %}
 

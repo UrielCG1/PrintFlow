@@ -16,7 +16,7 @@
 
             <div class="pf-page-header__actions">
                 {% if is_granted('inventory.receive') or is_granted('inventory.adjust_stock') %}
-                    <a href="{{ path('admin_inventory_receipts_new') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-qr-code" aria-hidden="true"></i><span>Registrar existencias</span></a>
+                    <a href="{{ path('admin_inventory_receipts_new') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-qr-code" aria-hidden="true"></i><span>Recibir material</span></a>
                 {% endif %}
                 {% if is_granted('material_categories.view') %}
                     <a

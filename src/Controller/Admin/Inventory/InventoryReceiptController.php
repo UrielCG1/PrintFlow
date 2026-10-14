@@ -81,7 +81,9 @@ final class InventoryReceiptController extends AbstractController
             ?? ($canReceive ? InventoryReceiptType::RECEIPT : InventoryReceiptType::INITIAL_COUNT);
         $validOrigin = !$request->isMethod('POST') || $requestedOrigin === $origin->value;
         if ($origin === InventoryReceiptType::INITIAL_COUNT) {
-            $this->denyAccessUnlessGranted('inventory.adjust_stock');
+            if (!$canReceive && !$canLoadOpeningStock) {
+                throw $this->createAccessDeniedException();
+            }
         } else {
             $this->denyAccessUnlessGranted('inventory.receive');
         }
@@ -155,7 +157,7 @@ final class InventoryReceiptController extends AbstractController
             } elseif ($purchaseRequestLineId !== null && !$linkedPurchaseRequestLine instanceof InventoryPurchaseRequestLine) {
                 $this->addFlash('error', 'La partida de solicitud de compra indicada no existe.');
             } elseif ($origin === InventoryReceiptType::INITIAL_COUNT && $purchaseRequestLineId !== null) {
-                $this->addFlash('error', 'Las existencias previas no se vinculan a solicitudes de compra nuevas.');
+                $this->addFlash('error', 'El material que ya estaba en bodega no se vincula a una compra nueva.');
             } elseif ($variant === null) {
                 $this->addFlash('error', 'Selecciona una presentación de material válida.');
             } elseif ((string) $variant->getMaterial()->getId() !== (string) $formData['material_id']) {
@@ -191,7 +193,7 @@ final class InventoryReceiptController extends AbstractController
                         : $receiptManager->receive($command, $this->getActor());
 
                     $message = $origin === InventoryReceiptType::INITIAL_COUNT
-                        ? 'Existencia previa %s registrada. Imprime la etiqueta antes de almacenar la unidad.'
+                        ? 'Material que ya estaba en bodega registrado con folio %s. Imprime su etiqueta antes de almacenarlo.'
                         : 'Recepción %s registrada. Imprime la etiqueta antes de llevar la unidad a bodega.';
                     $this->addFlash('success', sprintf($message, $receipt->getReceiptCode()));
 
@@ -217,79 +219,17 @@ final class InventoryReceiptController extends AbstractController
             'physicalForms' => self::PHYSICAL_FORMS,
             'defaultPhysicalForms' => $defaultPhysicalForms,
             'canReceive' => $canReceive,
-            'canLoadOpeningStock' => $canLoadOpeningStock,
             'purchaseRequestLine' => $linkedPurchaseRequestLine,
         ]);
     }
 
-    #[Route('/conteo-inicial', name: 'initial_count', methods: ['GET', 'POST'])]
-    public function initialCount(
-        Request $request,
-        MaterialVariantRepository $variantRepository,
-        InventoryReceiptManager $receiptManager,
-    ): Response {
-        $this->denyAccessUnlessGranted('inventory.adjust_stock');
-
-        if ($request->isMethod('GET')) {
-            return $this->redirectToRoute('admin_inventory_receipts_new', ['origin' => InventoryReceiptType::INITIAL_COUNT->value]);
+    #[Route('/conteo-inicial', name: 'initial_count', methods: ['GET'])]
+    public function initialCount(): Response
+    {
+        if (!$this->isGranted('inventory.receive') && !$this->isGranted('inventory.adjust_stock')) {
+            throw $this->createAccessDeniedException();
         }
-
-        $formData = [
-            'idempotency_key' => bin2hex(random_bytes(16)),
-            'variant_id' => '',
-            'quantity' => '',
-            'storage_location' => '',
-            'physical_description' => '',
-            'reference' => 'CONTEO-INICIAL',
-            'notes' => '',
-        ];
-
-        if ($request->isMethod('POST')) {
-            $formData = [
-                'idempotency_key' => $request->request->getString('idempotency_key'),
-                'variant_id' => $request->request->getString('variant_id'),
-                'quantity' => $request->request->getString('quantity'),
-                'storage_location' => $request->request->getString('storage_location'),
-                'physical_description' => $request->request->getString('physical_description'),
-                'reference' => $request->request->getString('reference'),
-                'notes' => $request->request->getString('notes'),
-            ];
-            if (!$this->isCsrfTokenValid('inventory_initial_count', $request->request->getString('_token'))) {
-                throw $this->createAccessDeniedException('La solicitud no es válida.');
-            }
-
-            $variantId = $this->positiveId($formData['variant_id']);
-            $variant = $variantId === null ? null : $variantRepository->find($variantId);
-            if ($variant === null) {
-                $this->addFlash('error', 'Selecciona una presentación de material válida.');
-            } else {
-                try {
-                    $physicalDescription = trim($formData['physical_description']);
-                    $receipt = $receiptManager->recordInitialCount(new InventoryReceiptCommand(
-                        idempotencyKey: $formData['idempotency_key'],
-                        lines: [new InventoryReceiptLineInput(
-                            variant: $variant,
-                            quantity: $formData['quantity'],
-                            storageLocation: $formData['storage_location'],
-                            physicalAttributes: $physicalDescription === '' ? [] : ['description' => $physicalDescription],
-                        )],
-                        reference: $formData['reference'],
-                        notes: $formData['notes'],
-                    ), $this->getActor());
-
-                    $this->addFlash('success', sprintf('Existencia previa %s registrada. Imprime la etiqueta antes de almacenar la unidad.', $receipt->getReceiptCode()));
-
-                    return $this->redirectToRoute('admin_inventory_receipts_label', ['id' => $receipt->getId()]);
-                } catch (\DomainException|\InvalidArgumentException $exception) {
-                    $this->addFlash('error', $exception->getMessage());
-                }
-            }
-        }
-
-        return $this->render('admin/inventory/receipts/initial_count.html.twig', [
-            'formData' => $formData,
-            'variants' => $variantRepository->findActiveConsumable(),
-        ]);
+        return $this->redirectToRoute('admin_inventory_receipts_new', ['origin' => InventoryReceiptType::INITIAL_COUNT->value]);
     }
 
     #[Route('/minimos', name: 'minimums', methods: ['GET'])]

@@ -330,7 +330,7 @@ flowchart TD
 
 ### 5.1 Recibir material
 
-1. Buscar o escanear una variante existente. Permitir alta de material/variante desde el mismo flujo a Administrador e Impresión con los permisos correspondientes.
+1. En un único formulario **Recibir material**, indicar si el material **acaba de llegar** o **ya estaba en bodega**. Buscar el material del catálogo y seleccionar su variante o ancho; cada objeto físico se registra una sola vez con su origen auditado. El formulario anterior de existencias previas ya no es una operación separada.
 2. Capturar cantidad y unidad de recepción; mostrar inmediatamente su equivalencia en la unidad de inventario.
 3. Registrar proveedor/documento cuando se conozcan. Solicitar lote y caducidad solo cuando sean aplicables. Una entrega física sin factura puede registrarse como recepción provisional; la factura posterior no vuelve a sumar existencias.
 4. Crear las unidades físicas con identificación individual. Para varios rollos iguales, capturar cantidad y longitud una sola vez, generando un identificador por rollo; permitir corregir medidas individuales antes de confirmar.

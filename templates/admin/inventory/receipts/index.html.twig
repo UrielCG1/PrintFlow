@@ -15,7 +15,7 @@
                 <div class="pf-page-header__actions">
                     <a href="{{ path('admin_inventory_receipts_new') }}" class="btn pf-button pf-button--primary">
                         <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                        <span>Registrar material</span>
+                        <span>Recibir material</span>
                     </a>
                     {% if is_granted('inventory.count') %}
                         <a href="{{ path('admin_inventory_cycle_counts_index') }}" class="btn pf-button pf-button--secondary">
@@ -37,7 +37,7 @@
                     {% endif %}
                 </div>
             {% elseif is_granted('inventory.adjust_stock') %}
-                <div class="pf-page-header__actions"><a href="{{ path('admin_inventory_receipts_new', {origin: 'INITIAL_COUNT'}) }}" class="btn pf-button pf-button--primary"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Registrar material</span></a><a href="{{ path('admin_inventory_stock_unit_operations_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-shield-check" aria-hidden="true"></i><span>Operaciones de bodega</span></a></div>
+                <div class="pf-page-header__actions"><a href="{{ path('admin_inventory_receipts_new', {origin: 'INITIAL_COUNT'}) }}" class="btn pf-button pf-button--primary"><i class="bi bi-plus-lg" aria-hidden="true"></i><span>Recibir material</span></a><a href="{{ path('admin_inventory_stock_unit_operations_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-shield-check" aria-hidden="true"></i><span>Operaciones de bodega</span></a></div>
             {% elseif is_granted('inventory.count') %}
                 <div class="pf-page-header__actions"><a href="{{ path('admin_inventory_cycle_counts_index') }}" class="btn pf-button pf-button--primary"><i class="bi bi-upc-scan" aria-hidden="true"></i><span>Conteo cíclico</span></a></div>
             {% endif %}

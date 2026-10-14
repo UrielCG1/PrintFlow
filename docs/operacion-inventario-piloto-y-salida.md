@@ -69,7 +69,7 @@ El conteo en `dev` es un ensayo y no se declara inventario oficial. Se puede usa
 1. Comunicar la ventana y el conjunto de variantes que entran al piloto.
 2. Detener temporalmente las entradas, consumos y ajustes de esas variantes, o anotar cada movimiento ocurrido durante el conteo para conciliarlos antes de reabrir la operación.
 3. Contar cada unidad física: código, QR, variante, saldo, unidad, lote/caducidad si aplica, ubicación y condición. Identificar por separado abierto, sobrante, dañado, caducado o en revisión.
-4. Registrar el físico confirmado por el flujo de recepción o conteo inicial. Cada rollo, envase, paquete o retazo separado requiere su propia unidad QR; no agrupar saldos de objetos diferentes en una sola etiqueta.
+4. En **Inventario → Recibir material**, elegir **Ya estaba en bodega** y registrar cada unidad física confirmada. Cada rollo, envase, paquete o retazo separado requiere su propia unidad QR; no agrupar saldos de objetos diferentes en una sola etiqueta.
 5. Registrar las necesidades pendientes de las órdenes abiertas y generar o revisar sus compromisos después de confirmar el físico. No volver a descontar consumos que sucedieron antes del corte.
 6. Revisar disponible, comprometido, bloqueado y faltante por variante. Cualquier diferencia queda como incidencia auditada; no se corrige editando directamente la base.
 

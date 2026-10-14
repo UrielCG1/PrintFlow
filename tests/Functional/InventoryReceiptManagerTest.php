@@ -158,7 +158,7 @@ final class InventoryReceiptManagerTest extends TestCase
         self::assertTrue($repository->hasReferencesThatLockWidth($this->variant));
     }
 
-    public function testItCountsSeveralOpeningUnitsButRejectsLateOpeningCounts(): void
+    public function testItRegistersExistingUnitsEvenAfterANewReceipt(): void
     {
         $count = new InventoryReceiptCommand(
             idempotencyKey: 'inventory-initial-count-qa-0001',
@@ -190,13 +190,15 @@ final class InventoryReceiptManagerTest extends TestCase
             lines: [new InventoryReceiptLineInput($this->variant, '2')],
         ), $this->actor);
 
-        $this->expectException(\DomainException::class);
-        $this->expectExceptionMessage('movimientos normales');
-
-        $this->manager->recordInitialCount(new InventoryReceiptCommand(
+        $lateExisting = $this->manager->recordInitialCount(new InventoryReceiptCommand(
             idempotencyKey: 'inventory-initial-count-qa-0003',
             lines: [new InventoryReceiptLineInput($this->variant, '1')],
         ), $this->actor);
+
+        self::assertTrue($lateExisting->isInitialCount());
+        self::assertSame(4, (int) $this->entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM inventory_stock_units'));
+        self::assertSame(3, (int) $this->entityManager->getConnection()->fetchOne("SELECT COUNT(*) FROM inventory_movements WHERE movement_type = 'INITIAL_COUNT'"));
+        self::assertEquals(10.25, $this->entityManager->getConnection()->fetchOne('SELECT on_hand_quantity FROM material_variant_costs'));
     }
 
     private function command(string $quantity): InventoryReceiptCommand
