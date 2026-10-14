@@ -178,6 +178,10 @@ La configuración final fija también la unidad del mínimo. El valor actual es 
 
 **Inicio del inventario:** realizar conteo físico por unidad identificada y registrar ese saldo inicial. Si el conteo es cero, confirmar el estado contado y el saldo cero sin insertar un movimiento de cantidad cero. Mientras no haya conteo, mostrar **Por contar**, conservar la existencia como desconocida y limitar reservas/consumos automáticos sobre ese material; un administrador puede autorizar el trabajo con faltante conforme a la sección 5.6, manteniendo conciliación física.
 
+### 3.3 Archivo de referencia del cliente y datos de ensayo
+
+El libro `base de datos.xlsx` proporcionado el 13 de octubre de 2026 enumera productos, máquinas y lógica general de costeo, pero no contiene existencias ni conversiones verificables. Sus cifras de ancho no indican unidad. Por tanto, no modifica la interpretación pendiente de `PZA`, no acredita stock físico y no justifica sustituciones entre viniles o lonas. Los [tres casos sintéticos del piloto](datos-prueba-piloto-inventario.md) permiten ensayar recepción, sobrante, sustitución y espera de compra en `dev` sin presentar cantidades inventadas como datos del cliente.
+
 ## 4. Reglas del inventario
 
 ### 4.1 Material, variante, lote y unidad física

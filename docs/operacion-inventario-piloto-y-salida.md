@@ -1,12 +1,16 @@
 # PrintFlow — piloto y salida operativa de inventario
 
-**Estado:** procedimiento operativo para ensayar el módulo de inventario en el servidor `dev`. La salida de PuTTY del 13 de octubre de 2026 identifica la base `u692972268_printflow_dev` y muestra `62/62` migraciones disponibles/ejecutadas, con última `Version20261011230000`. El código local ya contiene migraciones hasta `Version20261011320000`; por tanto falta publicar la versión nueva del código y aplicar las nueve versiones posteriores antes del piloto. Todavía no existe producción.
+**Estado:** procedimiento operativo para ensayar el módulo de inventario en el servidor `dev`. La salida de PuTTY del 13 de octubre de 2026 identifica la base `u692972268_printflow_dev`, checkout `0df50a8` y `62/62` migraciones disponibles/ejecutadas, con última `Version20261011230000`. El código local ya contiene migraciones hasta `Version20261011320000`; por tanto falta publicar la versión nueva del código y aplicar las nueve versiones posteriores antes del piloto. `FETCH_HEAD` y `public/uploads/` aparecen como archivos no rastreados en el servidor: preservarlos y revisar el checkout antes de cualquier cambio de versión. Todavía no existe producción.
 
 Esta guía completa la [estrategia del módulo de inventario](estrategia-modulo-inventario.md) con las actividades que requieren personas, material físico, dispositivos y el ambiente de destino. El [runbook general de despliegue](produccion-trazabilidad/operacion/validacion-y-despliegue-hostinger.md) conserva la secuencia técnica para publicar el código y aplicar migraciones.
 
 ## 1. Alcance del piloto
 
 El primer piloto debe incluir un grupo pequeño pero representativo de variantes: una unidad por rollo o envase, una presentación contable, un material que pueda dejar sobrante y, cuando exista una regla aprobada, un sustituto. No limita el alcance futuro del catálogo: sirve para confirmar unidades, conversiones, etiquetas y hábitos de captura antes de activar el resto de la bodega.
+
+El archivo del cliente enumera productos y maquinaria, pero no contiene los saldos ni unidades físicas necesarios para el corte. Usar los [tres casos sintéticos de ensayo](datos-prueba-piloto-inventario.md) para verificar el sistema en `dev`, separados de los datos reales.
+
+Antes de cargarlos, completar el alta operativa de variantes nuevas: el formulario actual de Materiales registra el concepto general, mientras la recepción de inventario requiere una `MaterialVariant` existente. No usar SQL manual para simular un flujo que todavía debe existir en la interfaz.
 
 Definir antes de iniciar:
 
