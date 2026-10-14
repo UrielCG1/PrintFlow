@@ -1,6 +1,6 @@
 # PrintFlow — piloto y salida operativa de inventario
 
-**Estado:** procedimiento operativo para liberar el módulo de inventario de forma controlada. No acredita que una base ni una bodega ya hayan sido migradas.
+**Estado:** procedimiento operativo para ensayar el módulo de inventario en el servidor `dev`. La salida de PuTTY del 13 de octubre de 2026 identifica la base `u692972268_printflow_dev` y muestra `62/62` migraciones disponibles/ejecutadas, con última `Version20261011230000`. El código local ya contiene migraciones hasta `Version20261011320000`; por tanto falta publicar la versión nueva del código y aplicar las nueve versiones posteriores antes del piloto. Todavía no existe producción.
 
 Esta guía completa la [estrategia del módulo de inventario](estrategia-modulo-inventario.md) con las actividades que requieren personas, material físico, dispositivos y el ambiente de destino. El [runbook general de despliegue](produccion-trazabilidad/operacion/validacion-y-despliegue-hostinger.md) conserva la secuencia técnica para publicar el código y aplicar migraciones.
 
@@ -22,9 +22,10 @@ No convertir el mínimo configurado en existencia inicial. Una variante sin cont
 
 ## 2. Prevuelo técnico y de datos
 
-Realizar estas comprobaciones primero en una copia aislada de la base y repetir las lecturas en el destino antes de abrir el piloto.
+Realizar estas comprobaciones en la base `dev` antes de abrir el piloto. Cuando exista producción, repetirlas sobre su base y su código publicados; el resultado de `dev` no certificará ese ambiente futuro. El valor `--env=prod` de Symfony puede usarse en un servidor de desarrollo optimizado: identifica la configuración de la aplicación, no el nombre ni el propósito de la base. Confirmar ambos con `php bin/console about --no-debug` y la primera consulta de la auditoría.
 
 1. Publicar un commit identificado y revisar que el árbol de trabajo esté limpio.
+   La salida recibida del servidor solo conoce `Version20261011230000`. Confirmar allí `git rev-parse HEAD` y `git status --short`; publicar un commit que incluya `Version20261011320000` antes de repetir `migrations:status`. Un mensaje de «Already at the latest version» se refiere únicamente a las migraciones que existen en ese checkout.
 2. Ejecutar `doctrine:migrations:status`, `doctrine:migrations:list` y `doctrine:migrations:migrate --dry-run`. Revisar cada sentencia contra las migraciones del commit; no usar `schema:update --force`.
 3. Aplicar las migraciones únicamente durante la ventana aprobada y comprobar de nuevo que no quedan versiones pendientes.
 4. Ejecutar la revisión de catálogo, que es de solo lectura:
@@ -34,12 +35,32 @@ Realizar estas comprobaciones primero en una copia aislada de la base y repetir 
    ```
 
    Corregir o documentar cada observación. Cuando se requiera que no haya ningún pendiente antes del corte, usar `--strict`; el comando devuelve código distinto de cero si todavía hay hallazgos.
+   Ejecutar también la [consulta de auditoría del piloto](consulta-inventario-piloto.sql) sobre la base confirmada. Comparar proyección, saldos QR y apartados; las consultas de anomalías deben devolver cero filas antes de formalizar el corte. La consulta no reemplaza el conteo físico.
 5. Verificar que Administración puede abrir Inventario, configurar mínimos, atender faltantes, imprimir etiquetas, aprobar conteos y operar compras. Verificar que Impresión puede recibir material, leer QR, capturar conteos y consumos, pero no aprobar sustituciones, autorizaciones parciales, mínimos ni ajustes administrativos.
-6. Confirmar HTTPS en el dispositivo móvil, lectura continua del lector USB, contraste del QR impreso y que la etiqueta incorpora el logo de OOXCORP. Probar un QR desde una etiqueta recién impresa y otro reimpreso.
+6. En el servidor `dev`, ejecutar `composer check-platform-reqs --no-dev` y comprobar que el paquete QR del `composer.lock` esté instalado: `php -r 'require "vendor/autoload.php"; echo class_exists("Endroid\\QrCode\\Writer\\SvgWriter") ? "QR OK\n" : "FALTA QR\n";'`. Si falta, instalar dependencias con Composer antes del ensayo; aplicar migraciones por sí solo no instala bibliotecas PHP.
+7. Confirmar HTTPS en el dispositivo móvil, lectura continua del lector USB, contraste del QR impreso y que la etiqueta incorpora el logo de OOXCORP. Probar un QR desde una etiqueta recién impresa y otro reimpreso.
 
 Registrar el SHA desplegado, fecha, responsable y resultado de cada paso. El piloto no inicia si una migración, un permiso o una lectura QR falla.
 
-## 3. Corte e inventario inicial
+### Registro mínimo de evidencia
+
+Completar esta tabla para `dev`. Cuando se prepare producción, abrir una copia nueva y repetir todas las comprobaciones. No incluir contraseñas ni tokens QR completos en documentos compartidos.
+
+| Comprobación | Resultado / referencia de evidencia | Responsable y fecha |
+| --- | --- | --- |
+| Ambiente, base y SHA desplegado | `u692972268_printflow_dev`; falta SHA | Pendiente |
+| Migraciones del código objetivo | `62/62` hasta `Version20261011230000` en servidor; faltan publicar/aplicar las nueve versiones hasta `Version20261011320000` | Pendiente |
+| Revisión de catálogo y unidad real de cada variante piloto | 1 variante activa, 0 listas; `LONA-FRONT-13OZ-DEFAULT` usa presentación legada `PZA` por confirmar | Pendiente |
+| Proyección = suma QR; apartados = suma pendiente | Pendiente | Pendiente |
+| Conteo físico firmado por unidad | Pendiente | Pendiente |
+| Administración e Impresión: permisos y accesos | Pendiente | Pendiente |
+| Dependencia QR y requisitos PHP en `dev` | Pendiente | Pendiente |
+| Etiqueta impresa y lectura con dispositivos reales | Pendiente | Pendiente |
+| Recorridos de la sección 4 con folio y resultado | Pendiente | Pendiente |
+
+## 3. Ensayo del conteo inicial en `dev`
+
+El conteo en `dev` es un ensayo y no se declara inventario oficial. Se puede usar una muestra física identificada como piloto o datos artificiales controlados; registrar cuáles se usaron para no trasladar sus saldos a producción. El corte formal y la firma de existencias reales se repetirán cuando exista el ambiente de producción.
 
 1. Comunicar la ventana y el conjunto de variantes que entran al piloto.
 2. Detener temporalmente las entradas, consumos y ajustes de esas variantes, o anotar cada movimiento ocurrido durante el conteo para conciliarlos antes de reabrir la operación.
@@ -48,7 +69,7 @@ Registrar el SHA desplegado, fecha, responsable y resultado de cada paso. El pil
 5. Registrar las necesidades pendientes de las órdenes abiertas y generar o revisar sus compromisos después de confirmar el físico. No volver a descontar consumos que sucedieron antes del corte.
 6. Revisar disponible, comprometido, bloqueado y faltante por variante. Cualquier diferencia queda como incidencia auditada; no se corrige editando directamente la base.
 
-Antes de reabrir las operaciones, Administración firma el conteo y conserva la hoja o evidencia física asociada al reporte del sistema.
+Antes de continuar con los recorridos en `dev`, Administración revisa el conteo de ensayo y conserva la hoja o evidencia asociada al reporte del sistema.
 
 ## 4. Recorridos obligatorios del piloto
 

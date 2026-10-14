@@ -9,6 +9,13 @@ use App\Application\Quotations\QuotationItemData;
 use App\Application\Quotations\QuotationManager;
 use App\Application\Orders\ServiceOrderManager;
 use App\Application\Orders\ServiceOrderCancellationManager;
+use App\Application\Inventory\InventoryCommitmentManager;
+use App\Application\Inventory\InventoryReceiptCommand;
+use App\Application\Inventory\InventoryReceiptLineInput;
+use App\Application\Inventory\InventoryReceiptManager;
+use App\Entity\Materials\Material;
+use App\Entity\Materials\MaterialCategory;
+use App\Entity\Materials\MaterialVariant;
 use App\Application\Production\ProductionExecutionCommand;
 use App\Application\Production\ProductionExecutionManager;
 use App\Application\Production\ProductionPlanManager;
@@ -99,6 +106,52 @@ final class ServiceOrderCommercialAccessTest extends TestCase
         self::assertFalse($this->serviceOrder->canCancelProduction());
         $this->expectException(\DomainException::class);
         $manager->cancel($this->serviceOrder, 'Intento de cancelación duplicado.', $this->fixtures['user']);
+    }
+
+    public function testCancellationReleasesPendingInventoryCommitmentAfterPhysicalReceipt(): void
+    {
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $services = $this->kernel->getContainer()->get('test.service_container');
+        $category = (new MaterialCategory())->setCode('QA-PILOT')->setName('Piloto inventario');
+        $material = (new Material())
+            ->setCategory($category)
+            ->setMeasurementUnit($this->fixtures['area'])
+            ->setCode('QA-PILOT-MATERIAL')
+            ->setName('Material para ensayo de reservas');
+        $variant = new MaterialVariant($material, 'QA-PILOT-MATERIAL-DEFAULT', $this->fixtures['area'], $this->fixtures['area'], $this->fixtures['area']);
+        foreach ([$category, $material, $variant] as $entity) {
+            $em->persist($entity);
+        }
+        $em->flush();
+
+        $services->get(InventoryReceiptManager::class)->receive(new InventoryReceiptCommand(
+            idempotencyKey: 'qa-pilot-receipt-'.bin2hex(random_bytes(8)),
+            lines: [new InventoryReceiptLineInput($variant, '10')],
+            reference: 'QA-PILOT-001',
+        ), $this->fixtures['user']);
+        $commitment = $services->get(InventoryCommitmentManager::class)->commit(
+            $this->serviceOrder,
+            $variant,
+            '6',
+            $this->fixtures['user'],
+        );
+        self::assertSame('6.000000', $commitment->getPendingQuantity());
+
+        $result = $services->get(ServiceOrderCancellationManager::class)->cancel(
+            $this->serviceOrder,
+            'Cliente canceló el trabajo antes de consumir el material.',
+            $this->fixtures['user'],
+        );
+        $balance = $em->getConnection()->fetchAssociative(
+            'SELECT on_hand_quantity, committed_quantity FROM material_variant_costs WHERE material_variant_id = ?',
+            [$variant->getId()],
+        );
+
+        self::assertCount(1, $result->releasedCommitments);
+        self::assertEquals(10, $balance['on_hand_quantity']);
+        self::assertEquals(0, $balance['committed_quantity']);
+        self::assertSame('0.000000', $commitment->getPendingQuantity());
+        self::assertTrue($this->serviceOrder->isCancelled());
     }
 
     public function testOperatorCanSeeOperationalOrderButNoCommercialAmountsOrSourceDocuments(): void
