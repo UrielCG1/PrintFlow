@@ -37,4 +37,18 @@ final class MaterialVariantRollTest extends TestCase
 
         $variant->configureRollWidth('1.52');
     }
+
+    public function testItCanCorrectAnUnusedRollsWidthAndCode(): void
+    {
+        $linearMeter = (new MeasurementUnit())->setCode('ML')->setDimensionType(MeasurementDimensionType::LENGTH);
+        $squareMeter = (new MeasurementUnit())->setCode('M2')->setDimensionType(MeasurementDimensionType::AREA);
+        $variant = (new MaterialVariant(new Material(), 'LONA-ANCHO-1P5200M', $linearMeter, $linearMeter, $squareMeter))
+            ->configureRollWidth('1.52');
+
+        $variant->correctUnusedRollWidth('1.60', 'LONA-ANCHO-1P6000M');
+
+        self::assertSame('LONA-ANCHO-1P6000M', $variant->getCode());
+        self::assertSame('1.6000', $variant->getSpecifications()['width_m']);
+        self::assertSame('1.600000000000', $variant->getInventoryToConsumptionFactor());
+    }
 }

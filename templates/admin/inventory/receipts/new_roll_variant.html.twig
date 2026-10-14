@@ -1,6 +1,6 @@
 {% extends 'layouts/app.html.twig' %}
 
-{% block title %}Configurar ancho de rollo | OoxCorp{% endblock %}
+{% block title %}{{ editingVariant ? 'Corregir ancho de rollo' : 'Configurar anchos de rollo' }} | OoxCorp{% endblock %}
 {% block app_navigation_active %}inventory{% endblock %}
 {% block app_breadcrumb %}Operación / Inventario / Configurar ancho de rollo{% endblock %}
 
@@ -8,22 +8,33 @@
     <div class="pf-page__content">
         <div class="pf-page-header">
             <div class="pf-page-header__content">
-                <h1 class="pf-page-header__title">Configurar ancho de rollo</h1>
-                <p class="pf-page-header__description">Cada ancho es una presentación distinta. La longitud variable se mide al registrar cada rollo físico.</p>
+                <h1 class="pf-page-header__title">{{ editingVariant ? 'Corregir ancho de rollo' : 'Configurar anchos de rollo' }}</h1>
+                <p class="pf-page-header__description">Cada ancho es una presentación distinta. Puedes agregar tantos anchos como necesites; la longitud se mide al registrar cada rollo.</p>
             </div>
         </div>
 
+        {% if editingVariant and not canEdit %}
+            <div class="alert alert-warning" role="alert">Esta presentación ya tiene existencias, órdenes u otros registros asociados. Su ancho debe conservarse para no alterar conversiones históricas. <a href="{{ path('admin_inventory_roll_variants_new', {material: editingVariant.material.id}) }}" class="alert-link">Agrega una presentación para el nuevo ancho</a>.</div>
+        {% endif %}
+
+        {% if canEdit %}
         <form method="post" class="pf-card pf-form" novalidate>
             <div class="pf-card__body row g-3">
-                <input type="hidden" name="_token" value="{{ csrf_token('inventory_roll_variant_new') }}">
+                <input type="hidden" name="_token" value="{{ csrf_token(editingVariant ? 'inventory_roll_variant_edit_' ~ editingVariant.id : 'inventory_roll_variant_new') }}">
+                {% if editingVariant %}<input type="hidden" name="expected_width_m" value="{{ formData.expected_width_m }}">{% endif %}
                 <div class="col-12 pf-form-field">
                     <label for="roll-material" class="form-label">Material</label>
+                    {% if editingVariant %}
+                        <div id="roll-material" class="form-control-plaintext">{{ editingVariant.material.name }} · {{ editingVariant.material.code }}</div>
+                        <div class="form-text">{{ editingVariant.code }}</div>
+                    {% else %}
                     <select id="roll-material" name="material_id" class="form-select" required>
                         <option value="">Selecciona el material</option>
                         {% for material in materials %}
                             <option value="{{ material.id }}" {{ formData.material_id == material.id ? 'selected' : '' }}>{{ material.name }} · {{ material.code }}</option>
                         {% endfor %}
                     </select>
+                    {% endif %}
                 </div>
                 <div class="col-md-6 pf-form-field">
                     <label for="roll-width" class="form-label">Ancho del rollo</label>
@@ -34,13 +45,42 @@
                     <div class="form-text">Ej. 1.52 m. Un rollo de 20 m lineales de este ancho equivale a 30.4 m².</div>
                 </div>
                 <div class="col-12">
-                    <div class="alert alert-info mb-0">Se creará una presentación con saldo en metros lineales y consumo en metros cuadrados. Cada rollo recibirá su propio QR y su longitud medida. Si el proveedor factura por rollo, conserva ese dato en la referencia de compra; la cantidad física se registra en metros.</div>
+                    <div class="alert alert-info mb-0">{{ editingVariant ? 'La corrección solo se permite antes de usar esta presentación.' : 'Se creará una presentación con saldo en metros lineales y consumo en metros cuadrados.' }} Cada rollo recibirá su propio QR y su longitud medida. Si el proveedor factura por rollo, conserva ese dato en la referencia de compra; la cantidad física se registra en metros.</div>
                 </div>
             </div>
             <div class="pf-card__footer d-flex justify-content-end gap-2">
-                <a href="{{ path('admin_inventory_receipts_new') }}" class="btn pf-button pf-button--secondary">Volver</a>
-                <button class="btn pf-button pf-button--primary" type="submit">Guardar presentación</button>
+                <a href="{{ path('admin_inventory_roll_variants_new') }}" class="btn pf-button pf-button--secondary">Volver</a>
+                <button class="btn pf-button pf-button--primary" type="submit">{{ editingVariant ? 'Guardar corrección' : 'Guardar presentación' }}</button>
             </div>
         </form>
+        {% endif %}
+
+        {% if not editingVariant %}
+        <div class="pf-card mt-4">
+            <div class="pf-card__body">
+                <h2 class="h5 mb-3">Anchos configurados</h2>
+                {% if configuredRolls is empty %}
+                    <p class="mb-0 text-body-secondary">Aún no hay anchos configurados. Agrega el primero con el formulario.</p>
+                {% else %}
+                    <div class="table-responsive" role="region" aria-label="Anchos de rollo configurados" tabindex="0">
+                        <table class="table pf-table mb-0">
+                            <thead><tr><th>Material</th><th>Ancho</th><th>Unidad de saldo</th><th>Unidad de consumo</th><th class="pf-table__actions-cell">Acción</th></tr></thead>
+                            <tbody>
+                                {% for roll in configuredRolls %}
+                                    <tr>
+                                        <td><strong>{{ roll.material.name }}</strong><div class="small text-body-secondary">{{ roll.code }}</div></td>
+                                        <td>{{ roll.specifications.width_m|number_format(2, '.', '') }} m</td>
+                                        <td>{{ roll.inventoryUnit.symbol }}</td>
+                                        <td>{{ roll.consumptionUnit.symbol }}</td>
+                                        <td class="pf-table__actions-cell"><div class="d-flex flex-wrap gap-2"><a href="{{ path('admin_inventory_receipts_new', {variant: roll.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm">Registrar rollo</a><a href="{{ path('admin_inventory_roll_variants_edit', {id: roll.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm">Corregir ancho</a></div></td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 {% endblock %}

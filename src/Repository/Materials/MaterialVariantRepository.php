@@ -12,9 +12,47 @@ use Doctrine\Persistence\ManagerRegistry;
 /** @extends ServiceEntityRepository<MaterialVariant> */
 final class MaterialVariantRepository extends ServiceEntityRepository
 {
+    /** Direct references make width and conversion part of an existing operational record. */
+    private const WIDTH_EDIT_REFERENCES = [
+        ['bill_of_material_items', 'material_variant_id'],
+        ['service_order_operation_plans', 'material_variant_id'],
+        ['production_material_usages', 'material_variant_id'],
+        ['production_printing_scans', 'material_variant_id'],
+        ['inventory_stock_units', 'material_variant_id'],
+        ['inventory_receipt_lines', 'material_variant_id'],
+        ['inventory_movements', 'material_variant_id'],
+        ['inventory_stock_unit_operations', 'material_variant_id'],
+        ['inventory_lots', 'material_variant_id'],
+        ['inventory_cycle_counts', 'material_variant_id'],
+        ['inventory_commitments', 'material_variant_id'],
+        ['inventory_purchase_request_lines', 'material_variant_id'],
+        ['material_variant_costs', 'material_variant_id'],
+        ['material_variant_conversions', 'material_variant_id'],
+        ['supplier_material_variants', 'material_variant_id'],
+        ['material_substitution_rules', 'original_variant_id'],
+        ['material_substitution_rules', 'substitute_variant_id'],
+    ];
+
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, MaterialVariant::class);
+    }
+
+    public function hasReferencesThatLockWidth(MaterialVariant $variant): bool
+    {
+        $id = $variant->getId();
+        if ($id === null) {
+            return false;
+        }
+
+        $connection = $this->getEntityManager()->getConnection();
+        foreach (self::WIDTH_EDIT_REFERENCES as [$table, $column]) {
+            if ($connection->fetchOne(sprintf('SELECT 1 FROM %s WHERE %s = :id LIMIT 1', $table, $column), ['id' => $id]) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function findActiveByBarcode(string $barcode): ?MaterialVariant

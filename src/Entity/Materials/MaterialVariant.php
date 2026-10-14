@@ -73,6 +73,20 @@ class MaterialVariant
         $this->inventoryToConsumptionFactor = $width->toScale(12)->__toString();
         return $this;
     }
+    /** Solo debe usarse antes de que la variante tenga referencias operativas. */
+    public function correctUnusedRollWidth(string $widthMeters,string $newCode):self
+    {
+        if (($this->specifications['physical_form'] ?? null) !== 'ROLLO' || !isset($this->specifications['width_m'])) {
+            throw new \DomainException('Solo se puede corregir una presentación de rollo configurada por ancho.');
+        }
+        $newCode = strtoupper(trim($newCode));
+        if (preg_match('/^[A-Z0-9._-]{3,80}$/D', $newCode) !== 1) {
+            throw new \InvalidArgumentException('El código de la presentación no tiene un formato válido.');
+        }
+        $this->configureRollWidth($widthMeters);
+        $this->code = $newCode;
+        return $this;
+    }
     public function getMinimumStock():string{return $this->minimumStock;}
     public function getReorderPoint():string{return $this->reorderPoint;}
     public function getReorderQuantity():string{return $this->reorderQuantity;}

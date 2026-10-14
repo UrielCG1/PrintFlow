@@ -11,6 +11,7 @@ use App\Entity\Catalog\MeasurementUnit;
 use App\Entity\Materials\Material;
 use App\Entity\Materials\MaterialCategory;
 use App\Entity\Materials\MaterialVariant;
+use App\Repository\Materials\MaterialVariantRepository;
 use App\Entity\Users\User;
 use App\Enum\Catalog\MeasurementDimensionType;
 use App\Tests\Support\IsolatedKernel;
@@ -144,6 +145,17 @@ final class InventoryReceiptManagerTest extends TestCase
         $this->expectExceptionMessage('solo admite cantidades enteras');
 
         $this->manager->receive($this->command('1.5'), $this->actor);
+    }
+
+    public function testAUsedVariantCannotHaveItsWidthCorrected(): void
+    {
+        /** @var MaterialVariantRepository $repository */
+        $repository = $this->entityManager->getRepository(MaterialVariant::class);
+        self::assertFalse($repository->hasReferencesThatLockWidth($this->variant));
+
+        $this->manager->receive($this->command('20'), $this->actor);
+
+        self::assertTrue($repository->hasReferencesThatLockWidth($this->variant));
     }
 
     public function testItCountsSeveralOpeningUnitsButRejectsLateOpeningCounts(): void
