@@ -90,7 +90,7 @@ final class InventoryReceiptManager
             }
 
             if ($type === InventoryReceiptType::INITIAL_COUNT) {
-                $this->assertVariantsHaveNoMovement($lines);
+                $this->assertVariantsHaveNoNormalMovement($lines);
             }
 
             // Otra solicitud idéntica puede haber terminado mientras esta esperaba
@@ -227,15 +227,15 @@ final class InventoryReceiptManager
     }
 
     /** @param list<InventoryReceiptLineInput> $lines */
-    private function assertVariantsHaveNoMovement(array $lines): void
+    private function assertVariantsHaveNoNormalMovement(array $lines): void
     {
         $variants = [];
         foreach ($lines as $line) {
             $variants[$line->variant->getId()] = $line->variant;
         }
         foreach ($variants as $variant) {
-            if ($this->movementRepository->hasAnyForVariant($variant)) {
-                throw new \DomainException('No se puede cargar el conteo inicial de una variante que ya tiene movimientos. Registra una corrección auditada en su lugar.');
+            if ($this->movementRepository->hasNonInitialCountForVariant($variant)) {
+                throw new \DomainException('No se pueden cargar existencias previas de una variante que ya tiene movimientos normales. Registra una corrección auditada en su lugar.');
             }
         }
     }

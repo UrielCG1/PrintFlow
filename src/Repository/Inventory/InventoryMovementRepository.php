@@ -19,12 +19,14 @@ final class InventoryMovementRepository extends ServiceEntityRepository
         parent::__construct($registry, InventoryMovement::class);
     }
 
-    public function hasAnyForVariant(MaterialVariant $variant): bool
+    public function hasNonInitialCountForVariant(MaterialVariant $variant): bool
     {
         return $this->createQueryBuilder('movement')
             ->select('movement.id')
             ->andWhere('movement.variant = :variant')
+            ->andWhere('movement.type != :initialCount')
             ->setParameter('variant', $variant)
+            ->setParameter('initialCount', MovementType::INITIAL_COUNT)
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult() !== null;

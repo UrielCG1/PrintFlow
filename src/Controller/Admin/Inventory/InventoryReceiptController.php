@@ -192,7 +192,7 @@ final class InventoryReceiptController extends AbstractController
                         notes: $formData['notes'],
                     ), $this->getActor());
 
-                    $this->addFlash('success', sprintf('Conteo inicial %s registrado. Imprime la etiqueta antes de almacenar la unidad.', $receipt->getReceiptCode()));
+                    $this->addFlash('success', sprintf('Existencia previa %s registrada. Imprime la etiqueta antes de almacenar la unidad.', $receipt->getReceiptCode()));
 
                     return $this->redirectToRoute('admin_inventory_receipts_label', ['id' => $receipt->getId()]);
                 } catch (\DomainException|\InvalidArgumentException $exception) {

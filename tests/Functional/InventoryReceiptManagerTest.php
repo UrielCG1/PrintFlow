@@ -117,7 +117,7 @@ final class InventoryReceiptManagerTest extends TestCase
         $this->manager->receive($this->command('9'), $this->actor);
     }
 
-    public function testItRecordsInitialCountOnlyBeforeAnyMovementForTheVariant(): void
+    public function testItCountsSeveralOpeningUnitsButRejectsLateOpeningCounts(): void
     {
         $count = new InventoryReceiptCommand(
             idempotencyKey: 'inventory-initial-count-qa-0001',
@@ -132,11 +132,28 @@ final class InventoryReceiptManagerTest extends TestCase
         self::assertSame('INITIAL_COUNT', $this->entityManager->getConnection()->fetchOne('SELECT receipt_type FROM inventory_receipts'));
         self::assertSame('INITIAL_COUNT', $this->entityManager->getConnection()->fetchOne('SELECT movement_type FROM inventory_movements'));
 
+        $secondCount = new InventoryReceiptCommand(
+            idempotencyKey: 'inventory-initial-count-qa-0002',
+            lines: [new InventoryReceiptLineInput($this->variant, '1')],
+        );
+        $secondReceipt = $this->manager->recordInitialCount($secondCount, $this->actor);
+        $retry = $this->manager->recordInitialCount($secondCount, $this->actor);
+
+        self::assertSame($secondReceipt->getId(), $retry->getId());
+        self::assertSame(2, (int) $this->entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM inventory_stock_units'));
+        self::assertSame(2, (int) $this->entityManager->getConnection()->fetchOne("SELECT COUNT(*) FROM inventory_movements WHERE movement_type = 'INITIAL_COUNT'"));
+        self::assertEquals(7.25, $this->entityManager->getConnection()->fetchOne('SELECT on_hand_quantity FROM material_variant_costs'));
+
+        $this->manager->receive(new InventoryReceiptCommand(
+            idempotencyKey: 'inventory-receipt-after-opening-qa-0001',
+            lines: [new InventoryReceiptLineInput($this->variant, '2')],
+        ), $this->actor);
+
         $this->expectException(\DomainException::class);
-        $this->expectExceptionMessage('ya tiene movimientos');
+        $this->expectExceptionMessage('movimientos normales');
 
         $this->manager->recordInitialCount(new InventoryReceiptCommand(
-            idempotencyKey: 'inventory-initial-count-qa-0002',
+            idempotencyKey: 'inventory-initial-count-qa-0003',
             lines: [new InventoryReceiptLineInput($this->variant, '1')],
         ), $this->actor);
     }

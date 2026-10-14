@@ -15,7 +15,7 @@
                 <div class="pf-page-header__actions">
                     <a href="{{ path('admin_inventory_receipts_new') }}" class="btn pf-button pf-button--primary">
                         <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                        <span>Registrar material</span>
+                        <span>Recibir material</span>
                     </a>
                     {% if is_granted('inventory.count') %}
                         <a href="{{ path('admin_inventory_cycle_counts_index') }}" class="btn pf-button pf-button--secondary">
@@ -26,7 +26,7 @@
                     {% if is_granted('inventory.adjust_stock') %}
                         <a href="{{ path('admin_inventory_receipts_initial_count') }}" class="btn pf-button pf-button--secondary">
                             <i class="bi bi-clipboard-check" aria-hidden="true"></i>
-                            <span>Conteo inicial</span>
+                            <span>Cargar existencias previas</span>
                         </a>
                         <a href="{{ path('admin_inventory_stock_unit_operations_index') }}" class="btn pf-button pf-button--secondary">
                             <i class="bi bi-shield-check" aria-hidden="true"></i>
@@ -35,12 +35,12 @@
                     {% endif %}
                     {% if is_granted('inventory.configure') %}
                         <a href="{{ path('admin_inventory_receipts_minimums') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-sliders" aria-hidden="true"></i><span>Configurar mínimos</span></a>
-                        <a href="{{ path('admin_inventory_replenishment_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-cart-plus" aria-hidden="true"></i><span>Preparar reposición</span></a>
+                        <a href="{{ path('admin_inventory_replenishment_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-cart-plus" aria-hidden="true"></i><span>Sugerencias de compra</span></a>
                         <a href="{{ path('admin_inventory_indicators_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-graph-up" aria-hidden="true"></i><span>Indicadores</span></a>
                     {% endif %}
                 </div>
             {% elseif is_granted('inventory.adjust_stock') %}
-                <div class="pf-page-header__actions"><a href="{{ path('admin_inventory_receipts_initial_count') }}" class="btn pf-button pf-button--primary"><i class="bi bi-clipboard-check" aria-hidden="true"></i><span>Conteo inicial</span></a><a href="{{ path('admin_inventory_stock_unit_operations_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-shield-check" aria-hidden="true"></i><span>Operaciones de bodega</span></a></div>
+                <div class="pf-page-header__actions"><a href="{{ path('admin_inventory_receipts_initial_count') }}" class="btn pf-button pf-button--primary"><i class="bi bi-clipboard-check" aria-hidden="true"></i><span>Cargar existencias previas</span></a><a href="{{ path('admin_inventory_stock_unit_operations_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-shield-check" aria-hidden="true"></i><span>Operaciones de bodega</span></a></div>
             {% elseif is_granted('inventory.count') %}
                 <div class="pf-page-header__actions"><a href="{{ path('admin_inventory_cycle_counts_index') }}" class="btn pf-button pf-button--primary"><i class="bi bi-upc-scan" aria-hidden="true"></i><span>Conteo cíclico</span></a></div>
             {% endif %}
