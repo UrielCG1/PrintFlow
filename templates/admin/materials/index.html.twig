@@ -10,11 +10,14 @@
             <div class="pf-page-header__content">
                 <h1 class="pf-page-header__title">Materiales</h1>
                 <p class="pf-page-header__description">
-                    Administra los insumos operativos preparados para inventario futuro, sin registrar existencias.
+                    Administra los tipos de material del catálogo. Las existencias de cada rollo, envase o paquete se registran en Inventario.
                 </p>
             </div>
 
             <div class="pf-page-header__actions">
+                {% if is_granted('inventory.receive') or is_granted('inventory.adjust_stock') %}
+                    <a href="{{ path('admin_inventory_receipts_new') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-qr-code" aria-hidden="true"></i><span>Registrar existencias</span></a>
+                {% endif %}
                 {% if is_granted('material_categories.view') %}
                     <a
                         href="{{ path('admin_material_categories_index') }}"

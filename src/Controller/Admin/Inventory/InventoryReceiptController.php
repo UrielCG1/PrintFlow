@@ -109,6 +109,7 @@ final class InventoryReceiptController extends AbstractController
             'idempotency_key' => bin2hex(random_bytes(16)),
             'origin' => $origin->value,
             'variant_id' => $linkedPurchaseRequestLine?->getVariant()->getId() ?? $prefilledVariant?->getId() ?? '',
+            'material_id' => $linkedPurchaseRequestLine?->getVariant()->getMaterial()->getId() ?? $prefilledVariant?->getMaterial()->getId() ?? '',
             'physical_form' => $linkedPurchaseRequestLine instanceof InventoryPurchaseRequestLine
                 ? ($this->defaultPhysicalForm($linkedPurchaseRequestLine->getVariant()) ?? '')
                 : ($prefilledVariant instanceof MaterialVariant ? ($this->defaultPhysicalForm($prefilledVariant) ?? '') : ''),
@@ -127,6 +128,7 @@ final class InventoryReceiptController extends AbstractController
                 'idempotency_key' => $request->request->getString('idempotency_key'),
                 'origin' => $origin->value,
                 'variant_id' => $request->request->getString('variant_id'),
+                'material_id' => $request->request->getString('material_id'),
                 'physical_form' => $request->request->getString('physical_form'),
                 'quantity' => $request->request->getString('quantity'),
                 'storage_location' => $request->request->getString('storage_location'),
@@ -156,6 +158,8 @@ final class InventoryReceiptController extends AbstractController
                 $this->addFlash('error', 'Las existencias previas no se vinculan a solicitudes de compra nuevas.');
             } elseif ($variant === null) {
                 $this->addFlash('error', 'Selecciona una presentación de material válida.');
+            } elseif ((string) $variant->getMaterial()->getId() !== (string) $formData['material_id']) {
+                $this->addFlash('error', 'El material y el ancho seleccionados no corresponden.');
             } elseif (!isset(self::PHYSICAL_FORMS[$formData['physical_form']])) {
                 $this->addFlash('error', 'Indica si la unidad física es un rollo, envase, paquete, pieza u otro objeto.');
             } elseif (isset($variant->getSpecifications()['physical_form'])
@@ -200,13 +204,16 @@ final class InventoryReceiptController extends AbstractController
 
         $variants = $variantRepository->findActiveConsumable();
         $defaultPhysicalForms = [];
+        $materials = [];
         foreach ($variants as $variant) {
             $defaultPhysicalForms[$variant->getId()] = $this->defaultPhysicalForm($variant);
+            $materials[$variant->getMaterial()->getId()] = $variant->getMaterial();
         }
 
         return $this->render('admin/inventory/receipts/new.html.twig', [
             'formData' => $formData,
             'variants' => $variants,
+            'materials' => array_values($materials),
             'physicalForms' => self::PHYSICAL_FORMS,
             'defaultPhysicalForms' => $defaultPhysicalForms,
             'canReceive' => $canReceive,
