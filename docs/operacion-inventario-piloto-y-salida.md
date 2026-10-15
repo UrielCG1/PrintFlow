@@ -51,14 +51,14 @@ Completar esta tabla para `dev`. Cuando se prepare producción, abrir una copia 
 
 | Comprobación | Resultado / referencia de evidencia | Responsable y fecha |
 | --- | --- | --- |
-| Ambiente, base y SHA desplegado | Confirmar `u692972268_printflow_dev` y registrar SHA actual | Pendiente |
-| Migraciones del código objetivo | Confirmar disponibles = ejecutadas y última `Version20261011320000` | Pendiente |
-| Revisión de catálogo y unidad real de cada variante piloto | Ejecutar diagnóstico nuevo; la variante legada `LONA-FRONT-13OZ-DEFAULT` no se usa para cargar metros | Pendiente |
+| Ambiente, base y SHA desplegado | Base `u692972268_printflow_dev`; `git pull --ff-only origin main` avanzó de `2d87d8f` a `5af994e` y `git rev-parse --short HEAD` confirmó `5af994e`. | Salida de PuTTY compartida el 14/10/2026 |
+| Migraciones del código objetivo | 71 ejecutadas / 71 disponibles, última `Version20261011320000`, verificadas antes del `git pull`. `5af994e` no añade migraciones; falta repetir `migrations:status` en el checkout actualizado. | Salida de PuTTY compartida el 14/10/2026 |
+| Revisión de catálogo y unidad real de cada variante piloto | El último diagnóstico compartido, anterior al alta `QA-`, mostró 3 variantes activas controladas y 0 sin observaciones: `COLD_LAMINATE-ANCHO-1P5200M` y `LONA-FRONT-13OZ-ANCHO-1P5200M` requieren política de mínimos; `LONA-FRONT-13OZ-DEFAULT` conserva presentación legada `PZA` y no se usa para cargar metros. La etiqueta posterior acredita que `QA-LONA-13OZ-ANCHO-1P5000M` ya fue configurada; falta repetir el diagnóstico. | Diagnóstico y captura compartidos el 14/10/2026 |
 | Proyección = suma QR; apartados = suma pendiente | Pendiente | Pendiente |
 | Conteo físico firmado por unidad | Pendiente | Pendiente |
 | Administración e Impresión: permisos y accesos | Pendiente | Pendiente |
-| Dependencia QR y requisitos PHP en `dev` | Pendiente | Pendiente |
-| Etiqueta impresa y lectura con dispositivos reales | Pendiente | Pendiente |
+| Dependencia QR y requisitos PHP en `dev` | `composer show endroid/qr-code --no-ansi` confirmó Endroid QR Code 5.1.0 instalado. Falta `composer check-platform-reqs --no-dev` y comprobar la generación y lectura reales de una etiqueta. | Salida de PuTTY compartida el 14/10/2026 |
+| Etiqueta impresa y lectura con dispositivos reales | Vista de etiqueta generada para `REC-20261015-46E1A69A`, unidad `IMU-4ECB6E2978E4`; muestra material `QA-LONA-13OZ`, ancho 1.50 m, saldo inicial 10 ML y ubicación `QA-RACK-01`. Falta confirmar impresión física, reimpresión y lectura con dispositivos. La captura mostró la fecha en UTC; se corrigió localmente la presentación horaria, pendiente de desplegar y comprobar. | Captura compartida el 14/10/2026 (Ciudad de México) |
 | Recorridos de la sección 4 con folio y resultado | Pendiente | Pendiente |
 
 ## 3. Ensayo del conteo inicial en `dev`
@@ -99,7 +99,7 @@ Anotar los códigos visibles `IMU-` de las unidades, sin copiar el token interno
 
 | Caso | Folio de orden | Unidades `IMU-` y referencia de recepción | Saldo, apartado y resultado de escaneo observados | Estado, responsable y fecha |
 | --- | --- | --- | --- | --- |
-| Rollo: 10 ML → 6 M2 consumidos → 1.5 ML sobrante | Pendiente | Pendiente | Pendiente | Pendiente |
+| Rollo: 10 ML → 6 M2 consumidos → 1.5 ML sobrante | Pendiente | `IMU-4ECB6E2978E4`; recepción `REC-20261015-46E1A69A` | Etiqueta generada con 10 ML iniciales y ancho 1.50 m; reimpresión, lectura, apartado, consumo y sobrante pendientes. | Recepción en `dev` confirmada por captura el 14/10/2026 (Ciudad de México) |
 | Faltante de 6 M2 y sustituto autorizado | Pendiente | Pendiente | Pendiente | Pendiente |
 | Paquetes: espera de 100 HOJA y recepciones 50 + 50 | Pendiente | Pendiente | Pendiente | Pendiente |
 

@@ -106,7 +106,7 @@
                                         <div class="small text-body-secondary">de {{ stockUnit.initialQuantity|number_format(6, '.', ',') }}</div>
                                     </td>
                                     <td>{{ stockUnit.storageLocation ?: 'Sin asignar' }}</td>
-                                    <td class="pf-table__cell--nowrap">{{ stockUnit.receivedAt|date('d/m/Y H:i') }}</td>
+                                    <td class="pf-table__cell--nowrap">{{ stockUnit.receivedAt|date('d/m/Y H:i', 'America/Mexico_City') }}</td>
                                     <td><span class="pf-status-badge pf-status-badge--{{ statusClass }}">{{ stockUnit.status.label }}</span></td>
                                     <td class="pf-table__actions-cell">
                                         {% if is_granted('inventory.labels.print') %}

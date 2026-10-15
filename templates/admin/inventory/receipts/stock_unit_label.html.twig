@@ -22,7 +22,7 @@
             {% if stockUnit.kind.value == 'SURPLUS' %}<dt>Tipo</dt><dd>Sobrante recuperable</dd>{% endif %}
             {% if stockUnit.parentStockUnit %}<dt>Unidad de origen</dt><dd>{{ stockUnit.parentStockUnit.unitCode }}</dd>{% endif %}
             <dt>Saldo actual</dt><dd>{{ stockUnit.remainingQuantity|number_format(6, '.', ',') }} {{ stockUnit.variant.inventoryUnit.symbol }}</dd>
-            <dt>Registro</dt><dd>{{ stockUnit.receivedAt|date('d/m/Y H:i') }}</dd>
+            <dt>Registro</dt><dd>{{ stockUnit.receivedAt|date('d/m/Y H:i', 'America/Mexico_City') }}</dd>
             {% if stockUnit.storageLocation %}<dt>Ubicación</dt><dd>{{ stockUnit.storageLocation }}</dd>{% endif %}
             {% if stockUnit.physicalAttributes.description|default(false) %}<dt>Datos físicos</dt><dd>{{ stockUnit.physicalAttributes.description }}</dd>{% endif %}
             {% if stockUnit.physicalAttributes.surplus_description|default(false) %}<dt>Datos del sobrante</dt><dd>{{ stockUnit.physicalAttributes.surplus_description }}</dd>{% endif %}

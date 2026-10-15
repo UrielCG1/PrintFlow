@@ -54,7 +54,7 @@
                         <dt>Saldo inicial</dt>
                         <dd>{{ line.receivedQuantity|number_format(6, '.', ',') }} {{ line.variant.inventoryUnit.symbol }}</dd>
                         <dt>Registro</dt>
-                        <dd>{{ receipt.receivedAt|date('d/m/Y H:i') }}</dd>
+                        <dd>{{ receipt.receivedAt|date('d/m/Y H:i', 'America/Mexico_City') }}</dd>
                         {% if stockUnit.storageLocation %}
                             <dt>Ubicación</dt>
                             <dd>{{ stockUnit.storageLocation }}</dd>

@@ -17,6 +17,7 @@ Material de prueba inspirado en «LONA 13 OZ BTE» del libro, sin usar el códig
 | Dato de ensayo | Valor |
 | --- | --- |
 | Material / presentación | `QA-LONA-13OZ`; crear en **Configurar anchos** un rollo de **1.50 m** de ancho. El sistema genera el código de presentación. |
+| Alta en Materiales | Código `QA-LONA-13OZ`, nombre `Lona de ensayo QA`, categoría `QA-PILOTO` y unidad general `ML`. |
 | Unidades y conversión | Objeto físico `ROLLO`; compra y saldo en `ML`, consumo en `M2`; **1 ML = 1.50 M2** por el ancho configurado. La longitud de cada rollo se mide al recibirlo. |
 | Unidad física recibida | Un rollo de **10 ML**, QR propio, referencia `QA-ENT-001`. |
 | Mínimos de prueba | Mínimo **2 ML**, punto de reabasto **3 ML** y cantidad sugerida **10 ML**. |
@@ -33,6 +34,7 @@ Dos variantes **ficticias** inspiradas en la familia de viniles brillantes. Su c
 | Dato de ensayo | Valor |
 | --- | --- |
 | Requisito original | Material `QA-VINIL-BRILLANTE-A`, presentación `QA-VINIL-BRILLANTE-A-M2`, **6 M2**. |
+| Alta en Materiales | Crear `QA-VINIL-BRILLANTE-A` y `QA-VINIL-BRILLANTE-B` en categoría `QA-PILOTO`, con unidad general `M2`. |
 | Existencia del original | **0 M2**. |
 | Sustituto disponible | Material `QA-VINIL-BRILLANTE-B`, presentación `QA-VINIL-BRILLANTE-B-M2`, una unidad QR de **8 M2**. |
 | Configuración de presentaciones | Crear ambas en **Nueva presentación**, con objeto físico `PIEZA` y unidades de compra, saldo y consumo `M2` (factor 1:1 solo para estas muestras medidas). |
@@ -50,6 +52,7 @@ Material contable ficticio que permite probar una presentación distinta del rol
 | Dato de ensayo | Valor |
 | --- | --- |
 | Material / presentación | `QA-PAPEL` / `QA-PAPEL-PAQ50`. Crear en **Nueva presentación** con objeto físico `PAQUETE`. |
+| Alta en Materiales | Código `QA-PAPEL`, nombre `Papel de ensayo QA`, categoría `QA-PILOTO` y unidad general `HOJA`. |
 | Unidades y conversión | Compra `PAQ`, saldo y consumo `HOJA`; **1 PAQ = 50 HOJA**. Registrar el contenido real de cada paquete en `HOJA`. |
 | Mínimos de prueba | Mínimo **20 HOJA**, punto de reabasto **30 HOJA** y cantidad sugerida **100 HOJA**. |
 | Existencia inicial | **0 HOJA**. |
