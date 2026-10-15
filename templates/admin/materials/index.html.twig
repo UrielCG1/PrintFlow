@@ -139,7 +139,6 @@
                             <th>Unidad</th>
                             <th>Proveedor principal</th>
                             <th class="pf-table__cell--right">Costo ref.</th>
-                            <th class="pf-table__cell--right">Stock mínimo</th>
                             <th>Estado</th>
 
                             {% if canManage %}
@@ -169,11 +168,6 @@
 
                                 <td class="pf-table__cell--right pf-table__cell--nowrap">
                                     ${{ material.referenceCost|number_format(2, '.', ',') }}
-                                </td>
-
-                                <td class="pf-table__cell--right pf-table__cell--nowrap">
-                                    {{ material.minimumStock|number_format(3, '.', ',') }}
-                                    {{ material.measurementUnit.code }}
                                 </td>
 
                                 <td>
@@ -242,7 +236,7 @@
                         {% else %}
                             <tr>
                                 <td
-                                    colspan="{{ canManage ? 9 : 8 }}"
+                                    colspan="{{ canManage ? 8 : 7 }}"
                                     class="pf-table__empty"
                                 >
                                     No se encontraron materiales con los filtros seleccionados.

@@ -38,7 +38,7 @@ final class MaterialData
     #[Assert\NotNull(message: 'Selecciona una categoría de materiales.')]
     public ?MaterialCategory $category = null;
 
-    #[Assert\NotNull(message: 'Selecciona la unidad de inventario.')]
+    #[Assert\NotNull(message: 'Selecciona la unidad de referencia.')]
     public ?MeasurementUnit $measurementUnit = null;
 
     #[Assert\NotBlank(message: 'El costo de referencia es obligatorio.')]
@@ -47,13 +47,6 @@ final class MaterialData
         message: 'Captura un importe válido con máximo dos decimales.',
     )]
     public ?string $referenceCost = '0.00';
-
-    #[Assert\NotBlank(message: 'El stock mínimo es obligatorio.')]
-    #[Assert\Regex(
-        pattern: '/^(?:0|[1-9]\d{0,8})(?:\.\d{1,3})?$/',
-        message: 'Captura una cantidad válida con máximo tres decimales.',
-    )]
-    public ?string $minimumStock = '0.000';
 
     public ?Supplier $primarySupplier = null;
 

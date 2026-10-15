@@ -134,7 +134,6 @@ final class MaterialController extends AbstractController
         $data->measurementUnit = $material->getMeasurementUnit();
         $data->primarySupplier = $material->getPrimarySupplier();
         $data->referenceCost = $material->getReferenceCost();
-        $data->minimumStock = $material->getMinimumStock();
         $data->notes = $material->getNotes();
 
         $form = $this->createMaterialForm(

@@ -120,12 +120,6 @@ final class MaterialManager
                     'El costo de referencia es obligatorio.',
                 ),
             )
-            ->setMinimumStock(
-                $this->requiredText(
-                    $data->minimumStock,
-                    'El stock mínimo es obligatorio.',
-                ),
-            )
             ->setNotes($data->notes);
     }
 
@@ -151,12 +145,12 @@ final class MaterialManager
         $measurementUnit = $data->measurementUnit;
 
         if (!$measurementUnit instanceof MeasurementUnit) {
-            throw new \DomainException('Selecciona la unidad de inventario.');
+            throw new \DomainException('Selecciona la unidad de referencia.');
         }
 
         if (!$measurementUnit->isActive()) {
             throw new \DomainException(
-                'La unidad de inventario seleccionada está inactiva.',
+                'La unidad de referencia seleccionada está inactiva.',
             );
         }
 

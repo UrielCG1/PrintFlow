@@ -10,7 +10,7 @@
             <div class="pf-page-header__content">
                 <h1 class="pf-page-header__title">{{ pageTitle }}</h1>
                 <p class="pf-page-header__description">
-                    {{ material ? 'Edita el tipo de material del catálogo.' : 'Crea un tipo de material en el catálogo.' }} Aquí no se registra la longitud de un rollo ni su existencia.
+                    {{ material ? 'Edita el tipo de material del catálogo.' : 'Crea un tipo de material en el catálogo.' }} Aquí no se registra la longitud de un rollo ni su existencia. El mínimo se configura por presentación en Inventario.
                 </p>
             </div>
         </div>
@@ -66,18 +66,14 @@
                 </section>
 
                 <section class="pf-form-section">
-                    <h2 class="pf-form-section__title">Parámetros operativos</h2>
+                    <h2 class="pf-form-section__title">Costo de referencia</h2>
                     <p class="pf-form-section__description">
-                        El costo es de referencia y el stock mínimo es únicamente un umbral para alertas futuras.
+                        Este costo es orientativo y no representa una valuación contable. Los mínimos de inventario se configuran por presentación.{% if is_granted('inventory.configure') %} <a href="{{ path('admin_inventory_receipts_minimums') }}">Configurar mínimos en Inventario</a>.{% endif %}
                     </p>
 
                     <div class="row g-3">
                         <div class="col-md-6 pf-form-field">
                             {{ form_row(form.referenceCost) }}
-                        </div>
-
-                        <div class="col-md-6 pf-form-field">
-                            {{ form_row(form.minimumStock) }}
                         </div>
                     </div>
                 </section>

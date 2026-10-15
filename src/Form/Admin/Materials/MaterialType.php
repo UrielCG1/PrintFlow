@@ -55,7 +55,8 @@ final class MaterialType extends AbstractType
                     $unit->getName(),
                     $unit->isActive() ? '' : ' (inactiva)',
                 ),
-                'label' => 'Unidad de inventario',
+                'label' => 'Unidad de referencia',
+                'help' => 'La unidad real del saldo se define en cada presentación de Inventario.',
                 'placeholder' => 'Selecciona una unidad',
             ])
             ->add('primarySupplier', EntityType::class, [
@@ -78,15 +79,6 @@ final class MaterialType extends AbstractType
                     'inputmode' => 'decimal',
                     'maxlength' => 13,
                     'placeholder' => '0.00',
-                ],
-            ])
-            ->add('minimumStock', TextType::class, [
-                'label' => 'Stock mínimo',
-                'help' => 'Umbral futuro para alertas. No representa existencia actual.',
-                'attr' => [
-                    'inputmode' => 'decimal',
-                    'maxlength' => 13,
-                    'placeholder' => '0.000',
                 ],
             ])
             ->add('description', TextareaType::class, [
