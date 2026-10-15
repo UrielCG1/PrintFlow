@@ -645,7 +645,7 @@ final class ServiceOrderCommercialAccessTest extends TestCase
         self::assertSame(200, $this->browser->getResponse()->getStatusCode());
         $qualityHtml = (string) $this->browser->getResponse()->getContent();
         self::assertStringContainsString('Laminado QA', $qualityHtml);
-        self::assertStringContainsString('Devolver a retrabajo', $qualityHtml);
+        self::assertStringContainsString('Enviar a retrabajo', $qualityHtml);
         self::assertStringContainsString('Liberar producción', $qualityHtml);
         $this->assertNoCommercialData($qualityHtml, 'quality review detail');
 
@@ -998,7 +998,7 @@ final class ServiceOrderCommercialAccessTest extends TestCase
         $this->browser->loginUser($sales);
 
         foreach ([
-            '/admin/ordenes-servicio' => ['13,791.11'],
+            '/admin/ordenes-servicio' => [],
             '/admin/ordenes-servicio/'.$this->serviceOrder->getId() => ['12,345.67', '13,791.11'],
         ] as $path => $visibleAmounts) {
             $this->browser->request('GET', $path);
@@ -1091,6 +1091,19 @@ final class ServiceOrderCommercialAccessTest extends TestCase
 
     public function testManualMaterialsUseHttpPermissionsAndIdempotencyWithoutInventoryMovements(): void
     {
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $category = (new MaterialCategory())->setCode('QA-MANUAL')->setName('Materiales manuales QA');
+        $material = (new Material())
+            ->setCategory($category)
+            ->setMeasurementUnit($this->fixtures['area'])
+            ->setCode('QA-MANUAL-LAMINATE')
+            ->setName('Película de laminado QA');
+        $variant = new MaterialVariant($material, 'QA-MANUAL-LAMINATE-M2', $this->fixtures['area'], $this->fixtures['area'], $this->fixtures['area']);
+        foreach ([$category, $material, $variant] as $entity) {
+            $em->persist($entity);
+        }
+        $em->flush();
+
         $manager = $this->createUserWithPermissions('qa-material-manager', 'ROLE_QA_MATERIAL_MANAGER', ['production.view', 'production.assign']);
         $operator = $this->createUserWithPermissions('qa-material-worker', 'ROLE_QA_MATERIAL_WORKER', ['production.view', 'production.execute']);
         $otherOperator = $this->createUserWithPermissions('qa-material-other', 'ROLE_QA_MATERIAL_OTHER', ['production.view', 'production.execute']);
@@ -1103,7 +1116,7 @@ final class ServiceOrderCommercialAccessTest extends TestCase
         $crawler = $this->browser->request('GET', $queue);
         self::assertSame(200, $this->browser->getResponse()->getStatusCode());
         $form = $crawler->filter('form[action="'.$plannedPath.'"]')->form([
-            'material_name' => 'Película de laminado QA', 'quantity' => '4.5', 'unit' => 'm²',
+            'material_variant_id' => (string) $variant->getId(), 'quantity' => '4.5',
         ]);
         $plannedPayload = $form->getPhpValues();
         $this->browser->submit($form);

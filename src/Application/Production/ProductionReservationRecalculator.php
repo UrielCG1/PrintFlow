@@ -56,7 +56,10 @@ final class ProductionReservationRecalculator
     ): bool {
         $id = $equipment->getId();
         if ($id === null) { return false; }
-        $this->entityManager->getConnection()->fetchOne('SELECT id FROM equipment WHERE id = ? FOR UPDATE', [$id]);
+        $connection = $this->entityManager->getConnection();
+        if ($connection->getDatabasePlatform() instanceof \Doctrine\DBAL\Platforms\AbstractMySQLPlatform) {
+            $connection->fetchOne('SELECT id FROM equipment WHERE id = ? FOR UPDATE', [$id]);
+        }
         $reservations = $this->reservationRepository->findActiveForEquipmentBetween($equipment, $now, $horizon);
         $candidatePlans = [];
         foreach ($reservations as $reservation) {

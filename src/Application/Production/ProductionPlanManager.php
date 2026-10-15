@@ -198,7 +198,10 @@ final class ProductionPlanManager
         }
         $id = $equipment->getId();
         if ($id === null) { throw new \LogicException('El equipo no tiene identificador.'); }
-        $this->entityManager->getConnection()->fetchOne('SELECT id FROM equipment WHERE id = ? FOR UPDATE', [$id]);
+        $connection = $this->entityManager->getConnection();
+        if ($connection->getDatabasePlatform() instanceof \Doctrine\DBAL\Platforms\AbstractMySQLPlatform) {
+            $connection->fetchOne('SELECT id FROM equipment WHERE id = ? FOR UPDATE', [$id]);
+        }
         $this->assertCompatibleMachine($plan, $equipment);
         $this->upgradeStandardEstimateToPhysical($plan, $actor);
         if ($plan->getEstimatedMinutes() === null || $plan->getEstimateKind() === null) {
