@@ -10,7 +10,7 @@ El primer piloto debe incluir un grupo pequeño pero representativo de variantes
 
 El archivo del cliente enumera productos y maquinaria, pero no contiene los saldos ni unidades físicas necesarios para el corte. Usar los [tres casos sintéticos de ensayo](datos-prueba-piloto-inventario.md) para verificar el sistema en `dev`, separados de los datos reales.
 
-Antes de cargarlos, completar el alta operativa de variantes nuevas: el formulario actual de Materiales registra el concepto general, mientras la recepción de inventario requiere una `MaterialVariant` existente. No usar SQL manual para simular un flujo que todavía debe existir en la interfaz.
+Para un material nuevo, primero crea el concepto general en **Materiales** y después define su presentación en **Inventario → Nueva presentación**. Indica el objeto que llevará el QR, las unidades reales de compra, saldo y consumo, y sus equivalencias; para rollos con saldo lineal y consumo por área usa **Configurar anchos**. Finalmente registra cada unidad física en **Recibir material**. No uses SQL manual para crear existencias.
 
 Definir antes de iniciar:
 

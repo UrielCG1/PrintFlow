@@ -89,9 +89,13 @@ final class MaterialController extends AbstractController
 
         if ($form->isSubmitted() && $form->isValid()) {
             try {
-                $materialManager->create($data, $this->getActor());
+                $material = $materialManager->create($data, $this->getActor());
 
                 $this->addFlash('success', 'Material registrado correctamente.');
+
+                if ($material->isStockItem() && $material->isConsumable() && $this->isGranted('inventory.configure')) {
+                    return $this->redirectToRoute('admin_inventory_variants_new', ['material' => $material->getId()]);
+                }
 
                 return $this->redirectToRoute('admin_materials_index');
             } catch (UniqueConstraintViolationException) {

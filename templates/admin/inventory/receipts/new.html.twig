@@ -17,7 +17,7 @@
 
         {% if variants is empty %}
             <div class="alert alert-warning" role="alert">
-                No hay presentaciones activas que puedan manejar existencias. Configura primero el material y su presentación.{% if is_granted('inventory.configure') %} <a href="{{ path('admin_inventory_roll_variants_new') }}" class="alert-link">Configurar ancho de rollo</a>.{% endif %}
+                No hay presentaciones activas que puedan manejar existencias. Configura primero el material y su presentación.{% if is_granted('inventory.configure') %} <a href="{{ path('admin_inventory_variants_new') }}" class="alert-link">Nueva presentación</a> o <a href="{{ path('admin_inventory_roll_variants_new') }}" class="alert-link">configurar ancho de rollo</a>.{% endif %}
             </div>
         {% else %}
             <form method="post" class="pf-card pf-form pf-inventory-receipt-form" novalidate data-controller="ui--inventory-entry">
@@ -67,7 +67,7 @@
 
                     <div class="col-12 col-md-6 pf-form-field align-self-start">
                         <div class="d-flex flex-column gap-2 w-100">
-                            <label for="inventory-variant" class="form-label">Ancho o presentación</label>
+                            <label for="inventory-variant" class="form-label">Presentación o ancho</label>
                             <select id="inventory-variant" name="variant_id" class="form-select" required data-ui--inventory-entry-target="variant" data-action="change->ui--inventory-entry#updateVariant">
                                 <option value="">Selecciona una presentación</option>
                                 {% for variant in variants %}
@@ -76,8 +76,13 @@
                                     </option>
                                 {% endfor %}
                             </select>
-                            <div class="form-text">Si hay varios anchos, elige el del rollo recibido. La unidad se carga automáticamente.</div>
-                            {% if is_granted('inventory.configure') %}<a href="{{ path('admin_inventory_roll_variants_new') }}" data-ui--inventory-entry-target="addWidthLink">¿Falta un ancho? Agrégalo aquí</a>{% endif %}
+                            <div class="form-text">Elige la presentación de la unidad física recibida. La unidad de saldo se carga automáticamente.</div>
+                            {% if is_granted('inventory.configure') %}
+                                <div class="d-flex flex-wrap gap-3">
+                                    <a href="{{ path('admin_inventory_variants_new') }}" data-ui--inventory-entry-target="addWidthLink">¿Falta una presentación?</a>
+                                    <a href="{{ path('admin_inventory_roll_variants_new') }}" data-ui--inventory-entry-target="addWidthLink">Configurar ancho de rollo</a>
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
 

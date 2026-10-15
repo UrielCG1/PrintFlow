@@ -216,7 +216,7 @@ final class InventoryReceiptManager
             throw new \DomainException('La variante recibida debe estar activa, controlar existencias y ser consumible.');
         }
         if (($line->variant->getSpecifications()['legacy_migration'] ?? false) === true) {
-            throw new \DomainException('Esta presentación heredada aún no tiene unidades físicas y conversiones confirmadas. Configura una presentación por ancho antes de registrar saldos.');
+            throw new \DomainException('Esta presentación heredada aún no tiene unidades físicas y conversiones confirmadas. Configura una presentación real antes de registrar saldos.');
         }
         if (!$line->variant->getInventoryUnit()->allowsFraction()
             && preg_match('/^(?:0|[1-9]\d*)(?:[.,]0+)?$/D', trim($line->quantity)) !== 1) {

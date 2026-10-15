@@ -1,0 +1,144 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Nueva presentación de material | OoxCorp{% endblock %}
+{% block app_navigation_active %}inventory{% endblock %}
+{% block app_breadcrumb %}Operación / Inventario / Nueva presentación{% endblock %}
+
+{% block app_content %}
+    <div class="pf-page__content">
+        <div class="pf-page-header">
+            <div class="pf-page-header__content">
+                <h1 class="pf-page-header__title">Nueva presentación de material</h1>
+                <p class="pf-page-header__description">Define cómo se compra, mide y consume un material del catálogo. Después registra cada envase, paquete, pieza u otra unidad física en Recibir material para asignarle un QR.</p>
+            </div>
+        </div>
+
+        <div class="alert alert-info" role="note">
+            Si se trata de un rollo medido en metros lineales y consumido en metros cuadrados, <a href="{{ path('admin_inventory_roll_variants_new', {material: formData.material_id}) }}" class="alert-link">configura su ancho</a>. Para una presentación con contenido fijo, captura aquí las equivalencias reales; no se deducen del nombre del material.
+        </div>
+
+        {% if materials is empty or units is empty %}
+            <div class="alert alert-warning" role="alert">Necesitas al menos un material con control de existencias y unidades activas antes de configurar una presentación.</div>
+        {% else %}
+            <form method="post" class="pf-card pf-form" novalidate>
+                <div class="pf-card__body row g-3">
+                    <input type="hidden" name="_token" value="{{ csrf_token('inventory_variant_new') }}">
+
+                    <div class="col-12 col-lg-7 pf-form-field d-flex flex-column gap-2 align-self-start">
+                        <label for="variant-material" class="form-label">Material del catálogo</label>
+                        <select id="variant-material" name="material_id" class="form-select" required>
+                            <option value="">Selecciona el material</option>
+                            {% for material in materials %}
+                                <option value="{{ material.id }}" {{ formData.material_id == material.id ? 'selected' : '' }}>{{ material.name }} · {{ material.code }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Si el material no existe, primero créalo en Materiales. Esta pantalla no registra existencias.</div>
+                    </div>
+
+                    <div class="col-12 col-lg-5 pf-form-field d-flex flex-column gap-2 align-self-start">
+                        <label for="variant-code" class="form-label">Código único de presentación</label>
+                        <input id="variant-code" name="code" value="{{ formData.code }}" class="form-control" maxlength="80" placeholder="Ej. TINTA-NEGRA-BOTELLA-1L" required>
+                        <div class="form-text">Identifica la presentación; no se reutiliza para otra configuración.</div>
+                    </div>
+
+                    <div class="col-12 col-md-6 pf-form-field d-flex flex-column gap-2 align-self-start">
+                        <label for="variant-physical-form" class="form-label">Objeto físico que recibirá el QR</label>
+                        <select id="variant-physical-form" name="physical_form" class="form-select" required>
+                            <option value="">Selecciona el objeto</option>
+                            {% for code, label in physicalForms %}
+                                <option value="{{ code }}" {{ formData.physical_form == code ? 'selected' : '' }}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-md-6 pf-form-field d-flex flex-column gap-2 align-self-start">
+                        <label for="variant-purchase-unit" class="form-label">Unidad de compra</label>
+                        <select id="variant-purchase-unit" name="purchase_unit_id" class="form-select" required>
+                            <option value="">Selecciona una unidad</option>
+                            {% for unit in units %}
+                                <option value="{{ unit.id }}" {{ formData.purchase_unit_id == unit.id ? 'selected' : '' }}>{{ unit.name }} ({{ unit.symbol }}) · {{ unit.dimensionType }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-md-6 pf-form-field d-flex flex-column gap-2 align-self-start">
+                        <label for="variant-inventory-unit" class="form-label">Unidad del saldo en bodega</label>
+                        <select id="variant-inventory-unit" name="inventory_unit_id" class="form-select" required>
+                            <option value="">Selecciona una unidad</option>
+                            {% for unit in units %}
+                                <option value="{{ unit.id }}" {{ formData.inventory_unit_id == unit.id ? 'selected' : '' }}>{{ unit.name }} ({{ unit.symbol }}) · {{ unit.dimensionType }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">La cantidad de cada unidad física se capturará en esta unidad al recibirla.</div>
+                    </div>
+
+                    <div class="col-12 col-md-6 pf-form-field d-flex flex-column gap-2 align-self-start">
+                        <label for="variant-consumption-unit" class="form-label">Unidad de consumo en la orden</label>
+                        <select id="variant-consumption-unit" name="consumption_unit_id" class="form-select" required>
+                            <option value="">Selecciona una unidad</option>
+                            {% for unit in units %}
+                                <option value="{{ unit.id }}" {{ formData.consumption_unit_id == unit.id ? 'selected' : '' }}>{{ unit.name }} ({{ unit.symbol }}) · {{ unit.dimensionType }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-12 col-md-6 pf-form-field d-flex flex-column gap-2 align-self-start">
+                        <label for="variant-purchase-factor" class="form-label">Contenido de una unidad de compra</label>
+                        <input id="variant-purchase-factor" name="purchase_factor" value="{{ formData.purchase_factor }}" class="form-control" inputmode="decimal" placeholder="Ej. 500 hojas por paquete">
+                        <div class="form-text">1 unidad de compra = esta cantidad en unidades de inventario. Déjalo vacío solo si ambas unidades son la misma.</div>
+                    </div>
+
+                    <div class="col-12 col-md-6 pf-form-field d-flex flex-column gap-2 align-self-start">
+                        <label for="variant-consumption-factor" class="form-label">Equivalencia para la orden</label>
+                        <input id="variant-consumption-factor" name="consumption_factor" value="{{ formData.consumption_factor }}" class="form-control" inputmode="decimal" placeholder="Ej. 1000 mL por litro">
+                        <div class="form-text">1 unidad de inventario = esta cantidad en unidades de consumo. Déjalo vacío solo si ambas unidades son la misma.</div>
+                    </div>
+
+                    <div class="col-12"><hr class="my-1"></div>
+
+                    <div class="col-12 col-md-4 pf-form-field d-flex flex-column gap-2 align-self-start">
+                        <label for="variant-minimum" class="form-label">Mínimo disponible</label>
+                        <input id="variant-minimum" name="minimum_stock" value="{{ formData.minimum_stock }}" class="form-control" inputmode="decimal" required>
+                    </div>
+                    <div class="col-12 col-md-4 pf-form-field d-flex flex-column gap-2 align-self-start">
+                        <label for="variant-reorder-point" class="form-label">Punto de reabasto</label>
+                        <input id="variant-reorder-point" name="reorder_point" value="{{ formData.reorder_point }}" class="form-control" inputmode="decimal" required>
+                    </div>
+                    <div class="col-12 col-md-4 pf-form-field d-flex flex-column gap-2 align-self-start">
+                        <label for="variant-reorder-quantity" class="form-label">Cantidad sugerida de reabasto</label>
+                        <input id="variant-reorder-quantity" name="reorder_quantity" value="{{ formData.reorder_quantity }}" class="form-control" inputmode="decimal" required>
+                    </div>
+                    <div class="col-12 form-text">Estos tres valores se expresan en la unidad del saldo. Cero deja pendiente la confirmación de la política de mínimos en el diagnóstico.</div>
+                </div>
+                <div class="pf-card__footer d-flex flex-wrap justify-content-end gap-2">
+                    <a href="{{ path('admin_inventory_receipts_index') }}" class="btn pf-button pf-button--secondary">Volver a inventario</a>
+                    <button type="submit" class="btn pf-button pf-button--primary">Guardar presentación</button>
+                </div>
+            </form>
+        {% endif %}
+
+        {% if configured is not empty %}
+            <div class="pf-card">
+                <div class="pf-card__body">
+                    <h2 class="h5 mb-3">Presentaciones configuradas</h2>
+                    <div class="table-responsive" role="region" aria-label="Presentaciones de material configuradas" tabindex="0">
+                        <table class="table pf-table mb-0">
+                            <thead><tr><th>Material y presentación</th><th>Objeto</th><th>Saldo</th><th>Consumo</th><th>Acción</th></tr></thead>
+                            <tbody>
+                                {% for variant in configured %}
+                                    <tr>
+                                        <td><strong>{{ variant.material.name }}</strong><div class="small text-body-secondary">{{ variant.code }}</div></td>
+                                        <td>{{ physicalForms[variant.specifications.physical_form]|default('Otro') }}</td>
+                                        <td>{{ variant.inventoryUnit.symbol }}</td>
+                                        <td>{{ variant.consumptionUnit.symbol }} <span class="small text-body-secondary">(× {{ variant.inventoryToConsumptionFactor|trim('0', 'right')|trim('.', 'right') }})</span></td>
+                                        <td><a href="{{ path('admin_inventory_receipts_new', {variant: variant.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm">Recibir unidad</a></td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

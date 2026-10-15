@@ -58,6 +58,48 @@ class MaterialVariant
     public function getInventoryUnit():MeasurementUnit{return $this->inventoryUnit;}
     public function getConsumptionUnit():MeasurementUnit{return $this->consumptionUnit;}
     public function getInventoryToConsumptionFactor():string{return $this->inventoryToConsumptionFactor;}
+    public function getPurchaseToInventoryFactor():string{return $this->purchaseToInventoryFactor;}
+    /** Configuración de una presentación nueva; cada recepción seguirá creando una unidad QR. */
+    public function configurePhysicalPresentation(string $physicalForm, string $purchaseFactor, string $consumptionFactor):self
+    {
+        $allowed = ['ROLLO', 'ENVASE', 'PAQUETE', 'PIEZA', 'HOJA', 'CAJA', 'CARTUCHO', 'BOTELLA', 'JUEGO', 'OTRO'];
+        if (!in_array($physicalForm, $allowed, true)) {
+            throw new \InvalidArgumentException('Selecciona un objeto físico válido para la presentación.');
+        }
+        if ($physicalForm === 'ROLLO' && $this->inventoryUnit->getDimensionType() === 'LENGTH'
+            && $this->consumptionUnit->getDimensionType() === 'AREA') {
+            throw new \DomainException('Un rollo con saldo lineal y consumo por área requiere configurar su ancho.');
+        }
+
+        $purchaseToInventoryFactor = $this->presentationFactor(
+            $purchaseFactor, $this->purchaseUnit, $this->inventoryUnit, 'compra a inventario',
+        );
+        $inventoryToConsumptionFactor = $this->presentationFactor(
+            $consumptionFactor, $this->inventoryUnit, $this->consumptionUnit, 'inventario a consumo',
+        );
+        $this->purchaseToInventoryFactor = $purchaseToInventoryFactor;
+        $this->inventoryToConsumptionFactor = $inventoryToConsumptionFactor;
+        $this->specifications = ['physical_form' => $physicalForm, 'conversion_confirmed' => true];
+
+        return $this;
+    }
+    private function presentationFactor(string $factor, MeasurementUnit $from, MeasurementUnit $to, string $label):string
+    {
+        $factor = trim(str_replace(',', '.', $factor));
+        if ($factor === '' && $from === $to) {
+            $factor = '1';
+        }
+        if (preg_match('/^(?:0|[1-9]\d{0,11})(?:\.\d{1,12})?$/D', $factor) !== 1
+            || \Brick\Math\BigDecimal::of($factor)->isLessThanOrEqualTo(\Brick\Math\BigDecimal::zero())) {
+            throw new \InvalidArgumentException('Indica un factor positivo de '.$label.' con hasta 12 decimales.');
+        }
+        $normalized = \Brick\Math\BigDecimal::of($factor)->toScale(12);
+        if ($from === $to && !$normalized->isEqualTo(\Brick\Math\BigDecimal::one())) {
+            throw new \DomainException('La conversión de '.$label.' entre la misma unidad debe ser 1.');
+        }
+
+        return $normalized->__toString();
+    }
     /** Un ancho identifica una variante; la longitud de cada rollo se mide al recibirlo. */
     public function configureRollWidth(string $widthMeters):self
     {

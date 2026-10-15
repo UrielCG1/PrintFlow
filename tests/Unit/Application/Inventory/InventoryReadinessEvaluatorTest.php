@@ -70,6 +70,54 @@ final class InventoryReadinessEvaluatorTest extends TestCase
         self::assertSame([], $report['findings']);
     }
 
+    public function testAcceptsAConfirmedPhysicalPackageWithCountedContents(): void
+    {
+        $report = (new InventoryReadinessEvaluator())->evaluate([
+            [
+                'material_code' => 'PAPEL-COUCHE',
+                'variant_code' => 'PAPEL-COUCHE-PAQ500',
+                'specifications' => ['physical_form' => 'PAQUETE', 'conversion_confirmed' => true],
+                'minimum_stock' => '100.000000',
+                'reorder_point' => '200.000000',
+                'reorder_quantity' => '500.000000',
+                'material_is_hazardous' => false,
+                'storage_conditions' => null,
+                'inventory_unit_code' => 'HOJA',
+                'inventory_unit_dimension' => 'COUNT',
+                'inventory_unit_allows_fraction' => false,
+                'consumption_unit_code' => 'PZA',
+                'consumption_unit_dimension' => 'COUNT',
+            ],
+        ], 1, 1);
+
+        self::assertSame(1, $report['summary']['ready']);
+        self::assertSame([], $report['findings']);
+    }
+
+    public function testAcceptsConfirmedCrossDimensionConversion(): void
+    {
+        $report = (new InventoryReadinessEvaluator())->evaluate([
+            [
+                'material_code' => 'TINTA-NEGRA',
+                'variant_code' => 'TINTA-NEGRA-BOTELLA-1L',
+                'specifications' => ['physical_form' => 'BOTELLA', 'conversion_confirmed' => true],
+                'minimum_stock' => '2.000000',
+                'reorder_point' => '3.000000',
+                'reorder_quantity' => '5.000000',
+                'material_is_hazardous' => false,
+                'storage_conditions' => null,
+                'inventory_unit_code' => 'BOTELLA',
+                'inventory_unit_dimension' => 'COUNT',
+                'inventory_unit_allows_fraction' => false,
+                'consumption_unit_code' => 'MLT',
+                'consumption_unit_dimension' => 'VOLUME',
+            ],
+        ], 1, 1);
+
+        self::assertSame(1, $report['summary']['ready']);
+        self::assertSame([], $report['findings']);
+    }
+
     public function testRequestsStorageConditionsForHazardousMaterial(): void
     {
         $report = (new InventoryReadinessEvaluator())->evaluate([

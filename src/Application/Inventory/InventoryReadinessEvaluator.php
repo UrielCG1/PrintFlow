@@ -103,7 +103,8 @@ final class InventoryReadinessEvaluator
 
         $inventoryDimension = (string) ($variant['inventory_unit_dimension'] ?? '');
         $consumptionDimension = (string) ($variant['consumption_unit_dimension'] ?? '');
-        if ($inventoryDimension === 'COUNT' && !$this->toBoolean($variant['inventory_unit_allows_fraction'] ?? false)) {
+        if ($inventoryDimension === 'COUNT' && !$this->toBoolean($variant['inventory_unit_allows_fraction'] ?? false)
+            && !isset($specifications['physical_form'])) {
             $add(
                 'ADVERTENCIA',
                 'PRESENTACION_CONTABLE_POR_CONFIRMAR',
@@ -111,7 +112,8 @@ final class InventoryReadinessEvaluator
             );
         }
 
-        if ($inventoryDimension !== '' && $consumptionDimension !== '' && $inventoryDimension !== $consumptionDimension) {
+        if ($inventoryDimension !== '' && $consumptionDimension !== '' && $inventoryDimension !== $consumptionDimension
+            && ($specifications['conversion_confirmed'] ?? false) !== true && !isset($specifications['width_m'])) {
             $add(
                 'ADVERTENCIA',
                 'CONVERSION_ENTRE_DIMENSIONES_POR_REVISAR',

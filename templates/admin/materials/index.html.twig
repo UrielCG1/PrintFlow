@@ -126,7 +126,7 @@
             </div>
         </form>
 
-        {% set canManage = is_granted('materials.update') or is_granted('materials.toggle_status') %}
+        {% set canManage = is_granted('materials.update') or is_granted('materials.toggle_status') or is_granted('inventory.configure') %}
 
         <div class="pf-card pf-card--padding-none">
             <div class="pf-table-responsive pf-table-responsive--flat">
@@ -185,6 +185,9 @@
                                 {% if canManage %}
                                     <td class="pf-table__actions-cell">
                                         <div class="pf-table__actions">
+                                            {% if is_granted('inventory.configure') and material.isActive and material.isStockItem and material.isConsumable %}
+                                                <a href="{{ path('admin_inventory_variants_new', {material: material.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm">Presentación</a>
+                                            {% endif %}
                                             {% if is_granted('materials.update') %}
                                                 <a
                                                     href="{{ path('admin_materials_edit', { id: material.id }) }}"

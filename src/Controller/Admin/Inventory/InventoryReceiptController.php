@@ -161,7 +161,7 @@ final class InventoryReceiptController extends AbstractController
             } elseif ($variant === null) {
                 $this->addFlash('error', 'Selecciona una presentación de material válida.');
             } elseif ((string) $variant->getMaterial()->getId() !== (string) $formData['material_id']) {
-                $this->addFlash('error', 'El material y el ancho seleccionados no corresponden.');
+                $this->addFlash('error', 'El material y la presentación seleccionados no corresponden.');
             } elseif (!isset(self::PHYSICAL_FORMS[$formData['physical_form']])) {
                 $this->addFlash('error', 'Indica si la unidad física es un rollo, envase, paquete, pieza u otro objeto.');
             } elseif (isset($variant->getSpecifications()['physical_form'])
