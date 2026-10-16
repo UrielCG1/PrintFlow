@@ -4,7 +4,7 @@
 {% block app_navigation_active %}equipment{% endblock %}
 {% block app_breadcrumb %}Operación / Equipos{% endblock %}
 
-{% set canManage = is_granted('equipment.update') or is_granted('equipment.change_status') %}
+{% set showActions = is_granted('equipment.view') or is_granted('equipment.update') or is_granted('equipment.change_status') %}
 
 {% block app_content %}
     <div class="pf-page__content">
@@ -127,7 +127,7 @@
                             <th>Ficha técnica</th>
                             <th>Estado</th>
 
-                            {% if canManage %}
+                            {% if showActions %}
                                 <th class="pf-table__actions-cell">Acciones</th>
                             {% endif %}
                         </tr>
@@ -183,9 +183,18 @@
                                     </span>
                                 </td>
 
-                                {% if canManage %}
+                                {% if showActions %}
                                     <td class="pf-table__actions-cell">
                                         <div class="pf-table__actions">
+                                            <a
+                                                href="{{ path('admin_equipment_label', {id: equipment.id}) }}"
+                                                class="btn pf-button pf-button--secondary pf-button--sm"
+                                                target="_blank"
+                                                rel="noopener"
+                                            >
+                                                <i class="bi bi-qr-code" aria-hidden="true"></i>
+                                                <span>Imprimir etiqueta</span>
+                                            </a>
                                             {% if is_granted('equipment.update') %}
                                                 <a
                                                     href="{{ path('admin_equipment_edit', {id: equipment.id}) }}"
@@ -234,7 +243,7 @@
                         {% else %}
                             <tr>
                                 <td
-                                    colspan="{{ canManage ? 6 : 5 }}"
+                                    colspan="{{ showActions ? 6 : 5 }}"
                                     class="pf-table__empty"
                                 >
                                     No se encontraron equipos con los filtros seleccionados.

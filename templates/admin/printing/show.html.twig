@@ -48,7 +48,7 @@
             <section class="pf-card printing-detail-card">
                 <div class="printing-card-heading"><h2>Requerimientos de producción</h2></div>
                 <dl class="printing-requirements">
-                    <div><dt><i class="bi bi-printer" aria-hidden="true"></i>Máquina asignada</dt><dd>{{ plan.equipment ? plan.equipment.name : 'Pendiente de configurar' }}{% if plan.equipment %}<small>{{ plan.equipment.code }}</small>{% endif %}</dd></div>
+                    <div><dt><i class="bi bi-printer" aria-hidden="true"></i>Máquina asignada</dt><dd>{{ plan.equipment ? plan.equipment.name : 'Pendiente de configurar' }}{% if plan.equipment %}<small>{{ plan.equipment.code }}</small>{% if is_granted('equipment.view') or is_granted('production.execute') %}<small><a href="{{ path('admin_equipment_label', {id: plan.equipment.id}) }}" target="_blank" rel="noopener">Imprimir etiqueta de máquina</a></small>{% endif %}{% endif %}</dd></div>
                     <div><dt><i class="bi bi-layers" aria-hidden="true"></i>Material</dt><dd>{{ plan.materialVariant ? plan.materialVariant.material.name : 'Pendiente de configurar' }}{% if plan.materialVariant %}<small>{{ plan.materialVariant.code }}</small>{% endif %}</dd></div>
                     <div><dt><i class="bi bi-box-seam" aria-hidden="true"></i>Cantidad a producir</dt><dd>{{ item.quantity|number_format(6, '.', ',')|trim('0', 'right')|trim('.', 'right') }} {{ item.commercialItemSnapshot.measurement_unit.code|default('') }}</dd></div>
                     <div><dt><i class="bi bi-layers" aria-hidden="true"></i>Material previsto</dt><dd>{{ plannedUsage ? plannedUsage.plannedQuantity ~ ' ' ~ plannedUsage.unitLabelSnapshot : 'Pendiente de captura' }}</dd></div>

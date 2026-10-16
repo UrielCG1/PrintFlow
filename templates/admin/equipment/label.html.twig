@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Etiqueta de equipo · {{ equipment.code }}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 16px; background: #f2f5f8; color: #132535; font: 12px/1.25 Arial, sans-serif; }
+        .label { width: 96mm; height: 64mm; padding: 4mm; background: #fff; border: 1px solid #aab7be; }
+        .header { display: flex; align-items: center; justify-content: space-between; gap: 5mm; padding-bottom: 2mm; border-bottom: 1px solid #ccd6d9; }
+        .logo { display: block; max-width: 32mm; max-height: 10mm; object-fit: contain; }
+        h1 { margin: 0; font-size: 13px; text-align: right; }
+        .content { display: grid; grid-template-columns: 38mm minmax(0, 1fr); gap: 4mm; align-items: center; padding-top: 2mm; }
+        .qr svg { display: block; width: 36mm; height: 36mm; }
+        .data { min-width: 0; }
+        .name { margin: 0 0 2mm; font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
+        .caption { display: block; margin-top: 2mm; color: #52636d; font-size: 9px; text-transform: uppercase; }
+        .code { display: block; margin-top: 1mm; font: 700 15px/1.15 monospace; overflow-wrap: anywhere; }
+        .detail { display: block; margin-top: 1mm; font-size: 10px; overflow-wrap: anywhere; }
+        .footer { margin: 1mm 0 0; padding-top: 1mm; border-top: 1px solid #ccd6d9; color: #52636d; font-size: 9px; }
+        .actions { width: 96mm; margin-top: 12px; text-align: center; }
+        .actions button { padding: 8px 16px; border: 0; border-radius: 6px; background: #087a23; color: #fff; font-weight: 700; cursor: pointer; }
+        @page { size: 96mm 64mm; margin: 0; }
+        @media print {
+            body { width: 96mm; height: 64mm; padding: 0; background: #fff; }
+            .label { border: 0; }
+            .actions { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <main class="label" aria-label="Etiqueta del equipo {{ equipment.code }}">
+        <header class="header">
+            <img class="logo" src="{{ asset('images/brand/logo.png') }}" alt="OoxCorp">
+            <h1>Identificación de equipo</h1>
+        </header>
+        <div class="content">
+            <div class="qr" aria-label="QR del código de equipo">{{ qrSvg|raw }}</div>
+            <div class="data">
+                <p class="name">{{ equipment.name }}</p>
+                <span class="caption">Código de máquina</span>
+                <strong class="code">{{ equipment.code }}</strong>
+                {% if equipment.brand or equipment.model %}<span class="detail">{{ equipment.brand }} {{ equipment.model }}</span>{% endif %}
+                <span class="caption">Operación</span>
+                <span class="detail">{{ equipment.primaryOperation.name }}</span>
+            </div>
+        </div>
+        <p class="footer">Escanea este QR en «Validar máquina y material» de Impresión.</p>
+    </main>
+    <div class="actions"><button type="button" onclick="window.print()">Imprimir etiqueta</button></div>
+</body>
+</html>

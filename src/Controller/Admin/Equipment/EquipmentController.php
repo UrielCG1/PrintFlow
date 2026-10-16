@@ -13,6 +13,7 @@ use App\Form\Admin\Equipment\EquipmentType;
 use App\Repository\Equipment\EquipmentRepository;
 use App\Repository\Operations\OperationAreaRepository;
 use App\Repository\Operations\OperationRepository;
+use App\Service\Equipment\EquipmentQrCodeGenerator;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Form\FormError;
@@ -144,6 +145,22 @@ final class EquipmentController extends AbstractController
         }
 
         return $this->renderEquipmentForm($form, $equipment, 'Editar equipo');
+    }
+
+    #[Route('/{id}/etiqueta', name: 'label', methods: ['GET'], requirements: ['id' => '\\d+'])]
+    public function label(Equipment $equipment, EquipmentQrCodeGenerator $qrCodeGenerator): Response
+    {
+        if (!$this->isGranted('equipment.view') && !$this->isGranted('production.execute')) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $response = $this->render('admin/equipment/label.html.twig', [
+            'equipment' => $equipment,
+            'qrSvg' => $qrCodeGenerator->generateSvg($equipment),
+        ]);
+        $response->headers->set('Cache-Control', 'private, no-store');
+
+        return $response;
     }
 
     #[Route('/{id}/estado', name: 'status', methods: ['POST'], requirements: ['id' => '\\d+'])]
