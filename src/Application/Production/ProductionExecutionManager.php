@@ -360,7 +360,7 @@ final class ProductionExecutionManager
         }
 
         $assigned = $plan->getAssignedOperator();
-        if ($assigned === null || !$this->sameUser($assigned, $actor)) {
+        if (!ProductionOperatorAccess::canActFor($assigned, $actor)) {
             throw new \DomainException('Solo el operador asignado puede ejecutar esta operación.');
         }
 
@@ -376,7 +376,7 @@ final class ProductionExecutionManager
 
     private function assertExecutionActor(ProductionOperationExecution $execution, User $actor): void
     {
-        if (!$this->sameUser($execution->getAssignedOperator(), $actor)) {
+        if (!ProductionOperatorAccess::canActFor($execution->getAssignedOperator(), $actor)) {
             throw new \DomainException('Solo el operador asignado puede actualizar este intento.');
         }
     }
@@ -422,11 +422,6 @@ final class ProductionExecutionManager
         if ($execution !== null && !$this->sameExecution($event->getOperationExecution(), $execution)) {
             throw new \DomainException('El identificador de comando no corresponde al intento indicado.');
         }
-    }
-
-    private function sameUser(User $left, User $right): bool
-    {
-        return $left === $right || ($left->getId() !== null && $left->getId() === $right->getId());
     }
 
     private function samePlan(?ServiceOrderOperationPlan $left, ServiceOrderOperationPlan $right): bool

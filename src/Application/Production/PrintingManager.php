@@ -446,7 +446,7 @@ final class PrintingManager
     private function assertAssignedOperator(ServiceOrderOperationPlan $plan, User $actor): void
     {
         $assigned = $plan->getAssignedOperator();
-        if ($assigned === null || !$this->sameUser($assigned, $actor)) {
+        if (!ProductionOperatorAccess::canActFor($assigned, $actor)) {
             throw new \DomainException('Solo el operador asignado puede validar e iniciar esta impresión.');
         }
     }
@@ -532,7 +532,7 @@ final class PrintingManager
     private function scanMatchesCurrentRequirements(ProductionPrintingScan $scan, ServiceOrderOperationPlan $plan, ServiceOrderItemDesignRelease $release, User $actor): bool
     {
         return $scan->isAvailable()
-            && $this->sameUser($scan->getOperator(), $actor)
+            && ProductionOperatorAccess::canActFor($scan->getOperator(), $actor)
             && $scan->getDesignRelease()->getId() === $release->getId()
             && $scan->getEquipment()->getId() === $plan->getEquipment()?->getId()
             && $scan->getStockUnit() instanceof InventoryStockUnit
@@ -568,11 +568,6 @@ final class PrintingManager
     private function requirementsState(ServiceOrderOperationPlan $plan): array
     {
         return ['equipment_id' => $plan->getEquipment()?->getId(), 'material_variant_id' => $plan->getMaterialVariant()?->getId(), 'material_snapshot' => $plan->getMaterialSnapshot()];
-    }
-
-    private function sameUser(User $left, User $right): bool
-    {
-        return $left === $right || ($left->getId() !== null && $left->getId() === $right->getId());
     }
 
     /** @param list<MaterialVariant> $variants */

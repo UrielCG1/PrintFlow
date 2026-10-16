@@ -1150,6 +1150,75 @@ final class ServiceOrderCommercialAccessTest extends TestCase
         self::assertEquals(4, $projectedBalance['committed_quantity']);
     }
 
+    public function testAdministratorPassesPrintingAssignmentCheckWithoutChangingTheOperator(): void
+    {
+        $operator = $this->createUserWithPermissions('qa-printing-assigned', 'ROLE_QA_PRINTING_ASSIGNED', ['production.execute']);
+        $plan = $this->createMaterialTestPlan($operator, 'IMP-IMPRESION');
+        $printingManager = $this->kernel->getContainer()->get('test.service_container')->get(\App\Application\Production\PrintingManager::class);
+
+        $this->expectException(\DomainException::class);
+        $this->expectExceptionMessage('Registra la cantidad prevista y actualiza el apartado');
+        $printingManager->validateScans($plan, 'QA-MACHINE', 'QA-MATERIAL', $this->fixtures['user']);
+    }
+
+    public function testAdministratorCanStartAnOperationAssignedToAnotherUser(): void
+    {
+        $operator = $this->createUserWithPermissions('qa-operator-assigned', 'ROLE_QA_OPERATOR_ASSIGNED', ['production.view', 'production.execute']);
+        $plan = $this->createMaterialTestPlan($operator);
+        $admin = $this->fixtures['user'];
+        $this->browser->loginUser($admin);
+
+        $queue = '/admin/produccion/ejecucion';
+        $crawler = $this->browser->request('GET', $queue);
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        $form = $crawler->filter('form[action="'.$queue.'/operaciones/'.$plan->getId().'/iniciar"]')->form();
+        $this->browser->submit($form);
+        self::assertSame(302, $this->browser->getResponse()->getStatusCode());
+        $this->browser->followRedirect();
+
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        self::assertSame($operator->getId(), $plan->getAssignedOperator()?->getId());
+        $executorId = $this->kernel->getContainer()->get('doctrine')->getConnection()->fetchOne(
+            'SELECT assigned_operator_user_id FROM production_operation_executions WHERE plan_id = ?',
+            [$plan->getId()],
+        );
+        self::assertEquals($admin->getId(), $executorId);
+    }
+
+    public function testAdministratorCanPauseAnAttemptStartedByTheAssignedOperator(): void
+    {
+        $operator = $this->createUserWithPermissions('qa-operator-in-progress', 'ROLE_QA_OPERATOR_IN_PROGRESS', ['production.view', 'production.execute']);
+        $plan = $this->createMaterialTestPlan($operator);
+        $queue = '/admin/produccion/ejecucion';
+
+        $this->browser->loginUser($operator);
+        $crawler = $this->browser->request('GET', $queue);
+        $this->browser->submit($crawler->filter('form[action="'.$queue.'/operaciones/'.$plan->getId().'/iniciar"]')->form());
+        self::assertSame(302, $this->browser->getResponse()->getStatusCode());
+
+        $executionId = $this->kernel->getContainer()->get('doctrine')->getConnection()->fetchOne(
+            'SELECT id FROM production_operation_executions WHERE plan_id = ?',
+            [$plan->getId()],
+        );
+        self::assertNotFalse($executionId);
+
+        $this->browser->loginUser($this->fixtures['user']);
+        $crawler = $this->browser->request('GET', $queue);
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        $pause = $crawler->filter('form[action="'.$queue.'/intentos/'.$executionId.'/pausar"]')->form([
+            'note' => 'Supervisión administrativa de prueba.',
+        ]);
+        $this->browser->submit($pause);
+        self::assertSame(302, $this->browser->getResponse()->getStatusCode());
+
+        $status = $this->kernel->getContainer()->get('doctrine')->getConnection()->fetchOne(
+            'SELECT status FROM production_operation_executions WHERE id = ?',
+            [$executionId],
+        );
+        self::assertSame('PAUSED', $status);
+        self::assertSame($operator->getId(), $plan->getAssignedOperator()?->getId());
+    }
+
     public function testManualMaterialsUseHttpPermissionsAndIdempotencyWithoutInventoryMovements(): void
     {
         $em = $this->kernel->getContainer()->get('doctrine')->getManager();

@@ -124,7 +124,7 @@ final class ProductionMaterialUsageManager
                 || $plan->getLatestExecution() !== $execution
                 || !$execution->isOpen()
                 || $execution->getStatus()->value !== 'IN_PROGRESS'
-                || !$this->sameUser($execution->getAssignedOperator(), $actor)
+                || !ProductionOperatorAccess::canActFor($execution->getAssignedOperator(), $actor)
             ) {
                 throw new \DomainException('Solo la persona asignada puede registrar material en su operación en curso.');
             }
@@ -236,8 +236,4 @@ final class ProductionMaterialUsageManager
         return BigDecimal::of($quantity)->toScale(6)->__toString();
     }
 
-    private function sameUser(User $left, User $right): bool
-    {
-        return $left === $right || ($left->getId() !== null && $left->getId() === $right->getId());
-    }
 }

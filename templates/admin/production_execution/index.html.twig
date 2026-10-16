@@ -10,7 +10,7 @@
             <div class="pf-page-header__content">
                 <p class="pf-page-header__eyebrow">Operación</p>
                 <h1 class="pf-page-header__title">Ejecución de producción</h1>
-                <p class="pf-page-header__description">Trabajos de producción activos. Cada persona puede iniciar y actualizar únicamente operaciones que tiene asignadas.</p>
+                <p class="pf-page-header__description">Trabajos de producción activos. Los operadores trabajan en sus asignaciones; Administración puede intervenir y queda registrada en la trazabilidad.</p>
             </div>
         </header>
 
@@ -23,7 +23,7 @@
                     {% set order = item.serviceOrder %}
                     {% set latest = plan.latestExecution %}
                     {% set origin = reworkOrigins[plan.id]|default(null) %}
-                    {% set assignedToMe = plan.assignedOperator and plan.assignedOperator.id == actorId %}
+                    {% set canActOnPlan = is_granted('ROLE_ADMIN') or (plan.assignedOperator and plan.assignedOperator.id == actorId) %}
                     {% set priorityTone = item.priority.value == 'urgent' ? 'danger' : (item.priority.value == 'high' ? 'warning' : 'info') %}
                     <article class="pf-card">
                         <div class="pf-card__header d-flex flex-wrap justify-content-between gap-2">
@@ -63,7 +63,7 @@
                             {% endif %}
 
                             {% if not specializedKinds[plan.id]|default(null) %}
-                            {% if canExecute and assignedToMe and latest and latest.isOpen %}
+                            {% if canExecute and canActOnPlan and latest and latest.isOpen %}
                                 <div class="d-flex flex-wrap gap-2">
                                     {% if latest.status.value == 'IN_PROGRESS' %}
                                         <form method="post" action="{{ path('admin_production_execution_pause', {id: latest.id}) }}" class="d-flex flex-wrap gap-2 align-items-end">
@@ -89,14 +89,14 @@
                                         </form>
                                     {% endif %}
                                 </div>
-                            {% elseif canExecute and assignedToMe and (not latest or latest.status.value == 'CANCELLED') and not startBlocks[plan.id]|default(null) and order.isPlanned and order.productionStatus.value != 'QUALITY_REWORK' %}
+                            {% elseif canExecute and canActOnPlan and (not latest or latest.status.value == 'CANCELLED') and not startBlocks[plan.id]|default(null) and order.isPlanned and order.productionStatus.value != 'QUALITY_REWORK' %}
                                 <form method="post" action="{{ path('admin_production_execution_start', {id: plan.id}) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('production-execution-start-' ~ plan.id) }}">
                                     <input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}">
                                     <input type="hidden" name="command_id" value="{{ commandIds.plan[plan.id].start }}">
                                     <button class="btn pf-button pf-button--primary btn-sm" type="submit">Iniciar operación</button>
                                 </form>
-                            {% elseif canExecute and assignedToMe and origin and order.isPlanned and not startBlocks[plan.id]|default(null) %}
+                            {% elseif canExecute and canActOnPlan and origin and order.isPlanned and not startBlocks[plan.id]|default(null) %}
                                 <form method="post" action="{{ path('admin_production_execution_start', {id: plan.id}) }}">
                                     <input type="hidden" name="_token" value="{{ csrf_token('production-execution-start-' ~ plan.id) }}">
                                     <input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}">
@@ -104,9 +104,9 @@
                                     <input type="hidden" name="origin_execution_id" value="{{ origin.id }}">
                                     <button class="btn pf-button pf-button--primary btn-sm" type="submit">Iniciar retrabajo · intento {{ origin.attemptNumber }}</button>
                                 </form>
-                            {% elseif canExecute and assignedToMe and startBlocks[plan.id]|default(null) %}
+                            {% elseif canExecute and canActOnPlan and startBlocks[plan.id]|default(null) %}
                                 <p class="small text-body-secondary mb-0">{{ startBlocks[plan.id] }}</p>
-                            {% elseif canExecute and not assignedToMe %}
+                            {% elseif canExecute and not canActOnPlan %}
                                 <p class="small text-body-secondary mb-0">{{ plan.assignedOperator ? 'La operación está asignada a otra persona.' : 'Pendiente de asignación de responsable.' }}</p>
                             {% endif %}
 
@@ -171,7 +171,7 @@
                                     </form>
                                 {% endif %}
 
-                                {% if canExecute and assignedToMe and latest and latest.status.value == 'IN_PROGRESS' %}
+                                {% if canExecute and canActOnPlan and latest and latest.status.value == 'IN_PROGRESS' %}
                                     <form method="post" action="{{ path('admin_production_execution_actual_material', {id: latest.id}) }}" class="row g-2 align-items-end">
                                         <input type="hidden" name="_token" value="{{ csrf_token('production-material-used-' ~ latest.id) }}">
                                         <input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}">
