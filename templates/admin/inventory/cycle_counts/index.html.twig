@@ -19,23 +19,28 @@
         {% if canCapture %}
             <section class="pf-card mb-4" aria-labelledby="cycle-count-capture-title">
                 <div class="pf-card__body">
-                    <h2 id="cycle-count-capture-title" class="h5 mb-2">Registrar lectura</h2>
-                    <p class="text-body-secondary small mb-3">Usa el lector USB o pega el contenido del QR. El sistema toma una fotografía del saldo actual; Administración aplicará la diferencia solo si no hubo movimientos posteriores.</p>
-                    <form method="post" action="{{ path('admin_inventory_cycle_counts_capture') }}" class="pf-form row g-3 align-items-end">
+                    <h2 id="cycle-count-capture-title" class="h5 mb-2">Registrar conteo físico</h2>
+                    <p class="text-body-secondary small mb-3">Usa esta opción solo después de medir cuánto material queda en la unidad. El conteo se enviará a Administración para su revisión, aunque coincida con el saldo del sistema. Si solo quieres identificarla, usa <a href="{{ path('admin_inventory_receipts_index') }}">Consultar unidad por QR</a>.</p>
+                    <form method="post" action="{{ path('admin_inventory_cycle_counts_capture') }}" class="pf-form row g-3 align-items-end" data-controller="ui--qr-scanner" data-ui--qr-scanner-src-value="{{ asset('vendor/zxing-browser/zxing-browser.min.js') }}">
                         <input type="hidden" name="_token" value="{{ csrf_token('inventory_cycle_count_capture') }}">
                         <input type="hidden" name="idempotency_key" value="{{ idempotencyKey }}">
                         <div class="col-lg-5 pf-form-field">
                             <label for="cycle-count-qr" class="form-label">Etiqueta QR de la unidad</label>
-                            <input id="cycle-count-qr" name="qr_payload" class="form-control" autocomplete="off" autofocus required placeholder="Escanea PF:MAT:1:...">
+                            <div class="input-group pf-qr-scan-input">
+                                <input id="cycle-count-qr" name="qr_payload" class="form-control" autocomplete="off" autofocus required placeholder="Escanea el QR de la unidad" data-ui--qr-scanner-target="input">
+                                <button class="btn pf-button pf-button--secondary" type="button" data-action="ui--qr-scanner#scan" aria-controls="cycle-count-qr-preview"><i class="bi bi-camera" aria-hidden="true"></i> Usar cámara</button>
+                            </div>
                         </div>
                         <div class="col-lg-3 pf-form-field">
-                            <label for="cycle-count-quantity" class="form-label">Saldo contado</label>
+                            <label for="cycle-count-quantity" class="form-label">Cantidad medida físicamente</label>
                             <input id="cycle-count-quantity" name="counted_quantity" class="form-control" inputmode="decimal" required placeholder="0.000000">
                         </div>
                         <div class="col-lg-4 pf-form-field">
                             <label for="cycle-count-note" class="form-label">Observación <span class="text-body-secondary">(opcional)</span></label>
                             <input id="cycle-count-note" name="note" class="form-control" maxlength="500" placeholder="Ej. envase abierto, medición por peso">
                         </div>
+                        <div id="cycle-count-qr-preview" class="col-12 pf-qr-scan-preview" data-ui--qr-scanner-target="panel" hidden><video autoplay muted playsinline data-ui--qr-scanner-target="video" aria-label="Vista de la cámara para escanear QR"></video><button class="btn pf-button pf-button--secondary pf-button--sm mt-2" type="button" data-action="ui--qr-scanner#stop">Cerrar cámara</button></div>
+                        <p class="col-12 small mb-0" data-ui--qr-scanner-target="message" role="status" aria-live="polite"></p>
                         <div class="col-12"><button type="submit" class="btn pf-button pf-button--primary"><i class="bi bi-upc-scan" aria-hidden="true"></i><span>Enviar conteo a revisión</span></button></div>
                     </form>
                 </div>

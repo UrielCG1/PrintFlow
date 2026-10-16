@@ -41,7 +41,7 @@ Realizar estas comprobaciones en la base `dev` antes de abrir el piloto. Cuando 
    Ejecutar también la [consulta de auditoría del piloto](consulta-inventario-piloto.sql) sobre la base confirmada. Comparar proyección, saldos QR y apartados; las consultas de anomalías deben devolver cero filas antes de formalizar el corte. La consulta no reemplaza el conteo físico.
 5. Verificar que Administración puede abrir Inventario, configurar mínimos, atender faltantes, imprimir etiquetas, aprobar conteos y operar compras. Verificar que Impresión puede recibir material, leer QR, capturar conteos y consumos, pero no aprobar sustituciones, autorizaciones parciales, mínimos ni ajustes administrativos.
 6. En el servidor `dev`, ejecutar `composer check-platform-reqs --no-dev` y comprobar que la biblioteca QR esté instalada con `composer show endroid/qr-code --no-ansi`. Si falta, instalar dependencias con Composer antes del ensayo; aplicar migraciones por sí solo no instala bibliotecas PHP.
-7. Confirmar HTTPS en el dispositivo móvil, lectura continua del lector USB, contraste del QR impreso y que la etiqueta incorpora el logo de OOXCORP. Probar un QR desde una etiqueta recién impresa y otro reimpreso.
+7. Confirmar HTTPS en el dispositivo móvil, lectura continua del lector USB, contraste del QR impreso y que la etiqueta incorpora el logo de OOXCORP. En **Inventario físico → Consultar unidad por QR**, usar la cámara integrada o lector USB con una etiqueta recién impresa y otra reimpresa; la consulta debe mostrar la unidad correcta sin crear conteos ni movimientos.
 
 Registrar el SHA desplegado, fecha, responsable y resultado de cada paso. El piloto no inicia si una migración, un permiso o una lectura QR falla.
 
@@ -55,7 +55,7 @@ Completar esta tabla para `dev`. Cuando se prepare producción, abrir una copia 
 | Migraciones del código objetivo | 71 ejecutadas / 71 disponibles, última `Version20261011320000`, verificadas antes del `git pull`. `5af994e` no añade migraciones; falta repetir `migrations:status` en el checkout actualizado. | Salida de PuTTY compartida el 14/10/2026 |
 | Revisión de catálogo y unidad real de cada variante piloto | El último diagnóstico compartido, anterior al alta `QA-`, mostró 3 variantes activas controladas y 0 sin observaciones: `COLD_LAMINATE-ANCHO-1P5200M` y `LONA-FRONT-13OZ-ANCHO-1P5200M` requieren política de mínimos; `LONA-FRONT-13OZ-DEFAULT` conserva presentación legada `PZA` y no se usa para cargar metros. La etiqueta posterior acredita que `QA-LONA-13OZ-ANCHO-1P5000M` ya fue configurada; falta repetir el diagnóstico. | Diagnóstico y captura compartidos el 14/10/2026 |
 | Proyección = suma QR; apartados = suma pendiente | Pendiente | Pendiente |
-| Conteo físico firmado por unidad | Pendiente | Pendiente |
+| Conteo físico firmado por unidad | Se informó una captura de 10 ML para `IMU-4ECB6E2978E4`, pendiente de revisión administrativa. Confirmar solo si esos 10 ML se midieron físicamente; si fue una prueba de lectura QR, rechazar el conteo indicando ese motivo. No constituye todavía un conteo físico firmado. | Usuario, 15/10/2026 |
 | Administración e Impresión: permisos y accesos | Pendiente | Pendiente |
 | Dependencia QR y requisitos PHP en `dev` | `composer show endroid/qr-code --no-ansi` confirmó Endroid QR Code 5.1.0 instalado. Falta `composer check-platform-reqs --no-dev` y comprobar la generación y lectura reales de una etiqueta. | Salida de PuTTY compartida el 14/10/2026 |
 | Etiqueta impresa y lectura con dispositivos reales | Vista de etiqueta generada para `REC-20261015-46E1A69A`, unidad `IMU-4ECB6E2978E4`; muestra material `QA-LONA-13OZ`, ancho 1.50 m, saldo inicial 10 ML y ubicación `QA-RACK-01`. Falta confirmar impresión física, reimpresión y lectura con dispositivos. La captura mostró la fecha en UTC; se corrigió localmente la presentación horaria, pendiente de desplegar y comprobar. | Captura compartida el 14/10/2026 (Ciudad de México) |
@@ -87,11 +87,13 @@ Para escanear y consumir en Impresión, la orden de prueba debe tener una operac
 | Sobrante | Consumir solo parte de una unidad y separar un retazo recuperable. | La unidad abierta conserva su QR y el retazo tiene QR propio con procedencia, sin crear existencia adicional. |
 | Faltante | Aceptar una orden, registrar la cantidad en **Impresión → operación → Material previsto** y planificarla, o guardar la previsión si ya estaba planificada; atender el aviso administrativo. | La orden queda visible con faltante cuando la demanda está cuantificada; Administración puede autorizar producción parcial, elegir sustituto viable o ponerla en espera de compra. |
 | Compra y recepción parcial | Crear solicitud, registrar una recepción parcial y después la restante. | Solicitar no aumenta stock; cada recepción real crea unidades QR y solo resuelve la espera cuando cubre la necesidad vigente. |
-| Conteo cíclico | Escanear una unidad, capturar saldo observado y aprobar una diferencia con motivo. | Se conserva la lectura, usuario y movimiento de ajuste; un movimiento posterior obliga a reconteo. |
+| Conteo cíclico | Escanear una unidad solo cuando se vaya a comprobar físicamente su saldo; capturar lo medido y enviar a revisión administrativa. | La captura queda pendiente hasta que Administración confirma o rechaza. Solo una diferencia aprobada cambia existencias; un movimiento posterior obliga a reconteo. |
 | Condición de bodega | Bloquear, liberar o retirar una unidad por daño, caducidad o devolución según corresponda. | El saldo físico y la condición quedan trazables; el QR bloqueado no puede usarse en Impresión. |
 | Cambio o cancelación de orden | Modificar, dividir, cancelar o retrabajar una orden piloto. | Se recalculan compromisos sin liberar consumo ya realizado ni duplicar necesidades. |
 
 Repetir la validación QR con lector USB y cámara si ambos se usarán. Probar también una etiqueta dañada y una unidad de otra variante: el sistema debe mostrar una causa clara y no iniciar ni descontar material.
+
+**Consultar unidad por QR** es la vía para identificar material, presentación, saldo y ubicación sin alterar nada. **Conteo cíclico** es una auditoría física: siempre requiere revisión administrativa, incluso con diferencia cero. Si se envió un conteo solo para probar el lector y no se midió la unidad, rechazarlo con ese motivo; no confirmarlo como inventario físico verificado.
 
 ### Registro de los tres casos `QA-`
 

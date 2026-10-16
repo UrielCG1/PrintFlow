@@ -111,6 +111,33 @@
     gap: 0.75rem;
 }
 
+.pf-qr-scan-input {
+    min-width: 0;
+}
+
+.pf-qr-scan-input .form-control {
+    min-width: 0;
+}
+
+.pf-qr-scan-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.pf-qr-scan-preview[hidden] {
+    display: none !important;
+}
+
+.pf-qr-scan-preview video {
+    display: block;
+    width: min(100%, 28rem);
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    background: #17212b;
+    border-radius: var(--pf-radius-md);
+}
+
 @media (max-width: 767.98px) {
     .pf-inventory-table-hint {
         display: block;
@@ -122,6 +149,18 @@
 }
 
 @media (max-width: 575.98px) {
+    .pf-qr-scan-input {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .pf-qr-scan-input .form-control,
+    .pf-qr-scan-input .btn {
+        flex: 1 1 100%;
+        width: 100%;
+        border-radius: var(--pf-radius-md) !important;
+    }
+
     .pf-inventory-receipt-form .pf-card__footer .pf-button {
         width: 100%;
         white-space: normal;

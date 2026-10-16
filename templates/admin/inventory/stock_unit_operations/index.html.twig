@@ -22,11 +22,14 @@
                 <div class="pf-card__body">
                     <h2 id="warehouse-operation-title" class="h5 mb-2">Registrar condición o retiro</h2>
                     <p class="text-body-secondary small mb-3">El bloqueo conserva el físico pero lo excluye de nuevas reservas. El retiro por daño, caducidad o devolución reduce la existencia y deja un movimiento inmutable. Las correcciones de saldo deben realizarse con conteo cíclico y revisión administrativa.</p>
-                    <form method="post" action="{{ path('admin_inventory_stock_unit_operations_create') }}" class="pf-form row g-3 align-items-end" data-stock-unit-operation-form>
+                    <form method="post" action="{{ path('admin_inventory_stock_unit_operations_create') }}" class="pf-form row g-3 align-items-end" data-stock-unit-operation-form data-controller="ui--qr-scanner" data-ui--qr-scanner-src-value="{{ asset('vendor/zxing-browser/zxing-browser.min.js') }}">
                         <input type="hidden" name="_token" value="{{ csrf_token('inventory_stock_unit_operation') }}">
                         <div class="col-lg-5 pf-form-field">
                             <label for="warehouse-operation-qr" class="form-label">Etiqueta QR de la unidad</label>
-                            <input id="warehouse-operation-qr" name="qr_payload" class="form-control" autocomplete="off" autofocus required placeholder="Escanea PF:MAT:1:...">
+                            <div class="input-group pf-qr-scan-input">
+                                <input id="warehouse-operation-qr" name="qr_payload" class="form-control" autocomplete="off" autofocus required placeholder="Escanea el QR de la unidad" data-ui--qr-scanner-target="input">
+                                <button class="btn pf-button pf-button--secondary" type="button" data-action="ui--qr-scanner#scan" aria-controls="warehouse-operation-qr-preview"><i class="bi bi-camera" aria-hidden="true"></i> Usar cámara</button>
+                            </div>
                         </div>
                         <div class="col-lg-3 pf-form-field">
                             <label for="warehouse-operation-type" class="form-label">Operación</label>
@@ -60,6 +63,8 @@
                             <label for="warehouse-operation-note" class="form-label">Observación y motivo concreto</label>
                             <input id="warehouse-operation-note" name="note" class="form-control" maxlength="500" required placeholder="Ej. Envase perforado detectado al surtir; se aparta para revisión">
                         </div>
+                        <div id="warehouse-operation-qr-preview" class="col-12 pf-qr-scan-preview" data-ui--qr-scanner-target="panel" hidden><video autoplay muted playsinline data-ui--qr-scanner-target="video" aria-label="Vista de la cámara para escanear QR"></video><button class="btn pf-button pf-button--secondary pf-button--sm mt-2" type="button" data-action="ui--qr-scanner#stop">Cerrar cámara</button></div>
+                        <p class="col-12 small mb-0" data-ui--qr-scanner-target="message" role="status" aria-live="polite"></p>
                         <div class="col-12"><button type="submit" class="btn pf-button pf-button--primary"><i class="bi bi-shield-check" aria-hidden="true"></i><span>Confirmar operación de bodega</span></button></div>
                     </form>
                 </div>

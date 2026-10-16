@@ -7,6 +7,7 @@ namespace App\Controller\Admin\Inventory;
 use App\Application\Inventory\InventoryReceiptCommand;
 use App\Application\Inventory\InventoryReceiptLineInput;
 use App\Application\Inventory\InventoryReceiptManager;
+use App\Application\Inventory\InventoryStockUnitQrPayload;
 use App\Entity\Inventory\InventoryReceipt;
 use App\Entity\Inventory\InventoryPurchaseRequestLine;
 use App\Entity\Inventory\InventoryStockUnit;
@@ -59,6 +60,31 @@ final class InventoryReceiptController extends AbstractController
             'status' => $status?->value ?? '',
             'statuses' => InventoryStockUnitStatus::cases(),
         ]);
+    }
+
+    #[Route('/consultar-qr', name: 'qr_lookup', methods: ['POST'])]
+    public function qrLookup(Request $request, InventoryStockUnitRepository $stockUnitRepository): Response
+    {
+        $this->denyAccessUnlessGranted('inventory.view');
+        if (!$this->isCsrfTokenValid('inventory_qr_lookup', $request->request->getString('_token'))) {
+            throw $this->createAccessDeniedException('La solicitud no es válida.');
+        }
+
+        try {
+            $payload = InventoryStockUnitQrPayload::fromScanned($request->request->getString('qr_payload'));
+            $stockUnit = $stockUnitRepository->findOneByQrToken($payload->getToken());
+            if (!$stockUnit instanceof InventoryStockUnit) {
+                throw new \DomainException('La etiqueta QR no corresponde a una unidad registrada en inventario.');
+            }
+
+            $this->addFlash('success', sprintf('Unidad %s identificada. Consulta su saldo y estado en la fila filtrada.', $stockUnit->getUnitCode()));
+
+            return $this->redirectToRoute('admin_inventory_receipts_index', ['q' => $stockUnit->getUnitCode()]);
+        } catch (\DomainException $exception) {
+            $this->addFlash('error', $exception->getMessage());
+
+            return $this->redirectToRoute('admin_inventory_receipts_index');
+        }
     }
 
     #[Route('/nueva', name: 'new', methods: ['GET', 'POST'])]

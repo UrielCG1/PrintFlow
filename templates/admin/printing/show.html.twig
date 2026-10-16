@@ -81,7 +81,7 @@
         </div>
 
         <div class="printing-workflow-grid">
-            <section class="pf-card printing-detail-card printing-validation-card" data-controller="ui--printing-scanner">
+            <section class="pf-card printing-detail-card printing-validation-card" data-controller="ui--printing-scanner" data-ui--printing-scanner-src-value="{{ asset('vendor/zxing-browser/zxing-browser.min.js') }}">
                 <div class="printing-card-heading"><div><h2>Validar máquina y material</h2><p>Escanea los códigos o ingrésalos manualmente.</p></div><span class="printing-step-number">1</span></div>
                 {% if canExecute and release and not activeExecution and canStartPrinting %}
                     <form class="pf-form" method="post" action="{{ path('admin_printing_validate_scans', {id: plan.id}) }}">
@@ -91,6 +91,7 @@
                             <div><label class="form-label" for="scan-equipment">Código de máquina <span>*</span></label><div class="input-group"><input id="scan-equipment" name="equipment_code" class="form-control" placeholder="Escanea o ingresa el código" maxlength="40" required autocomplete="off" data-ui--printing-scanner-target="equipment"><button class="btn printing-scan-camera" type="button" aria-label="Usar cámara para máquina" data-ui--printing-scanner-target="cameraButton" data-action="ui--printing-scanner#scanEquipment"><i class="bi bi-upc-scan" aria-hidden="true"></i></button></div></div>
                             <div><label class="form-label" for="scan-material">Etiqueta QR de unidad física <span>*</span></label><div class="input-group"><input id="scan-material" name="material_qr_payload" class="form-control" placeholder="Escanea el QR del rollo, envase o paquete" maxlength="80" required autocomplete="off" data-ui--printing-scanner-target="material"><button class="btn printing-scan-camera" type="button" aria-label="Usar cámara para etiqueta QR" data-ui--printing-scanner-target="cameraButton" data-action="ui--printing-scanner#scanMaterial"><i class="bi bi-upc-scan" aria-hidden="true"></i></button></div></div>
                         </div>
+                        <div class="pf-qr-scan-preview" data-ui--printing-scanner-target="panel" hidden><video autoplay muted playsinline data-ui--printing-scanner-target="video" aria-label="Vista de la cámara para escanear códigos"></video><button class="btn pf-button pf-button--secondary pf-button--sm mt-2" type="button" data-action="ui--printing-scanner#stop">Cerrar cámara</button></div>
                         <p class="printing-scan-message" data-ui--printing-scanner-target="message" aria-live="polite"></p>
                         <p class="printing-form-hint">Escanea la etiqueta QR de la unidad física; debe conservar saldo disponible.</p>
                         <button class="btn pf-button pf-button--primary printing-wide-button" type="submit"><i class="bi bi-upc-scan" aria-hidden="true"></i>Validar escaneos</button>

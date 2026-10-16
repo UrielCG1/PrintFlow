@@ -44,6 +44,29 @@
             {% endif %}
         </div>
 
+        <section class="pf-card mb-4" aria-labelledby="inventory-qr-lookup-title">
+            <div class="pf-card__body">
+                <h2 id="inventory-qr-lookup-title" class="h5 mb-2">Consultar unidad por QR</h2>
+                <p class="text-body-secondary small mb-3">Escanea la etiqueta para ver el material, saldo y ubicación. Esta consulta no registra un conteo ni modifica existencias.</p>
+                <form method="post" action="{{ path('admin_inventory_receipts_qr_lookup') }}" class="pf-form row g-3 align-items-end" data-controller="ui--qr-scanner" data-ui--qr-scanner-src-value="{{ asset('vendor/zxing-browser/zxing-browser.min.js') }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('inventory_qr_lookup') }}">
+                    <div class="col-lg-8 pf-form-field">
+                        <label for="inventory-qr-lookup" class="form-label">Etiqueta QR del material</label>
+                        <div class="input-group pf-qr-scan-input">
+                            <input id="inventory-qr-lookup" name="qr_payload" class="form-control" autocomplete="off" required placeholder="Escanea el QR de la unidad" data-ui--qr-scanner-target="input">
+                            <button class="btn pf-button pf-button--secondary" type="button" data-action="ui--qr-scanner#scan" aria-controls="inventory-qr-preview"><i class="bi bi-camera" aria-hidden="true"></i> Usar cámara</button>
+                        </div>
+                    </div>
+                    <div class="col-lg-4"><button type="submit" class="btn pf-button pf-button--primary w-100">Consultar unidad</button></div>
+                    <div id="inventory-qr-preview" class="col-12 pf-qr-scan-preview" data-ui--qr-scanner-target="panel" hidden>
+                        <video autoplay muted playsinline data-ui--qr-scanner-target="video" aria-label="Vista de la cámara para escanear QR"></video>
+                        <button class="btn pf-button pf-button--secondary pf-button--sm mt-2" type="button" data-action="ui--qr-scanner#stop">Cerrar cámara</button>
+                    </div>
+                    <p class="col-12 small mb-0" data-ui--qr-scanner-target="message" role="status" aria-live="polite"></p>
+                </form>
+            </div>
+        </section>
+
         <form method="get" class="pf-card pf-form mb-4">
             <div class="pf-card__body row g-3 align-items-end">
                 <div class="col-xl-6 col-lg-5 col-md-6 pf-form-field">
