@@ -16,6 +16,10 @@ use App\Application\Inventory\InventoryReceiptManager;
 use App\Entity\Materials\Material;
 use App\Entity\Materials\MaterialCategory;
 use App\Entity\Materials\MaterialVariant;
+use App\Entity\Catalog\MeasurementUnit;
+use App\Entity\Equipment\Equipment;
+use App\Entity\Inventory\InventoryStockUnit;
+use App\Entity\Inventory\MaterialVariantCost;
 use App\Application\Production\ProductionExecutionCommand;
 use App\Application\Production\ProductionExecutionManager;
 use App\Application\Production\ProductionPlanManager;
@@ -1087,6 +1091,63 @@ final class ServiceOrderCommercialAccessTest extends TestCase
         self::assertSame('110.000000', $item->getProductionSpecificationsSnapshot()['finished_width_cm']);
         self::assertSame('technical_correction', $item->getProductionSpecificationsSnapshot()['_production_adjustment']['type']);
         self::assertSame('Las medidas de producción se corrigieron; revisa la ruta y confírmala antes de planificar.', $item->getPlanningIssue());
+    }
+
+    public function testConfiguringPrintingRollReservesLinearMetersFromPlannedArea(): void
+    {
+        $em = $this->kernel->getContainer()->get('doctrine')->getManager();
+        $plan = $this->createMaterialTestPlan($this->fixtures['user'], 'IMP-IMPRESION');
+        $linearMeter = (new MeasurementUnit())
+            ->setCode('ML')->setName('Metro lineal')->setSymbol('m')
+            ->setDimensionType('LENGTH')->setDecimalScale(4)->setAllowsFraction(true);
+        $category = (new MaterialCategory())->setCode('QA-PRINT-ROLL')->setName('Rollo de impresión QA');
+        $material = (new Material())
+            ->setCategory($category)->setMeasurementUnit($linearMeter)
+            ->setCode('QA-PRINT-ROLL')->setName('Lona de impresión QA');
+        $variant = (new MaterialVariant($material, 'QA-PRINT-ROLL-1P5M', $linearMeter, $linearMeter, $this->fixtures['area']))
+            ->configureRollWidth('1.5');
+        $stockUnit = new InventoryStockUnit($variant, '10');
+        $balance = new MaterialVariantCost($variant);
+        $balance->increaseOnHand('10');
+        $equipment = (new Equipment())
+            ->setPrimaryOperation($plan->getOperation())->setCode('QA-PRINT-MACHINE')->setName('Máquina QA');
+        foreach ([$linearMeter, $category, $material, $variant, $stockUnit, $balance, $equipment] as $entity) {
+            $em->persist($entity);
+        }
+        $em->flush();
+
+        $manager = $this->createUserWithPermissions('qa-printing-assign', 'ROLE_QA_PRINTING_ASSIGN', ['production.view', 'production.assign']);
+        $this->browser->loginUser($manager);
+        $path = '/admin/impresion/operaciones/'.$plan->getId();
+        $crawler = $this->browser->request('GET', $path);
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+        $form = $crawler->filter('form[action="'.$path.'/requisitos"]')->form([
+            'equipment_id' => (string) $equipment->getId(),
+            'material_variant_id' => (string) $variant->getId(),
+            'planned_quantity' => '6',
+            'reason' => 'Plan de impresión de prueba QA.',
+        ]);
+        $this->browser->submit($form);
+        self::assertSame(302, $this->browser->getResponse()->getStatusCode());
+        $this->browser->followRedirect();
+        self::assertSame(200, $this->browser->getResponse()->getStatusCode());
+
+        $commitment = $em->getConnection()->fetchAssociative(
+            'SELECT requested_quantity, committed_quantity, shortage_quantity FROM inventory_commitments WHERE service_order_id = ? AND material_variant_id = ?',
+            [$this->serviceOrder->getId(), $variant->getId()],
+        );
+        self::assertIsArray($commitment);
+        self::assertEquals(4, $commitment['requested_quantity']);
+        self::assertEquals(4, $commitment['committed_quantity']);
+        self::assertEquals(0, $commitment['shortage_quantity']);
+        self::assertSame('10.000000', $stockUnit->getRemainingQuantity());
+        $projectedBalance = $em->getConnection()->fetchAssociative(
+            'SELECT on_hand_quantity, committed_quantity FROM material_variant_costs WHERE material_variant_id = ?',
+            [$variant->getId()],
+        );
+        self::assertIsArray($projectedBalance);
+        self::assertEquals(10, $projectedBalance['on_hand_quantity']);
+        self::assertEquals(4, $projectedBalance['committed_quantity']);
     }
 
     public function testManualMaterialsUseHttpPermissionsAndIdempotencyWithoutInventoryMovements(): void

@@ -46,7 +46,7 @@ final class InventorySubstitutionManager
             if ($this->commitmentRepository->findOneForOrderAndVariant($order, $substitute) !== null) { throw new \DomainException('La orden ya tiene un apartado para la variante sustituta; requiere conciliación manual.'); }
 
             $originalShortage = $original->getShortageQuantity();
-            $substituteQuantity = BigDecimal::of($originalShortage)->multipliedBy($rule->getSubstitutePerOriginal())->toScale(6, RoundingMode::UP)->__toString();
+            $substituteQuantity = BigDecimal::of($originalShortage)->multipliedBy($rule->getSubstitutePerOriginal())->toScale(6, RoundingMode::Up)->__toString();
             $substituteCommitment = $this->commitmentManager->commit($order, $substitute, $substituteQuantity, $actor);
             if ($substituteCommitment->getShortageQuantity() !== '0.000000') { throw new \DomainException('El sustituto viable no tiene saldo suficiente para cubrir el faltante completo.'); }
 

@@ -101,7 +101,7 @@ Anotar los códigos visibles `IMU-` de las unidades, sin copiar el token interno
 
 | Caso | Folio de orden | Unidades `IMU-` y referencia de recepción | Saldo, apartado y resultado de escaneo observados | Estado, responsable y fecha |
 | --- | --- | --- | --- | --- |
-| Rollo: 10 ML → 6 M2 consumidos → 1.5 ML sobrante | Pendiente | `IMU-4ECB6E2978E4`; recepción `REC-20261015-46E1A69A` | Etiqueta generada con 10 ML iniciales y ancho 1.50 m. Cámara integrada funcional según el usuario; faltan rechazo del conteo de prueba, reimpresión, saldo consultado, apartado, consumo y sobrante. | Recepción en `dev` confirmada por captura el 14/10/2026; cámara reportada funcional el 15/10/2026 |
+| Rollo: 10 ML → 6 M2 consumidos → 1.5 ML sobrante | Incidencia al apartar | `IMU-4ECB6E2978E4`; recepción `REC-20261015-46E1A69A` | Etiqueta generada con 10 ML iniciales y ancho 1.50 m. Cámara integrada funcional según el usuario. Al guardar 6 M2 previstos, el servidor respondió 500 por `RoundingMode::UP` en la conversión del apartado; la corrección local aún debe desplegarse y repetirse el recorrido. Faltan confirmar rechazo del conteo de prueba, reimpresión, saldos, consumo y sobrante. | Registro `prod.log` compartido el 15/10/2026 (Ciudad de México) |
 | Faltante de 6 M2 y sustituto autorizado | Pendiente | Pendiente | Pendiente | Pendiente |
 | Paquetes: espera de 100 HOJA y recepciones 50 + 50 | Pendiente | Pendiente | Pendiente | Pendiente |
 

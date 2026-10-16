@@ -145,7 +145,7 @@ final class InventoryPhysicalConsumptionManager
             throw new \DomainException('La variante escaneada no tiene una conversión válida entre inventario y consumo.');
         }
 
-        return BigDecimal::of($consumptionQuantity)->dividedBy($factor, 6, RoundingMode::UP)->__toString();
+        return BigDecimal::of($consumptionQuantity)->dividedBy($factor, 6, RoundingMode::Up)->__toString();
     }
 
     private function optionalPositiveQuantity(?string $value, string $field): ?string
