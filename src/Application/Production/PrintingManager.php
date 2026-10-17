@@ -58,6 +58,7 @@ final class PrintingManager
         private readonly ProductionMaterialUsageRepository $materialUsageRepository,
         private readonly InventoryOrderCommitmentManager $orderCommitmentManager,
         private readonly InventoryCommitmentRepository $inventoryCommitmentRepository,
+        private readonly PrintingConsumptionResolver $consumptionResolver,
     ) {
     }
 
@@ -259,16 +260,18 @@ final class PrintingManager
         ProductionOperationExecution $execution,
         User $actor,
         ProductionExecutionCommand $command,
-        string $total,
+        ?string $total,
         ?string $waste,
-        string $measurementMethod,
+        ?string $measurementMethod,
         ?string $wasteReason,
         ?string $surplusQuantity = null,
         ?string $surplusLocation = null,
         ?string $surplusDescription = null,
+        ?string $adjustmentReason = null,
+        bool $confirmedConsumption = false,
     ): PrintingCompletionResult {
         $physicalConsumption = null;
-        $this->executionManager->complete($execution, $actor, $command, function (ServiceOrder $order, ServiceOrderOperationPlan $plan, ProductionOperationExecution $lockedExecution, User $lockedActor) use ($total, $waste, $measurementMethod, $wasteReason, $surplusQuantity, $surplusLocation, $surplusDescription, &$physicalConsumption): void {
+        $this->executionManager->complete($execution, $actor, $command, function (ServiceOrder $order, ServiceOrderOperationPlan $plan, ProductionOperationExecution $lockedExecution, User $lockedActor) use ($total, $waste, $measurementMethod, $wasteReason, $surplusQuantity, $surplusLocation, $surplusDescription, $adjustmentReason, $confirmedConsumption, &$physicalConsumption): void {
             $this->assertPrintingPlan($plan);
             $scan = $this->scanRepository->findCurrentForPlanForUpdate($plan);
             $stockUnit = $scan?->getStockUnit();
@@ -280,17 +283,29 @@ final class PrintingManager
             if ($this->outputRepository->findOneBy(['execution' => $lockedExecution]) instanceof ProductionPrintedOutput) {
                 throw new \DomainException('Este intento ya tiene una salida impresa registrada.');
             }
+            $plannedUsages = $this->materialUsageRepository->findPlannedForPlan($plan);
+            $plannedUsage = count($plannedUsages) === 1 ? $plannedUsages[0] : null;
+            $sameMaterial = $plannedUsage instanceof ProductionMaterialUsage
+                && $plannedUsage->getVariant()?->getId() === $material->getId();
+            $consumption = $this->consumptionResolver->resolve(
+                $plannedUsage?->getPlannedQuantity(),
+                $sameMaterial,
+                $total,
+                $measurementMethod,
+                $adjustmentReason,
+                $confirmedConsumption,
+            );
             $usage = new ProductionMaterialUsage(
                 $plan->getServiceOrderItem(),
                 $material,
                 $material->getConsumptionUnit(),
-                null,
+                $consumption['planned'],
                 CalculationMethod::FIXED,
                 1,
-                ['version' => 'printing-capture-v1', 'planned_quantity' => null],
+                ['version' => 'printing-consumption-v2', 'source' => $consumption['source'] === QuantitySource::DERIVED ? 'confirmed-production-plan' : 'measured-printing-consumption', 'adjustment_reason' => $consumption['adjustment_reason']],
             );
             $usage->assignExecutionContext($plan, $lockedExecution, $this->materialSnapshot($material));
-            $usage->recordActual($total, $waste, QuantitySource::MEASURED, $lockedActor, $measurementMethod, $wasteReason);
+            $usage->recordActual($consumption['total'], $waste, $consumption['source'], $lockedActor, $consumption['method'], $wasteReason);
             $currentOutput = $this->outputRepository->findCurrentForUpdate($plan->getServiceOrderItem());
             if ($currentOutput instanceof ProductionPrintedOutput) {
                 $origin = $lockedExecution->getOriginExecution();
@@ -340,6 +355,8 @@ final class PrintingManager
                     'stock_unit_code' => $stockUnit->getUnitCode(),
                     'total' => $usage->getActualQuantity(),
                     'waste' => $usage->getWasteQuantity(),
+                    'quantity_source' => $usage->getQuantitySource()->value,
+                    'adjustment_reason' => $consumption['adjustment_reason'],
                     'unit' => $material->getConsumptionUnit()->getCode(),
                     'inventory_consumed_quantity' => $physicalConsumption->consumedInventoryQuantity,
                     'inventory_waste_quantity' => $physicalConsumption->wasteInventoryQuantity,

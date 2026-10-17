@@ -21,6 +21,8 @@ use App\Repository\Production\ProductionMaterialUsageRepository;
 use App\Repository\Production\ProductionPrintingScanRepository;
 use App\Repository\Production\ServiceOrderItemDesignReleaseRepository;
 use App\Service\Production\PrintingLabelRenderer;
+use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -130,6 +132,19 @@ final class PrintingController extends AbstractController
         $currentScan = $scanRepository->findCurrentForPlan($plan);
         $scannedStockUnit = $currentScan?->getStockUnit();
         $plannedUsages = $usageRepository->findPlannedForPlan($plan);
+        $plannedUsage = count($plannedUsages) === 1 ? $plannedUsages[0] : null;
+        $confirmedPlanQuantity = $plannedUsage !== null
+            && $scannedStockUnit !== null
+            && $plannedUsage->getVariant()?->getId() === $scannedStockUnit->getVariant()->getId()
+            ? $plannedUsage->getPlannedQuantity()
+            : null;
+        $plannedInventoryQuantity = $confirmedPlanQuantity !== null
+            ? BigDecimal::of($confirmedPlanQuantity)->dividedBy(
+                BigDecimal::of($scannedStockUnit->getVariant()->getInventoryToConsumptionFactor()),
+                6,
+                RoundingMode::Up,
+            )->__toString()
+            : null;
 
         return $this->render('admin/printing/show.html.twig', [
             'plan' => $plan,
@@ -143,7 +158,9 @@ final class PrintingController extends AbstractController
             'output' => $output,
             'outputQrSvg' => $output !== null ? $labelRenderer->renderQrSvg($output) : null,
             'materialUsages' => array_values(array_filter($usageRepository->findForPlan($plan), static fn ($usage): bool => $usage->getOperationExecution() !== null)),
-            'plannedUsage' => count($plannedUsages) === 1 ? $plannedUsages[0] : null,
+            'plannedUsage' => $plannedUsage,
+            'confirmedPlanQuantity' => $confirmedPlanQuantity,
+            'plannedInventoryQuantity' => $plannedInventoryQuantity,
             'multiplePlannedUsages' => count($plannedUsages) > 1,
             'allowedMaterialVariants' => $printingMaterialResolver->allowedVariantsForPlan($plan),
             'equipmentChoices' => $equipmentRepository->findAvailableForFutureExecution($plan->getOperation()),
@@ -237,6 +254,8 @@ final class PrintingController extends AbstractController
                 $request->request->getString('surplus_quantity'),
                 $request->request->getString('surplus_location'),
                 $request->request->getString('surplus_description'),
+                $request->request->getString('adjustment_reason'),
+                $request->request->getBoolean('confirmed_consumption'),
             );
             if ($result->surplusStockUnit !== null) {
                 $this->addFlash('success', 'Impresión terminada. El sobrante '.$result->surplusStockUnit->getUnitCode().' tiene una etiqueta QR lista para imprimir.');
