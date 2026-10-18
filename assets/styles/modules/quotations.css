@@ -410,6 +410,184 @@
     white-space: pre-line;
 }
 
+.quotation-decision-record__header {
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--pf-space-md);
+}
+
+.quotation-decision-record__header > div {
+    display: grid;
+    gap: 0.2rem;
+}
+
+.quotation-decision-record__eyebrow {
+    margin: 0;
+    color: var(--pf-secondary);
+    font-size: var(--pf-font-size-label-sm);
+    font-weight: var(--pf-font-weight-semibold);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.quotation-decision-record__header .pf-card__title {
+    margin: 0;
+}
+
+.quotation-decision-record__body {
+    display: grid;
+    gap: var(--pf-space-md);
+}
+
+.quotation-decision-record__facts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--pf-space-md);
+}
+
+.quotation-decision-record__fact,
+.quotation-decision-record__note {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--pf-space-md);
+    min-width: 0;
+    padding: var(--pf-space-md);
+    background: var(--pf-surface-container-low);
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-md);
+}
+
+.quotation-decision-record__fact--date {
+    background: var(--quotation-accent-soft);
+    border-color: var(--quotation-accent-border);
+}
+
+.quotation-decision-record__icon {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    color: var(--pf-primary);
+    background: var(--pf-surface-container-lowest);
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-sm);
+    font-size: 1rem;
+}
+
+.quotation-decision-record__fact-content,
+.quotation-decision-record__note > div {
+    display: grid;
+    align-content: start;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.quotation-decision-record__label {
+    color: var(--pf-on-surface-variant);
+    font-size: var(--pf-font-size-label-sm);
+    font-weight: var(--pf-font-weight-semibold);
+}
+
+.quotation-decision-record__fact strong {
+    color: var(--pf-on-surface);
+    font-size: var(--pf-font-size-body-md);
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: var(--pf-line-height-body-md);
+    overflow-wrap: anywhere;
+}
+
+.quotation-decision-record__fact small {
+    color: var(--pf-on-surface-variant);
+    font-size: var(--pf-font-size-body-sm);
+}
+
+.quotation-decision-record__notes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--pf-space-md);
+}
+
+.quotation-decision-record__note p {
+    margin: 0;
+    color: var(--pf-on-surface);
+    font-size: var(--pf-font-size-body-sm);
+    line-height: var(--pf-line-height-body-sm);
+    overflow-wrap: anywhere;
+    white-space: pre-line;
+}
+
+.quotation-decision-record__note:only-child {
+    grid-column: 1 / -1;
+}
+
+.quotation-purchase-order__summary {
+    display: flex;
+    align-items: center;
+    min-height: 4.5rem;
+    margin-bottom: var(--pf-space-md);
+    padding: var(--pf-space-md) var(--pf-space-lg);
+    background: var(--quotation-accent-soft);
+    border: 1px solid var(--quotation-accent-border);
+    border-radius: var(--pf-radius-md);
+}
+
+.quotation-purchase-order__summary > div {
+    display: grid;
+    gap: 0.2rem;
+}
+
+.quotation-purchase-order__summary strong {
+    color: var(--pf-on-surface);
+    font-size: var(--pf-font-size-body-md);
+    font-weight: var(--pf-font-weight-semibold);
+    overflow-wrap: anywhere;
+}
+
+.quotation-purchase-order__file {
+    margin-bottom: var(--pf-space-md);
+}
+
+.quotation-purchase-order__empty {
+    display: flex;
+    align-items: center;
+    gap: var(--pf-space-sm);
+    margin: 0 0 var(--pf-space-md);
+    padding: var(--pf-space-sm) var(--pf-space-md);
+    color: var(--pf-on-surface-variant);
+    background: var(--pf-surface-container-low);
+    border-radius: var(--pf-radius-sm);
+    font-size: var(--pf-font-size-body-sm);
+}
+
+.quotation-purchase-order__empty i {
+    color: var(--pf-primary);
+}
+
+.quotation-purchase-order__form {
+    padding-top: var(--pf-space-md);
+    border-top: 1px solid var(--pf-border-color);
+}
+
+.quotation-purchase-order__form .form-text {
+    max-width: 34rem;
+}
+
+.quotation-purchase-order__form .quotation-file-preview {
+    margin-top: var(--pf-space-md);
+}
+
+@media (max-width: 767.98px) {
+    .quotation-decision-record__facts,
+    .quotation-decision-record__notes {
+        grid-template-columns: 1fr;
+    }
+
+    .quotation-decision-record__header {
+        flex-direction: column;
+    }
+}
+
 .quotation-detail-items {
     display: grid;
     gap: var(--pf-space-lg);

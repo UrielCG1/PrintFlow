@@ -10,6 +10,7 @@ use App\Application\Quotations\QuotationEmailData;
 use App\Application\Quotations\QuotationItemData;
 use App\Application\Quotations\QuotationItemCharacteristicsSpecificationResolver;
 use App\Application\Quotations\QuotationItemPresentationBuilder;
+use App\Application\Quotations\QuotationPurchaseOrderData;
 use App\Application\Quotations\QuotationManager;
 use App\Application\Quotations\QuotationVolumeApprovalService;
 use App\Application\Quotations\QuotationTotalsCalculator;
@@ -17,11 +18,13 @@ use App\Application\Quotations\QuotationRevisionData;
 use App\Entity\Quotations\Quotation;
 use App\Entity\Quotations\QuotationItem;
 use App\Entity\Users\User;
+use App\Enum\Quotations\QuotationStatus;
 use App\Application\Orders\ServiceOrderManager;
 use App\Form\Admin\Quotations\QuotationCancellationType;
 use App\Form\Admin\Quotations\QuotationDecisionType;
 use App\Form\Admin\Quotations\QuotationEmailType;
 use App\Form\Admin\Quotations\QuotationRevisionType;
+use App\Form\Admin\Quotations\QuotationPurchaseOrderType;
 use App\Form\Admin\Quotations\QuotationType;
 use App\Repository\Orders\ServiceOrderRepository;
 use App\Repository\Clients\ClientAddressRepository;
@@ -687,6 +690,67 @@ final class QuotationController extends AbstractController
         return $response;
     }
 
+    #[Route('/{id}/orden-compra', name: 'admin_quotations_purchase_order', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function updatePurchaseOrder(
+        Request $request,
+        Quotation $quotation,
+        QuotationManager $quotationManager,
+        QuotationDecisionFileStorage $fileStorage,
+    ): Response {
+        $this->denyAccessUnlessGranted('quotations.manage_status');
+
+        $data = new QuotationPurchaseOrderData($quotation->getPurchaseOrderFile() !== null);
+        $data->purchaseOrderNumber = $quotation->getPurchaseOrderNumber();
+        $form = $this->createForm(QuotationPurchaseOrderType::class, $data);
+        $form->handleRequest($request);
+
+        if (!$form->isSubmitted() || !$form->isValid()) {
+            return $this->renderQuotationDetail($quotation, purchaseOrderForm: $form);
+        }
+
+        /** @var QuotationPurchaseOrderData $data */
+        $data = $form->getData();
+        $previousFile = $quotation->getPurchaseOrderFile();
+        $storedFile = null;
+
+        try {
+            if ($data->purchaseOrderFile !== null) {
+                $storedFile = $fileStorage->storePurchaseOrder(
+                    $quotation,
+                    $data->purchaseOrderFile,
+                    (string) $data->purchaseOrderNumber,
+                );
+            }
+
+            $quotationManager->updatePurchaseOrder(
+                $quotation,
+                $data->purchaseOrderNumber,
+                $storedFile,
+                $this->authenticatedUser(),
+            );
+        } catch (\DomainException|\InvalidArgumentException|\RuntimeException $exception) {
+            $fileStorage->remove($storedFile);
+            $this->addFlash('error', $exception->getMessage());
+
+            return $this->redirectToRoute('admin_quotations_show', ['id' => $quotation->getId()]);
+        } catch (\Throwable $exception) {
+            $fileStorage->remove($storedFile);
+            throw $exception;
+        }
+
+        if ($storedFile !== null && ($previousFile['path'] ?? null) !== ($storedFile['path'] ?? null)) {
+            try {
+                $fileStorage->remove($previousFile);
+            } catch (\InvalidArgumentException|\RuntimeException) {
+                // La orden de compra ya quedó guardada; un archivo anterior inválido no debe revertirla.
+            }
+        }
+
+        $this->addFlash('success', 'La orden de compra del cliente quedó actualizada.');
+
+        return $this->redirectToRoute('admin_quotations_show', ['id' => $quotation->getId()]);
+    }
+
     #[Route('/{id}', name: 'admin_quotations_show', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function show(Request $request, Quotation $quotation): Response
     {
@@ -703,6 +767,7 @@ final class QuotationController extends AbstractController
         ?FormInterface $rejectForm = null,
         ?FormInterface $cancellationForm = null,
         ?FormInterface $revisionForm = null,
+        ?FormInterface $purchaseOrderForm = null,
         ?array $decisionFailure = null,
     ): Response {
         $submittedDecisionForm = $acceptForm?->isSubmitted() ? $acceptForm : ($rejectForm?->isSubmitted() ? $rejectForm : null);
@@ -716,9 +781,18 @@ final class QuotationController extends AbstractController
             $decisionErrors = array_values(array_unique($decisionErrors));
         }
 
+        $purchaseOrderFormView = null;
+        if (in_array($quotation->getStatus(), [QuotationStatus::ACCEPTED, QuotationStatus::ACCEPTED_WITH_CHANGES], true)
+            && $this->isGranted('quotations.manage_status')) {
+            $purchaseOrderData = new QuotationPurchaseOrderData($quotation->getPurchaseOrderFile() !== null);
+            $purchaseOrderData->purchaseOrderNumber = $quotation->getPurchaseOrderNumber();
+            $purchaseOrderFormView = ($purchaseOrderForm ?? $this->createForm(QuotationPurchaseOrderType::class, $purchaseOrderData))->createView();
+        }
+
         return $this->render('admin/quotations/show.html.twig', [
             'quotation' => $quotation,
             'serviceOrder' => $this->serviceOrderRepository->findOneBySourceQuotation($quotation),
+            'purchaseOrderForm' => $purchaseOrderFormView,
             'presentedItems' => $this->itemPresentationBuilder->presentAll($quotation->getItems()),
             'decisionErrors' => $decisionErrors,
             'decisionErrorPanel' => $decisionFailure['panel'] ?? ($acceptForm?->isSubmitted() ? '.quotation-action--accept' : '.quotation-action--reject'),
