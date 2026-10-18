@@ -674,4 +674,33 @@
             </button>
         </div>
     </footer>
+
+    <div
+        class="modal fade quotation-file-modal"
+        tabindex="-1"
+        role="dialog"
+        aria-labelledby="quotation-file-modal-title"
+        aria-hidden="true"
+        data-ui--quotation-form-target="attachmentModal"
+    >
+        <div class="modal-dialog modal-dialog-centered modal-xl modal-fullscreen-lg-down">
+            <div class="modal-content quotation-file-modal__content">
+                <div class="modal-header quotation-file-modal__header">
+                    <div>
+                        <p class="quotation-file-modal__eyebrow">Vista previa del archivo</p>
+                        <h2 class="modal-title quotation-file-modal__title" id="quotation-file-modal-title" data-ui--quotation-form-target="attachmentModalTitle"></h2>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar vista previa"></button>
+                </div>
+                <div class="modal-body quotation-file-modal__body" data-ui--quotation-form-target="attachmentModalBody"></div>
+                <div class="modal-footer quotation-file-modal__footer">
+                    <a class="btn pf-button pf-button--secondary" href="#" data-ui--quotation-form-target="attachmentModalDownload" hidden>
+                        <i class="bi bi-download" aria-hidden="true"></i>
+                        Descargar original
+                    </a>
+                    <button type="button" class="btn pf-button pf-button--primary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 {{ form_end(form, {render_rest: false}) }}

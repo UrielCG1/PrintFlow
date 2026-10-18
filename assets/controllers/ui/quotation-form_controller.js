@@ -24,6 +24,10 @@ export default class extends Controller {
         'clientContextRetry',
         'submitButton',
         'submitStatus',
+        'attachmentModal',
+        'attachmentModalTitle',
+        'attachmentModalBody',
+        'attachmentModalDownload',
     ];
 
     static values = {
@@ -162,16 +166,95 @@ export default class extends Controller {
         metadata.className = 'quotation-file-preview__metadata';
         metadata.textContent = `${this.formatAttachmentSize(file.size)} · ${(extension || 'archivo').toUpperCase()}`;
         details.append(label, name, metadata);
-        card.append(thumbnail, details);
+
+        const openButton = document.createElement('button');
+        openButton.type = 'button';
+        openButton.className = 'btn pf-button pf-button--subtle pf-button--sm quotation-file-preview__open';
+        openButton.dataset.action = 'ui--quotation-form#openAttachmentPreview';
+        openButton.setAttribute('aria-label', `Visualizar ${file.name} en grande`);
+        openButton.title = 'Visualizar archivo';
+        const eye = document.createElement('i');
+        eye.className = 'bi bi-eye';
+        eye.setAttribute('aria-hidden', 'true');
+        openButton.append(eye);
+        card.append(thumbnail, details, openButton);
         preview.append(card);
     }
 
+    openAttachmentPreview(event) {
+        const item = event.currentTarget.closest('[data-ui--quotation-form-item]');
+        const preview = item?.querySelector('[data-ui--quotation-form-attachment-preview]');
+        const fileInput = item?.querySelector('input[type="file"]');
+        const file = fileInput?.files?.[0];
+        const objectUrl = preview?.dataset.objectUrl;
+        const modalClass = window.bootstrap?.Modal;
+
+        if (!item || !preview || !file || !objectUrl || !modalClass) {
+            return;
+        }
+
+        this.attachmentModalTitleTarget.textContent = file.name;
+        this.attachmentModalBodyTarget.replaceChildren();
+        this.attachmentModalDownloadTarget.href = objectUrl;
+        this.attachmentModalDownloadTarget.download = file.name;
+        this.attachmentModalDownloadTarget.hidden = false;
+
+        const extension = file.name.split('.').pop()?.toLowerCase();
+        if (['jpg', 'jpeg', 'png', 'svg'].includes(extension)) {
+            const image = document.createElement('img');
+            image.className = 'quotation-file-modal__image';
+            image.src = objectUrl;
+            image.alt = `Vista ampliada de ${file.name}`;
+            this.attachmentModalBodyTarget.append(image);
+        } else if (file.type === 'application/pdf' || extension === 'pdf') {
+            const documentPreview = document.createElement('object');
+            documentPreview.className = 'quotation-file-modal__document';
+            documentPreview.data = objectUrl;
+            documentPreview.type = 'application/pdf';
+            documentPreview.setAttribute('aria-label', `Vista ampliada de ${file.name}`);
+            const fallback = document.createElement('p');
+            fallback.className = 'quotation-file-modal__unsupported';
+            fallback.textContent = 'No se pudo mostrar el PDF en este navegador. Puedes descargar el original.';
+            documentPreview.append(fallback);
+            this.attachmentModalBodyTarget.append(documentPreview);
+        } else {
+            const message = document.createElement('div');
+            message.className = 'quotation-file-modal__unsupported';
+            const icon = document.createElement('i');
+            icon.className = extension === 'zip'
+                ? 'bi bi-file-earmark-zip'
+                : ['ai', 'eps'].includes(extension)
+                    ? 'bi bi-vector-pen'
+                    : 'bi bi-file-earmark';
+            icon.setAttribute('aria-hidden', 'true');
+            const text = document.createElement('p');
+            text.textContent = `El navegador no puede previsualizar archivos ${extension?.toUpperCase() ?? 'de este tipo'}. Descarga el original para abrirlo.`;
+            message.append(icon, text);
+            this.attachmentModalBodyTarget.append(message);
+        }
+
+        this.activeAttachmentPreview = preview;
+        this.attachmentModalInstance = modalClass.getOrCreateInstance(this.attachmentModalTarget);
+        this.attachmentModalInstance.show();
+    }
+
     clearAttachmentPreview(preview) {
+        if (this.activeAttachmentPreview === preview) {
+            this.closeAttachmentPreview();
+        }
         if (preview.dataset.objectUrl) {
             URL.revokeObjectURL(preview.dataset.objectUrl);
             delete preview.dataset.objectUrl;
         }
         preview.replaceChildren();
+    }
+
+    closeAttachmentPreview() {
+        this.attachmentModalInstance?.hide();
+        this.attachmentModalBodyTarget?.replaceChildren();
+        this.attachmentModalDownloadTarget?.removeAttribute('href');
+        this.attachmentModalDownloadTarget?.removeAttribute('download');
+        this.activeAttachmentPreview = null;
     }
 
     formatAttachmentSize(bytes) {
