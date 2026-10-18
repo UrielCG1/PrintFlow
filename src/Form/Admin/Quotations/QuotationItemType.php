@@ -105,6 +105,7 @@ final class QuotationItemType extends AbstractType
                 'help' => 'Opcional. PDF, AI, EPS, SVG, JPG, PNG, TIFF o ZIP; máximo 20 MB.',
                 'attr' => [
                     'accept' => '.pdf,.ai,.eps,.svg,.jpg,.jpeg,.png,.tif,.tiff,.zip',
+                    'data-action' => 'change->ui--quotation-form#previewAttachment',
                 ],
             ]);
     }

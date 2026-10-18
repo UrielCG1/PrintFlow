@@ -57,6 +57,9 @@ export default class extends Controller {
         this.pricePreviewRequest += 1;
         this.productContextActive = false;
         this.pricePreviewActive = false;
+        this.element.querySelectorAll('[data-ui--quotation-form-attachment-preview]').forEach((preview) => {
+            this.clearAttachmentPreview(preview);
+        });
     }
 
     async changeClient() {
@@ -91,6 +94,92 @@ export default class extends Controller {
     changeDeliveryAddress() {
         this.deliveryAddressIdTarget.value = this.deliveryAddressTarget.value;
         this.renderCommercialSelectionPreviews();
+    }
+
+    previewAttachment(event) {
+        const input = event.currentTarget;
+        const item = input.closest('[data-ui--quotation-form-item]');
+        const preview = item?.querySelector('[data-ui--quotation-form-attachment-preview]');
+        if (!preview) {
+            return;
+        }
+
+        this.clearAttachmentPreview(preview);
+        const file = input.files?.[0];
+        if (!file) {
+            preview.hidden = true;
+            return;
+        }
+
+        preview.hidden = false;
+        const card = document.createElement('div');
+        card.className = 'quotation-file-preview__card';
+
+        const thumbnail = document.createElement('div');
+        thumbnail.className = 'quotation-file-preview__thumbnail';
+        const objectUrl = URL.createObjectURL(file);
+        const extension = file.name.split('.').pop()?.toLowerCase();
+        preview.dataset.objectUrl = objectUrl;
+
+        if (['jpg', 'jpeg', 'png', 'svg'].includes(extension)) {
+            const image = document.createElement('img');
+            image.src = objectUrl;
+            image.alt = `Vista previa de ${file.name}`;
+            image.loading = 'lazy';
+            thumbnail.append(image);
+        } else if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+            const documentPreview = document.createElement('object');
+            documentPreview.className = 'quotation-file-preview__document';
+            documentPreview.data = objectUrl;
+            documentPreview.type = 'application/pdf';
+            documentPreview.setAttribute('aria-label', `Vista previa de ${file.name}`);
+            const fallback = document.createElement('i');
+            fallback.className = 'bi bi-file-earmark-pdf';
+            fallback.setAttribute('aria-hidden', 'true');
+            documentPreview.append(fallback);
+            thumbnail.append(documentPreview);
+        } else {
+            const icon = document.createElement('i');
+            icon.className = extension === 'zip'
+                ? 'bi bi-file-earmark-zip'
+                : ['ai', 'eps', 'svg'].includes(extension)
+                    ? 'bi bi-vector-pen'
+                    : 'bi bi-file-earmark';
+            icon.setAttribute('aria-hidden', 'true');
+            thumbnail.append(icon);
+        }
+
+        const details = document.createElement('div');
+        details.className = 'quotation-file-preview__details';
+        const label = document.createElement('span');
+        label.className = 'quotation-file-preview__label';
+        label.textContent = 'Archivo seleccionado';
+        const name = document.createElement('strong');
+        name.className = 'quotation-file-preview__name';
+        name.textContent = file.name;
+        name.title = file.name;
+        const metadata = document.createElement('span');
+        metadata.className = 'quotation-file-preview__metadata';
+        metadata.textContent = `${this.formatAttachmentSize(file.size)} · ${(extension || 'archivo').toUpperCase()}`;
+        details.append(label, name, metadata);
+        card.append(thumbnail, details);
+        preview.append(card);
+    }
+
+    clearAttachmentPreview(preview) {
+        if (preview.dataset.objectUrl) {
+            URL.revokeObjectURL(preview.dataset.objectUrl);
+            delete preview.dataset.objectUrl;
+        }
+        preview.replaceChildren();
+    }
+
+    formatAttachmentSize(bytes) {
+        if (bytes < 1024 * 1024) {
+            return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+        }
+
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     }
 
     addItem(event) {
@@ -255,6 +344,11 @@ export default class extends Controller {
         ) ?? item.previousElementSibling?.querySelector(
             'select:not(:disabled), input:not(:disabled), textarea:not(:disabled)',
         );
+
+        const attachmentPreview = item.querySelector('[data-ui--quotation-form-attachment-preview]');
+        if (attachmentPreview) {
+            this.clearAttachmentPreview(attachmentPreview);
+        }
 
         item.remove();
         this.refreshState();

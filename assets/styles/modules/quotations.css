@@ -1799,6 +1799,71 @@
     border-color: var(--quotation-accent-border);
 }
 
+.quotation-file-preview[hidden] {
+    display: none;
+}
+
+.quotation-file-preview__card {
+    display: flex;
+    align-items: center;
+    gap: var(--pf-space-md);
+
+    max-width: 25rem;
+    padding: var(--pf-space-sm);
+
+    background: var(--pf-surface-container-lowest);
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-md);
+}
+
+.quotation-file-preview__thumbnail {
+    display: grid;
+    flex: 0 0 auto;
+    place-items: center;
+    overflow: hidden;
+
+    width: 3.75rem;
+    height: 3.75rem;
+
+    color: var(--pf-primary);
+    background: var(--pf-surface-container-low);
+    border: 1px solid var(--pf-border-color);
+    border-radius: var(--pf-radius-sm);
+}
+
+.quotation-file-preview__thumbnail > img,
+.quotation-file-preview__document {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.quotation-file-preview__thumbnail > i {
+    font-size: 1.6rem;
+}
+
+.quotation-file-preview__details {
+    display: grid;
+    gap: 0.12rem;
+    min-width: 0;
+}
+
+.quotation-file-preview__label,
+.quotation-file-preview__metadata {
+    color: var(--pf-on-surface-variant);
+    font-size: var(--pf-font-size-label-sm);
+}
+
+.quotation-file-preview__name {
+    overflow: hidden;
+    max-width: 18rem;
+    color: var(--pf-on-surface);
+    font-size: var(--pf-font-size-body-sm);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .quotation-item__section-header {
     display: flex;
     align-items: flex-start;
