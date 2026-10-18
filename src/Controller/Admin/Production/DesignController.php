@@ -8,6 +8,7 @@ use App\Application\Production\DesignReviewManager;
 use App\Entity\Orders\ServiceOrderItem;
 use App\Entity\Production\ProductionFile;
 use App\Entity\Users\User;
+use App\Enum\Orders\ProductionPriority;
 use App\Enum\Orders\ServiceOrderItemDesignStatus;
 use App\Repository\Orders\ServiceOrderItemRepository;
 use App\Repository\Production\ProductionFileRepository;
@@ -30,6 +31,36 @@ final class DesignController extends AbstractController
         $this->denyAccessUnlessGranted('production.view');
 
         $items = $itemRepository->findForDesignQueue();
+        $serviceOrderIds = [];
+        foreach ($items as $item) {
+            $serviceOrderId = $item->getServiceOrder()->getId();
+            if ($serviceOrderId !== null) {
+                $serviceOrderIds[$serviceOrderId] = $serviceOrderId;
+            }
+        }
+
+        $orderPriorities = $itemRepository->findHighestPrioritiesByServiceOrderIds(array_values($serviceOrderIds));
+        usort($items, static function (ServiceOrderItem $left, ServiceOrderItem $right) use ($orderPriorities): int {
+            $leftOrderId = $left->getServiceOrder()->getId() ?? 0;
+            $rightOrderId = $right->getServiceOrder()->getId() ?? 0;
+            $leftPriority = $orderPriorities[$leftOrderId] ?? ProductionPriority::NORMAL;
+            $rightPriority = $orderPriorities[$rightOrderId] ?? ProductionPriority::NORMAL;
+            $priorityOrder = $rightPriority->weight() <=> $leftPriority->weight();
+
+            if ($priorityOrder !== 0) {
+                return $priorityOrder;
+            }
+
+            $dateOrder = $left->getServiceOrder()->getCreatedAt() <=> $right->getServiceOrder()->getCreatedAt();
+            if ($dateOrder !== 0) {
+                return $dateOrder;
+            }
+
+            $lineOrder = $left->getLineNumber() <=> $right->getLineNumber();
+
+            return $lineOrder !== 0 ? $lineOrder : (($left->getId() ?? 0) <=> ($right->getId() ?? 0));
+        });
+
         $designSummary = [
             ServiceOrderItemDesignStatus::PENDING_REVIEW->value => 0,
             ServiceOrderItemDesignStatus::IN_REVIEW->value => 0,
@@ -46,6 +77,7 @@ final class DesignController extends AbstractController
         return $this->render('admin/design/index.html.twig', [
             'items' => $items,
             'designSummary' => $designSummary,
+            'orderPriorities' => $orderPriorities,
         ]);
     }
 

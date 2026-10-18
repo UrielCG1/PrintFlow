@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['search', 'status', 'source', 'rows', 'noResults', 'count'];
+    static targets = ['search', 'status', 'source', 'priority', 'rows', 'noResults', 'count'];
 
     filter() {
         const query = this.normalize(this.searchTarget.value.trim());
@@ -11,7 +11,8 @@ export default class extends Controller {
         rows.forEach((row) => {
             const matches = (!query || this.normalize(row.dataset.search).includes(query))
                 && (!this.statusTarget.value || row.dataset.status === this.statusTarget.value)
-                && (!this.sourceTarget.value || row.dataset.source === this.sourceTarget.value);
+                && (!this.sourceTarget.value || row.dataset.source === this.sourceTarget.value)
+                && (!this.priorityTarget.value || row.dataset.priority === this.priorityTarget.value);
 
             row.hidden = !matches;
             if (matches) visibleRows += 1;
@@ -25,6 +26,7 @@ export default class extends Controller {
         this.searchTarget.value = '';
         this.statusTarget.value = '';
         this.sourceTarget.value = '';
+        this.priorityTarget.value = '';
         this.filter();
         this.searchTarget.focus();
     }

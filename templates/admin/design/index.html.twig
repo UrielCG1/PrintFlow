@@ -16,7 +16,7 @@
 
         <section class="design-metrics" aria-label="Resumen de partidas en Diseño">
             <article class="design-metric design-metric--pending">
-                <span class="design-metric__icon" aria-hidden="true"><i class="bi bi-file-earmark"></i></span>
+                <span class="design-metric__icon" aria-hidden="true"><i class="bi bi-clock-history"></i></span>
                 <div>
                     <h2>Pendientes</h2>
                     <strong>{{ designSummary['PENDING_REVIEW'] }}</strong>
@@ -24,7 +24,7 @@
                 </div>
             </article>
             <article class="design-metric design-metric--review">
-                <span class="design-metric__icon" aria-hidden="true"><i class="bi bi-play-fill"></i></span>
+                <span class="design-metric__icon" aria-hidden="true"><i class="bi bi-palette"></i></span>
                 <div>
                     <h2>En revisión</h2>
                     <strong>{{ designSummary['IN_REVIEW'] }}</strong>
@@ -71,6 +71,15 @@
                         <option value="preparation">Requiere preparación</option>
                     </select>
                 </label>
+                <label class="design-filter">
+                    <span>Prioridad</span>
+                    <select data-admin--design-queue-target="priority" data-action="change->admin--design-queue#filter">
+                        <option value="">Todas</option>
+                        <option value="urgent">Urgente</option>
+                        <option value="high">Alta</option>
+                        <option value="normal">Normal</option>
+                    </select>
+                </label>
                 <button class="design-clear" type="button" data-action="click->admin--design-queue#clear">Limpiar</button>
             </div>
         </section>
@@ -86,6 +95,7 @@
                     <colgroup>
                         <col class="design-table__column--order">
                         <col class="design-table__column--product">
+                        <col class="design-table__column--priority">
                         <col class="design-table__column--source">
                         <col class="design-table__column--status">
                         <col class="design-table__column--action">
@@ -94,6 +104,7 @@
                         <tr>
                             <th scope="col">Orden / partida</th>
                             <th scope="col">Producto</th>
+                            <th scope="col">Prioridad</th>
                             <th scope="col">Archivo del cliente</th>
                             <th scope="col">Estado de Diseño</th>
                             <th scope="col"><span class="visually-hidden">Acción</span></th>
@@ -104,19 +115,32 @@
                             {% set source = item.sourceFileSnapshot ?? {} %}
                             {% set hasClientFile = source.path is defined and source.path is not empty %}
                             {% set productName = item.commercialItemSnapshot.name ?? item.commercialItem.name %}
+                            {% set orderPriority = orderPriorities[item.serviceOrder.id] %}
+                            {% set priorityIcon = orderPriority.value == 'urgent' ? 'bi-lightning-charge-fill' : (orderPriority.value == 'high' ? 'bi-arrow-up-circle-fill' : 'bi-dash-circle') %}
+                            {% set priorityTone = orderPriority.value == 'urgent' ? 'danger' : (orderPriority.value == 'high' ? 'warning' : 'info') %}
                             <tr
                                 data-design-row
                                 data-status="{{ item.designStatus.value }}"
                                 data-source="{{ hasClientFile ? 'received' : 'preparation' }}"
-                                data-search="{{ (item.serviceOrder.folio ~ ' ' ~ item.trackingCode ~ ' ' ~ item.displayLineNumber ~ ' ' ~ productName)|lower }}"
+                                data-priority="{{ orderPriority.value }}"
+                                data-search="{{ (item.serviceOrder.folio ~ ' ' ~ item.serviceOrder.sourceQuotationFolio ~ ' ' ~ item.trackingCode ~ ' ' ~ item.displayLineNumber ~ ' ' ~ productName)|lower }}"
                             >
                                 <td data-label="Orden / partida">
                                     <div class="design-order">
                                         <strong>{{ item.serviceOrder.folio }}</strong>
                                         <span>{{ item.trackingCode }} · Partida {{ item.displayLineNumber }}</span>
+                                        <span class="design-order__dates">
+                                            <span><i class="bi bi-calendar3" aria-hidden="true"></i> Cotización {{ item.serviceOrder.sourceQuotation.createdAt|date('d/m/Y', 'America/Mexico_City') }}</span>
+                                            <span>Orden {{ item.serviceOrder.createdAt|date('d/m/Y', 'America/Mexico_City') }}</span>
+                                        </span>
                                     </div>
                                 </td>
                                 <td data-label="Producto"><span class="design-product" title="{{ productName }}">{{ productName }}</span></td>
+                                <td data-label="Prioridad">
+                                    <span class="pf-status-badge pf-status-badge--{{ priorityTone }} design-priority">
+                                        <i class="bi {{ priorityIcon }}" aria-hidden="true"></i>{{ orderPriority.label }}
+                                    </span>
+                                </td>
                                 <td data-label="Archivo del cliente">
                                     {% if hasClientFile %}
                                         <span class="design-file-status design-file-status--received"><span aria-hidden="true"></span>Recibido</span>
@@ -141,7 +165,7 @@
                             </tr>
                         {% else %}
                             <tr class="design-table__empty">
-                                <td colspan="5">
+                                <td colspan="6">
                                     <span class="design-table__empty-icon" aria-hidden="true"><i class="bi bi-palette"></i></span>
                                     <strong>No hay partidas pendientes de Diseño.</strong>
                                     <span>Las partidas liberadas para Impresión ya no aparecen en esta cola.</span>
@@ -149,7 +173,7 @@
                             </tr>
                         {% endfor %}
                         <tr class="design-table__empty design-table__no-results" hidden data-admin--design-queue-target="noResults">
-                            <td colspan="5">
+                            <td colspan="6">
                                 <span class="design-table__empty-icon" aria-hidden="true"><i class="bi bi-search"></i></span>
                                 <strong>No hay partidas que coincidan con los filtros.</strong>
                                 <span>Prueba con otro término o limpia los filtros.</span>
