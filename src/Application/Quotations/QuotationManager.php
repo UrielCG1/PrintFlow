@@ -288,6 +288,34 @@ final class QuotationManager
         $this->recordDecision($quotation, QuotationStatus::ACCEPTED, $data, $actor);
     }
 
+    /** @param array<string, int|string>|null $purchaseOrderFile Null conserva el archivo actual. */
+    public function updatePurchaseOrder(
+        Quotation $quotation,
+        ?string $purchaseOrderNumber,
+        ?array $purchaseOrderFile,
+        User $actor,
+    ): void {
+        if ($quotation->getId() === null) {
+            throw new \LogicException('No es posible actualizar la orden de compra de una cotización sin identificar.');
+        }
+
+        $this->entityManager->wrapInTransaction(function () use ($quotation, $purchaseOrderNumber, $purchaseOrderFile, $actor): void {
+            $this->entityManager->refresh($quotation, LockMode::PESSIMISTIC_WRITE);
+            $oldValues = $this->auditSnapshot($quotation);
+            $quotation->updatePurchaseOrder($purchaseOrderNumber, $purchaseOrderFile);
+
+            $this->auditLogger->record(
+                actor: $actor,
+                action: 'quotation.purchase_order_updated',
+                entityType: 'quotation',
+                entityId: $quotation->getId(),
+                oldValues: $oldValues,
+                newValues: $this->auditSnapshot($quotation),
+            );
+            $this->entityManager->flush();
+        });
+    }
+
     public function reject(Quotation $quotation, QuotationDecisionData $data, User $actor): void
     {
         $this->recordDecision($quotation, QuotationStatus::REJECTED, $data, $actor);

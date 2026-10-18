@@ -649,13 +649,17 @@ final class QuotationController extends AbstractController
     }
 
     #[Route('/{id}/evidencia/{type}', name: 'admin_quotations_decision_file', requirements: ['id' => '\d+', 'type' => 'purchase-order|response-screenshot'], methods: ['GET'])]
-    public function decisionFile(Quotation $quotation, string $type, QuotationDecisionFileStorage $fileStorage): Response
+    public function decisionFile(Request $request, Quotation $quotation, string $type, QuotationDecisionFileStorage $fileStorage): Response
     {
         $this->denyAccessUnlessGranted('quotations.view');
         $metadata = $type === 'purchase-order' ? $quotation->getPurchaseOrderFile() : $quotation->getResponseScreenshotFile();
         if ($metadata === null) throw $this->createNotFoundException('La evidencia solicitada no existe.');
         try { $path = $fileStorage->resolve($metadata); } catch (\InvalidArgumentException|\RuntimeException) { throw $this->createNotFoundException('La evidencia solicitada no está disponible.'); }
-        return $this->file($path, (string) ($metadata['original_name'] ?? $metadata['stored_name'] ?? basename($path)), ResponseHeaderBag::DISPOSITION_ATTACHMENT);
+        $disposition = $request->query->getBoolean('preview')
+            ? ResponseHeaderBag::DISPOSITION_INLINE
+            : ResponseHeaderBag::DISPOSITION_ATTACHMENT;
+
+        return $this->file($path, (string) ($metadata['original_name'] ?? $metadata['stored_name'] ?? basename($path)), $disposition);
     }
 
     #[Route('/{id}/partidas/{itemId}/archivo', name: 'admin_quotations_item_attachment', requirements: ['id' => '\\d+', 'itemId' => '\\d+'], methods: ['GET'])]

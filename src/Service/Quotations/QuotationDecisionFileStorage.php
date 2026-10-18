@@ -16,7 +16,8 @@ final class QuotationDecisionFileStorage
     public function storePurchaseOrder(Quotation $quotation, UploadedFile $file, string $orderNumber): array
     {
         $client = (string) ($quotation->getClientSnapshot()['business_name'] ?? 'cliente');
-        return $this->store($quotation, $file, $this->slugger->slug($client.'-'.$orderNumber)->lower()->toString(), 'purchase-order');
+        $baseName = $this->slugger->slug($client.'-'.$orderNumber)->lower()->toString();
+        return $this->store($quotation, $file, $baseName.'-'.bin2hex(random_bytes(4)), 'purchase-order');
     }
 
     /** @return array<string, int|string> */

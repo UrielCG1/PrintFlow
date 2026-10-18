@@ -19,6 +19,8 @@ use App\Application\Production\ProductionEquipmentAvailabilityAdvisor;
 use App\Application\Production\ProductionLoadResolver;
 use App\Application\Production\ProductionPlanManager;
 use App\Application\Production\ProductionPriorityRescheduler;
+use App\Application\Quotations\QuotationManager;
+use App\Application\Quotations\QuotationPurchaseOrderData;
 use App\Entity\Orders\ServiceOrder;
 use App\Entity\Orders\ServiceOrderItem;
 use App\Entity\Orders\ServiceOrderOperationPlan;
@@ -29,9 +31,11 @@ use App\Entity\Users\User;
 use App\Enum\Orders\ProductionPriority;
 use App\Enum\Equipment\ProductionLoadUnit;
 use App\Enum\Inventory\InventoryShortageDecisionType;
+use App\Enum\Quotations\QuotationStatus;
 use App\Form\Admin\Orders\ServiceOrderItemOperationEquipmentType;
 use App\Form\Admin\Orders\ServiceOrderItemOperationType;
 use App\Form\Admin\Orders\ServiceOrderPlanningType;
+use App\Form\Admin\Quotations\QuotationPurchaseOrderType;
 use App\Repository\Equipment\EquipmentRepository;
 use App\Repository\Operations\OperationRepository;
 use App\Repository\Orders\ServiceOrderOperationPlanRepository;
@@ -44,6 +48,7 @@ use App\Repository\Inventory\MaterialVariantCostRepository;
 use App\Repository\Inventory\InventoryShortageDecisionRepository;
 use App\Repository\Inventory\MaterialSubstitutionRuleRepository;
 use App\Repository\Users\UserRepository;
+use App\Service\Quotations\QuotationDecisionFileStorage;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -1005,6 +1010,75 @@ final class ServiceOrderController extends AbstractController
         return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
     }
 
+    #[Route('/{id}/orden-compra', name: 'purchase_order', requirements: ['id' => '\\d+'], methods: ['POST'])]
+    public function updatePurchaseOrder(
+        Request $request,
+        ServiceOrder $serviceOrder,
+        QuotationManager $quotationManager,
+        QuotationDecisionFileStorage $fileStorage,
+    ): Response {
+        $this->denyAccessUnlessGranted('quotations.manage_status');
+
+        $quotation = $serviceOrder->getSourceQuotation();
+        $data = new QuotationPurchaseOrderData($quotation->getPurchaseOrderFile() !== null);
+        $data->purchaseOrderNumber = $quotation->getPurchaseOrderNumber();
+        $form = $this->formFactory->create(QuotationPurchaseOrderType::class, $data);
+        $form->handleRequest($request);
+
+        if (!$form->isSubmitted() || !$form->isValid()) {
+            $messages = [];
+            foreach ($form->getErrors(true) as $error) {
+                $messages[] = $error->getMessage();
+            }
+            $this->addFlash('error', $messages !== [] ? implode(' ', array_unique($messages)) : 'Revisa los datos de la orden de compra e inténtalo de nuevo.');
+
+            return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+        }
+
+        /** @var QuotationPurchaseOrderData $data */
+        $data = $form->getData();
+        $previousFile = $quotation->getPurchaseOrderFile();
+        $storedFile = null;
+
+        try {
+            if ($data->purchaseOrderFile !== null) {
+                $storedFile = $fileStorage->storePurchaseOrder(
+                    $quotation,
+                    $data->purchaseOrderFile,
+                    (string) $data->purchaseOrderNumber,
+                );
+            }
+
+            $quotationManager->updatePurchaseOrder(
+                $quotation,
+                $data->purchaseOrderNumber,
+                $storedFile,
+                $this->authenticatedUser(),
+            );
+
+        } catch (\DomainException|\InvalidArgumentException|\RuntimeException $exception) {
+            $fileStorage->remove($storedFile);
+            $this->addFlash('error', $exception->getMessage());
+
+            return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+        } catch (\Throwable $exception) {
+            $fileStorage->remove($storedFile);
+            throw $exception;
+        }
+
+        if ($storedFile !== null && ($previousFile['path'] ?? null) !== ($storedFile['path'] ?? null)) {
+            try {
+                $fileStorage->remove($previousFile);
+            } catch (\InvalidArgumentException|\RuntimeException) {
+                // La actualización ya quedó guardada; un archivo anterior inválido no debe revertirla.
+            }
+        }
+
+        $this->addFlash('success', 'La orden de compra del cliente quedó actualizada.');
+
+        return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
+    }
+
     #[Route('/{id}', name: 'show', requirements: ['id' => '\\d+'], methods: ['GET'])]
     public function show(
         ServiceOrder $serviceOrder,
@@ -1026,6 +1100,14 @@ final class ServiceOrderController extends AbstractController
         InventoryCoverageEvaluator $coverageEvaluator,
     ): Response {
         $this->denyAccessUnlessGranted('service_orders.view');
+
+        $purchaseOrderForm = null;
+        if ($this->isGranted('quotations.manage_status')
+            && in_array($serviceOrder->getSourceQuotation()->getStatus(), [QuotationStatus::ACCEPTED, QuotationStatus::ACCEPTED_WITH_CHANGES], true)) {
+            $purchaseOrderData = new QuotationPurchaseOrderData($serviceOrder->getSourceQuotation()->getPurchaseOrderFile() !== null);
+            $purchaseOrderData->purchaseOrderNumber = $serviceOrder->getSourceQuotation()->getPurchaseOrderNumber();
+            $purchaseOrderForm = $this->formFactory->create(QuotationPurchaseOrderType::class, $purchaseOrderData)->createView();
+        }
 
         $plansByItem = [];
         $allPlans = $operationPlanRepository->findActiveForServiceOrder($serviceOrder);
@@ -1510,6 +1592,7 @@ final class ServiceOrderController extends AbstractController
 
         return $this->render('admin/service_orders/show.html.twig', [
             'serviceOrder' => $serviceOrder,
+            'purchaseOrderForm' => $purchaseOrderForm,
             'productionForecast' => $productionForecast,
             'orderProgress' => $orderProgress,
             'planningProgress' => $planningProgress,

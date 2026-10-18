@@ -429,6 +429,19 @@ class Quotation
         $this->responseScreenshotFile = $responseScreenshotFile;
     }
 
+    /** @param array<string, int|string>|null $purchaseOrderFile */
+    public function updatePurchaseOrder(?string $purchaseOrderNumber, ?array $purchaseOrderFile): void
+    {
+        if (!in_array($this->status, [QuotationStatus::ACCEPTED, QuotationStatus::ACCEPTED_WITH_CHANGES], true)) {
+            throw new \DomainException('Solo una cotización aceptada puede actualizar su orden de compra.');
+        }
+
+        $this->purchaseOrderNumber = self::normalizeOptionalText($purchaseOrderNumber);
+        if ($purchaseOrderFile !== null) {
+            $this->purchaseOrderFile = $purchaseOrderFile;
+        }
+    }
+
     public function acceptWithChanges(string $contact, \DateTimeImmutable $respondedAt, string $notes, string $ip): void
     {
         $this->recordDecision(QuotationStatus::ACCEPTED_WITH_CHANGES, QuotationResponseChannel::EMAIL, $contact, $respondedAt, $notes, 'Aceptación mediante enlace web; IP: '.$ip);
