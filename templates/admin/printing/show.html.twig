@@ -180,11 +180,6 @@
 {% elseif not canConfigure %}
     <p class="printing-requirements-readonly">{% if requirementsReady %}Estos requisitos están listos. Para cambiar la máquina, el material o la cantidad, solicita apoyo al responsable de Producción.{% else %}Falta completar requisitos. Solicita al responsable de Producción que asigne máquina y material para esta partida.{% endif %}</p>
 {% endif %}
-                    </details>
-                {% elseif not canConfigure %}
-                    <p class="printing-requirements-readonly">{% if requirementsReady %}Estos requisitos están listos. Para cambiar la máquina, el material o la cantidad, solicita apoyo al responsable de Producción.{% else %}Falta completar requisitos. Solicita al responsable de Producción que asigne máquina y material para esta partida.{% endif %}</p>
-                {% endif %}
-            </section>
 
             <section class="pf-card printing-detail-card printing-instructions-card">
                 <div class="printing-preparation-card-heading"><div><span class="printing-section-eyebrow">Guía de trabajo</span><h2>Instrucciones de impresión</h2><p>Indicaciones para preparar esta partida.</p></div>{% if release and release.instructions %}<span class="printing-instruction-source"><i class="bi bi-shield-check" aria-hidden="true"></i>Diseño</span>{% endif %}</div>
