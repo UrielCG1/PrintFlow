@@ -10,7 +10,7 @@
             <div class="pf-page-header__content">
                 <p class="pf-page-header__eyebrow">Primera etapa de producción</p>
                 <h1 class="pf-page-header__title">Diseño</h1>
-                <p class="pf-page-header__description">Prepara, revisa y libera el arte que guiará la impresión de cada partida.</p>
+                <p class="pf-page-header__description">{% if is_granted('production.design.review') %}Prepara, revisa y libera el arte que guiará la impresión de cada partida.{% else %}Consulta el estado, la prioridad, los archivos y las especificaciones de cada partida en Diseño.{% endif %}</p>
             </div>
         </header>
 
@@ -157,9 +157,9 @@
                                     <a
                                         class="btn pf-button pf-button--secondary pf-button--sm design-review-button"
                                         href="{{ path('admin_design_show', {id: item.id}) }}"
-                                        aria-label="Revisar {{ item.serviceOrder.folio }}, partida {{ item.displayLineNumber }}"
+                                        aria-label="{{ is_granted('production.design.review') ? 'Revisar' : 'Consultar' }} {{ item.serviceOrder.folio }}, partida {{ item.displayLineNumber }}"
                                     >
-                                        Revisar <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                                        {{ is_granted('production.design.review') ? 'Revisar' : 'Consultar' }} <i class="bi bi-arrow-right" aria-hidden="true"></i>
                                     </a>
                                 </td>
                             </tr>

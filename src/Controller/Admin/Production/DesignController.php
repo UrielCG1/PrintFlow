@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin\Production;
 
 use App\Application\Production\DesignReviewManager;
+use App\Application\Production\DesignSpecificationsPresenter;
 use App\Entity\Orders\ServiceOrderItem;
 use App\Entity\Production\ProductionFile;
 use App\Entity\Users\User;
@@ -25,6 +26,13 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/admin/diseno', name: 'admin_design_')]
 final class DesignController extends AbstractController
 {
+    private const PREVIEWABLE_CLIENT_MIME_TYPES = [
+        'application/pdf',
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+    ];
+
     #[Route('', name: 'index', methods: ['GET'])]
     public function index(ServiceOrderItemRepository $itemRepository): Response
     {
@@ -86,16 +94,29 @@ final class DesignController extends AbstractController
         ServiceOrderItem $item,
         ProductionFileRepository $fileRepository,
         ServiceOrderItemDesignReleaseRepository $releaseRepository,
+        ProductionFileStorage $storage,
+        DesignSpecificationsPresenter $specificationsPresenter,
     ): Response {
         $this->denyAccessUnlessGranted('production.view');
+        $clientOriginal = $this->resolveClientOriginal($item, $storage);
+        $sourceSnapshot = $item->getSourceFileSnapshot() ?? [];
+        $sourcePath = $sourceSnapshot['path'] ?? null;
 
         return $this->render('admin/design/show.html.twig', [
             'item' => $item,
             'files' => $fileRepository->findForItem($item),
             'currentRelease' => $releaseRepository->findCurrent($item),
             'releaseHistory' => $releaseRepository->findHistory($item),
-            'hasClientOriginal' => is_string(($item->getSourceFileSnapshot() ?? [])['path'] ?? null),
+            'hasClientOriginal' => is_string($sourcePath) && trim($sourcePath) !== '',
+            'clientOriginalFile' => $clientOriginal === null ? null : [
+                'name' => $clientOriginal['name'],
+                'mimeType' => $clientOriginal['mimeType'],
+                'byteSize' => $clientOriginal['byteSize'],
+                'previewable' => $clientOriginal['previewable'],
+            ],
+            'specifications' => $specificationsPresenter->present($item->getProductionSpecificationsSnapshot()),
             'canReview' => $this->isGranted('production.design.review'),
+            'canUploadFiles' => $this->isGranted('production.files.upload'),
         ]);
     }
 
@@ -119,6 +140,7 @@ final class DesignController extends AbstractController
     public function authorizeOriginal(Request $request, ServiceOrderItem $item, DesignReviewManager $manager): Response
     {
         $this->denyAccessUnlessGranted('production.design.review');
+        $this->denyAccessUnlessGranted('production.files.upload');
         $this->assertCsrf($request, 'design-authorize-original-'.$item->getId());
 
         try {
@@ -140,6 +162,7 @@ final class DesignController extends AbstractController
     public function authorizePrepared(Request $request, ServiceOrderItem $item, DesignReviewManager $manager): Response
     {
         $this->denyAccessUnlessGranted('production.design.review');
+        $this->denyAccessUnlessGranted('production.files.upload');
         $this->assertCsrf($request, 'design-authorize-prepared-'.$item->getId());
 
         try {
@@ -176,21 +199,62 @@ final class DesignController extends AbstractController
     }
 
     #[Route('/partidas/{id}/original-cliente', name: 'download_client_original', requirements: ['id' => '\\d+'], methods: ['GET'])]
-    public function downloadClientOriginal(ServiceOrderItem $item, ProductionFileStorage $storage): BinaryFileResponse
+    public function downloadClientOriginal(Request $request, ServiceOrderItem $item, ProductionFileStorage $storage): BinaryFileResponse
     {
         $this->denyAccessUnlessGranted('production.files.download');
-        $snapshot = $item->getSourceFileSnapshot() ?? [];
-        $path = $snapshot['path'] ?? null;
-        if (!is_string($path) || trim($path) === '') {
+        $file = $this->resolveClientOriginal($item, $storage);
+        if ($file === null) {
             throw $this->createNotFoundException('La partida no tiene archivo original del cliente.');
         }
-        $name = is_string($snapshot['original_name'] ?? null) ? $snapshot['original_name'] : 'original-del-cliente';
-        $response = new BinaryFileResponse($storage->absoluteClientSource($path));
-        $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_ATTACHMENT, $name);
+        $inline = $request->query->getBoolean('preview') && $file['previewable'];
+        $response = new BinaryFileResponse($file['absolutePath']);
+        $response->headers->set('Content-Type', $file['mimeType']);
+        $response->setContentDisposition(
+            $inline ? ResponseHeaderBag::DISPOSITION_INLINE : ResponseHeaderBag::DISPOSITION_ATTACHMENT,
+            $file['name'],
+        );
         $response->headers->set('Cache-Control', 'private, no-store');
         $response->headers->set('X-Content-Type-Options', 'nosniff');
 
         return $response;
+    }
+
+    /**
+     * @return array{absolutePath: string, name: string, mimeType: string, byteSize: int, previewable: bool}|null
+     */
+    private function resolveClientOriginal(ServiceOrderItem $item, ProductionFileStorage $storage): ?array
+    {
+        $snapshot = $item->getSourceFileSnapshot() ?? [];
+        $path = $snapshot['path'] ?? null;
+        if (!is_string($path) || trim($path) === '') {
+            return null;
+        }
+
+        try {
+            $absolutePath = $storage->absoluteClientSource($path);
+        } catch (\InvalidArgumentException|\RuntimeException) {
+            return null;
+        }
+
+        if (!is_file($absolutePath) || !is_readable($absolutePath)) {
+            return null;
+        }
+
+        $mimeType = strtolower((string) (new \finfo(FILEINFO_MIME_TYPE))->file($absolutePath));
+        $byteSize = filesize($absolutePath);
+        if ($mimeType === '' || $byteSize === false) {
+            return null;
+        }
+
+        return [
+            'absolutePath' => $absolutePath,
+            'name' => is_string($snapshot['original_name'] ?? null) && trim($snapshot['original_name']) !== ''
+                ? trim($snapshot['original_name'])
+                : 'Archivo original del cliente',
+            'mimeType' => $mimeType,
+            'byteSize' => $byteSize,
+            'previewable' => in_array($mimeType, self::PREVIEWABLE_CLIENT_MIME_TYPES, true),
+        ];
     }
 
     private function assertCsrf(Request $request, string $tokenId): void

@@ -145,7 +145,7 @@
                                 <span class="service-order-journey__owner">Siguiente responsable: Ventas y Producción</span>
                             {% endif %}
                         {% elseif orderProgress.current_stage == 'design' %}
-                            {% if is_granted('production.view') and is_granted('production.design.review') %}
+                            {% if is_granted('production.view') %}
                                 <a href="{{ path('admin_design_index') }}" class="btn pf-button pf-button--primary">Abrir Diseño <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
                             {% else %}
                                 <span class="service-order-journey__owner">Siguiente responsable: Diseño</span>
