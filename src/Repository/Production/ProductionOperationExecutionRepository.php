@@ -6,6 +6,7 @@ namespace App\Repository\Production;
 
 use App\Entity\Orders\ServiceOrderItem;
 use App\Entity\Production\ProductionOperationExecution;
+use App\Entity\Users\User;
 use App\Enum\Production\ProductionOperationExecutionStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\LockMode;
@@ -47,5 +48,41 @@ final class ProductionOperationExecutionRepository extends ServiceEntityReposito
             ->getOneOrNullResult();
 
         return $execution;
+    }
+
+    /** @return list<ProductionOperationExecution> */
+    public function findCompletedBetween(\DateTimeImmutable $from, \DateTimeImmutable $until, ?User $assignedOperator = null): array
+    {
+        $queryBuilder = $this->createQueryBuilder('execution')
+            ->innerJoin('execution.plan', 'plan')
+            ->innerJoin('plan.serviceOrderItem', 'item')
+            ->innerJoin('item.serviceOrder', 'serviceOrder')
+            ->innerJoin('plan.operation', 'operation')
+            ->innerJoin('operation.operationArea', 'area')
+            ->leftJoin('plan.equipment', 'equipment')
+            ->addSelect('plan', 'item', 'serviceOrder', 'operation', 'area', 'equipment')
+            ->andWhere('execution.status = :completed')
+            ->andWhere('execution.completedAt >= :from')
+            ->andWhere('execution.completedAt < :until')
+            ->andWhere('plan.isActive = true')
+            ->andWhere('serviceOrder.status = :planned')
+            ->setParameter('completed', ProductionOperationExecutionStatus::COMPLETED)
+            ->setParameter('planned', \App\Enum\Orders\ServiceOrderStatus::PLANNED->value)
+            ->setParameter('from', $from)
+            ->setParameter('until', $until);
+
+        if ($assignedOperator !== null) {
+            $queryBuilder
+                ->andWhere('execution.assignedOperator = :assignedOperator')
+                ->setParameter('assignedOperator', $assignedOperator);
+        }
+
+        /** @var list<ProductionOperationExecution> $executions */
+        $executions = $queryBuilder
+            ->orderBy('execution.completedAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        return $executions;
     }
 }
