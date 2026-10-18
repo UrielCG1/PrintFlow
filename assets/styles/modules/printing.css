@@ -194,16 +194,35 @@
 .printing-stepper::before { right: 10%; background: #d8deea; }
 .printing-stepper::after { width: var(--printing-progress); max-width: 80%; background: #0b9136; }
 .printing-stepper li { position: relative; z-index: 1; display: flex; min-width: 0; align-items: center; flex-direction: column; gap: 0.28rem; color: #263754; text-align: center; }
+.printing-stepper__link, .printing-stepper__locked { display: flex; width: 100%; min-width: 0; align-items: center; flex-direction: column; gap: 0.28rem; color: inherit; text-align: center; text-decoration: none; }
+.printing-stepper__link { border-radius: 0.35rem; cursor: pointer; }
+.printing-stepper__link:hover strong { color: #08752b; }
+.printing-stepper__link:focus-visible { outline: 3px solid rgba(79, 141, 255, 0.35); outline-offset: 2px; }
+.printing-stepper__locked { color: #9aa5b8; cursor: not-allowed; }
 .printing-stepper__node { display: grid; width: 2rem; height: 2rem; place-items: center; color: #52627e; background: #fff; border: 2px solid #d2dbea; border-radius: 50%; font-size: 0.8rem; font-weight: 700; }
 .printing-stepper li.is-complete .printing-stepper__node { color: #fff; background: #0c9839; border-color: #0c9839; }
 .printing-stepper li.is-current .printing-stepper__node { color: #0b7440; border-color: #a7bad4; box-shadow: 0 0 0 3px #f0f4fb; }
+.printing-stepper li.is-selected .printing-stepper__node { box-shadow: 0 0 0 3px #f0f4fb; }
 .printing-stepper li strong { max-width: 11rem; font-size: 0.68rem; font-weight: 700; line-height: 1.25; }
 .printing-stepper li small { color: #64728a; font-size: 0.63rem; }
 .printing-stepper li.is-complete strong { color: #075d1c; }
 
+.printing-phase-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 0.35rem 0 0.15rem; padding-top: 0.7rem; border-top: 1px solid #e2e7ef; }
+.printing-phase-heading__eyebrow { margin: 0 0 0.15rem; color: #08752b; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.045em; text-transform: uppercase; }
+.printing-phase-heading h2 { margin: 0; color: #11253e; font-size: 1.05rem; font-weight: 700; }
+.printing-phase-heading > div > p:last-child { margin: 0.22rem 0 0; color: #5a6983; font-size: 0.76rem; }
+.printing-phase-complete, .printing-phase-navigation__done { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 0.35rem; color: #08752c; font-size: 0.76rem; font-weight: 700; }
+.printing-phase-navigation { display: flex; min-height: 2.6rem; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 0.1rem; padding-top: 0.65rem; border-top: 1px solid #e2e7ef; }
+.printing-phase-navigation > .btn { min-height: 2.25rem; font-size: 0.76rem; }
+.printing-phase-navigation__hint { color: #687792; font-size: 0.72rem; text-align: right; }
 .printing-overview-grid { display: grid; grid-template-columns: 1.12fr 0.9fr 0.9fr; align-items: stretch; gap: 0.55rem; }
 .printing-workflow-grid { display: grid; grid-template-columns: 1.25fr 0.72fr 1fr; align-items: stretch; gap: 0.55rem; }
 .printing-bottom-grid { display: grid; grid-template-columns: 0.95fr 1.35fr; align-items: stretch; gap: 0.55rem; }
+.printing-workflow-grid--phase-2, .printing-workflow-grid--phase-3, .printing-workflow-grid--phase-4 { grid-template-columns: minmax(0, 1fr); }
+.printing-workflow-grid--phase-2 .printing-validation-card { max-width: 54rem; }
+.printing-workflow-grid--phase-3 .printing-next-card { max-width: 40rem; }
+.printing-workflow-grid--phase-4 .printing-close-card { width: 100%; max-width: 72rem; }
+.printing-bottom-grid--phase, .printing-bottom-grid--history { grid-template-columns: minmax(0, 1fr); }
 .printing-detail-card { min-width: 0; padding: 0.8rem; border-color: #e0e6f0; border-radius: 0.55rem; box-shadow: 0 1px 2px rgba(19, 37, 68, 0.025); }
 .printing-card-heading { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.65rem; }
 .printing-card-heading h2 { margin: 0; color: #11253e; font-size: 0.82rem; font-weight: 700; }
@@ -348,6 +367,11 @@
     .printing-stepper__node { width: 1.7rem; height: 1.7rem; font-size: 0.7rem; }
     .printing-stepper li strong { max-width: 4.5rem; font-size: 0.56rem; }
     .printing-stepper li small { font-size: 0.54rem; }
+    .printing-phase-heading { align-items: flex-start; flex-direction: column; gap: 0.4rem; }
+    .printing-phase-heading > div > p:last-child { max-width: 38rem; }
+    .printing-phase-navigation { align-items: stretch; }
+    .printing-phase-navigation > .btn { white-space: nowrap; }
+    .printing-phase-navigation__hint { max-width: 12rem; }
     .printing-overview-grid, .printing-workflow-grid, .printing-bottom-grid { grid-template-columns: minmax(0, 1fr); }
     .printing-instructions-card, .printing-close-card { grid-column: auto; }
     .printing-detail-card { padding: 0.75rem; }

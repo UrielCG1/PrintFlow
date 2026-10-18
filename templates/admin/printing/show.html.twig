@@ -9,7 +9,20 @@
     {% set scannedMaterial = currentScan and currentScan.stockUnit ? currentScan.stockUnit.variant : plan.materialVariant %}
     {% set materialNeedsDecision = materialStatus and materialStatus.code in ['pending_reservation', 'pending_authorization', 'waiting_purchase'] %}
     {% set scanIsDone = activeExecution or output or (currentScan and currentScan.available and not materialNeedsDecision) %}
-    {% set activeStep = output and output.labelPlaced ? 6 : (output ? 5 : (activeExecution ? 4 : (currentScan and currentScan.available and not materialNeedsDecision ? 3 : (release ? 2 : 1)))) %}
+    {% set requirementsReady = plan.equipment and plan.materialVariant and plannedUsage and not multiplePlannedUsages %}
+    {% set preparationReady = release and requirementsReady and not materialNeedsDecision and canValidatePrinting %}
+    {% set activeStep = output and output.labelPlaced ? 6 : (output ? 5 : (activeExecution ? 4 : (currentScan and currentScan.available and not materialNeedsDecision ? 3 : (preparationReady ? 2 : 1)))) %}
+    {% set maxUnlockedStep = activeStep > 5 ? 5 : activeStep %}
+    {% set requestedStep = app.request.query.getInt('step', activeStep > 5 ? 5 : activeStep) %}
+    {% set selectedStep = requestedStep >= 1 and requestedStep <= maxUnlockedStep ? requestedStep : (activeStep > 5 ? 5 : activeStep) %}
+    {% set stepLabels = ['Preparación', 'Validar máquina y material', 'Iniciar impresión', 'Registrar consumo', 'Etiqueta QR'] %}
+    {% set phaseDescriptions = [
+        'Revisa la liberación de Diseño, confirma las instrucciones y deja lista la máquina y el material previstos.',
+        'Confirma físicamente la máquina y la unidad de material que se descontará al terminar.',
+        'Con la validación completa, registra el inicio de este intento de impresión.',
+        'Al finalizar, registra consumo, merma y cualquier sobrante reutilizable.',
+        'Genera la etiqueta de producción, imprímela y confirma que quedó colocada.'
+    ] %}
     <section class="pf-page__content printing-page printing-detail">
         <header class="printing-detail-header">
             <div class="printing-detail-heading">
@@ -21,16 +34,35 @@
         </header>
 
         <ol class="printing-stepper" style="--printing-progress: {{ activeStep > 5 ? 100 : (activeStep - 1) * 25 }}%" aria-label="Etapas del trabajo de impresión">
-            {% set stepLabels = ['Arte liberado', 'Validar máquina y material', 'Iniciar impresión', 'Registrar consumo', 'Etiqueta QR'] %}
             {% for label in stepLabels %}
                 {% set stepNumber = loop.index %}
-                <li class="{{ stepNumber < activeStep ? 'is-complete' : (stepNumber == activeStep ? 'is-current' : '') }}">
-                    <span class="printing-stepper__node">{% if stepNumber < activeStep %}<i class="bi bi-check-lg" aria-hidden="true"></i>{% else %}{{ stepNumber }}{% endif %}</span>
-                    <strong>{{ label }}</strong>
-                    <small>{{ stepNumber < activeStep ? 'Completado' : (stepNumber == activeStep ? (stepNumber == 4 and activeExecution ? 'En curso' : 'Siguiente paso') : 'Pendiente') }}</small>
+                {% set phaseComplete = stepNumber < activeStep or (stepNumber == 5 and output and output.labelPlaced) %}
+                <li class="{{ phaseComplete ? 'is-complete' : (stepNumber == activeStep ? 'is-current' : '') }} {{ stepNumber == selectedStep ? 'is-selected' : '' }}">
+                    {% if stepNumber <= maxUnlockedStep %}
+                        <a class="printing-stepper__link" href="{{ path('admin_printing_show', {id: plan.id, step: stepNumber}) }}" aria-current="{{ stepNumber == selectedStep ? 'step' : 'false' }}" aria-label="{{ label }} · {{ phaseComplete ? 'Completado' : (stepNumber == activeStep ? 'Fase actual' : 'Disponible') }}">
+                            <span class="printing-stepper__node">{% if phaseComplete %}<i class="bi bi-check-lg" aria-hidden="true"></i>{% else %}{{ stepNumber }}{% endif %}</span>
+                            <strong>{{ label }}</strong>
+                            <small>{{ phaseComplete ? 'Completado' : (stepNumber == activeStep ? (stepNumber == 4 and activeExecution ? 'En curso' : 'Siguiente paso') : 'Disponible') }}</small>
+                        </a>
+                    {% else %}
+                        <span class="printing-stepper__locked" aria-disabled="true">
+                            <span class="printing-stepper__node">{{ stepNumber }}</span>
+                            <strong>{{ label }}</strong>
+                            <small>Pendiente</small>
+                        </span>
+                    {% endif %}
                 </li>
             {% endfor %}
         </ol>
+
+        <header class="printing-phase-heading">
+            <div>
+                <p class="printing-phase-heading__eyebrow">Fase {{ selectedStep }} de 5</p>
+                <h2>{{ stepLabels[selectedStep - 1] }}</h2>
+                <p>{{ phaseDescriptions[selectedStep - 1] }}</p>
+            </div>
+            {% if output and output.labelPlaced %}<span class="printing-phase-complete"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Trabajo terminado</span>{% endif %}
+        </header>
 
         {% if materialStatus and not output %}
             <div class="printing-callout printing-material-alert printing-callout--{{ materialNeedsDecision or materialStatus.code == 'partial_authorized' ? 'warning' : 'success' }}" role="{{ materialNeedsDecision ? 'alert' : 'status' }}">
@@ -39,6 +71,10 @@
             </div>
         {% endif %}
 
+        {% if selectedStep == 1 %}
+        {% if preparationBlockReason %}
+            <div class="printing-callout printing-callout--warning" role="status"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i><p><strong>Antes de validar</strong><span>{{ preparationBlockReason }}</span></p></div>
+        {% endif %}
         <div class="printing-overview-grid">
             <section class="pf-card printing-detail-card printing-art-card">
                 <div class="printing-card-heading"><h2>Arte aprobado</h2>{% if release %}<span class="printing-inline-status printing-inline-status--success"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Liberado para impresión</span>{% endif %}</div>
@@ -89,10 +125,13 @@
                 {% if item.productionSpecificationsSnapshot is not empty %}<details class="printing-configure-details"><summary>Especificaciones técnicas de la partida</summary><pre class="small mt-2 mb-0">{{ item.productionSpecificationsSnapshot|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></details>{% endif %}
             </section>
         </div>
+        {% endif %}
 
-        <div class="printing-workflow-grid">
+        {% if selectedStep in [2, 3, 4] %}
+        <div class="printing-workflow-grid printing-workflow-grid--phase-{{ selectedStep }}">
+            {% if selectedStep == 2 %}
             <section class="pf-card printing-detail-card printing-validation-card" data-controller="ui--printing-scanner" data-ui--printing-scanner-src-value="{{ asset('vendor/zxing-browser/zxing-browser.min.js') }}">
-                <div class="printing-card-heading"><div><h2>Validar máquina y material</h2><p>Escanea los códigos o ingrésalos manualmente.</p></div><span class="printing-step-number">1</span></div>
+                <div class="printing-card-heading"><div><h2>Validar máquina y material</h2><p>Escanea los códigos o ingrésalos manualmente.</p></div><span class="printing-step-number">2</span></div>
                 {% if canExecute and release and not activeExecution and canStartPrinting and not materialNeedsDecision %}
                     <form class="pf-form" method="post" action="{{ path('admin_printing_validate_scans', {id: plan.id}) }}">
                         <input type="hidden" name="_token" value="{{ csrf_token('printing-scan-' ~ plan.id) }}">
@@ -115,8 +154,10 @@
                 {% endif %}
             </section>
 
+            {% endif %}
+            {% if selectedStep == 3 %}
             <section class="pf-card printing-detail-card printing-next-card">
-                <div class="printing-card-heading"><h2>Siguiente paso</h2></div>
+                <div class="printing-card-heading"><h2>Iniciar impresión</h2></div>
                 {% if canExecute and currentScan and currentScan.available and not activeExecution and canStartPrinting and not materialNeedsDecision %}
                     <form method="post" action="{{ path('admin_printing_start', {id: plan.id}) }}">
                         <input type="hidden" name="_token" value="{{ csrf_token('printing-start-' ~ plan.id) }}"><input type="hidden" name="expected_order_version" value="{{ orderVersion }}"><input type="hidden" name="command_id" value="{{ startCommandId }}">
@@ -125,10 +166,12 @@
                     </form>
                 {% else %}
                     <button class="btn pf-button pf-button--primary printing-wide-button" type="button" disabled><i class="bi bi-play-circle-fill" aria-hidden="true"></i>Iniciar impresión</button>
-                    <p class="printing-form-hint">Valida la máquina y el material para habilitar el inicio.</p>
+                    <p class="printing-form-hint">{% if activeExecution %}La impresión ya está en curso.{% elseif output %}La impresión ya terminó; consulta su salida y etiqueta en la fase 5.{% else %}Valida la máquina y el material para habilitar el inicio.{% endif %}</p>
                 {% endif %}
             </section>
 
+            {% endif %}
+            {% if selectedStep == 4 %}
             <section class="pf-card printing-detail-card printing-close-card">
                 <div class="printing-card-heading"><div><h2>Cerrar impresión</h2><p>Registra el consumo al finalizar.</p></div><i class="bi bi-lock printing-locked-icon" aria-hidden="true"></i></div>
                 {% if canExecute and activeExecution %}
@@ -155,13 +198,16 @@
                     </form>
                 {% else %}
                     <div class="printing-disabled-fields"><span>Total previsto ({{ scannedMaterial ? scannedMaterial.consumptionUnit.symbol : 'unidad' }})<b>{{ confirmedPlanQuantity ?: 'Pendiente' }}</b></span><span>Merma ({{ scannedMaterial ? scannedMaterial.consumptionUnit.symbol : 'unidad' }})<b>0</b></span></div>
-                    <p class="printing-form-hint">El registro estará disponible cuando finalice la impresión.</p>
-                    <button class="btn pf-button pf-button--secondary printing-wide-button" type="button" disabled>Cerrar impresión</button>
+                    <p class="printing-form-hint">{% if output %}El consumo quedó registrado al cerrar esta impresión.{% else %}El registro estará disponible cuando finalice la impresión.{% endif %}</p>
+                    <button class="btn pf-button pf-button--secondary printing-wide-button" type="button" disabled>{{ output ? 'Impresión cerrada' : 'Cerrar impresión' }}</button>
                 {% endif %}
             </section>
+            {% endif %}
         </div>
+        {% endif %}
 
-        <div class="printing-bottom-grid">
+        {% if selectedStep == 5 %}
+        <div class="printing-bottom-grid printing-bottom-grid--phase">
             <section class="pf-card printing-detail-card printing-label-card">
                 <div class="printing-card-heading"><h2>Etiqueta QR de producción</h2></div>
                 {% if output %}
@@ -181,7 +227,15 @@
                     </div>
                 </section>
             {% endif %}
+        </div>
+        {% endif %}
 
+        <nav class="printing-phase-navigation" aria-label="Navegación entre fases">
+            {% if selectedStep > 1 %}<a class="btn pf-button pf-button--secondary" href="{{ path('admin_printing_show', {id: plan.id, step: selectedStep - 1}) }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> Fase anterior</a>{% else %}<span></span>{% endif %}
+            {% if selectedStep < maxUnlockedStep %}<a class="btn pf-button pf-button--primary" href="{{ path('admin_printing_show', {id: plan.id, step: selectedStep + 1}) }}">Siguiente fase <i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% elseif selectedStep == 5 and output and output.labelPlaced %}<span class="printing-phase-navigation__done"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Trabajo terminado</span>{% else %}<span class="printing-phase-navigation__hint">Completa esta fase para desbloquear la siguiente.</span>{% endif %}
+        </nav>
+
+        <div class="printing-bottom-grid printing-bottom-grid--history">
             <section class="pf-card printing-detail-card printing-trace-card">
                 <div class="printing-card-heading"><h2>Trazabilidad del trabajo</h2><span class="printing-trace-order">{{ item.serviceOrder.folio }} · P{{ item.displayLineNumber }}</span></div>
                 <ol class="printing-timeline">
