@@ -1,5 +1,5 @@
 {% set current_navigation = active_navigation|default('dashboard') %}
-{% set canSeeDailyOperations = is_granted('service_orders.view') or is_granted('production.view') or is_granted('quality.review') or is_granted('delivery.confirm') or is_granted('delivery.ship') %}
+{% set canSeeDailyOperations = is_granted('service_orders.view') or (is_granted('production.view') and is_granted('production.design.review')) or (is_granted('production.view') and is_granted('production.execute')) or is_granted('quality.review') or is_granted('delivery.confirm') or is_granted('delivery.ship') %}
 {% set canSeeWorkshopSetup = is_granted('production_routes.manage') or is_granted('production_calendar.manage') or is_granted('equipment.view') or is_granted('operations.view') or is_granted('operation_areas.view') %}
 {% set canSeeMaterials = is_granted('suppliers.view') or is_granted('materials.view') or is_granted('material_categories.view') or is_granted('inventory.view') %}
 
@@ -169,7 +169,7 @@
                     </a>
                 {% endif %}
 
-                {% if is_granted('production.view') %}
+                {% if is_granted('production.view') and is_granted('production.design.review') %}
                     <a
                         href="{{ path('admin_design_index') }}"
                         class="pf-sidebar__link {{ current_navigation == 'design' ? 'is-active' : '' }}"

@@ -145,7 +145,7 @@
                                 <span class="service-order-journey__owner">Siguiente responsable: Ventas y Producción</span>
                             {% endif %}
                         {% elseif orderProgress.current_stage == 'design' %}
-                            {% if is_granted('production.view') %}
+                            {% if is_granted('production.view') and is_granted('production.design.review') %}
                                 <a href="{{ path('admin_design_index') }}" class="btn pf-button pf-button--primary">Abrir Diseño <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
                             {% else %}
                                 <span class="service-order-journey__owner">Siguiente responsable: Diseño</span>
@@ -394,7 +394,7 @@
                             <div class="d-flex flex-column align-items-md-end gap-2">
                                 <span class="pf-status-badge pf-status-badge--{{ itemForecast ? itemForecast.risk_tone : item.designStatus.badgeTone }}">{{ itemForecast ? itemForecast.risk_label : item.designStatus.label }}</span>
                                 <span class="text-muted small">{{ plans|length }} {{ plans|length == 1 ? 'operación' : 'operaciones' }}</span>
-                                {% if is_granted('production.view') %}
+                                {% if is_granted('production.view') and is_granted('production.design.review') %}
                                     <a href="{{ path('admin_design_show', {id: item.id}) }}" class="btn pf-button pf-button--secondary pf-button--sm">Abrir Diseño</a>
                                 {% endif %}
                             </div>

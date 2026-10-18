@@ -258,58 +258,71 @@
                 </section>
 
                 {% if canReview and canUploadFiles and item.serviceOrder.isPlanned and designStatus == 'IN_REVIEW' %}
-                    {% if clientOriginalFile %}
-                        <section class="pf-card design-review-form-card" aria-labelledby="design-authorize-original-title">
-                            <div class="pf-card__header">
-                                <div><span class="design-section-eyebrow">Opción 1 · Archivo recibido</span><h2 class="pf-card__title" id="design-authorize-original-title">Autorizar el original</h2></div>
-                                <i class="bi bi-file-earmark-check design-review-form-card__icon" aria-hidden="true"></i>
-                            </div>
-                            <form class="pf-card__body pf-form" method="post" enctype="multipart/form-data" action="{{ path('admin_design_authorize_original', {id: item.id}) }}">
-                                <input type="hidden" name="_token" value="{{ csrf_token('design-authorize-original-' ~ item.id) }}">
-                                <p class="design-form-intro">Elige esta opción si el archivo del cliente se imprimirá sin cambios. Adjunta una captura del diseño final para que Impresión pueda compararlo.</p>
-                                <div class="design-upload-field" data-controller="ui--file-preview">
-                                    <label class="form-label" for="reference-original">Captura del diseño final <span class="design-required">Obligatoria</span></label>
-                                    <input id="reference-original" name="reference" type="file" class="form-control" accept="image/jpeg,image/png,image/webp" required data-action="change->ui--file-preview#previewFile">
-                                    <div class="quotation-file-preview mt-2" data-ui--file-preview-target="preview" aria-live="polite" hidden></div>
-                                    {{ include('partials/_file_preview_modal.html.twig', {controllerIdentifier: 'ui--file-preview', modalTitleId: 'design-original-upload-preview-title'}) }}
-                                </div>
-                                <label class="form-label" for="instructions-original">Instrucciones para Impresión <span class="text-body-secondary">Opcional</span></label>
-                                <textarea id="instructions-original" name="instructions" class="form-control" rows="3" maxlength="5000" placeholder="Colores, orientación, sangrado u otras indicaciones..."></textarea>
-                                <button class="btn pf-button pf-button--primary design-authorize-cta" type="submit"><i class="bi bi-check2-circle" aria-hidden="true"></i> Autorizar original y liberar</button>
-                            </form>
-                        </section>
-                    {% endif %}
-
-                    <section class="pf-card design-review-form-card" aria-labelledby="design-authorize-prepared-title">
-                        <div class="pf-card__header">
-                            <div><span class="design-section-eyebrow">{% if clientOriginalFile %}Opción 2 · Requiere cambios{% elseif isClientFileReceived %}Archivo original no disponible{% else %}Preparación requerida{% endif %}</span><h2 class="pf-card__title" id="design-authorize-prepared-title">{% if clientOriginalFile %}Entregar arte preparado{% else %}Preparar arte para impresión{% endif %}</h2></div>
-                            <i class="bi bi-brush design-review-form-card__icon" aria-hidden="true"></i>
-                        </div>
-                        <form class="pf-card__body pf-form" method="post" enctype="multipart/form-data" action="{{ path('admin_design_authorize_prepared', {id: item.id}) }}">
-                            <input type="hidden" name="_token" value="{{ csrf_token('design-authorize-prepared-' ~ item.id) }}">
+                    <section class="design-review-options" aria-labelledby="design-review-options-title" data-controller="admin--design-options">
+                        <header class="design-review-options__heading">
+                            <span class="design-section-eyebrow">Elige una ruta</span>
+                            <h2 id="design-review-options-title">¿Cómo liberarás el arte?</h2>
+                            <p>No llenes ambos formularios. La captura de referencia se pide en las dos opciones.</p>
+                        </header>
+                        <div class="design-review-options__choices">
                             {% if clientOriginalFile %}
-                                <p class="design-form-intro">Usa esta opción cuando el original requiera ajustes, adaptación o reconstrucción. El arte adjunto será la versión exacta que recibirá Impresión.</p>
-                            {% elseif isClientFileReceived %}
-                                <p class="design-form-intro">El registro indica que se recibió un archivo, pero no está disponible para consulta. Adjunta un arte preparado a partir de la información de la partida o solicita que vuelvan a adjuntarlo.</p>
-                            {% else %}
-                                <p class="design-form-intro">No hay un original del cliente. Adjunta el arte final creado a partir de la solicitud y las especificaciones técnicas de esta partida.</p>
+                                <details class="pf-card design-review-form-card design-path-option" name="design-release-option" data-action="toggle->admin--design-options#toggle">
+                                    <summary class="design-path-option__summary">
+                                        <span class="design-path-option__number">1</span>
+                                        <span class="design-path-option__copy"><strong>Usar el original del cliente</strong><small>El archivo está listo y se imprimirá sin cambios.</small></span>
+                                        <span class="design-path-option__count">1 archivo obligatorio</span>
+                                        <i class="bi bi-chevron-down design-path-option__chevron" aria-hidden="true"></i>
+                                    </summary>
+                                    <form class="pf-card__body pf-form design-review-form-card__body" method="post" enctype="multipart/form-data" action="{{ path('admin_design_authorize_original', {id: item.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('design-authorize-original-' ~ item.id) }}">
+                                        <p class="design-form-intro">Adjunta una captura donde se vea el diseño final tal como se imprimirá. El original recibido quedará como arte autorizado.</p>
+                                        <div class="design-upload-field" data-controller="ui--file-preview">
+                                            <label class="form-label" for="reference-original">Captura de referencia <span class="design-required">Obligatoria</span></label>
+                                            <input id="reference-original" name="reference" type="file" class="form-control" accept="image/jpeg,image/png,image/webp" required data-action="change->ui--file-preview#previewFile">
+                                            <div class="quotation-file-preview mt-2" data-ui--file-preview-target="preview" aria-live="polite" hidden></div>
+                                            {{ include('partials/_file_preview_modal.html.twig', {controllerIdentifier: 'ui--file-preview', modalTitleId: 'design-original-upload-preview-title'}) }}
+                                        </div>
+                                        <label class="form-label" for="instructions-original">Instrucciones para Impresión <span class="text-body-secondary">Opcional</span></label>
+                                        <textarea id="instructions-original" name="instructions" class="form-control" rows="3" maxlength="5000" placeholder="Colores, orientación, sangrado u otras indicaciones..."></textarea>
+                                        <button class="btn pf-button pf-button--primary design-authorize-cta" type="submit"><i class="bi bi-check2-circle" aria-hidden="true"></i> Autorizar original y liberar</button>
+                                    </form>
+                                </details>
                             {% endif %}
-                            <div class="design-upload-field" data-controller="ui--file-preview">
-                                <label class="form-label" for="prepared-artwork">Archivo final listo para impresión <span class="design-required">Obligatorio</span></label>
-                                <input id="prepared-artwork" name="artwork" type="file" class="form-control" accept="application/pdf,application/postscript,application/illustrator,application/eps,application/zip,application/x-zip-compressed,image/svg+xml,image/jpeg,image/png,image/webp,image/tiff,.ai,.eps,.svg,.tif,.tiff,.zip" required data-action="change->ui--file-preview#previewFile">
-                                <div class="quotation-file-preview mt-2" data-ui--file-preview-target="preview" aria-live="polite" hidden></div>
-                                {{ include('partials/_file_preview_modal.html.twig', {controllerIdentifier: 'ui--file-preview', modalTitleId: 'design-prepared-artwork-preview-title'}) }}
-                            </div>
-                            <div class="design-upload-field" data-controller="ui--file-preview">
-                                <label class="form-label" for="reference-prepared">Captura del diseño final <span class="design-required">Obligatoria</span></label>
-                                <input id="reference-prepared" name="reference" type="file" class="form-control" accept="image/jpeg,image/png,image/webp" required data-action="change->ui--file-preview#previewFile">
-                                <div class="quotation-file-preview mt-2" data-ui--file-preview-target="preview" aria-live="polite" hidden></div>
-                                {{ include('partials/_file_preview_modal.html.twig', {controllerIdentifier: 'ui--file-preview', modalTitleId: 'design-prepared-reference-preview-title'}) }}
-                            </div>
-                            <label class="form-label" for="instructions-prepared">Instrucciones para Impresión <span class="text-body-secondary">Opcional</span></label>
-                            <textarea id="instructions-prepared" name="instructions" class="form-control" rows="3" maxlength="5000" placeholder="Colores, orientación, sangrado u otras indicaciones..."></textarea>
-                            <button class="btn pf-button pf-button--primary design-authorize-cta" type="submit"><i class="bi bi-check2-circle" aria-hidden="true"></i> Autorizar arte preparado y liberar</button>
-                        </form>
+
+                            <details class="pf-card design-review-form-card design-path-option" name="design-release-option" {% if not clientOriginalFile %}open{% endif %} data-action="toggle->admin--design-options#toggle">
+                                <summary class="design-path-option__summary">
+                                    <span class="design-path-option__number">{{ clientOriginalFile ? '2' : '1' }}</span>
+                                    <span class="design-path-option__copy"><strong>{% if clientOriginalFile %}Preparar o corregir el arte{% else %}Preparar arte para impresión{% endif %}</strong><small>{% if clientOriginalFile %}El original requiere ajustes o no debe imprimirse tal como llegó.{% elseif isClientFileReceived %}El registro indica que llegó un archivo, pero no está disponible para abrirlo.{% else %}La cotización no incluyó un archivo del cliente.{% endif %}</small></span>
+                                    <span class="design-path-option__count">2 archivos obligatorios</span>
+                                    <i class="bi bi-chevron-down design-path-option__chevron" aria-hidden="true"></i>
+                                </summary>
+                                <form class="pf-card__body pf-form design-review-form-card__body" method="post" enctype="multipart/form-data" action="{{ path('admin_design_authorize_prepared', {id: item.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('design-authorize-prepared-' ~ item.id) }}">
+                                    {% if clientOriginalFile %}
+                                        <p class="design-form-intro">Adjunta el arte corregido o reconstruido y una captura que muestre la versión final exacta que recibirá Impresión.</p>
+                                    {% elseif isClientFileReceived %}
+                                        <p class="design-form-intro">El original no se puede abrir. Adjunta un arte preparado a partir de la información de la partida o solicita que vuelvan a adjuntarlo.</p>
+                                    {% else %}
+                                        <p class="design-form-intro">Crea el arte a partir de la solicitud y las especificaciones técnicas de esta partida.</p>
+                                    {% endif %}
+                                    <div class="design-upload-field" data-controller="ui--file-preview">
+                                        <label class="form-label" for="prepared-artwork">Arte final exacto para impresión <span class="design-required">Obligatorio</span></label>
+                                        <input id="prepared-artwork" name="artwork" type="file" class="form-control" accept="application/pdf,application/postscript,application/illustrator,application/eps,application/zip,application/x-zip-compressed,image/svg+xml,image/jpeg,image/png,image/webp,image/tiff,.ai,.eps,.svg,.tif,.tiff,.zip" required data-action="change->ui--file-preview#previewFile">
+                                        <div class="quotation-file-preview mt-2" data-ui--file-preview-target="preview" aria-live="polite" hidden></div>
+                                        {{ include('partials/_file_preview_modal.html.twig', {controllerIdentifier: 'ui--file-preview', modalTitleId: 'design-prepared-artwork-preview-title'}) }}
+                                    </div>
+                                    <div class="design-upload-field" data-controller="ui--file-preview">
+                                        <label class="form-label" for="reference-prepared">Captura de referencia del arte final <span class="design-required">Obligatoria</span></label>
+                                        <input id="reference-prepared" name="reference" type="file" class="form-control" accept="image/jpeg,image/png,image/webp" required data-action="change->ui--file-preview#previewFile">
+                                        <div class="quotation-file-preview mt-2" data-ui--file-preview-target="preview" aria-live="polite" hidden></div>
+                                        {{ include('partials/_file_preview_modal.html.twig', {controllerIdentifier: 'ui--file-preview', modalTitleId: 'design-prepared-reference-preview-title'}) }}
+                                    </div>
+                                    <label class="form-label" for="instructions-prepared">Instrucciones para Impresión <span class="text-body-secondary">Opcional</span></label>
+                                    <textarea id="instructions-prepared" name="instructions" class="form-control" rows="3" maxlength="5000" placeholder="Colores, orientación, sangrado u otras indicaciones..."></textarea>
+                                    <button class="btn pf-button pf-button--primary design-authorize-cta" type="submit"><i class="bi bi-check2-circle" aria-hidden="true"></i> Autorizar arte preparado y liberar</button>
+                                </form>
+                            </details>
+                        </div>
                     </section>
                 {% elseif not canReview %}
                     <section class="pf-card design-review-permission-card"><div class="pf-card__body"><i class="bi bi-lock" aria-hidden="true"></i><p><strong>Acceso de consulta</strong><span>Tu perfil puede consultar la partida{% if is_granted('production.files.download') %} y abrir sus archivos{% endif %}, pero no iniciar ni autorizar una liberación.</span></p></div></section>

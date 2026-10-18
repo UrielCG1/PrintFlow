@@ -57,7 +57,9 @@
                             {% endif %}
 
                             {% if specializedKinds[plan.id]|default(null) == 'design' %}
-                                <a class="btn pf-button pf-button--secondary btn-sm" href="{{ path('admin_design_show', {id: item.id}) }}">Abrir en Diseño</a>
+                                {% if is_granted('production.view') and is_granted('production.design.review') %}
+                                    <a class="btn pf-button pf-button--secondary btn-sm" href="{{ path('admin_design_show', {id: item.id}) }}">Abrir en Diseño</a>
+                                {% endif %}
                             {% elseif specializedKinds[plan.id]|default(null) == 'printing' %}
                                 <a class="btn pf-button pf-button--secondary btn-sm" href="{{ path('admin_printing_show', {id: plan.id}) }}">Abrir en Impresión</a>
                             {% endif %}

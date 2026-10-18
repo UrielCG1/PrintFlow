@@ -37,6 +37,7 @@ final class DesignController extends AbstractController
     public function index(ServiceOrderItemRepository $itemRepository): Response
     {
         $this->denyAccessUnlessGranted('production.view');
+        $this->denyAccessUnlessGranted('production.design.review');
 
         $items = $itemRepository->findForDesignQueue();
         $serviceOrderIds = [];
@@ -98,6 +99,7 @@ final class DesignController extends AbstractController
         DesignSpecificationsPresenter $specificationsPresenter,
     ): Response {
         $this->denyAccessUnlessGranted('production.view');
+        $this->denyAccessUnlessGranted('production.design.review');
         $clientOriginal = $this->resolveClientOriginal($item, $storage);
         $sourceSnapshot = $item->getSourceFileSnapshot() ?? [];
         $sourcePath = $sourceSnapshot['path'] ?? null;
@@ -123,6 +125,7 @@ final class DesignController extends AbstractController
     #[Route('/partidas/{id}/iniciar-revision', name: 'start_review', requirements: ['id' => '\\d+'], methods: ['POST'])]
     public function startReview(Request $request, ServiceOrderItem $item, DesignReviewManager $manager): Response
     {
+        $this->denyAccessUnlessGranted('production.view');
         $this->denyAccessUnlessGranted('production.design.review');
         $this->assertCsrf($request, 'design-start-review-'.$item->getId());
 
@@ -139,6 +142,7 @@ final class DesignController extends AbstractController
     #[Route('/partidas/{id}/autorizar-original', name: 'authorize_original', requirements: ['id' => '\\d+'], methods: ['POST'])]
     public function authorizeOriginal(Request $request, ServiceOrderItem $item, DesignReviewManager $manager): Response
     {
+        $this->denyAccessUnlessGranted('production.view');
         $this->denyAccessUnlessGranted('production.design.review');
         $this->denyAccessUnlessGranted('production.files.upload');
         $this->assertCsrf($request, 'design-authorize-original-'.$item->getId());
@@ -161,6 +165,7 @@ final class DesignController extends AbstractController
     #[Route('/partidas/{id}/autorizar-arte-preparado', name: 'authorize_prepared', requirements: ['id' => '\\d+'], methods: ['POST'])]
     public function authorizePrepared(Request $request, ServiceOrderItem $item, DesignReviewManager $manager): Response
     {
+        $this->denyAccessUnlessGranted('production.view');
         $this->denyAccessUnlessGranted('production.design.review');
         $this->denyAccessUnlessGranted('production.files.upload');
         $this->assertCsrf($request, 'design-authorize-prepared-'.$item->getId());
@@ -201,6 +206,8 @@ final class DesignController extends AbstractController
     #[Route('/partidas/{id}/original-cliente', name: 'download_client_original', requirements: ['id' => '\\d+'], methods: ['GET'])]
     public function downloadClientOriginal(Request $request, ServiceOrderItem $item, ProductionFileStorage $storage): BinaryFileResponse
     {
+        $this->denyAccessUnlessGranted('production.view');
+        $this->denyAccessUnlessGranted('production.design.review');
         $this->denyAccessUnlessGranted('production.files.download');
         $file = $this->resolveClientOriginal($item, $storage);
         if ($file === null) {
