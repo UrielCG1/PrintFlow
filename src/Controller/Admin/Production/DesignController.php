@@ -111,12 +111,16 @@ final class DesignController extends AbstractController
     }
 
     #[Route('/archivos/{id}', name: 'download_file', requirements: ['id' => '\\d+'], methods: ['GET'])]
-    public function downloadFile(ProductionFile $file, ProductionFileStorage $storage): BinaryFileResponse
+    public function downloadFile(Request $request, ProductionFile $file, ProductionFileStorage $storage): BinaryFileResponse
     {
         $this->denyAccessUnlessGranted('production.files.download');
         $response = new BinaryFileResponse($storage->absolutePath($file->getInternalPath()));
         $response->headers->set('Content-Type', $file->getMimeType());
-        $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_ATTACHMENT, $file->getOriginalName());
+        $previewable = in_array($file->getMimeType(), ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'], true);
+        $disposition = $request->query->getBoolean('preview') && $previewable
+            ? ResponseHeaderBag::DISPOSITION_INLINE
+            : ResponseHeaderBag::DISPOSITION_ATTACHMENT;
+        $response->setContentDisposition($disposition, $file->getOriginalName());
         $response->headers->set('Cache-Control', 'private, no-store');
         $response->headers->set('X-Content-Type-Options', 'nosniff');
 

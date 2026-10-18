@@ -299,7 +299,7 @@
             {% set hasPurchaseOrderNumber = quotation.purchaseOrderNumber is not empty %}
             {% set hasPurchaseOrderFile = quotation.purchaseOrderFile is not empty %}
             {% set purchaseOrderDownloadUrl = quotation.purchaseOrderFile ? path('admin_quotations_decision_file', {id: quotation.id, type: 'purchase-order'}) : null %}
-            <section class="pf-card mb-4 quotation-purchase-order" data-controller="ui--purchase-order">
+            <section class="pf-card mb-4 quotation-purchase-order" data-controller="ui--file-preview">
                 <header class="pf-card__header quotation-purchase-order__header">
                     <div class="quotation-purchase-order__heading">
                         <div class="quotation-purchase-order__title-row">
@@ -336,10 +336,11 @@
                                 <button
                                     type="button"
                                     class="btn pf-button pf-button--subtle pf-button--sm quotation-file-preview__open"
-                                    data-action="ui--purchase-order#openExistingPreview"
+                                    data-action="ui--file-preview#openExistingPreview"
                                     data-preview-url="{{ path('admin_quotations_decision_file', {id: quotation.id, type: 'purchase-order', preview: 1}) }}"
                                     data-download-url="{{ purchaseOrderDownloadUrl }}"
                                     data-file-name="{{ quotation.purchaseOrderFile.original_name|default('Orden de compra.pdf') }}"
+                                    data-file-type="application/pdf"
                                     aria-label="Visualizar {{ quotation.purchaseOrderFile.original_name|default('Orden de compra.pdf') }} en grande"
                                     title="Visualizar archivo"
                                 ><i class="bi bi-eye" aria-hidden="true"></i></button>
@@ -364,34 +365,17 @@
                                 {{ form_start(purchaseOrderForm, {action: path('admin_quotations_purchase_order', {id: quotation.id}), attr: {class: 'quotation-purchase-order__form'}}) }}
                                     <div class="row g-3 align-items-end">
                                         <div class="col-lg-4">{{ form_row(purchaseOrderForm.purchaseOrderNumber) }}</div>
-                                        <div class="col-lg-6">{{ form_row(purchaseOrderForm.purchaseOrderFile, {attr: {accept: 'application/pdf,.pdf', 'data-ui--purchase-order-target': 'fileInput', 'data-action': 'change->ui--purchase-order#previewFile'}}) }}</div>
+                                        <div class="col-lg-6">{{ form_row(purchaseOrderForm.purchaseOrderFile, {attr: {accept: 'application/pdf,.pdf', 'data-ui--file-preview-target': 'fileInput', 'data-action': 'change->ui--file-preview#previewFile'}}) }}</div>
                                         <div class="col-lg-2"><button type="submit" class="btn pf-button pf-button--primary w-100"><i class="bi bi-save2" aria-hidden="true"></i> Guardar</button></div>
                                     </div>
-                                    <div class="quotation-file-preview" data-ui--purchase-order-target="preview" aria-live="polite" hidden></div>
+                                    <div class="quotation-file-preview" data-ui--file-preview-target="preview" aria-live="polite" hidden></div>
                                 {{ form_end(purchaseOrderForm) }}
                             </div>
                         </details>
                     {% endif %}
                 </div>
 
-                <div class="modal fade quotation-file-modal" tabindex="-1" role="dialog" aria-labelledby="purchase-order-modal-title" aria-hidden="true" data-ui--purchase-order-target="modal">
-                    <div class="modal-dialog modal-dialog-centered modal-xl modal-fullscreen-lg-down">
-                        <div class="modal-content quotation-file-modal__content">
-                            <div class="modal-header quotation-file-modal__header">
-                                <div>
-                                    <p class="quotation-file-modal__eyebrow">Vista previa del archivo</p>
-                                    <h2 class="modal-title quotation-file-modal__title" id="purchase-order-modal-title" data-ui--purchase-order-target="modalTitle"></h2>
-                                </div>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar vista previa"></button>
-                            </div>
-                            <div class="modal-body quotation-file-modal__body" data-ui--purchase-order-target="modalBody"></div>
-                            <div class="modal-footer quotation-file-modal__footer">
-                                <a class="btn pf-button pf-button--secondary" href="#" data-ui--purchase-order-target="modalDownload" hidden><i class="bi bi-download" aria-hidden="true"></i> Descargar original</a>
-                                <button type="button" class="btn pf-button pf-button--primary" data-bs-dismiss="modal">Cerrar</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                {{ include('partials/_file_preview_modal.html.twig', {controllerIdentifier: 'ui--file-preview', modalTitleId: 'purchase-order-modal-title'}) }}
             </section>
         {% endif %}
 

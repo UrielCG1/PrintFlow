@@ -10,10 +10,20 @@ export default class extends Controller {
         'wasteReason',
         'measurementMethod',
         'adjustmentReason',
+        'configurationEquipment',
+        'configurationMaterial',
+        'configurationQuantity',
+        'configurationReason',
+        'plannedUnit',
+        'plannedUnitHelp',
     ];
 
     static values = {
         plannedQuantity: String,
+        initialEquipment: String,
+        initialMaterial: String,
+        initialQuantity: String,
+        initialUnit: String,
     };
 
     connect() {
@@ -72,6 +82,9 @@ export default class extends Controller {
 
         if (this.hasTotalTarget) {
             this.refreshConsumptionConstraints();
+        }
+        if (this.hasConfigurationReasonTarget) {
+            this.refreshConfigurationConstraints();
         }
 
         this.element.querySelectorAll('input[required], textarea[required], select[required]').forEach((field) => {
@@ -144,6 +157,45 @@ export default class extends Controller {
         }
         if (this.hasAdjustmentReasonTarget && this.adjustmentReasonTarget.required && this.adjustmentReasonTarget.value.trim().length < 5) {
             this.adjustmentReasonTarget.setCustomValidity('Explica el cambio con al menos cinco caracteres.');
+        }
+    }
+
+    refreshConfigurationConstraints() {
+        const initialEquipment = this.hasInitialEquipmentValue ? this.initialEquipmentValue.trim() : '';
+        const initialMaterial = this.hasInitialMaterialValue ? this.initialMaterialValue.trim() : '';
+        const initialQuantity = this.hasInitialQuantityValue ? this.initialQuantityValue.trim() : '';
+        const initialUnit = this.hasInitialUnitValue ? this.initialUnitValue.trim() : '';
+        const equipment = this.hasConfigurationEquipmentTarget ? this.configurationEquipmentTarget.value.trim() || initialEquipment : initialEquipment;
+        const material = this.configurationMaterialTarget.value.trim();
+        const quantity = this.configurationQuantityTarget.value.trim();
+        const currentQuantityValid = Number.isFinite(this.quantityNumber(quantity));
+        const initialQuantityValid = Number.isFinite(this.quantityNumber(initialQuantity));
+        const quantityChanged = !currentQuantityValid
+            || !initialQuantityValid
+            || this.compareQuantities(quantity, initialQuantity) !== 0;
+        const requirementsChanged = equipment !== initialEquipment
+            || material !== initialMaterial
+            || quantityChanged;
+
+        if (this.hasConfigurationEquipmentTarget) {
+            this.configurationEquipmentTarget.required = initialEquipment === '';
+        }
+        this.configurationReasonTarget.required = requirementsChanged;
+        if (requirementsChanged && this.configurationReasonTarget.value.trim() === '') {
+            this.configurationReasonTarget.setCustomValidity('Explica el motivo de la asignación o del cambio antes de guardar.');
+        }
+
+        const selectedUnit = this.hasConfigurationMaterialTarget
+            ? this.configurationMaterialTarget.selectedOptions[0]?.dataset.consumptionUnit || ''
+            : '';
+        const unit = selectedUnit || initialUnit || 'unidad de consumo';
+        if (this.hasPlannedUnitTarget) {
+            this.plannedUnitTarget.textContent = unit;
+        }
+        if (this.hasPlannedUnitHelpTarget) {
+            this.plannedUnitHelpTarget.textContent = selectedUnit || initialUnit
+                ? `Captura la previsión en ${unit}. Para lona, indica el área de material necesaria; no la longitud del rollo.`
+                : 'Selecciona primero el material para conocer la unidad en que debes capturar la cantidad.';
         }
     }
 

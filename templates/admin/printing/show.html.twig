@@ -17,7 +17,7 @@
     {% set selectedStep = requestedStep >= 1 and requestedStep <= maxUnlockedStep ? requestedStep : (activeStep > 5 ? 5 : activeStep) %}
     {% set stepLabels = ['Preparación', 'Validar máquina y material', 'Iniciar impresión', 'Registrar consumo', 'Etiqueta QR'] %}
     {% set phaseDescriptions = [
-        'Revisa la liberación de Diseño, confirma las instrucciones y deja lista la máquina y el material previstos.',
+        'Revisa el arte autorizado, sigue las indicaciones de Diseño y confirma la máquina y la previsión de material antes de avanzar.',
         'Confirma físicamente la máquina y la unidad de material que se descontará al terminar.',
         'Con la validación completa, registra el inicio de este intento de impresión.',
         'Al finalizar, registra consumo, merma y cualquier sobrante reutilizable.',
@@ -75,54 +75,109 @@
         {% if preparationBlockReason %}
             <div class="printing-callout printing-callout--warning" role="status"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i><p><strong>Antes de validar</strong><span>{{ preparationBlockReason }}</span></p></div>
         {% endif %}
-        <div class="printing-overview-grid">
-            <section class="pf-card printing-detail-card printing-art-card">
-                <div class="printing-card-heading"><h2>Arte aprobado</h2>{% if release %}<span class="printing-inline-status printing-inline-status--success"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Liberado para impresión</span>{% endif %}</div>
-                <div class="printing-art-file">
-                    <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
-                    <div>{% if release %}<a href="{{ path('admin_design_download_file', {id: release.artworkFile.id}) }}">{{ release.artworkFile.originalName }}</a><small>{{ release.artworkFile.mimeType|split('/')|last|upper }}{% if release.artworkFile.byteSize %} · {{ (release.artworkFile.byteSize / 1048576)|number_format(1) }} MB{% endif %}</small>{% else %}<span class="printing-art-pending">Arte pendiente de liberación</span><small>Diseño aún no libera esta partida</small>{% endif %}</div>
-                    {% if release %}<a class="printing-file-button" href="{{ path('admin_design_download_file', {id: release.artworkFile.id}) }}" aria-label="Ver arte aprobado"><i class="bi bi-eye" aria-hidden="true"></i><span>Ver arte</span></a>{% endif %}
+        {% set previewableArtworkMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'] %}
+        {% set productionSpecifications = item.productionSpecificationsSnapshot|default({}) %}
+        {% set specificationValues = productionSpecifications.values|default({}) %}
+        <div class="printing-overview-grid printing-overview-grid--preparation">
+            <section class="pf-card printing-detail-card printing-art-card" data-controller="ui--file-preview">
+                <div class="printing-preparation-card-heading">
+                    <div><span class="printing-section-eyebrow">Liberación de Diseño</span><h2>Arte aprobado</h2><p>Este es el archivo vigente que debe usarse en la impresión.</p></div>
+                    {% if release %}<span class="printing-inline-status printing-inline-status--success"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Liberado</span>{% endif %}
                 </div>
                 {% if release %}
-                    <div class="printing-callout printing-callout--success"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><p><strong>El arte fue revisado y aprobado por Diseño.</strong><span>Versión {{ release.versionNumber }} · {{ release.authorizationType.label }} · {{ release.authorizedAt|date('d/m/Y H:i', 'America/Mexico_City') }}</span></p></div>
-                    {% if release.referenceFile %}<a class="printing-reference-link" href="{{ path('admin_design_download_file', {id: release.referenceFile.id}) }}"><i class="bi bi-images" aria-hidden="true"></i>Ver captura guía</a>{% endif %}
-                {% else %}<div class="printing-callout printing-callout--warning"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i><p>No hay liberación vigente de Diseño. La impresión no puede iniciar.</p></div>{% endif %}
+                    {% set artworkMime = release.artworkFile.mimeType|lower %}
+                    {% set artworkPreviewable = artworkMime in previewableArtworkMimes %}
+                    {% set artworkTypeLabel = artworkMime == 'application/pdf' ? 'PDF' : (artworkMime == 'image/jpeg' ? 'Imagen JPG' : (artworkMime == 'image/png' ? 'Imagen PNG' : (artworkMime == 'image/webp' ? 'Imagen WebP' : (artworkMime == 'application/postscript' or artworkMime == 'application/illustrator' or artworkMime == 'application/eps' ? 'Archivo para software de diseño' : 'Archivo de diseño')))) %}
+                    <div class="printing-artwork-file">
+                        <span class="printing-artwork-file__icon"><i class="bi {{ artworkMime == 'application/pdf' ? 'bi-file-earmark-pdf' : (artworkMime starts with 'image/' ? 'bi-file-earmark-image' : 'bi-file-earmark-check') }}" aria-hidden="true"></i></span>
+                        <div class="printing-artwork-file__details"><span>Versión {{ release.versionNumber }} · {{ artworkTypeLabel }}</span><strong title="{{ release.artworkFile.originalName }}">{{ release.artworkFile.originalName }}</strong><small>{% if release.artworkFile.byteSize %}{{ (release.artworkFile.byteSize / 1048576)|number_format(1, '.', ',') }} MB · {% endif %}Autorizado {{ release.authorizedAt|date('d/m/Y H:i', 'America/Mexico_City') }}</small></div>
+                    </div>
+                    <div class="printing-artwork-actions">
+                        {% if artworkPreviewable %}<button class="btn pf-button pf-button--primary" type="button" data-action="ui--file-preview#openExistingPreview" data-preview-url="{{ path('admin_design_download_file', {id: release.artworkFile.id, preview: 1}) }}" data-download-url="{{ path('admin_design_download_file', {id: release.artworkFile.id}) }}" data-file-name="{{ release.artworkFile.originalName }}" data-file-type="{{ artworkMime }}"><i class="bi bi-eye" aria-hidden="true"></i> Ver arte en pantalla</button>{% endif %}
+                        <a class="btn pf-button pf-button--secondary" href="{{ path('admin_design_download_file', {id: release.artworkFile.id}) }}"><i class="bi bi-download" aria-hidden="true"></i> Descargar original</a>
+                    </div>
+                    {% if not artworkPreviewable %}<p class="printing-file-viewer-hint">Este formato no tiene vista previa en el navegador. Descarga el original para abrirlo en el software de diseño.</p>{% endif %}
+                    <div class="printing-art-approval">
+                        <i class="bi bi-patch-check-fill" aria-hidden="true"></i>
+                        <div><strong>Autorizado por {{ release.authorizedBy.fullName|default('Diseño') }}</strong><span>{{ release.authorizationType.label }} · versión vigente</span></div>
+                    </div>
+                    <p class="printing-operator-note">Compara el arte con esta partida y usa esta versión. Si el archivo, las medidas o el acabado no coinciden, detente y consulta a Diseño antes de imprimir.</p>
+                    {% if release.referenceFile %}
+                        <div class="printing-guide-file">
+                            <span class="printing-guide-file__icon"><i class="bi bi-images" aria-hidden="true"></i></span>
+                            <div><strong>Captura guía de Diseño</strong><small>{{ release.referenceFile.originalName }} · referencia visual de la autorización</small></div>
+                            <button class="btn pf-button pf-button--subtle pf-button--sm" type="button" data-action="ui--file-preview#openExistingPreview" data-preview-url="{{ path('admin_design_download_file', {id: release.referenceFile.id, preview: 1}) }}" data-download-url="{{ path('admin_design_download_file', {id: release.referenceFile.id}) }}" data-file-name="{{ release.referenceFile.originalName }}" data-file-type="{{ release.referenceFile.mimeType|lower }}" aria-label="Ver captura guía de Diseño"><i class="bi bi-eye" aria-hidden="true"></i> Ver guía</button>
+                        </div>
+                    {% endif %}
+                    {{ include('partials/_file_preview_modal.html.twig', {controllerIdentifier: 'ui--file-preview', modalTitleId: 'printing-art-preview-title'}) }}
+                {% else %}
+                    <div class="printing-art-empty"><span><i class="bi bi-file-earmark-lock" aria-hidden="true"></i></span><strong>Arte pendiente de liberación</strong><p>Diseño todavía no ha autorizado un archivo vigente para esta partida. La impresión permanecerá bloqueada hasta recibir la liberación.</p></div>
+                {% endif %}
             </section>
 
-            <section class="pf-card printing-detail-card">
-                <div class="printing-card-heading"><h2>Requerimientos de producción</h2></div>
-                <dl class="printing-requirements">
-                    <div><dt><i class="bi bi-printer" aria-hidden="true"></i>Máquina asignada</dt><dd>{{ plan.equipment ? plan.equipment.name : 'Pendiente de configurar' }}{% if plan.equipment %}<small>{{ plan.equipment.code }}</small>{% if is_granted('equipment.view') or is_granted('production.execute') %}<small><a href="{{ path('admin_equipment_label', {id: plan.equipment.id}) }}" target="_blank" rel="noopener">Imprimir etiqueta de máquina</a></small>{% endif %}{% endif %}</dd></div>
-                    <div><dt><i class="bi bi-layers" aria-hidden="true"></i>Material</dt><dd>{{ plan.materialVariant ? plan.materialVariant.material.name : 'Pendiente de configurar' }}{% if plan.materialVariant %}<small>{{ plan.materialVariant.code }}</small>{% endif %}</dd></div>
-                    <div><dt><i class="bi bi-box-seam" aria-hidden="true"></i>Cantidad a producir</dt><dd>{{ item.quantity|number_format(6, '.', ',')|trim('0', 'right')|trim('.', 'right') }} {{ item.commercialItemSnapshot.measurement_unit.code|default('') }}</dd></div>
-                    <div><dt><i class="bi bi-layers" aria-hidden="true"></i>Material previsto</dt><dd>{{ plannedUsage ? plannedUsage.plannedQuantity ~ ' ' ~ plannedUsage.unitLabelSnapshot : 'Pendiente de captura' }}</dd></div>
-                </dl>
+            <section class="pf-card printing-detail-card printing-requirements-card">
+                <div class="printing-preparation-card-heading">
+                    <div><span class="printing-section-eyebrow">Antes de escanear</span><h2>Requerimientos de producción</h2><p>Confirma dónde imprimir y cuánto material se necesita.</p></div>
+                    <span class="printing-requirements-state {{ requirementsReady ? 'is-ready' : 'is-pending' }}"><i class="bi {{ requirementsReady ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill' }}" aria-hidden="true"></i>{{ requirementsReady ? 'Configurado' : 'Pendiente' }}</span>
+                </div>
+                <ul class="printing-requirements">
+                    <li class="printing-requirements__row"><span class="printing-requirements__icon"><i class="bi bi-printer" aria-hidden="true"></i></span><div><span>Máquina</span><strong>{{ plan.equipment ? plan.equipment.name : 'Aún no asignada' }}</strong><small>{% if plan.equipment %}{{ plan.equipment.code }}{% if is_granted('equipment.view') or is_granted('production.execute') %} · <a href="{{ path('admin_equipment_label', {id: plan.equipment.id}) }}" target="_blank" rel="noopener">Imprimir etiqueta</a>{% endif %}{% else %}La máquina se necesita para habilitar la validación.{% endif %}</small></div></li>
+                    <li class="printing-requirements__row"><span class="printing-requirements__icon"><i class="bi bi-layers" aria-hidden="true"></i></span><div><span>Material que se utilizará</span><strong>{{ plan.materialVariant ? plan.materialVariant.material.name : 'Aún no asignado' }}</strong><small>{% if plan.materialVariant %}{{ plan.materialVariant.code }} · unidad de consumo {{ plan.materialVariant.consumptionUnit.symbol }}{% else %}Elige el tipo de material antes de reservarlo.{% endif %}</small></div></li>
+                    <li class="printing-requirements__row"><span class="printing-requirements__icon"><i class="bi bi-box-seam" aria-hidden="true"></i></span><div><span>Producto terminado</span><strong>{{ item.quantity|number_format(6, '.', ',')|trim('0', 'right')|trim('.', 'right') }} {{ item.commercialItemSnapshot.measurement_unit.code|default('') }}</strong><small>Cantidad solicitada en la orden de servicio.</small></div></li>
+                    <li class="printing-requirements__row"><span class="printing-requirements__icon"><i class="bi bi-rulers" aria-hidden="true"></i></span><div><span>Material previsto</span><strong>{{ plannedUsage ? plannedUsage.plannedQuantity ~ ' ' ~ plannedUsage.unitLabelSnapshot : 'Falta indicar la cantidad' }}</strong><small>Es la cantidad a reservar; no es el total del rollo ni la cantidad de piezas.</small></div></li>
+                </ul>
                 {% if materialStatus and materialStatus.code == 'substituted' %}
-                    <div class="printing-callout printing-callout--success"><i class="bi bi-qr-code-scan" aria-hidden="true"></i><p><strong>Escanea el sustituto autorizado.</strong><span>{{ materialStatus.substitute }}</span></p></div>
+                    <div class="printing-callout printing-callout--success mt-3"><i class="bi bi-qr-code-scan" aria-hidden="true"></i><p><strong>Material sustituto autorizado</strong><span>{{ materialStatus.substitute }} · escanea el QR de una unidad de este material.</span></p></div>
                 {% elseif materialStatus and materialStatus.code in ['covered', 'partial_authorized'] and allowedMaterialVariants is not empty %}
-                    <div class="printing-callout printing-callout--success"><i class="bi bi-qr-code-scan" aria-hidden="true"></i><p><strong>Material permitido para etiqueta QR.</strong><span>{% for material in allowedMaterialVariants %}{{ material.material.name }} · {{ material.code }}{{ not loop.last ? ' / ' : '' }}{% endfor %}</span></p></div>
+                    <div class="printing-callout printing-callout--success mt-3"><i class="bi bi-qr-code-scan" aria-hidden="true"></i><p><strong>Material permitido para escanear</strong><span>{% for material in allowedMaterialVariants %}{{ material.material.name }} · {{ material.code }}{{ not loop.last ? ' / ' : '' }}{% endfor %}</span></p></div>
                 {% endif %}
                 {% if canConfigure and not activeExecution and not plan.hasCompletedExecution %}
-                    <details class="printing-configure-details">
-                        <summary><i class="bi bi-sliders" aria-hidden="true"></i>Ajustar requerimientos</summary>
-                        <form class="pf-form printing-configure-form" method="post" action="{{ path('admin_printing_configure', {id: plan.id}) }}" data-controller="ui--printing-form">
-                            <input type="hidden" name="_token" value="{{ csrf_token('printing-configure-' ~ plan.id) }}">
-                            <div><label class="form-label" for="printing-equipment">Máquina prevista</label><select id="printing-equipment" name="equipment_id" class="form-select"><option value="">{{ plan.equipment ? 'Conservar ' ~ plan.equipment.name : 'Selecciona una máquina' }}</option>{% for equipment in equipmentChoices %}<option value="{{ equipment.id }}" {{ plan.equipment and plan.equipment.id == equipment.id ? 'selected' : '' }}>{{ equipment.name }} · {{ equipment.code }}</option>{% endfor %}</select></div>
-                            <div><label class="form-label" for="printing-material">Material previsto</label><select id="printing-material" name="material_variant_id" class="form-select" required><option value="">Selecciona un material</option>{% for material in materialChoices %}<option value="{{ material.id }}" {{ plan.materialVariant and plan.materialVariant.id == material.id ? 'selected' : '' }} {{ material.specifications.legacy_migration|default(false) ? 'disabled' : '' }}>{{ material.material.name }} · {% if material.specifications.width_m|default(false) %}rollo de {{ material.specifications.width_m|number_format(2, '.', '') }} m de ancho{% else %}{{ material.code }}{% endif %} · consumo en {{ material.consumptionUnit.symbol }}{{ material.specifications.legacy_migration|default(false) ? ' (configurar presentación real)' : '' }}</option>{% endfor %}</select></div>
-                            <div><label class="form-label" for="printing-planned-quantity">Cantidad de material prevista</label><input id="printing-planned-quantity" name="planned_quantity" type="number" min="0.000001" max="99999999999999" step="0.000001" value="{{ plannedUsage ? plannedUsage.plannedQuantity : '' }}" class="form-control" inputmode="decimal" placeholder="Ej. 30.4" required><div class="form-text">Captura la cantidad en la unidad de consumo del material seleccionado. Para lona: m² de material necesarios, incluida la merma prevista; no la longitud del rollo.</div></div>
-                            <div><label class="form-label" for="printing-reason">Motivo técnico</label><textarea id="printing-reason" name="reason" class="form-control" rows="2" minlength="5" maxlength="500" required>{{ plan.materialVariant ? 'Ajuste técnico autorizado de requisitos.' : 'Definición inicial de requisitos de Impresión.' }}</textarea></div>
-                            {% if multiplePlannedUsages %}<div class="alert alert-warning">Esta operación tiene varias previsiones; revísalas antes de modificar los requisitos.</div>{% endif %}
-                            <button class="btn pf-button pf-button--secondary" type="submit" {{ multiplePlannedUsages ? 'disabled' : '' }}>Guardar material y apartar</button>
-                        </form>
+                    <details class="printing-requirements-editor" {{ not requirementsReady ? 'open' : '' }}>
+                        <summary><span class="printing-requirements-editor__summary-icon"><i class="bi bi-sliders" aria-hidden="true"></i></span><span><strong>{{ requirementsReady ? 'Editar requerimientos' : 'Completar requerimientos' }}</strong><small>Máquina, material y cantidad prevista</small></span><i class="bi bi-chevron-down printing-requirements-editor__chevron" aria-hidden="true"></i></summary>
+                        <div class="printing-requirements-editor__content">
+                            <p class="printing-requirements-editor__intro">Elige la máquina y el material. La cantidad prevista se captura en la unidad de consumo del material seleccionado. Al guardar, el sistema intenta reservar inventario; la unidad física se valida después con su QR.</p>
+                            {% if multiplePlannedUsages %}<div class="alert alert-warning">Hay varias previsiones de material para esta operación. Pide a un responsable que las revise antes de hacer cambios.</div>{% endif %}
+                            <form class="pf-form printing-configure-form" method="post" action="{{ path('admin_printing_configure', {id: plan.id}) }}" data-controller="ui--printing-form" data-ui--printing-form-initial-equipment-value="{{ plan.equipment ? plan.equipment.id : '' }}" data-ui--printing-form-initial-material-value="{{ plan.materialVariant ? plan.materialVariant.id : '' }}" data-ui--printing-form-initial-quantity-value="{{ plannedUsage ? plannedUsage.plannedQuantity : '' }}" data-ui--printing-form-initial-unit-value="{{ plan.materialVariant ? plan.materialVariant.consumptionUnit.symbol : '' }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('printing-configure-' ~ plan.id) }}">
+                                <div class="printing-configure-field"><label class="form-label" for="printing-equipment">1. Máquina para esta impresión{% if not plan.equipment %} <span class="printing-configure-required">*</span>{% endif %}</label><select id="printing-equipment" name="equipment_id" class="form-select" data-ui--printing-form-target="configurationEquipment" {{ not plan.equipment ? 'required' : '' }}><option value="">{{ plan.equipment ? 'Conservar máquina actual · ' ~ plan.equipment.name : 'Selecciona una máquina' }}</option>{% for equipment in equipmentChoices %}<option value="{{ equipment.id }}">{{ equipment.name }} · {{ equipment.code }}</option>{% endfor %}</select><small>Selecciona el equipo que usará el operador. Si conservas la máquina actual, deja la opción inicial.</small></div>
+                                <div class="printing-configure-field"><label class="form-label" for="printing-material">2. Material previsto <span class="printing-configure-required">*</span></label><select id="printing-material" name="material_variant_id" class="form-select" required data-ui--printing-form-target="configurationMaterial" data-action="change->ui--printing-form#refreshConstraints"><option value="">Selecciona un material</option>{% for material in materialChoices %}<option value="{{ material.id }}" data-consumption-unit="{{ material.consumptionUnit.symbol }}" {{ plan.materialVariant and plan.materialVariant.id == material.id ? 'selected' : '' }} {{ material.specifications.legacy_migration|default(false) ? 'disabled' : '' }}>{{ material.material.name }} · {{ material.code }}{% if material.specifications.width_m|default(false) %} · {{ material.specifications.width_m|number_format(2, '.', '') }} m de ancho{% endif %} · consumo en {{ material.consumptionUnit.symbol }}{{ material.specifications.legacy_migration|default(false) ? ' · requiere configurar presentación' : '' }}</option>{% endfor %}</select><small>El QR que se escanea después identifica una unidad física de este material.</small></div>
+                                <div class="printing-configure-field"><label class="form-label" for="printing-planned-quantity">3. Cantidad de material prevista (<span data-ui--printing-form-target="plannedUnit">{{ plan.materialVariant ? plan.materialVariant.consumptionUnit.symbol : 'unidad de consumo' }}</span>) <span class="printing-configure-required">*</span></label><input id="printing-planned-quantity" name="planned_quantity" type="number" min="0.000001" max="99999999999999" step="0.000001" value="{{ plannedUsage ? plannedUsage.plannedQuantity : '' }}" class="form-control" inputmode="decimal" placeholder="Ej. 30.4" required data-ui--printing-form-target="configurationQuantity"><small data-ui--printing-form-target="plannedUnitHelp">{{ plan.materialVariant ? 'Captura en ' ~ plan.materialVariant.consumptionUnit.symbol ~ '; para lona registra el área de material necesaria, no la longitud del rollo.' : 'Selecciona primero el material para conocer la unidad de captura.' }}</small></div>
+                                <div class="printing-configure-field"><label class="form-label" for="printing-reason">Motivo de la asignación o cambio <span class="printing-field__conditional">Requerido si modificas un requisito</span></label><textarea id="printing-reason" name="reason" class="form-control" rows="2" minlength="5" maxlength="500" placeholder="Ej. Se asigna esta máquina por disponibilidad del equipo" data-ui--printing-form-target="configurationReason"></textarea><small>Explica el cambio de máquina, material o cantidad. Si no cambias nada, puedes dejarlo vacío.</small></div>
+                                <button class="btn pf-button pf-button--primary printing-requirements-save" type="submit" {{ multiplePlannedUsages ? 'disabled' : '' }}><i class="bi bi-check2-circle" aria-hidden="true"></i>{{ requirementsReady ? 'Guardar cambios y actualizar apartado' : 'Guardar requisitos y apartar material' }}</button>
+                            </form>
+                        </div>
                     </details>
+                {% elseif not canConfigure %}
+                    <p class="printing-requirements-readonly">{% if requirementsReady %}Estos requisitos están listos. Para cambiar la máquina, el material o la cantidad, solicita apoyo al responsable de Producción.{% else %}Falta completar requisitos. Solicita al responsable de Producción que asigne máquina y material para esta partida.{% endif %}</p>
                 {% endif %}
-                {% if plan.materialSnapshot %}<details class="printing-configure-details"><summary>Características técnicas del material</summary><pre class="small mt-2 mb-0">{{ plan.materialSnapshot.specifications|default({})|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></details>{% endif %}
             </section>
 
             <section class="pf-card printing-detail-card printing-instructions-card">
-                <div class="printing-card-heading"><h2>Instrucciones</h2></div>
-                {% if release and release.instructions %}<div class="printing-instructions"><i class="bi bi-shield-check" aria-hidden="true"></i><p>{{ release.instructions|nl2br }}</p></div>{% else %}<p class="printing-muted-copy">Sigue el perfil de impresión definido para este producto y confirma la alineación antes de iniciar.</p>{% endif %}
-                {% if item.productionSpecificationsSnapshot is not empty %}<details class="printing-configure-details"><summary>Especificaciones técnicas de la partida</summary><pre class="small mt-2 mb-0">{{ item.productionSpecificationsSnapshot|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></details>{% endif %}
+                <div class="printing-preparation-card-heading"><div><span class="printing-section-eyebrow">Guía de trabajo</span><h2>Instrucciones de impresión</h2><p>Indicaciones para preparar esta partida.</p></div>{% if release and release.instructions %}<span class="printing-instruction-source"><i class="bi bi-shield-check" aria-hidden="true"></i>Diseño</span>{% endif %}</div>
+                {% if release and release.instructions %}
+                    <div class="printing-instructions"><i class="bi bi-chat-square-text" aria-hidden="true"></i><div><strong>Indicaciones de Diseño</strong><p>{{ release.instructions|nl2br }}</p></div></div>
+                {% else %}
+                    <div class="printing-instructions printing-instructions--empty"><i class="bi bi-info-circle" aria-hidden="true"></i><div><strong>Sin indicaciones especiales de Diseño</strong><p>Revisa el arte autorizado y las especificaciones de la partida. Sigue el perfil de impresión configurado en la máquina.</p></div></div>
+                {% endif %}
+                <div class="printing-specifications">
+                    <h3><i class="bi bi-card-list" aria-hidden="true"></i>Especificaciones de esta partida</h3>
+                    {% if productionSpecifications.summary|default('') and productionSpecifications.summary != 'Sin características capturadas.' %}
+                        <p class="printing-specifications__summary">{{ productionSpecifications.summary }}</p>
+                    {% elseif specificationValues is not empty %}
+                        <dl>
+                            {% for specification in specificationValues %}
+                                {% if specification is iterable and specification.name|default('') %}
+                                    {% set specificationValue = specification.display_value|default(specification.submitted_value|default('')) %}
+                                    {% if specificationValue is not same as('') %}<div><dt>{{ specification.name }}</dt><dd>{{ specificationValue }}</dd></div>{% endif %}
+                                {% endif %}
+                            {% endfor %}
+                        </dl>
+                    {% else %}
+                        <p class="printing-specifications__empty">No hay características adicionales capturadas para esta partida.</p>
+                    {% endif %}
+                    {% if productionSpecifications is not empty %}<details class="printing-technical-details"><summary>Ver datos técnicos completos</summary><pre>{{ productionSpecifications|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></details>{% endif %}
+                </div>
+                <div class="printing-instruction-footer"><i class="bi bi-pause-circle" aria-hidden="true"></i><p>Si el arte o las especificaciones no coinciden con el trabajo solicitado, pausa y consulta a Diseño antes de avanzar.</p></div>
             </section>
         </div>
         {% endif %}
