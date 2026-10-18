@@ -4,6 +4,7 @@ namespace App\Application\Quotations;
 
 use App\Entity\Catalog\CommercialCategory;
 use App\Entity\Catalog\CommercialItem;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final class QuotationItemData
@@ -32,4 +33,15 @@ final class QuotationItemData
         message: 'El origen de la cantidad no es válido.',
     )]
     public string $quantityMode = self::QUANTITY_MODE_AUTO;
+
+    #[Assert\File(
+        maxSize: '20M',
+        extensions: ['pdf', 'ai', 'eps', 'svg', 'jpg', 'jpeg', 'png', 'tif', 'tiff', 'zip'],
+        extensionsMessage: 'Adjunta un PDF, AI, EPS, SVG, JPG, PNG, TIFF o ZIP.',
+    )]
+    public ?UploadedFile $attachment = null;
+
+    public ?int $existingItemId = null;
+    public ?string $attachmentPath = null;
+    public ?string $attachmentOriginalName = null;
 }

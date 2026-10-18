@@ -13,6 +13,7 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 final class QuotationItemType extends AbstractType
@@ -97,6 +98,14 @@ final class QuotationItemType extends AbstractType
                 'allow_delete' => true,
                 'by_reference' => false,
                 'required' => false,
+            ])
+            ->add('attachment', FileType::class, [
+                'label' => 'Archivo de la partida',
+                'required' => false,
+                'help' => 'Opcional. PDF, AI, EPS, SVG, JPG, PNG, TIFF o ZIP; máximo 20 MB.',
+                'attr' => [
+                    'accept' => '.pdf,.ai,.eps,.svg,.jpg,.jpeg,.png,.tif,.tiff,.zip',
+                ],
             ]);
     }
 

@@ -657,7 +657,9 @@ final class QuotationManager
                 )
                 ->setPriceRuleSnapshot($resolvedItem['price_rule_snapshot'])
                 ->setSpecificationsSnapshot($resolvedItem['specifications_snapshot'])
-                ->setSpecificationSchemaVersion($resolvedItem['specification_schema_version']);
+                ->setSpecificationSchemaVersion($resolvedItem['specification_schema_version'])
+                ->setAttachmentPath($itemData->attachmentPath)
+                ->setAttachmentOriginalName($itemData->attachmentOriginalName);
 
             if (!isset($currentItems[$index])) {
                 $quotation->addItem($quotationItem);

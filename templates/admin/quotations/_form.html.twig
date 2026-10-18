@@ -1,5 +1,6 @@
-{% macro quotation_item(itemForm, lineNumber) %}
+{% macro quotation_item(itemForm, lineNumber, quotationId) %}
     {% set specifications = itemForm.specifications.vars.data|default({}) %}
+    {% set itemData = itemForm.vars.data|default(null) %}
 
     <article class="quotation-item" data-ui--quotation-form-item>
         <header class="quotation-item__header">
@@ -100,6 +101,33 @@
                     data-specifications-name="{{ itemForm.specifications.vars.full_name }}"
                     data-initial-specifications="{{ specifications|json_encode|e('html_attr') }}"
                 ></div>
+            </section>
+
+            <section class="quotation-item__section quotation-item__section--attachment">
+                <header class="quotation-item__section-header">
+                    <span class="quotation-item__section-icon" aria-hidden="true">
+                        <i class="bi bi-paperclip"></i>
+                    </span>
+                    <div>
+                        <h4 class="quotation-item__section-title">Archivo de referencia</h4>
+                        <p class="quotation-item__section-description">
+                            Adjunta el arte o los documentos que correspondan a esta partida.
+                        </p>
+                    </div>
+                </header>
+
+                {% if itemData and itemData.attachmentPath %}
+                    <div class="alert alert-light border d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                        <span><i class="bi bi-file-earmark me-1" aria-hidden="true"></i>Archivo actual: <strong>{{ itemData.attachmentOriginalName|default('archivo adjunto') }}</strong></span>
+                        {% if quotationId and itemData.existingItemId %}
+                            <a class="btn btn-sm btn-outline-primary" href="{{ path('admin_quotations_item_attachment', {id: quotationId, itemId: itemData.existingItemId}) }}">
+                                <i class="bi bi-download me-1" aria-hidden="true"></i>Descargar
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                {{ form_row(itemForm.attachment) }}
             </section>
 
             <section
@@ -221,6 +249,7 @@
 {% endmacro %}
 
 {% import _self as quote_ui %}
+{% set quotationId = quotation is defined ? quotation.id : null %}
 
 {{ form_start(form, {
     attr: {
@@ -258,7 +287,7 @@
     {{ form_widget(form.deliveryAddressId) }}
 
     <template data-ui--quotation-form-target="prototype">
-        {{ quote_ui.quotation_item(form.items.vars.prototype, null) }}
+        {{ quote_ui.quotation_item(form.items.vars.prototype, null, null) }}
     </template>
 
     <nav class="quotation-workflow" aria-label="Flujo de captura de cotización">
@@ -580,7 +609,7 @@
 
                     <div class="quotation-items" data-ui--quotation-form-target="items">
                         {% for itemForm in form.items %}
-                            {{ quote_ui.quotation_item(itemForm, loop.index) }}
+                            {{ quote_ui.quotation_item(itemForm, loop.index, quotationId) }}
                         {% endfor %}
                     </div>
 

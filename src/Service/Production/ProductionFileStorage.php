@@ -41,6 +41,28 @@ final class ProductionFileStorage
         return $this->storeUpload($file, 'requests', self::ARTWORK_MIME_TYPES, 20 * 1024 * 1024);
     }
 
+    public function storeQuotationItemAttachment(UploadedFile $file): StoredProductionFile
+    {
+        return $this->storeUpload($file, 'quotation-items', self::ARTWORK_MIME_TYPES, 20 * 1024 * 1024);
+    }
+
+    public function removeQuotationItemAttachment(?string $internalPath): void
+    {
+        $internalPath = str_replace('\\', '/', trim((string) $internalPath));
+        if ($internalPath === '' || !str_starts_with($internalPath, 'quotation-items/')) {
+            return;
+        }
+
+        try {
+            $absolutePath = $this->absolutePath($internalPath);
+            if (is_file($absolutePath)) {
+                @unlink($absolutePath);
+            }
+        } catch (\InvalidArgumentException|\RuntimeException) {
+            // Historical or invalid references are left untouched.
+        }
+    }
+
     public function storePreparedArtwork(UploadedFile $file): StoredProductionFile
     {
         return $this->storeUpload($file, 'artwork', self::ARTWORK_MIME_TYPES, 100 * 1024 * 1024);

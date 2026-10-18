@@ -124,6 +124,9 @@ final class QuotationData
             $item->quantityMode = ($specifications['billing_quantity']['source'] ?? null) === 'DIMENSIONS'
                 ? QuotationItemData::QUANTITY_MODE_AUTO
                 : QuotationItemData::QUANTITY_MODE_MANUAL;
+            $item->existingItemId = $quotationItem->getId();
+            $item->attachmentPath = $quotationItem->getAttachmentPath();
+            $item->attachmentOriginalName = $quotationItem->getAttachmentOriginalName();
 
             $data->addItem($item);
         }
