@@ -8,6 +8,7 @@ use App\Entity\Operations\Operation;
 use App\Entity\Orders\ServiceOrder;
 use App\Entity\Orders\ServiceOrderItem;
 use App\Entity\Orders\ServiceOrderOperationPlan;
+use App\Entity\Users\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\LockMode;
 use Doctrine\Persistence\ManagerRegistry;
@@ -66,10 +67,9 @@ final class ServiceOrderOperationPlanRepository extends ServiceEntityRepository
     }
 
     /** @return list<ServiceOrderOperationPlan> */
-    public function findForProductionQueue(): array
+    public function findForProductionQueue(?User $assignedOperator = null): array
     {
-        /** @var list<ServiceOrderOperationPlan> $plans */
-        $plans = $this->createQueryBuilder('plan')
+        $queryBuilder = $this->createQueryBuilder('plan')
             ->innerJoin('plan.serviceOrderItem', 'item')
             ->innerJoin('item.serviceOrder', 'serviceOrder')
             ->innerJoin('plan.operation', 'operation')
@@ -89,7 +89,16 @@ final class ServiceOrderOperationPlanRepository extends ServiceEntityRepository
             ->orderBy('serviceOrder.commitmentDate', 'ASC')
             ->addOrderBy('serviceOrder.createdAt', 'ASC')
             ->addOrderBy('item.lineNumber', 'ASC')
-            ->addOrderBy('plan.sequenceNumber', 'ASC')
+            ->addOrderBy('plan.sequenceNumber', 'ASC');
+
+        if ($assignedOperator !== null) {
+            $queryBuilder
+                ->andWhere('plan.assignedOperator = :assignedOperator')
+                ->setParameter('assignedOperator', $assignedOperator);
+        }
+
+        /** @var list<ServiceOrderOperationPlan> $plans */
+        $plans = $queryBuilder
             ->getQuery()
             ->getResult();
 

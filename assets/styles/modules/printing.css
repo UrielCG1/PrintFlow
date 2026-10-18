@@ -194,16 +194,35 @@
 .printing-stepper::before { right: 10%; background: #d8deea; }
 .printing-stepper::after { width: var(--printing-progress); max-width: 80%; background: #0b9136; }
 .printing-stepper li { position: relative; z-index: 1; display: flex; min-width: 0; align-items: center; flex-direction: column; gap: 0.28rem; color: #263754; text-align: center; }
+.printing-stepper__link, .printing-stepper__locked { display: flex; width: 100%; min-width: 0; align-items: center; flex-direction: column; gap: 0.28rem; color: inherit; text-align: center; text-decoration: none; }
+.printing-stepper__link { border-radius: 0.35rem; cursor: pointer; }
+.printing-stepper__link:hover strong { color: #08752b; }
+.printing-stepper__link:focus-visible { outline: 3px solid rgba(79, 141, 255, 0.35); outline-offset: 2px; }
+.printing-stepper__locked { color: #9aa5b8; cursor: not-allowed; }
 .printing-stepper__node { display: grid; width: 2rem; height: 2rem; place-items: center; color: #52627e; background: #fff; border: 2px solid #d2dbea; border-radius: 50%; font-size: 0.8rem; font-weight: 700; }
 .printing-stepper li.is-complete .printing-stepper__node { color: #fff; background: #0c9839; border-color: #0c9839; }
 .printing-stepper li.is-current .printing-stepper__node { color: #0b7440; border-color: #a7bad4; box-shadow: 0 0 0 3px #f0f4fb; }
+.printing-stepper li.is-selected .printing-stepper__node { box-shadow: 0 0 0 3px #f0f4fb; }
 .printing-stepper li strong { max-width: 11rem; font-size: 0.68rem; font-weight: 700; line-height: 1.25; }
 .printing-stepper li small { color: #64728a; font-size: 0.63rem; }
 .printing-stepper li.is-complete strong { color: #075d1c; }
 
+.printing-phase-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 0.35rem 0 0.15rem; padding-top: 0.7rem; border-top: 1px solid #e2e7ef; }
+.printing-phase-heading__eyebrow { margin: 0 0 0.15rem; color: #08752b; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.045em; text-transform: uppercase; }
+.printing-phase-heading h2 { margin: 0; color: #11253e; font-size: 1.05rem; font-weight: 700; }
+.printing-phase-heading > div > p:last-child { margin: 0.22rem 0 0; color: #5a6983; font-size: 0.76rem; }
+.printing-phase-complete, .printing-phase-navigation__done { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 0.35rem; color: #08752c; font-size: 0.76rem; font-weight: 700; }
+.printing-phase-navigation { display: flex; min-height: 2.6rem; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 0.1rem; padding-top: 0.65rem; border-top: 1px solid #e2e7ef; }
+.printing-phase-navigation > .btn { min-height: 2.25rem; font-size: 0.76rem; }
+.printing-phase-navigation__hint { color: #687792; font-size: 0.72rem; text-align: right; }
 .printing-overview-grid { display: grid; grid-template-columns: 1.12fr 0.9fr 0.9fr; align-items: stretch; gap: 0.55rem; }
 .printing-workflow-grid { display: grid; grid-template-columns: 1.25fr 0.72fr 1fr; align-items: stretch; gap: 0.55rem; }
 .printing-bottom-grid { display: grid; grid-template-columns: 0.95fr 1.35fr; align-items: stretch; gap: 0.55rem; }
+.printing-workflow-grid--phase-2, .printing-workflow-grid--phase-3, .printing-workflow-grid--phase-4 { grid-template-columns: minmax(0, 1fr); }
+.printing-workflow-grid--phase-2 .printing-validation-card { max-width: 54rem; }
+.printing-workflow-grid--phase-3 .printing-next-card { max-width: 40rem; }
+.printing-workflow-grid--phase-4 .printing-close-card { width: 100%; max-width: 72rem; }
+.printing-bottom-grid--phase, .printing-bottom-grid--history { grid-template-columns: minmax(0, 1fr); }
 .printing-detail-card { min-width: 0; padding: 0.8rem; border-color: #e0e6f0; border-radius: 0.55rem; box-shadow: 0 1px 2px rgba(19, 37, 68, 0.025); }
 .printing-card-heading { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.65rem; }
 .printing-card-heading h2 { margin: 0; color: #11253e; font-size: 0.82rem; font-weight: 700; }
@@ -311,6 +330,44 @@
 .printing-usage-list strong { color: #273956; }
 .printing-usage-list span, .printing-usage-list time { color: #687792; }
 
+.printing-close-card { max-width: 76rem; padding: 1.15rem; }
+.printing-completion-form { gap: 0.9rem !important; }
+.printing-validation-summary { padding: 0.7rem 0.85rem; color: #842029; background: #fff0f0; border: 1px solid #f1c2c5; border-radius: 0.5rem; font-size: 0.84rem; font-weight: 600; }
+.printing-validation-summary[hidden] { display: none; }
+.printing-plan-summary { display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 1rem; color: #155d2b; background: #effaf0; border: 1px solid #cfead3; border-radius: 0.6rem; }
+.printing-plan-summary__icon { display: grid; width: 2.35rem; height: 2.35rem; flex: 0 0 auto; place-items: center; background: #d9f3dd; border-radius: 0.55rem; font-size: 1.15rem; }
+.printing-plan-summary > div { display: grid; gap: 0.18rem; }
+.printing-plan-summary strong { font-size: 0.9rem; }
+.printing-plan-summary span:not(.printing-plan-summary__icon) { color: #42694a; font-size: 0.8rem; }
+.printing-form-section { display: grid; gap: 0.85rem; padding: 1rem; background: #fbfcfe; border: 1px solid #e0e6ef; border-radius: 0.65rem; }
+.printing-form-section__heading { display: flex; align-items: flex-start; gap: 0.7rem; }
+.printing-form-section__heading > span { display: grid; width: 1.8rem; height: 1.8rem; flex: 0 0 auto; place-items: center; color: #24518b; background: #e9f0ff; border-radius: 50%; font-size: 0.72rem; font-weight: 700; }
+.printing-form-section__heading h3 { margin: 0; color: #142844; font-size: 0.96rem; font-weight: 700; }
+.printing-form-section__heading p { margin: 0.18rem 0 0; color: #66758c; font-size: 0.78rem; }
+.printing-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem; }
+.printing-field { display: grid; align-content: start; gap: 0.25rem; min-width: 0; }
+.printing-field .form-label { margin: 0; color: #243752; font-size: 0.83rem; font-weight: 650; }
+.printing-field .form-control, .printing-field .form-select { min-height: 2.65rem; border-color: #cbd6e7; font-size: 0.88rem; }
+.printing-field textarea.form-control { min-height: 5rem; }
+.printing-field__required, .printing-field__optional { display: inline-flex; align-items: center; margin-left: 0.2rem; color: #66758c; font-size: 0.68rem; font-weight: 500; }
+.printing-field__required { color: #a33131; }
+.printing-field__conditional { display: inline-flex; align-items: center; margin-left: 0.2rem; color: #80601c; font-size: 0.68rem; font-weight: 600; }
+.printing-field-help { margin: 0; color: #687792; font-size: 0.75rem; line-height: 1.45; }
+.printing-form-details { padding: 0.85rem 1rem; background: #fff; border: 1px solid #e0e6ef; border-radius: 0.6rem; }
+.printing-form-details > summary { color: #315786; cursor: pointer; font-size: 0.84rem; font-weight: 700; list-style: none; }
+.printing-form-details > summary::-webkit-details-marker { display: none; }
+.printing-form-details > summary::after { float: right; content: "⌄"; font-size: 1rem; }
+.printing-form-details[open] > summary { margin-bottom: 0.8rem; }
+.printing-form-details__body { display: grid; gap: 0.9rem; }
+.printing-surplus-fields { display: grid; gap: 0.7rem; margin: 0; padding: 0.8rem; border: 1px solid #e4e9f1; border-radius: 0.5rem; }
+.printing-surplus-fields legend { float: none; width: auto; margin: 0; color: #243752; font-size: 0.82rem; font-weight: 700; }
+.printing-surplus-fields > .printing-field-help { margin-top: -0.55rem; }
+.printing-completion-form > .form-check { padding: 0.7rem 0.8rem 0.7rem 2.4rem; background: #f6f8fb; border: 1px solid #e5eaf1; border-radius: 0.5rem; }
+.printing-completion-form > .form-check .form-check-input { margin-left: -1.55rem; }
+.printing-completion-form > .form-check .form-check-label { color: #344761; font-size: 0.8rem; line-height: 1.45; }
+.printing-completion-form > .printing-wide-button { min-height: 2.8rem; font-size: 0.88rem; font-weight: 700; }
+.printing-completion-form > .printing-wide-button:focus-visible { outline: 3px solid rgba(8, 117, 43, 0.24); outline-offset: 2px; }
+
 @media (max-width: 1199.98px) {
     .printing-filters { grid-template-columns: minmax(12rem, 1.5fr) repeat(2, minmax(8rem, 1fr)); }
     .printing-search { grid-column: span 2; }
@@ -350,10 +407,18 @@
     .printing-stepper__node { width: 1.7rem; height: 1.7rem; font-size: 0.7rem; }
     .printing-stepper li strong { max-width: 4.5rem; font-size: 0.56rem; }
     .printing-stepper li small { font-size: 0.54rem; }
+    .printing-phase-heading { align-items: flex-start; flex-direction: column; gap: 0.4rem; }
+    .printing-phase-heading > div > p:last-child { max-width: 38rem; }
+    .printing-phase-navigation { align-items: stretch; }
+    .printing-phase-navigation > .btn { white-space: nowrap; }
+    .printing-phase-navigation__hint { max-width: 12rem; }
     .printing-overview-grid, .printing-workflow-grid, .printing-bottom-grid { grid-template-columns: minmax(0, 1fr); }
     .printing-instructions-card, .printing-close-card { grid-column: auto; }
     .printing-detail-card { padding: 0.75rem; }
     .printing-label-preview { grid-template-columns: minmax(6rem, 0.7fr) minmax(0, 1.3fr); }
+    .printing-field-grid { grid-template-columns: minmax(0, 1fr); }
+    .printing-close-card { padding: 0.8rem; }
+    .printing-form-section { padding: 0.8rem; }
 }
 
 @media (max-width: 420px) {
@@ -421,4 +486,108 @@
 @media (max-width: 767.98px) {
     .printing-stepper li strong { font-size: 0.68rem; }
     .printing-stepper li small { font-size: 0.64rem; }
+}
+
+.printing-overview-grid--preparation { grid-template-columns: minmax(0, 1.04fr) minmax(19rem, 1.08fr) minmax(0, 0.94fr); align-items: start; gap: 0.85rem; }
+.printing-overview-grid--preparation > .printing-detail-card { padding: 1rem; border-radius: 0.75rem; }
+.printing-preparation-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; margin-bottom: 1rem; }
+.printing-preparation-card-heading h2 { margin: 0; color: #11253e; font-size: 1.05rem; font-weight: 750; }
+.printing-preparation-card-heading p { margin: 0.3rem 0 0; color: #64728a; font-size: 0.8rem; line-height: 1.45; }
+.printing-section-eyebrow { display: block; margin-bottom: 0.25rem; color: #08752b; font-size: 0.68rem; font-weight: 750; letter-spacing: 0.055em; text-transform: uppercase; }
+.printing-artwork-file { display: flex; align-items: center; gap: 0.8rem; min-width: 0; padding: 0.85rem; background: #f6f8fc; border: 1px solid #e3e9f2; border-radius: 0.65rem; }
+.printing-artwork-file__icon, .printing-guide-file__icon { display: grid; width: 2.75rem; height: 2.75rem; flex: 0 0 auto; place-items: center; color: #315a91; background: #e8effb; border-radius: 0.6rem; font-size: 1.35rem; }
+.printing-artwork-file__details { display: grid; min-width: 0; gap: 0.2rem; }
+.printing-artwork-file__details > span { color: #58708e; font-size: 0.72rem; font-weight: 650; }
+.printing-artwork-file__details > strong { overflow-wrap: anywhere; color: #162a45; font-size: 0.9rem; line-height: 1.35; }
+.printing-artwork-file__details > small { color: #65738b; font-size: 0.72rem; }
+.printing-artwork-actions { display: flex; flex-wrap: wrap; gap: 0.55rem; margin-top: 0.7rem; }
+.printing-artwork-actions .btn { min-height: 2.45rem; align-items: center; gap: 0.4rem; font-size: 0.78rem; }
+.printing-file-viewer-hint { margin: 0.6rem 0 0; color: #69778d; font-size: 0.75rem; line-height: 1.45; }
+.printing-art-approval { display: flex; align-items: flex-start; gap: 0.6rem; margin-top: 0.9rem; padding: 0.75rem; color: #11662d; background: #effaf0; border: 1px solid #d3efd7; border-radius: 0.6rem; }
+.printing-art-approval > .bi { flex: 0 0 auto; margin-top: 0.06rem; font-size: 1rem; }
+.printing-art-approval > div { display: grid; gap: 0.2rem; }
+.printing-art-approval strong { font-size: 0.79rem; }
+.printing-art-approval span { color: #47724e; font-size: 0.72rem; }
+.printing-operator-note { margin: 0.7rem 0 0; color: #52637d; font-size: 0.76rem; line-height: 1.5; }
+.printing-guide-file { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0.65rem; margin-top: 0.85rem; padding: 0.7rem; border: 1px solid #e2e7ef; border-radius: 0.6rem; }
+.printing-guide-file__icon { width: 2.25rem; height: 2.25rem; color: #5a6591; background: #f1f0ff; font-size: 1rem; }
+.printing-guide-file > div { display: grid; min-width: 0; gap: 0.15rem; }
+.printing-guide-file strong { color: #253851; font-size: 0.76rem; }
+.printing-guide-file small { overflow-wrap: anywhere; color: #69778e; font-size: 0.68rem; }
+.printing-guide-file .btn { display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap; }
+.printing-art-empty { display: grid; justify-items: start; gap: 0.55rem; padding: 1.2rem 0.5rem; }
+.printing-art-empty > span { display: grid; width: 3rem; height: 3rem; place-items: center; color: #9b6500; background: #fff4d9; border-radius: 0.75rem; font-size: 1.4rem; }
+.printing-art-empty strong { color: #3b2a0e; font-size: 0.95rem; }
+.printing-art-empty p { max-width: 34rem; margin: 0; color: #6d624e; font-size: 0.8rem; line-height: 1.5; }
+.printing-requirements-card .printing-preparation-card-heading { margin-bottom: 0.85rem; }
+.printing-requirements-state, .printing-instruction-source { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 0.35rem; padding: 0.32rem 0.55rem; border-radius: 999px; font-size: 0.69rem; font-weight: 700; white-space: nowrap; }
+.printing-requirements-state.is-ready { color: #11662d; background: #e9f8eb; }
+.printing-requirements-state.is-pending { color: #855600; background: #fff5df; }
+.printing-requirements { display: grid; gap: 0.55rem; margin: 0; padding: 0; list-style: none; }
+.printing-requirements > .printing-requirements__row { display: grid; grid-template-columns: 2.15rem minmax(0, 1fr); align-items: start; gap: 0.55rem; padding: 0.62rem 0.65rem; background: #f8f9fc; border: 1px solid #ebeff5; border-radius: 0.55rem; }
+.printing-requirements__icon { display: grid; width: 2.05rem; height: 2.05rem; place-items: center; color: #355b8d; background: #eaf0fb; border-radius: 0.5rem; font-size: 0.95rem; }
+.printing-requirements__row > div { display: grid; gap: 0.15rem; min-width: 0; }
+.printing-requirements__row > div > span { color: #65748b; font-size: 0.7rem; font-weight: 650; }
+.printing-requirements__row strong { overflow-wrap: anywhere; color: #152943; font-size: 0.84rem; font-weight: 700; line-height: 1.35; }
+.printing-requirements__row small { display: block; margin-top: 0.2rem; color: #65748b; font-size: 0.7rem; line-height: 1.4; }
+.printing-requirements__row small a { color: #24613a; font-weight: 650; }
+.printing-requirements-editor { margin-top: 0.8rem; border: 1px solid #dce4f0; border-radius: 0.65rem; }
+.printing-requirements-editor > summary { display: flex; align-items: center; gap: 0.65rem; padding: 0.75rem; color: #284c7d; cursor: pointer; list-style: none; }
+.printing-requirements-editor > summary::-webkit-details-marker { display: none; }
+.printing-requirements-editor__summary-icon { display: grid; width: 2rem; height: 2rem; flex: 0 0 auto; place-items: center; color: #315b91; background: #edf2ff; border-radius: 0.5rem; }
+.printing-requirements-editor > summary > span:nth-child(2) { display: grid; gap: 0.12rem; }
+.printing-requirements-editor > summary strong { color: #1c3e6b; font-size: 0.8rem; }
+.printing-requirements-editor > summary small { color: #6b7a91; font-size: 0.69rem; }
+.printing-requirements-editor__chevron { margin-left: auto; color: #60738e; font-size: 0.75rem; transition: transform 0.18s ease; }
+.printing-requirements-editor[open] .printing-requirements-editor__chevron { transform: rotate(180deg); }
+.printing-requirements-editor__content { padding: 0 0.75rem 0.75rem; }
+.printing-requirements-editor__intro { margin: 0 0 0.8rem; padding: 0.65rem; color: #4f6281; background: #f3f6fc; border-radius: 0.5rem; font-size: 0.72rem; line-height: 1.45; }
+.printing-configure-form { display: grid; gap: 0.8rem; margin-top: 0; }
+.printing-configure-field { display: grid; gap: 0.28rem; }
+.printing-configure-field .form-label { margin: 0; color: #263953; font-size: 0.77rem; font-weight: 700; }
+.printing-configure-field .form-label > .printing-configure-required { color: #a33131; font-weight: 750; }
+.printing-configure-field .form-control, .printing-configure-field .form-select { min-height: 2.55rem; padding: 0.45rem 0.6rem; font-size: 0.8rem; }
+.printing-configure-field textarea.form-control { min-height: 4.5rem; }
+.printing-configure-field > small { color: #69778c; font-size: 0.69rem; line-height: 1.45; }
+.printing-configure-field__unit { color: #355b8d; }
+.printing-requirements-save { display: inline-flex; min-height: 2.55rem; align-items: center; justify-content: center; gap: 0.4rem; font-size: 0.79rem; font-weight: 700; }
+.printing-requirements-readonly { margin: 0.8rem 0 0; padding: 0.7rem; color: #53627a; background: #f5f7fb; border: 1px solid #e5eaf2; border-radius: 0.55rem; font-size: 0.73rem; line-height: 1.45; }
+.printing-instruction-source { color: #385c90; background: #eef3ff; }
+.printing-instructions { gap: 0.65rem; padding: 0.85rem; border-radius: 0.6rem; }
+.printing-instructions > div { min-width: 0; }
+.printing-instructions > div > strong { color: #263f67; font-size: 0.78rem; }
+.printing-instructions p { margin-top: 0.25rem; font-size: 0.77rem; line-height: 1.55; overflow-wrap: anywhere; }
+.printing-instructions--empty { color: #52637d; background: #f6f8fc; border-color: #e4e9f1; }
+.printing-instructions--empty > .bi { color: #647a9c; }
+.printing-instructions--empty > div > strong { color: #344968; }
+.printing-specifications { margin-top: 0.9rem; padding-top: 0.85rem; border-top: 1px solid #e6ebf2; }
+.printing-specifications h3 { display: flex; align-items: center; gap: 0.45rem; margin: 0 0 0.55rem; color: #253a58; font-size: 0.8rem; font-weight: 700; }
+.printing-specifications h3 > .bi { color: #496a9a; }
+.printing-specifications__summary { margin: 0; padding: 0.7rem; color: #344967; background: #f7f9fc; border: 1px solid #e7ecf3; border-radius: 0.55rem; font-size: 0.74rem; line-height: 1.55; }
+.printing-specifications dl { display: grid; gap: 0.45rem; margin: 0; }
+.printing-specifications dl > div { display: grid; grid-template-columns: minmax(6rem, 0.85fr) minmax(0, 1.15fr); gap: 0.6rem; padding: 0.5rem 0; border-bottom: 1px solid #edf0f5; }
+.printing-specifications dt { color: #69778c; font-size: 0.7rem; }
+.printing-specifications dd { margin: 0; color: #253852; font-size: 0.73rem; font-weight: 650; overflow-wrap: anywhere; }
+.printing-specifications__empty { margin: 0; color: #6b788d; font-size: 0.73rem; }
+.printing-technical-details { margin-top: 0.65rem; }
+.printing-technical-details > summary { color: #557096; cursor: pointer; font-size: 0.69rem; font-weight: 650; }
+.printing-technical-details pre { max-height: 14rem; overflow: auto; margin: 0.55rem 0 0; padding: 0.7rem; color: #40516a; background: #f7f8fb; border: 1px solid #e5eaf2; border-radius: 0.5rem; font-size: 0.66rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.printing-instruction-footer { display: flex; align-items: flex-start; gap: 0.5rem; margin-top: 0.8rem; padding: 0.65rem 0.7rem; color: #735b27; background: #fff8e8; border: 1px solid #f3e3bf; border-radius: 0.55rem; }
+.printing-instruction-footer > .bi { flex: 0 0 auto; margin-top: 0.05rem; }
+.printing-instruction-footer p { margin: 0; font-size: 0.71rem; line-height: 1.45; }
+
+@media (max-width: 1199.98px) {
+    .printing-overview-grid--preparation { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .printing-overview-grid--preparation .printing-instructions-card { grid-column: 1 / -1; }
+}
+
+@media (max-width: 767.98px) {
+    .printing-overview-grid--preparation { grid-template-columns: minmax(0, 1fr); }
+    .printing-overview-grid--preparation .printing-instructions-card { grid-column: auto; }
+    .printing-overview-grid--preparation > .printing-detail-card { padding: 0.8rem; }
+    .printing-preparation-card-heading { flex-wrap: wrap; }
+    .printing-requirements-state, .printing-instruction-source { margin-left: auto; }
+    .printing-guide-file { grid-template-columns: auto minmax(0, 1fr); }
+    .printing-guide-file .btn { grid-column: 2; justify-self: start; }
+    .printing-specifications dl > div { grid-template-columns: minmax(0, 1fr); gap: 0.15rem; }
 }

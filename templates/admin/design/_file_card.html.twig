@@ -1,0 +1,42 @@
+{% set normalizedMimeType = mimeType|default('')|lower %}
+{% set previewable = normalizedMimeType in ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'] %}
+{% set fileIcon = normalizedMimeType == 'application/pdf' ? 'bi-file-earmark-pdf' : (normalizedMimeType starts with 'image/' ? 'bi-file-earmark-image' : 'bi-file-earmark-check') %}
+{% set fileSize = byteSize|default(0) %}
+<article class="design-file-card">
+    <span class="design-file-card__thumbnail" aria-hidden="true">
+        {% if previewable and normalizedMimeType starts with 'image/' and is_granted('production.files.download') %}
+            <img src="{{ previewUrl }}" alt="" loading="lazy">
+        {% else %}
+            <i class="bi {{ fileIcon }}"></i>
+        {% endif %}
+    </span>
+    <div class="design-file-card__details">
+        <span>{{ label }}</span>
+        <strong title="{{ name }}">{{ name }}</strong>
+        <small>
+            {% if normalizedMimeType == 'application/pdf' %}PDF{% elseif normalizedMimeType starts with 'image/' %}Imagen{% elseif normalizedMimeType %}{{ normalizedMimeType|upper }}{% else %}Archivo{% endif %}
+            {% if fileSize > 0 %} · {{ fileSize < 1048576 ? (fileSize / 1024)|round(0, 'ceil') ~ ' KB' : (fileSize / 1048576)|number_format(1, '.', ',') ~ ' MB' }}{% endif %}
+            {% if versionLabel|default(null) %} · {{ versionLabel }}{% endif %}
+            {% if createdAt|default(null) %} · {{ createdAt|date('d/m/Y H:i', 'America/Mexico_City') }}{% endif %}
+        </small>
+    </div>
+    <div class="design-file-card__actions">
+        {% if previewable and is_granted('production.files.download') %}
+            <button
+                class="btn pf-button pf-button--subtle pf-button--sm"
+                type="button"
+                data-action="ui--file-preview#openExistingPreview"
+                data-preview-url="{{ previewUrl }}"
+                data-download-url="{{ downloadUrl }}"
+                data-file-name="{{ name }}"
+                data-file-type="{{ normalizedMimeType }}"
+                aria-label="Previsualizar {{ name }}"
+            ><i class="bi bi-eye" aria-hidden="true"></i><span>Vista previa</span></button>
+        {% endif %}
+        {% if is_granted('production.files.download') %}
+            <a class="btn pf-button pf-button--secondary pf-button--sm" href="{{ downloadUrl }}" aria-label="Descargar {{ name }}"><i class="bi bi-download" aria-hidden="true"></i><span>Descargar</span></a>
+        {% else %}
+            <span class="design-file-card__permission"><i class="bi bi-lock" aria-hidden="true"></i> Tu perfil no tiene permiso para abrir archivos</span>
+        {% endif %}
+    </div>
+</article>

@@ -9,7 +9,20 @@
     {% set scannedMaterial = currentScan and currentScan.stockUnit ? currentScan.stockUnit.variant : plan.materialVariant %}
     {% set materialNeedsDecision = materialStatus and materialStatus.code in ['pending_reservation', 'pending_authorization', 'waiting_purchase'] %}
     {% set scanIsDone = activeExecution or output or (currentScan and currentScan.available and not materialNeedsDecision) %}
-    {% set activeStep = output and output.labelPlaced ? 6 : (output ? 5 : (activeExecution ? 4 : (currentScan and currentScan.available and not materialNeedsDecision ? 3 : (release ? 2 : 1)))) %}
+    {% set requirementsReady = plan.equipment and plan.materialVariant and plannedUsage and not multiplePlannedUsages %}
+    {% set preparationReady = release and requirementsReady and not materialNeedsDecision and canValidatePrinting %}
+    {% set activeStep = output and output.labelPlaced ? 6 : (output ? 5 : (activeExecution ? 4 : (currentScan and currentScan.available and not materialNeedsDecision ? 3 : (preparationReady ? 2 : 1)))) %}
+    {% set maxUnlockedStep = activeStep > 5 ? 5 : activeStep %}
+    {% set requestedStep = app.request.query.getInt('step', activeStep > 5 ? 5 : activeStep) %}
+    {% set selectedStep = requestedStep >= 1 and requestedStep <= maxUnlockedStep ? requestedStep : (activeStep > 5 ? 5 : activeStep) %}
+    {% set stepLabels = ['Preparación', 'Validar máquina y material', 'Iniciar impresión', 'Registrar consumo', 'Etiqueta QR'] %}
+    {% set phaseDescriptions = [
+        'Revisa el arte autorizado, sigue las indicaciones de Diseño y confirma la máquina y la previsión de material antes de avanzar.',
+        'Confirma físicamente la máquina y la unidad de material que se descontará al terminar.',
+        'Con la validación completa, registra el inicio de este intento de impresión.',
+        'Al finalizar, registra consumo, merma y cualquier sobrante reutilizable.',
+        'Genera la etiqueta de producción, imprímela y confirma que quedó colocada.'
+    ] %}
     <section class="pf-page__content printing-page printing-detail">
         <header class="printing-detail-header">
             <div class="printing-detail-heading">
@@ -21,16 +34,35 @@
         </header>
 
         <ol class="printing-stepper" style="--printing-progress: {{ activeStep > 5 ? 100 : (activeStep - 1) * 25 }}%" aria-label="Etapas del trabajo de impresión">
-            {% set stepLabels = ['Arte liberado', 'Validar máquina y material', 'Iniciar impresión', 'Registrar consumo', 'Etiqueta QR'] %}
             {% for label in stepLabels %}
                 {% set stepNumber = loop.index %}
-                <li class="{{ stepNumber < activeStep ? 'is-complete' : (stepNumber == activeStep ? 'is-current' : '') }}">
-                    <span class="printing-stepper__node">{% if stepNumber < activeStep %}<i class="bi bi-check-lg" aria-hidden="true"></i>{% else %}{{ stepNumber }}{% endif %}</span>
-                    <strong>{{ label }}</strong>
-                    <small>{{ stepNumber < activeStep ? 'Completado' : (stepNumber == activeStep ? (stepNumber == 4 and activeExecution ? 'En curso' : 'Siguiente paso') : 'Pendiente') }}</small>
+                {% set phaseComplete = stepNumber < activeStep or (stepNumber == 5 and output and output.labelPlaced) %}
+                <li class="{{ phaseComplete ? 'is-complete' : (stepNumber == activeStep ? 'is-current' : '') }} {{ stepNumber == selectedStep ? 'is-selected' : '' }}">
+                    {% if stepNumber <= maxUnlockedStep %}
+                        <a class="printing-stepper__link" href="{{ path('admin_printing_show', {id: plan.id, step: stepNumber}) }}" aria-current="{{ stepNumber == selectedStep ? 'step' : 'false' }}" aria-label="{{ label }} · {{ phaseComplete ? 'Completado' : (stepNumber == activeStep ? 'Fase actual' : 'Disponible') }}">
+                            <span class="printing-stepper__node">{% if phaseComplete %}<i class="bi bi-check-lg" aria-hidden="true"></i>{% else %}{{ stepNumber }}{% endif %}</span>
+                            <strong>{{ label }}</strong>
+                            <small>{{ phaseComplete ? 'Completado' : (stepNumber == activeStep ? (stepNumber == 4 and activeExecution ? 'En curso' : 'Siguiente paso') : 'Disponible') }}</small>
+                        </a>
+                    {% else %}
+                        <span class="printing-stepper__locked" aria-disabled="true">
+                            <span class="printing-stepper__node">{{ stepNumber }}</span>
+                            <strong>{{ label }}</strong>
+                            <small>Pendiente</small>
+                        </span>
+                    {% endif %}
                 </li>
             {% endfor %}
         </ol>
+
+        <header class="printing-phase-heading">
+            <div>
+                <p class="printing-phase-heading__eyebrow">Fase {{ selectedStep }} de 5</p>
+                <h2>{{ stepLabels[selectedStep - 1] }}</h2>
+                <p>{{ phaseDescriptions[selectedStep - 1] }}</p>
+            </div>
+            {% if output and output.labelPlaced %}<span class="printing-phase-complete"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Trabajo terminado</span>{% endif %}
+        </header>
 
         {% if materialStatus and not output %}
             <div class="printing-callout printing-material-alert printing-callout--{{ materialNeedsDecision or materialStatus.code == 'partial_authorized' ? 'warning' : 'success' }}" role="{{ materialNeedsDecision ? 'alert' : 'status' }}">
@@ -39,74 +71,170 @@
             </div>
         {% endif %}
 
-        <div class="printing-overview-grid">
-            <section class="pf-card printing-detail-card printing-art-card">
-                <div class="printing-card-heading"><h2>Arte aprobado</h2>{% if release %}<span class="printing-inline-status printing-inline-status--success"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Liberado para impresión</span>{% endif %}</div>
-                <div class="printing-art-file">
-                    <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
-                    <div>{% if release %}<a href="{{ path('admin_design_download_file', {id: release.artworkFile.id}) }}">{{ release.artworkFile.originalName }}</a><small>{{ release.artworkFile.mimeType|split('/')|last|upper }}{% if release.artworkFile.byteSize %} · {{ (release.artworkFile.byteSize / 1048576)|number_format(1) }} MB{% endif %}</small>{% else %}<span class="printing-art-pending">Arte pendiente de liberación</span><small>Diseño aún no libera esta partida</small>{% endif %}</div>
-                    {% if release %}<a class="printing-file-button" href="{{ path('admin_design_download_file', {id: release.artworkFile.id}) }}" aria-label="Ver arte aprobado"><i class="bi bi-eye" aria-hidden="true"></i><span>Ver arte</span></a>{% endif %}
+        {% if selectedStep == 1 %}
+        {% if preparationBlockReason %}
+            <div class="printing-callout printing-callout--warning" role="status"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i><p><strong>Antes de validar</strong><span>{{ preparationBlockReason }}</span></p></div>
+        {% endif %}
+        {% set previewableArtworkMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'] %}
+        {% set productionSpecifications = item.productionSpecificationsSnapshot|default({}) %}
+        {% set specificationValues = productionSpecifications.values|default({}) %}
+        <div class="printing-overview-grid printing-overview-grid--preparation">
+            <section class="pf-card printing-detail-card printing-art-card" data-controller="ui--file-preview">
+                <div class="printing-preparation-card-heading">
+                    <div><span class="printing-section-eyebrow">Liberación de Diseño</span><h2>Arte aprobado</h2><p>Este es el archivo vigente que debe usarse en la impresión.</p></div>
+                    {% if release %}<span class="printing-inline-status printing-inline-status--success"><i class="bi bi-check-circle-fill" aria-hidden="true"></i>Liberado</span>{% endif %}
                 </div>
                 {% if release %}
-                    <div class="printing-callout printing-callout--success"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><p><strong>El arte fue revisado y aprobado por Diseño.</strong><span>Versión {{ release.versionNumber }} · {{ release.authorizationType.label }} · {{ release.authorizedAt|date('d/m/Y H:i', 'America/Mexico_City') }}</span></p></div>
-                    {% if release.referenceFile %}<a class="printing-reference-link" href="{{ path('admin_design_download_file', {id: release.referenceFile.id}) }}"><i class="bi bi-images" aria-hidden="true"></i>Ver captura guía</a>{% endif %}
-                {% else %}<div class="printing-callout printing-callout--warning"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i><p>No hay liberación vigente de Diseño. La impresión no puede iniciar.</p></div>{% endif %}
+                    {% set artworkMime = release.artworkFile.mimeType|lower %}
+                    {% set artworkPreviewable = artworkMime in previewableArtworkMimes %}
+                    {% set artworkTypeLabel = artworkMime == 'application/pdf' ? 'PDF' : (artworkMime == 'image/jpeg' ? 'Imagen JPG' : (artworkMime == 'image/png' ? 'Imagen PNG' : (artworkMime == 'image/webp' ? 'Imagen WebP' : (artworkMime == 'application/postscript' or artworkMime == 'application/illustrator' or artworkMime == 'application/eps' ? 'Archivo para software de diseño' : 'Archivo de diseño')))) %}
+                    <div class="printing-artwork-file">
+                        <span class="printing-artwork-file__icon"><i class="bi {{ artworkMime == 'application/pdf' ? 'bi-file-earmark-pdf' : (artworkMime starts with 'image/' ? 'bi-file-earmark-image' : 'bi-file-earmark-check') }}" aria-hidden="true"></i></span>
+                        <div class="printing-artwork-file__details"><span>Versión {{ release.versionNumber }} · {{ artworkTypeLabel }}</span><strong title="{{ release.artworkFile.originalName }}">{{ release.artworkFile.originalName }}</strong><small>{% if release.artworkFile.byteSize %}{{ (release.artworkFile.byteSize / 1048576)|number_format(1, '.', ',') }} MB · {% endif %}Autorizado {{ release.authorizedAt|date('d/m/Y H:i', 'America/Mexico_City') }}</small></div>
+                    </div>
+                    <div class="printing-artwork-actions">
+                        {% if artworkPreviewable %}<button class="btn pf-button pf-button--primary" type="button" data-action="ui--file-preview#openExistingPreview" data-preview-url="{{ path('admin_design_download_file', {id: release.artworkFile.id, preview: 1}) }}" data-download-url="{{ path('admin_design_download_file', {id: release.artworkFile.id}) }}" data-file-name="{{ release.artworkFile.originalName }}" data-file-type="{{ artworkMime }}"><i class="bi bi-eye" aria-hidden="true"></i> Ver arte en pantalla</button>{% endif %}
+                        <a class="btn pf-button pf-button--secondary" href="{{ path('admin_design_download_file', {id: release.artworkFile.id}) }}"><i class="bi bi-download" aria-hidden="true"></i> Descargar original</a>
+                    </div>
+                    {% if not artworkPreviewable %}<p class="printing-file-viewer-hint">Este formato no tiene vista previa en el navegador. Descarga el original para abrirlo en el software de diseño.</p>{% endif %}
+                    <div class="printing-art-approval">
+                        <i class="bi bi-patch-check-fill" aria-hidden="true"></i>
+                        <div><strong>Autorizado por {{ release.authorizedBy.fullName|default('Diseño') }}</strong><span>{{ release.authorizationType.label }} · versión vigente</span></div>
+                    </div>
+                    <p class="printing-operator-note">Compara el arte con esta partida y usa esta versión. Si el archivo, las medidas o el acabado no coinciden, detente y consulta a Diseño antes de imprimir.</p>
+                    {% if release.referenceFile %}
+                        <div class="printing-guide-file">
+                            <span class="printing-guide-file__icon"><i class="bi bi-images" aria-hidden="true"></i></span>
+                            <div><strong>Captura guía de Diseño</strong><small>{{ release.referenceFile.originalName }} · referencia visual de la autorización</small></div>
+                            <button class="btn pf-button pf-button--subtle pf-button--sm" type="button" data-action="ui--file-preview#openExistingPreview" data-preview-url="{{ path('admin_design_download_file', {id: release.referenceFile.id, preview: 1}) }}" data-download-url="{{ path('admin_design_download_file', {id: release.referenceFile.id}) }}" data-file-name="{{ release.referenceFile.originalName }}" data-file-type="{{ release.referenceFile.mimeType|lower }}" aria-label="Ver captura guía de Diseño"><i class="bi bi-eye" aria-hidden="true"></i> Ver guía</button>
+                        </div>
+                    {% endif %}
+                    {{ include('partials/_file_preview_modal.html.twig', {controllerIdentifier: 'ui--file-preview', modalTitleId: 'printing-art-preview-title'}) }}
+                {% else %}
+                    <div class="printing-art-empty"><span><i class="bi bi-file-earmark-lock" aria-hidden="true"></i></span><strong>Arte pendiente de liberación</strong><p>Diseño todavía no ha autorizado un archivo vigente para esta partida. La impresión permanecerá bloqueada hasta recibir la liberación.</p></div>
+                {% endif %}
             </section>
 
-            <section class="pf-card printing-detail-card">
-                <div class="printing-card-heading"><h2>Requerimientos de producción</h2></div>
-                <dl class="printing-requirements">
-                    <div><dt><i class="bi bi-printer" aria-hidden="true"></i>Máquina asignada</dt><dd>{{ plan.equipment ? plan.equipment.name : 'Pendiente de configurar' }}{% if plan.equipment %}<small>{{ plan.equipment.code }}</small>{% if is_granted('equipment.view') or is_granted('production.execute') %}<small><a href="{{ path('admin_equipment_label', {id: plan.equipment.id}) }}" target="_blank" rel="noopener">Imprimir etiqueta de máquina</a></small>{% endif %}{% endif %}</dd></div>
-                    <div><dt><i class="bi bi-layers" aria-hidden="true"></i>Material</dt><dd>{{ plan.materialVariant ? plan.materialVariant.material.name : 'Pendiente de configurar' }}{% if plan.materialVariant %}<small>{{ plan.materialVariant.code }}</small>{% endif %}</dd></div>
-                    <div><dt><i class="bi bi-box-seam" aria-hidden="true"></i>Cantidad a producir</dt><dd>{{ item.quantity|number_format(6, '.', ',')|trim('0', 'right')|trim('.', 'right') }} {{ item.commercialItemSnapshot.measurement_unit.code|default('') }}</dd></div>
-                    <div><dt><i class="bi bi-layers" aria-hidden="true"></i>Material previsto</dt><dd>{{ plannedUsage ? plannedUsage.plannedQuantity ~ ' ' ~ plannedUsage.unitLabelSnapshot : 'Pendiente de captura' }}{% if plannedUsage and plannedUsage.plannedInventoryQuantity %}<small>Longitud apartada: {{ plannedUsage.plannedInventoryQuantity }} {{ plannedUsage.variant.inventoryUnit.symbol }}</small>{% endif %}</dd></div>
-                </dl>
+<section class="pf-card printing-detail-card printing-requirements-card">
+    <div class="printing-preparation-card-heading">
+        <div><span class="printing-section-eyebrow">Antes de escanear</span><h2>Requerimientos de producción</h2><p>Confirma dónde imprimir y cuánto material se necesita.</p></div>
+        <span class="printing-requirements-state {{ requirementsReady ? 'is-ready' : 'is-pending' }}"><i class="bi {{ requirementsReady ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill' }}" aria-hidden="true"></i>{{ requirementsReady ? 'Configurado' : 'Pendiente' }}</span>
+    </div>
+    <ul class="printing-requirements">
+        <li class="printing-requirements__row">
+            <span class="printing-requirements__icon"><i class="bi bi-printer" aria-hidden="true"></i></span>
+            <div>
+                <span>Máquina</span>
+                <strong>{{ plan.equipment ? plan.equipment.name : 'Aún no asignada' }}</strong>
+                <small>{% if plan.equipment %}{{ plan.equipment.code }}{% if is_granted('equipment.view') or is_granted('production.execute') %} · <a href="{{ path('admin_equipment_label', {id: plan.equipment.id}) }}" target="_blank" rel="noopener">Imprimir etiqueta</a>{% endif %}{% else %}La máquina se necesita para habilitar la validación.{% endif %}</small>
+            </div>
+        </li>
+        <li class="printing-requirements__row">
+            <span class="printing-requirements__icon"><i class="bi bi-layers" aria-hidden="true"></i></span>
+            <div>
+                <span>Material que se utilizará</span>
+                <strong>{{ plan.materialVariant ? plan.materialVariant.material.name : 'Aún no asignado' }}</strong>
+                <small>{% if plan.materialVariant %}{{ plan.materialVariant.code }}{% if plan.materialVariant.consumptionUnit %} · unidad de consumo {{ plan.materialVariant.consumptionUnit.symbol }}{% endif %}{% else %}Elige el tipo de material antes de reservarlo.{% endif %}</small>
+            </div>
+        </li>
+        <li class="printing-requirements__row">
+            <span class="printing-requirements__icon"><i class="bi bi-box-seam" aria-hidden="true"></i></span>
+            <div>
+                <span>Producto terminado</span>
+                <strong>{{ item.quantity|number_format(6, '.', ',')|trim('0', 'right')|trim('.', 'right') }} {{ item.commercialItemSnapshot.measurement_unit.code|default('') }}</strong>
+                <small>Cantidad solicitada en la orden de servicio.</small>
+            </div>
+        </li>
+        <li class="printing-requirements__row">
+            <span class="printing-requirements__icon"><i class="bi bi-rulers" aria-hidden="true"></i></span>
+            <div>
+                <span>Material previsto</span>
+                <strong>{{ plannedUsage ? plannedUsage.plannedQuantity ~ ' ' ~ plannedUsage.unitLabelSnapshot : 'Falta indicar la cantidad' }}</strong>
+                <small>{% if plannedUsage and plannedUsage.plannedInventoryQuantity %}Longitud apartada: {{ plannedUsage.plannedInventoryQuantity }} {{ plannedUsage.variant.inventoryUnit.symbol }}{% else %}Es la cantidad a reservar; no es el total del rollo ni la cantidad de piezas.{% endif %}</small>
+            </div>
+        </li>
+    </ul>
+</section>
                 {% if materialStatus and materialStatus.code == 'substituted' %}
-                    <div class="printing-callout printing-callout--success"><i class="bi bi-qr-code-scan" aria-hidden="true"></i><p><strong>Escanea el sustituto autorizado.</strong><span>{{ materialStatus.substitute }}</span></p></div>
+                    <div class="printing-callout printing-callout--success mt-3"><i class="bi bi-qr-code-scan" aria-hidden="true"></i><p><strong>Material sustituto autorizado</strong><span>{{ materialStatus.substitute }} · escanea el QR de una unidad de este material.</span></p></div>
                 {% elseif materialStatus and materialStatus.code in ['covered', 'partial_authorized'] and allowedMaterialVariants is not empty %}
-                    <div class="printing-callout printing-callout--success"><i class="bi bi-qr-code-scan" aria-hidden="true"></i><p><strong>Material permitido para etiqueta QR.</strong><span>{% for material in allowedMaterialVariants %}{{ material.material.name }} · {{ material.code }}{{ not loop.last ? ' / ' : '' }}{% endfor %}</span></p></div>
+                    <div class="printing-callout printing-callout--success mt-3"><i class="bi bi-qr-code-scan" aria-hidden="true"></i><p><strong>Material permitido para escanear</strong><span>{% for material in allowedMaterialVariants %}{{ material.material.name }} · {{ material.code }}{{ not loop.last ? ' / ' : '' }}{% endfor %}</span></p></div>
                 {% endif %}
                 {% if canConfigure and not activeExecution and not plan.hasCompletedExecution %}
-                    <details class="printing-configure-details">
-                        <summary><i class="bi bi-sliders" aria-hidden="true"></i>Ajustar requerimientos</summary>
-                        <form class="pf-form printing-configure-form" method="post" action="{{ path('admin_printing_configure', {id: plan.id}) }}">
-                            <input type="hidden" name="_token" value="{{ csrf_token('printing-configure-' ~ plan.id) }}">
-                            <div><label class="form-label" for="printing-equipment">Máquina prevista</label><select id="printing-equipment" name="equipment_id" class="form-select"><option value="">{{ plan.equipment ? 'Conservar ' ~ plan.equipment.name : 'Selecciona una máquina' }}</option>{% for equipment in equipmentChoices %}<option value="{{ equipment.id }}" {{ plan.equipment and plan.equipment.id == equipment.id ? 'selected' : '' }}>{{ equipment.name }} · {{ equipment.code }}</option>{% endfor %}</select></div>
-                            <div><label class="form-label" for="printing-material">Material previsto</label><select id="printing-material" name="material_variant_id" class="form-select" required><option value="">Selecciona un material</option>{% for material in materialChoices %}<option value="{{ material.id }}" data-linear-roll="{{ material.linearRoll ? '1' : '0' }}" data-inventory-unit="{{ material.inventoryUnit.symbol }}" {{ plan.materialVariant and plan.materialVariant.id == material.id ? 'selected' : '' }} {{ material.specifications.legacy_migration|default(false) ? 'disabled' : '' }}>{{ material.material.name }} · {% if material.specifications.width_m|default(false) %}rollo de {{ material.specifications.width_m|number_format(2, '.', '') }} m de ancho{% else %}{{ material.code }}{% endif %} · consumo en {{ material.consumptionUnit.symbol }}{{ material.specifications.legacy_migration|default(false) ? ' (configurar presentación real)' : '' }}</option>{% endfor %}</select></div>
-                            <div><label class="form-label" for="printing-planned-quantity">Área de material prevista</label><input id="printing-planned-quantity" name="planned_quantity" value="{{ plannedUsage ? plannedUsage.plannedQuantity : '' }}" class="form-control" inputmode="decimal" placeholder="Ej. 30.4" required><div class="form-text">Captura la cantidad en la unidad de producción del material: normalmente m². No se descuenta directamente del rollo.</div></div>
-                            <div id="printing-planned-inventory-field"><label class="form-label" for="printing-planned-inventory-quantity">Longitud prevista del rollo (<span id="printing-planned-inventory-unit">{{ plan.materialVariant ? plan.materialVariant.inventoryUnit.symbol : 'm' }}</span>)</label><input id="printing-planned-inventory-quantity" name="planned_inventory_quantity" value="{{ plannedUsage ? plannedUsage.plannedInventoryQuantity : '' }}" class="form-control" inputmode="decimal" placeholder="Ej. 6"><div class="form-text">Obligatoria para rollos. Indica los metros lineales que se alimentarán según el acomodo, avance y merma previstos. Esta cifra se aparta en inventario.</div></div>
-                            <div><label class="form-label" for="printing-reason">Motivo técnico</label><textarea id="printing-reason" name="reason" class="form-control" rows="2" minlength="5" maxlength="500" required>{{ plan.materialVariant ? 'Ajuste técnico autorizado de requisitos.' : 'Definición inicial de requisitos de Impresión.' }}</textarea></div>
-                            {% if multiplePlannedUsages %}<div class="alert alert-warning">Esta operación tiene varias previsiones; revísalas antes de modificar los requisitos.</div>{% endif %}
-                            <button class="btn pf-button pf-button--secondary" type="submit" {{ multiplePlannedUsages ? 'disabled' : '' }}>Guardar material y apartar</button>
-                        </form>
+<details class="printing-requirements-editor" {{ not requirementsReady ? 'open' : '' }}>
+    <summary><span class="printing-requirements-editor__summary-icon"><i class="bi bi-sliders" aria-hidden="true"></i></span><span><strong>{{ requirementsReady ? 'Editar requerimientos' : 'Completar requerimientos' }}</strong><small>Máquina, material y cantidad prevista</small></span><i class="bi bi-chevron-down printing-requirements-editor__chevron" aria-hidden="true"></i></summary>
+    <div class="printing-requirements-editor__content">
+        <p class="printing-requirements-editor__intro">Elige la máquina y el material. La cantidad prevista se captura en la unidad de consumo del material seleccionado. Al guardar, el sistema intenta reservar inventario; la unidad física se valida después con su QR.</p>
+        {% if multiplePlannedUsages %}<div class="alert alert-warning">Hay varias previsiones de material para esta operación. Pide a un responsable que las revise antes de hacer cambios.</div>{% endif %}
+        <form class="pf-form printing-configure-form" method="post" action="{{ path('admin_printing_configure', {id: plan.id}) }}" data-controller="ui--printing-form" data-ui--printing-form-initial-equipment-value="{{ plan.equipment ? plan.equipment.id : '' }}" data-ui--printing-form-initial-material-value="{{ plan.materialVariant ? plan.materialVariant.id : '' }}" data-ui--printing-form-initial-quantity-value="{{ plannedUsage ? plannedUsage.plannedQuantity : '' }}" data-ui--printing-form-initial-unit-value="{{ plan.materialVariant ? plan.materialVariant.consumptionUnit.symbol : '' }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('printing-configure-' ~ plan.id) }}">
+            <div class="printing-configure-field"><label class="form-label" for="printing-equipment">1. Máquina para esta impresión{% if not plan.equipment %} <span class="printing-configure-required">*</span>{% endif %}</label><select id="printing-equipment" name="equipment_id" class="form-select" data-ui--printing-form-target="configurationEquipment" {{ not plan.equipment ? 'required' : '' }}><option value="">{{ plan.equipment ? 'Conservar máquina actual · ' ~ plan.equipment.name : 'Selecciona una máquina' }}</option>{% for equipment in equipmentChoices %}<option value="{{ equipment.id }}" {{ plan.equipment and plan.equipment.id == equipment.id ? 'selected' : '' }}>{{ equipment.name }} · {{ equipment.code }}</option>{% endfor %}</select><small>Selecciona el equipo que usará el operador. Si conservas la máquina actual, deja la opción inicial.</small></div>
+            <div class="printing-configure-field"><label class="form-label" for="printing-material">2. Material previsto <span class="printing-configure-required">*</span></label><select id="printing-material" name="material_variant_id" class="form-select" required data-ui--printing-form-target="configurationMaterial" data-action="change->ui--printing-form#refreshConstraints"><option value="">Selecciona un material</option>{% for material in materialChoices %}<option value="{{ material.id }}" data-consumption-unit="{{ material.consumptionUnit.symbol }}" data-linear-roll="{{ material.linearRoll ? '1' : '0' }}" data-inventory-unit="{{ material.inventoryUnit.symbol }}" {{ plan.materialVariant and plan.materialVariant.id == material.id ? 'selected' : '' }} {{ material.specifications.legacy_migration|default(false) ? 'disabled' : '' }}>{{ material.material.name }} · {{ material.code }}{% if material.specifications.width_m|default(false) %} · {{ material.specifications.width_m|number_format(2, '.', '') }} m de ancho{% endif %} · consumo en {{ material.consumptionUnit.symbol }}{{ material.specifications.legacy_migration|default(false) ? ' · requiere configurar presentación' : '' }}</option>{% endfor %}</select><small>El QR que se escanea después identifica una unidad física de este material.</small></div>
+            <div class="printing-configure-field"><label class="form-label" for="printing-planned-quantity">3. Cantidad de material prevista (<span data-ui--printing-form-target="plannedUnit">{{ plan.materialVariant ? plan.materialVariant.consumptionUnit.symbol : 'unidad de consumo' }}</span>) <span class="printing-configure-required">*</span></label><input id="printing-planned-quantity" name="planned_quantity" type="number" min="0.000001" max="99999999999999" step="0.000001" value="{{ plannedUsage ? plannedUsage.plannedQuantity : '' }}" class="form-control" inputmode="decimal" placeholder="Ej. 30.4" required data-ui--printing-form-target="configurationQuantity"><small data-ui--printing-form-target="plannedUnitHelp">{{ plan.materialVariant ? 'Captura en ' ~ plan.materialVariant.consumptionUnit.symbol ~ '; para lona registra el área de material necesaria, no la longitud del rollo.' : 'Selecciona primero el material para conocer la unidad de captura.' }}</small></div>
+            <div id="printing-planned-inventory-field"><label class="form-label" for="printing-planned-inventory-quantity">Longitud prevista del rollo (<span id="printing-planned-inventory-unit">{{ plan.materialVariant ? plan.materialVariant.inventoryUnit.symbol : 'm' }}</span>)</label><input id="printing-planned-inventory-quantity" name="planned_inventory_quantity" value="{{ plannedUsage ? plannedUsage.plannedInventoryQuantity : '' }}" class="form-control" inputmode="decimal" placeholder="Ej. 6"><div class="form-text">Obligatoria para rollos. Indica los metros lineales que se alimentarán según el acomodo, avance y merma previstos. Esta cifra se aparta en inventario.</div></div>
+            <div class="printing-configure-field"><label class="form-label" for="printing-reason">Motivo de la asignación o cambio <span class="printing-field__conditional">Requerido si modificas un requisito</span></label><textarea id="printing-reason" name="reason" class="form-control" rows="2" minlength="5" maxlength="500" placeholder="Ej. Se asigna esta máquina por disponibilidad del equipo" data-ui--printing-form-target="configurationReason">{{ plan.materialVariant ? 'Ajuste técnico autorizado de requisitos.' : 'Definición inicial de requisitos de Impresión.' }}</textarea><small>Explica el cambio de máquina, material o cantidad. Si no cambias nada, puedes dejarlo vacío.</small></div>
+            <button class="btn pf-button pf-button--primary printing-requirements-save" type="submit" {{ multiplePlannedUsages ? 'disabled' : '' }}><i class="bi bi-check2-circle" aria-hidden="true"></i>{{ requirementsReady ? 'Guardar cambios y actualizar apartado' : 'Guardar requisitos y apartar material' }}</button>
+        </form>
+    </div>
+</details>
+{% elseif not canConfigure %}
+    <p class="printing-requirements-readonly">{% if requirementsReady %}Estos requisitos están listos. Para cambiar la máquina, el material o la cantidad, solicita apoyo al responsable de Producción.{% else %}Falta completar requisitos. Solicita al responsable de Producción que asigne máquina y material para esta partida.{% endif %}</p>
+{% endif %}
                     </details>
+                {% elseif not canConfigure %}
+                    <p class="printing-requirements-readonly">{% if requirementsReady %}Estos requisitos están listos. Para cambiar la máquina, el material o la cantidad, solicita apoyo al responsable de Producción.{% else %}Falta completar requisitos. Solicita al responsable de Producción que asigne máquina y material para esta partida.{% endif %}</p>
                 {% endif %}
-                {% if plan.materialSnapshot %}<details class="printing-configure-details"><summary>Características técnicas del material</summary><pre class="small mt-2 mb-0">{{ plan.materialSnapshot.specifications|default({})|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></details>{% endif %}
             </section>
 
             <section class="pf-card printing-detail-card printing-instructions-card">
-                <div class="printing-card-heading"><h2>Instrucciones</h2></div>
-                {% if release and release.instructions %}<div class="printing-instructions"><i class="bi bi-shield-check" aria-hidden="true"></i><p>{{ release.instructions|nl2br }}</p></div>{% else %}<p class="printing-muted-copy">Sigue el perfil de impresión definido para este producto y confirma la alineación antes de iniciar.</p>{% endif %}
-                {% if item.productionSpecificationsSnapshot is not empty %}<details class="printing-configure-details"><summary>Especificaciones técnicas de la partida</summary><pre class="small mt-2 mb-0">{{ item.productionSpecificationsSnapshot|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></details>{% endif %}
+                <div class="printing-preparation-card-heading"><div><span class="printing-section-eyebrow">Guía de trabajo</span><h2>Instrucciones de impresión</h2><p>Indicaciones para preparar esta partida.</p></div>{% if release and release.instructions %}<span class="printing-instruction-source"><i class="bi bi-shield-check" aria-hidden="true"></i>Diseño</span>{% endif %}</div>
+                {% if release and release.instructions %}
+                    <div class="printing-instructions"><i class="bi bi-chat-square-text" aria-hidden="true"></i><div><strong>Indicaciones de Diseño</strong><p>{{ release.instructions|nl2br }}</p></div></div>
+                {% else %}
+                    <div class="printing-instructions printing-instructions--empty"><i class="bi bi-info-circle" aria-hidden="true"></i><div><strong>Sin indicaciones especiales de Diseño</strong><p>Revisa el arte autorizado y las especificaciones de la partida. Sigue el perfil de impresión configurado en la máquina.</p></div></div>
+                {% endif %}
+                <div class="printing-specifications">
+                    <h3><i class="bi bi-card-list" aria-hidden="true"></i>Especificaciones de esta partida</h3>
+                    {% if productionSpecifications.summary|default('') and productionSpecifications.summary != 'Sin características capturadas.' %}
+                        <p class="printing-specifications__summary">{{ productionSpecifications.summary }}</p>
+                    {% elseif specificationValues is not empty %}
+                        <dl>
+                            {% for specification in specificationValues %}
+                                {% if specification is iterable and specification.name|default('') %}
+                                    {% set specificationValue = specification.display_value|default(specification.submitted_value|default('')) %}
+                                    {% if specificationValue is not same as('') %}<div><dt>{{ specification.name }}</dt><dd>{{ specificationValue }}</dd></div>{% endif %}
+                                {% endif %}
+                            {% endfor %}
+                        </dl>
+                    {% else %}
+                        <p class="printing-specifications__empty">No hay características adicionales capturadas para esta partida.</p>
+                    {% endif %}
+                    {% if productionSpecifications is not empty %}<details class="printing-technical-details"><summary>Ver datos técnicos completos</summary><pre>{{ productionSpecifications|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></details>{% endif %}
+                </div>
+                <div class="printing-instruction-footer"><i class="bi bi-pause-circle" aria-hidden="true"></i><p>Si el arte o las especificaciones no coinciden con el trabajo solicitado, pausa y consulta a Diseño antes de avanzar.</p></div>
             </section>
         </div>
+        {% endif %}
 
-        <div class="printing-workflow-grid">
+        {% if selectedStep in [2, 3, 4] %}
+        <div class="printing-workflow-grid printing-workflow-grid--phase-{{ selectedStep }}">
+            {% if selectedStep == 2 %}
             <section class="pf-card printing-detail-card printing-validation-card" data-controller="ui--printing-scanner" data-ui--printing-scanner-src-value="{{ asset('vendor/zxing-browser/zxing-browser.min.js') }}">
-                <div class="printing-card-heading"><div><h2>Validar máquina y material</h2><p>Escanea los códigos o ingrésalos manualmente.</p></div><span class="printing-step-number">1</span></div>
+                <div class="printing-card-heading"><div><h2>Validar máquina y material</h2><p>Escanea los códigos o ingrésalos manualmente.</p></div><span class="printing-step-number">2</span></div>
                 {% if canExecute and release and not activeExecution and canStartPrinting and not materialNeedsDecision %}
-                    <form class="pf-form" method="post" action="{{ path('admin_printing_validate_scans', {id: plan.id}) }}">
+                    <form class="pf-form" method="post" action="{{ path('admin_printing_validate_scans', {id: plan.id}) }}" data-controller="ui--printing-form">
                         <input type="hidden" name="_token" value="{{ csrf_token('printing-scan-' ~ plan.id) }}">
-                        <input type="hidden" name="capture_mode" value="SCANNER" data-ui--printing-scanner-target="mode">
                         <div class="printing-scan-fields">
                             <div><label class="form-label" for="scan-equipment">Código de máquina <span>*</span></label><div class="input-group"><input id="scan-equipment" name="equipment_code" class="form-control" placeholder="Escanea o ingresa el código" maxlength="40" required autocomplete="off" data-ui--printing-scanner-target="equipment"><button class="btn printing-scan-camera" type="button" aria-label="Usar cámara para máquina" data-ui--printing-scanner-target="cameraButton" data-action="ui--printing-scanner#scanEquipment"><i class="bi bi-upc-scan" aria-hidden="true"></i></button></div></div>
-                            <div><label class="form-label" for="scan-material">Etiqueta QR de unidad física <span>*</span></label><div class="input-group"><input id="scan-material" name="material_qr_payload" class="form-control" placeholder="Escanea el QR del rollo, envase o paquete" maxlength="80" required autocomplete="off" data-ui--printing-scanner-target="material"><button class="btn printing-scan-camera" type="button" aria-label="Usar cámara para etiqueta QR" data-ui--printing-scanner-target="cameraButton" data-action="ui--printing-scanner#scanMaterial"><i class="bi bi-upc-scan" aria-hidden="true"></i></button></div></div>
+                            <div><label class="form-label" for="scan-material">Etiqueta QR de unidad física <span>*</span></label><div class="input-group"><input id="scan-material" name="material_qr_payload" class="form-control" placeholder="PF:MAT:1:… (impreso bajo el QR)" pattern="PF:MAT:1:[A-Fa-f0-9]{48}" title="Usa el código completo PF:MAT:1: seguido de 48 caracteres hexadecimales." maxlength="80" required autocomplete="off" data-ui--printing-scanner-target="material"><button class="btn printing-scan-camera" type="button" aria-label="Usar cámara para etiqueta QR" data-ui--printing-scanner-target="cameraButton" data-action="ui--printing-scanner#scanMaterial"><i class="bi bi-upc-scan" aria-hidden="true"></i></button></div></div>
                         </div>
+                        <div class="pf-form-field mt-3"><label class="form-label" for="printing-capture-mode">Método de captura</label><select id="printing-capture-mode" name="capture_mode" class="form-select" data-ui--printing-scanner-target="mode"><option value="SCANNER">Lector USB o cámara</option>{% if canSubstitute %}<option value="MANUAL">Captura manual autorizada</option>{% endif %}</select></div>
                         <div class="pf-qr-scan-preview" data-ui--printing-scanner-target="panel" hidden><video autoplay muted playsinline data-ui--printing-scanner-target="video" aria-label="Vista de la cámara para escanear códigos"></video><button class="btn pf-button pf-button--secondary pf-button--sm mt-2" type="button" data-action="ui--printing-scanner#stop">Cerrar cámara</button></div>
                         <p class="printing-scan-message" data-ui--printing-scanner-target="message" aria-live="polite"></p>
-                        <p class="printing-form-hint">Escanea la etiqueta QR de la unidad física; debe conservar saldo disponible.</p>
+                        <p class="printing-form-hint">El QR identifica una unidad física concreta con saldo disponible. No es el código del material ni el de su presentación.</p>
+                        <p class="printing-form-hint">{% if is_granted('inventory.view') %}<a href="{{ path('admin_inventory_receipts_index') }}" target="_blank" rel="noopener">Busca la unidad en Inventario físico</a>{% else %}Pide a Bodega que localice la unidad en Inventario físico.{% endif %}{% if canPrintInventoryLabels %} Abre «Etiqueta» y copia el texto impreso debajo del QR (empieza con PF:MAT:1:).{% else %} Solicita a Bodega o a un supervisor que te comparta ese texto o imprima la etiqueta.{% endif %}</p>
                         <button class="btn pf-button pf-button--primary printing-wide-button" type="submit"><i class="bi bi-upc-scan" aria-hidden="true"></i>Validar escaneos</button>
-                        <p class="printing-form-hint">La etiqueta debe pertenecer a una unidad con saldo disponible. La captura manual requiere autorización del jefe de Producción.</p>
+                        <p class="printing-form-hint">{% if canSubstitute %}Si no tienes lector ni cámara, selecciona «Captura manual autorizada» y copia el código completo de la etiqueta.{% else %}Sin lector ni cámara, solicita al jefe de Producción o a un administrador que realice la captura manual.{% endif %}</p>
                     </form>
                 {% elseif currentScan and currentScan.available and not materialNeedsDecision %}
                     <div class="printing-callout printing-callout--success"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><p><strong>Máquina y material validados.</strong><span>Validación {{ currentScan.validatedAt|date('d/m/Y H:i', 'America/Mexico_City') }}.</span></p></div>
@@ -116,60 +244,103 @@
                 {% endif %}
             </section>
 
+            {% endif %}
+            {% if selectedStep == 3 %}
             <section class="pf-card printing-detail-card printing-next-card">
-                <div class="printing-card-heading"><h2>Siguiente paso</h2></div>
+                <div class="printing-card-heading"><h2>Iniciar impresión</h2></div>
                 {% if canExecute and currentScan and currentScan.available and not activeExecution and canStartPrinting and not materialNeedsDecision %}
-                    <form method="post" action="{{ path('admin_printing_start', {id: plan.id}) }}">
+                    <form method="post" action="{{ path('admin_printing_start', {id: plan.id}) }}" data-controller="ui--printing-form">
                         <input type="hidden" name="_token" value="{{ csrf_token('printing-start-' ~ plan.id) }}"><input type="hidden" name="expected_order_version" value="{{ orderVersion }}"><input type="hidden" name="command_id" value="{{ startCommandId }}">
                         {% if reworkOrigin %}<p class="printing-next-note">Calidad autorizó el retrabajo del intento {{ reworkOrigin.attemptNumber }}.</p>{% else %}<p class="printing-next-note">La máquina y el material están validados para esta partida.</p>{% endif %}
                         <button class="btn pf-button pf-button--primary printing-wide-button" type="submit"><i class="bi bi-play-circle-fill" aria-hidden="true"></i>Iniciar impresión</button>
                     </form>
                 {% else %}
                     <button class="btn pf-button pf-button--primary printing-wide-button" type="button" disabled><i class="bi bi-play-circle-fill" aria-hidden="true"></i>Iniciar impresión</button>
-                    <p class="printing-form-hint">Valida la máquina y el material para habilitar el inicio.</p>
+                    <p class="printing-form-hint">{% if activeExecution %}La impresión ya está en curso.{% elseif output %}La impresión ya terminó; consulta su salida y etiqueta en la fase 5.{% else %}Valida la máquina y el material para habilitar el inicio.{% endif %}</p>
                 {% endif %}
             </section>
 
+            {% endif %}
+            {% if selectedStep == 4 %}
             <section class="pf-card printing-detail-card printing-close-card">
-                <div class="printing-card-heading"><div><h2>Cerrar impresión</h2><p>Registra el consumo al finalizar.</p></div><i class="bi bi-lock printing-locked-icon" aria-hidden="true"></i></div>
+                <div class="printing-card-heading"><div><h2>Cerrar impresión</h2><p>Completa el consumo medido para terminar este intento y generar la etiqueta de producción.</p></div><span class="printing-step-number">4</span></div>
                 {% if canExecute and activeExecution %}
-                    <form class="pf-form" method="post" action="{{ path('admin_printing_complete', {id: activeExecution.id}) }}">
+                    <form class="pf-form printing-completion-form" method="post" action="{{ path('admin_printing_complete', {id: activeExecution.id}) }}" data-controller="ui--printing-form" data-ui--printing-form-planned-quantity-value="{{ confirmedPlanQuantity|default('') }}">
                         <input type="hidden" name="_token" value="{{ csrf_token('printing-complete-' ~ activeExecution.id) }}"><input type="hidden" name="expected_order_version" value="{{ orderVersion }}"><input type="hidden" name="command_id" value="{{ completeCommandId }}">
-                        <div class="printing-consumption-grid">
-                            {% if confirmedPlanQuantity %}
-                                <div><label class="form-label" for="printing-planned-total">Área propuesta desde Material previsto ({{ scannedMaterial.consumptionUnit.symbol }})</label><input id="printing-planned-total" class="form-control" value="{{ confirmedPlanQuantity }}" readonly><div class="form-text">{% if plannedInventoryQuantity %}Para el inventario se apartaron {{ plannedInventoryQuantity }} {{ scannedMaterial.inventoryUnit.symbol }}. El área no se convierte automáticamente en longitud del rollo.{% endif %}</div></div>
-                            {% else %}
-                                <div><label class="form-label" for="printing-total">Total real utilizado ({{ scannedMaterial ? scannedMaterial.consumptionUnit.symbol : 'unidad' }})</label><input id="printing-total" class="form-control" name="total_consumed" inputmode="decimal" placeholder="Cantidad medida" required><div class="form-text">El material escaneado no tiene un total previsto aplicable; mide su consumo.</div></div>
-                            {% endif %}
-                            <div><label class="form-label" for="printing-waste">Merma medida ({{ scannedMaterial ? scannedMaterial.consumptionUnit.symbol : 'unidad' }})</label><input id="printing-waste" class="form-control" name="waste" inputmode="decimal" value="0" required></div>
-                        </div>
-                        {% if scannedMaterial and scannedMaterial.linearRoll %}
-                            <div class="printing-linear-consumption"><label class="form-label" for="printing-actual-inventory-quantity">Metros lineales realmente alimentados ({{ scannedMaterial.inventoryUnit.symbol }})</label><input id="printing-actual-inventory-quantity" class="form-control" name="actual_inventory_quantity" inputmode="decimal" placeholder="Ej. {{ plannedInventoryQuantity ?: '6' }}" required><div class="form-text">Mide el avance real del rollo o toma la lectura de máquina. Esta es la única cantidad que se descontará del QR; incluye el avance y la merma longitudinal. Si difiere de la longitud prevista, explica la diferencia en los datos de cierre.</div></div>
-                        {% endif %}
-                        <p class="printing-form-hint">La merma se registra para Producción. En un rollo, el descuento se calcula únicamente con los metros lineales realmente alimentados y no se suma otra vez.</p>
+<div class="printing-validation-summary" role="alert" tabindex="-1" data-ui--printing-form-target="summary" hidden></div>
+<div class="printing-consumption-grid">
+    {% if confirmedPlanQuantity %}
+        <div><label class="form-label" for="printing-planned-total">Área propuesta desde Material previsto ({{ scannedMaterial.consumptionUnit.symbol }})</label><input id="printing-planned-total" class="form-control" value="{{ confirmedPlanQuantity }}" readonly><div class="form-text">{% if plannedInventoryQuantity %}Para el inventario se apartaron {{ plannedInventoryQuantity }} {{ scannedMaterial.inventoryUnit.symbol }}. El área no se convierte automáticamente en longitud del rollo.{% endif %}</div></div>
+    {% else %}
+        <div><label class="form-label" for="printing-total">Total real utilizado ({{ scannedMaterial ? scannedMaterial.consumptionUnit.symbol : 'unidad' }})</label><input id="printing-total" class="form-control" name="total_consumed" inputmode="decimal" placeholder="Cantidad medida" required><div class="form-text">El material escaneado no tiene un total previsto aplicable; mide su consumo.</div></div>
+    {% endif %}
+    <div><label class="form-label" for="printing-waste">Merma medida ({{ scannedMaterial ? scannedMaterial.consumptionUnit.symbol : 'unidad' }})</label><input id="printing-waste" class="form-control" name="waste" inputmode="decimal" value="0" required></div>
+</div>
+{% if scannedMaterial and scannedMaterial.linearRoll %}
+    <div class="printing-linear-consumption"><label class="form-label" for="printing-actual-inventory-quantity">Metros lineales realmente alimentados ({{ scannedMaterial.inventoryUnit.symbol }})</label><input id="printing-actual-inventory-quantity" class="form-control" name="actual_inventory_quantity" inputmode="decimal" placeholder="Ej. {{ plannedInventoryQuantity ?: '6' }}" required><div class="form-text">Mide el avance real del rollo o toma la lectura de máquina. Esta es la única cantidad que se descontará del QR; incluye el avance y la merma longitudinal. Si difiere de la longitud prevista, explica la diferencia en los datos de cierre.</div></div>
+{% endif %}
+<p class="printing-form-hint">La merma se registra para Producción. En un rollo, el descuento se calcula únicamente con los metros lineales realmente alimentados y no se suma otra vez.</p>
                         {% if confirmedPlanQuantity %}
-                            <details class="printing-configure-details"><summary>Registrar un consumo distinto al previsto</summary><div class="mt-3"><label class="form-label" for="printing-total">Total real utilizado ({{ scannedMaterial.consumptionUnit.symbol }})</label><input id="printing-total" class="form-control" name="total_consumed" inputmode="decimal" placeholder="Solo si difiere de {{ confirmedPlanQuantity }}"><div class="form-text">Al capturar este valor se usará en lugar del total propuesto.</div><label class="form-label mt-3" for="printing-method">Cómo se midió el total</label><select id="printing-method" class="form-select" name="measurement_method"><option value="medición manual">Medición manual</option><option value="lectura de máquina">Lectura de máquina</option></select><label class="form-label mt-3" for="printing-adjustment-reason">Motivo de la diferencia</label><input id="printing-adjustment-reason" class="form-control" name="adjustment_reason" minlength="5" maxlength="500" placeholder="Ej. Reimpresión parcial o avance adicional"><div class="form-text">Obligatorio si cambió la cantidad prevista.</div></div></details>
-                        {% else %}
-                            <div><label class="form-label" for="printing-method">Cómo se midió el total</label><select id="printing-method" class="form-select" name="measurement_method" required><option value="medición manual">Medición manual</option><option value="lectura de máquina">Lectura de máquina</option></select><label class="form-label mt-3" for="printing-adjustment-reason">Motivo de usar una cantidad distinta</label><input id="printing-adjustment-reason" class="form-control" name="adjustment_reason" minlength="5" maxlength="500" required placeholder="Ej. Sustituto autorizado o consumo sin previsión aplicable"></div>
+                            <div class="printing-plan-summary"><span class="printing-plan-summary__icon"><i class="bi bi-calculator" aria-hidden="true"></i></span><div><strong>Consumo previsto confirmado</strong><span>{{ confirmedPlanQuantity }} {{ scannedMaterial.consumptionUnit.symbol }}{% if plannedInventoryQuantity %} · Equivale a {{ plannedInventoryQuantity }} {{ scannedMaterial.inventoryUnit.symbol }} de la unidad física.{% endif %}</span></div></div>
                         {% endif %}
-                        <details class="printing-configure-details"><summary>Agregar datos de cierre</summary><div class="mt-3"><label class="form-label" for="printing-waste-reason">Motivo de merma</label><input id="printing-waste-reason" class="form-control" name="waste_reason" maxlength="255"><div class="form-text">Obligatorio si la merma es mayor que cero.</div><label class="form-label mt-3" for="printing-note">Nota de cierre</label><input id="printing-note" class="form-control" name="note" maxlength="500"></div></details>
-                        <details class="printing-configure-details"><summary>Separar sobrante reutilizable</summary><div class="mt-3"><p class="printing-form-hint">Regístralo solo si separaste físicamente un retazo o remanente. Se conserva el saldo total y se crea una etiqueta QR propia.</p><label class="form-label" for="printing-surplus-quantity">Cantidad separada ({{ scannedMaterial ? scannedMaterial.inventoryUnit.symbol : 'unidad de inventario' }})</label><input id="printing-surplus-quantity" class="form-control" name="surplus_quantity" inputmode="decimal" value="0"><label class="form-label mt-3" for="printing-surplus-location">Ubicación del sobrante</label><input id="printing-surplus-location" class="form-control" name="surplus_location" maxlength="100" placeholder="Conserva la ubicación actual si se deja vacío"><label class="form-label mt-3" for="printing-surplus-description">Descripción física</label><input id="printing-surplus-description" class="form-control" name="surplus_description" maxlength="500" placeholder="Ej. Retazo 1.20 m × 0.80 m, ancho útil 0.80 m"></div></details>
-                        <div class="form-check"><input id="printing-confirm-consumption" class="form-check-input" type="checkbox" name="confirmed_consumption" value="1" required><label class="form-check-label" for="printing-confirm-consumption">Confirmo que el consumo de Producción y, si es rollo, los metros lineales a descontar corresponden al material realmente utilizado.</label></div>
-                        <button class="btn pf-button pf-button--primary printing-wide-button" type="submit">Terminar impresión y crear etiqueta</button>
+{% if confirmedPlanQuantity %}
+    <div class="printing-plan-summary"><span class="printing-plan-summary__icon"><i class="bi bi-calculator" aria-hidden="true"></i></span><div><strong>Consumo previsto confirmado</strong><span>{{ confirmedPlanQuantity }} {{ scannedMaterial.consumptionUnit.symbol }}{% if plannedInventoryQuantity %} · Equivale a {{ plannedInventoryQuantity }} {{ scannedMaterial.inventoryUnit.symbol }} de la unidad física.{% endif %}</span></div></div>
+{% endif %}
+<section class="printing-form-section" aria-labelledby="printing-consumption-title">
+    <div class="printing-form-section__heading"><span>01</span><div><h3 id="printing-consumption-title">Consumo de material</h3><p>{% if confirmedPlanQuantity %}Deja el consumo real vacío para usar la cantidad prevista.{% else %}Mide el material utilizado e indica el total.{% endif %}</p></div></div>
+    {% if confirmedPlanQuantity %}
+        <div class="printing-field"><label class="form-label" for="printing-total">Consumo real diferente al previsto ({{ scannedMaterial.consumptionUnit.symbol }}) <span class="printing-field__optional">Opcional</span></label><input id="printing-total" class="form-control" name="total_consumed" type="number" min="0.000001" max="99999999999999" step="0.000001" inputmode="decimal" placeholder="Déjalo vacío para usar {{ confirmedPlanQuantity }}" data-ui--printing-form-target="total"><div class="printing-field-help">Escribe una cantidad solo si mediste un consumo distinto. Esta cantidad incluye la merma.</div></div>
+    {% else %}
+        <div class="printing-field"><label class="form-label" for="printing-total">Total real utilizado ({{ scannedMaterial ? scannedMaterial.consumptionUnit.symbol : 'unidad' }}) <span class="printing-field__required">Obligatorio</span></label><input id="printing-total" class="form-control" name="total_consumed" type="number" min="0.000001" max="99999999999999" step="0.000001" inputmode="decimal" placeholder="Ej. 16.5" required data-ui--printing-form-target="total"><div class="printing-field-help">El material escaneado no tiene una cantidad prevista aplicable. Mide el total utilizado; debe ser mayor que cero e incluir la merma.</div></div>
+    {% endif %}
+    <div class="printing-field-grid">
+        <div class="printing-field"><label class="form-label" for="printing-method">Cómo mediste el consumo <span class="printing-field__conditional">Obligatorio si indicas consumo real</span></label><select id="printing-method" class="form-select" name="measurement_method" data-ui--printing-form-target="measurementMethod"><option value="">Selecciona el método de medición</option><option value="medición manual">Medición manual</option><option value="lectura de máquina">Lectura de máquina</option></select><div class="printing-field-help">Elige medición manual si mediste el material directamente o lectura de máquina si usaste el contador del equipo.</div></div>
+        <div class="printing-field"><label class="form-label" for="printing-adjustment-reason">Motivo del consumo o ajuste <span class="printing-field__conditional">Requerido según el caso</span></label><input id="printing-adjustment-reason" class="form-control" name="adjustment_reason" minlength="5" maxlength="500" placeholder="Ej. Sin previsión, reimpresión parcial o ajuste de corte" data-ui--printing-form-target="adjustmentReason"><div class="printing-field-help">Explica por qué no había una cantidad prevista o por qué el consumo real fue distinto. Se solicitará cuando aplique.</div></div>
+    </div>
+</section>
+
+<section class="printing-form-section" aria-labelledby="printing-waste-title">
+    <div class="printing-form-section__heading"><span>02</span><div><h3 id="printing-waste-title">Merma</h3><p>Registra el material que se perdió durante la impresión.</p></div></div>
+    <div class="printing-field-grid">
+        <div class="printing-field"><label class="form-label" for="printing-waste">Merma medida ({{ scannedMaterial ? scannedMaterial.consumptionUnit.symbol : 'unidad' }}) <span class="printing-field__required">Obligatorio</span></label><input id="printing-waste" class="form-control" name="waste" type="number" min="0" max="99999999999999" step="0.000001" inputmode="decimal" value="0" required data-ui--printing-form-target="waste"><div class="printing-field-help">Captura 0 si no hubo merma. No puede superar el total real utilizado.</div></div>
+        <div class="printing-field"><label class="form-label" for="printing-waste-reason">Motivo de la merma <span class="printing-field__conditional">Obligatorio si la merma es mayor que 0</span></label><input id="printing-waste-reason" class="form-control" name="waste_reason" maxlength="255" placeholder="Ej. Prueba de color, ajuste o material dañado" data-ui--printing-form-target="wasteReason"><div class="printing-field-help">Describe brevemente por qué se perdió material. Si registras merma, este campo se solicitará antes de enviar.</div></div>
+    </div>
+</section>
+
+<details class="printing-form-details">
+    <summary>Datos adicionales del cierre</summary>
+    <div class="printing-form-details__body">
+        <div class="printing-field"><label class="form-label" for="printing-note">Comentario de cierre <span class="printing-field__optional">Opcional</span></label><textarea id="printing-note" class="form-control" name="note" rows="2" minlength="5" maxlength="500" placeholder="Agrega un comentario útil para el siguiente turno"></textarea><div class="printing-field-help">Si lo completas, escribe al menos cinco caracteres (máximo 500).</div></div>
+        <fieldset class="printing-surplus-fields">
+            <legend>Separar un sobrante reutilizable <span class="printing-field__optional">Opcional</span></legend>
+            <p class="printing-field-help">Úsalo solo si separaste físicamente un retazo o remanente que volverá a inventario. Se creará una unidad con su propio QR.</p>
+            <div class="printing-field-grid">
+                <div class="printing-field"><label class="form-label" for="printing-surplus-quantity">Cantidad que se separa ({{ scannedMaterial ? scannedMaterial.inventoryUnit.symbol : 'unidad de inventario' }})</label><input id="printing-surplus-quantity" class="form-control" name="surplus_quantity" type="number" min="0" max="99999999999999" step="0.000001" inputmode="decimal" value="0"><div class="printing-field-help">Captura 0 si no guardarás sobrante. Esta cantidad se mide en la unidad de inventario.</div></div>
+                <div class="printing-field"><label class="form-label" for="printing-surplus-location">Ubicación del sobrante</label><input id="printing-surplus-location" class="form-control" name="surplus_location" maxlength="100" placeholder="Ej. Rack A · Nivel 2"><div class="printing-field-help">Es opcional; si queda vacío se conserva la ubicación original.</div></div>
+            </div>
+            <div class="printing-field mt-3"><label class="form-label" for="printing-surplus-description">Descripción física</label><input id="printing-surplus-description" class="form-control" name="surplus_description" maxlength="500" placeholder="Ej. Retazo de 1.20 × 0.80 m"><div class="printing-field-help">Describe el tamaño o estado para que Bodega pueda identificarlo.</div></div>
+        </fieldset>
+    </div>
+</details>
+<div class="form-check"><input id="printing-confirm-consumption" class="form-check-input" type="checkbox" name="confirmed_consumption" value="1" required><label class="form-check-label" for="printing-confirm-consumption">Confirmo que el total a descontar corresponde al material realmente utilizado en esta impresión.</label></div>
+<button class="btn pf-button pf-button--primary printing-wide-button" type="submit"><i class="bi bi-check-circle" aria-hidden="true"></i>Terminar impresión y crear etiqueta</button>
                     </form>
                 {% else %}
                     <div class="printing-disabled-fields"><span>Total previsto ({{ scannedMaterial ? scannedMaterial.consumptionUnit.symbol : 'unidad' }})<b>{{ confirmedPlanQuantity ?: 'Pendiente' }}</b></span><span>Merma ({{ scannedMaterial ? scannedMaterial.consumptionUnit.symbol : 'unidad' }})<b>0</b></span></div>
-                    <p class="printing-form-hint">El registro estará disponible cuando finalice la impresión.</p>
-                    <button class="btn pf-button pf-button--secondary printing-wide-button" type="button" disabled>Cerrar impresión</button>
+                    <p class="printing-form-hint">{% if output %}El consumo quedó registrado al cerrar esta impresión.{% else %}El registro estará disponible cuando finalice la impresión.{% endif %}</p>
+                    <button class="btn pf-button pf-button--secondary printing-wide-button" type="button" disabled>{{ output ? 'Impresión cerrada' : 'Cerrar impresión' }}</button>
                 {% endif %}
             </section>
+            {% endif %}
         </div>
+        {% endif %}
 
-        <div class="printing-bottom-grid">
+        {% if selectedStep == 5 %}
+        <div class="printing-bottom-grid printing-bottom-grid--phase">
             <section class="pf-card printing-detail-card printing-label-card">
                 <div class="printing-card-heading"><h2>Etiqueta QR de producción</h2></div>
                 {% if output %}
-                    <div class="printing-label-preview"><div class="printing-label-mark"><img src="{{ asset('images/brand/logo.png') }}" alt="OoxCorp" class="printing-label-logo">{% if outputQrSvg %}<div class="printing-label-qr">{{ outputQrSvg|raw }}</div>{% else %}<i class="bi bi-qr-code printing-label-qr-fallback" aria-hidden="true"></i>{% endif %}<strong>{{ output.labelCode }}</strong><small>{{ item.serviceOrder.folio }} · P{{ item.displayLineNumber }}</small><span>PRODUCCIÓN</span></div><div class="printing-label-actions"><small>Código de etiqueta</small><code>{{ output.labelCode }}</code><p>Salida versión {{ output.versionNumber }}{% if output.labelReadyAt %} · generada {{ output.labelReadyAt|date('d/m/Y H:i', 'America/Mexico_City') }}{% endif %}</p>{% if canPrintLabels %}{% if output.labelReadyAt %}<a class="btn pf-button pf-button--primary printing-wide-button" href="{{ path('admin_printing_label', {id: output.id}) }}" target="_blank"><i class="bi bi-printer" aria-hidden="true"></i>Imprimir etiqueta</a>{% else %}<a class="btn pf-button pf-button--primary printing-wide-button" href="{{ path('admin_printing_label', {id: output.id}) }}" target="_blank"><i class="bi bi-printer" aria-hidden="true"></i>Generar e imprimir etiqueta</a>{% endif %}{% endif %}{% if canExecute %}<form method="post" action="{{ path('admin_printing_confirm_label_placed', {id: output.id}) }}"><input type="hidden" name="_token" value="{{ csrf_token('printing-label-placed-' ~ output.id) }}"><button class="btn pf-button pf-button--secondary printing-wide-button" type="submit" {{ output.labelPlaced ? 'disabled' : '' }}><i class="bi bi-check2" aria-hidden="true"></i>{{ output.labelPlaced ? 'Etiqueta colocada' : 'Confirmar colocación' }}</button></form>{% endif %}{% if canPrintLabels and output.labelReadyAt %}<details class="printing-reprint-details"><summary>Reimprimir etiqueta</summary><form class="pf-form mt-2" method="post" action="{{ path('admin_printing_reprint_label', {id: output.id}) }}" target="_blank"><input type="hidden" name="_token" value="{{ csrf_token('printing-reprint-label-' ~ output.id) }}"><label class="form-label" for="reprint-reason">Motivo de reimpresión</label><input id="reprint-reason" class="form-control mb-2" name="reason" minlength="5" required><button class="btn pf-button pf-button--secondary" type="submit">Reimprimir</button></form></details>{% endif %}</div></div>
+                    <div class="printing-label-preview"><div class="printing-label-mark"><img src="{{ asset('images/brand/logo.png') }}" alt="OoxCorp" class="printing-label-logo">{% if outputQrSvg %}<div class="printing-label-qr">{{ outputQrSvg|raw }}</div>{% else %}<i class="bi bi-qr-code printing-label-qr-fallback" aria-hidden="true"></i>{% endif %}<strong>{{ output.labelCode }}</strong><small>{{ item.serviceOrder.folio }} · P{{ item.displayLineNumber }}</small><span>PRODUCCIÓN</span></div><div class="printing-label-actions"><small>Código de etiqueta</small><code>{{ output.labelCode }}</code><p>Salida versión {{ output.versionNumber }}{% if output.labelReadyAt %} · generada {{ output.labelReadyAt|date('d/m/Y H:i', 'America/Mexico_City') }}{% endif %}</p>{% if canPrintLabels %}{% if output.labelReadyAt %}<a class="btn pf-button pf-button--primary printing-wide-button" href="{{ path('admin_printing_label', {id: output.id}) }}" target="_blank"><i class="bi bi-printer" aria-hidden="true"></i>Imprimir etiqueta</a>{% else %}<a class="btn pf-button pf-button--primary printing-wide-button" href="{{ path('admin_printing_label', {id: output.id}) }}" target="_blank"><i class="bi bi-printer" aria-hidden="true"></i>Generar e imprimir etiqueta</a>{% endif %}{% endif %}{% if canExecute %}<form method="post" action="{{ path('admin_printing_confirm_label_placed', {id: output.id}) }}" data-controller="ui--printing-form"><input type="hidden" name="_token" value="{{ csrf_token('printing-label-placed-' ~ output.id) }}"><button class="btn pf-button pf-button--secondary printing-wide-button" type="submit" {{ output.labelPlaced ? 'disabled' : '' }}><i class="bi bi-check2" aria-hidden="true"></i>{{ output.labelPlaced ? 'Etiqueta colocada' : 'Confirmar colocación' }}</button></form>{% endif %}{% if canPrintLabels and output.labelReadyAt %}<details class="printing-reprint-details"><summary>Reimprimir etiqueta</summary><form class="pf-form mt-2" method="post" action="{{ path('admin_printing_reprint_label', {id: output.id}) }}" target="_blank" data-controller="ui--printing-form"><input type="hidden" name="_token" value="{{ csrf_token('printing-reprint-label-' ~ output.id) }}"><label class="form-label" for="reprint-reason">Motivo de reimpresión</label><input id="reprint-reason" class="form-control mb-2" name="reason" minlength="5" maxlength="500" required><button class="btn pf-button pf-button--secondary" type="submit">Reimprimir</button></form></details>{% endif %}</div></div>
                     {% if output.labelPlaced %}<div class="printing-callout printing-callout--success mt-3"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><p><strong>Etiqueta colocada</strong><span>La colocación quedó confirmada.</span></p></div>{% elseif not output.labelReadyAt %}<p class="printing-form-hint">Generar la etiqueta no duplica la impresión ni el consumo.</p>{% endif %}
                 {% else %}<div class="printing-label-placeholder"><i class="bi bi-qr-code" aria-hidden="true"></i><strong>Etiqueta pendiente</strong><span>Se generará al cerrar la impresión y registrar el consumo.</span></div>{% endif %}
             </section>
@@ -185,7 +356,15 @@
                     </div>
                 </section>
             {% endif %}
+        </div>
+        {% endif %}
 
+        <nav class="printing-phase-navigation" aria-label="Navegación entre fases">
+            {% if selectedStep > 1 %}<a class="btn pf-button pf-button--secondary" href="{{ path('admin_printing_show', {id: plan.id, step: selectedStep - 1}) }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> Fase anterior</a>{% else %}<span></span>{% endif %}
+            {% if selectedStep < maxUnlockedStep %}<a class="btn pf-button pf-button--primary" href="{{ path('admin_printing_show', {id: plan.id, step: selectedStep + 1}) }}">Siguiente fase <i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% elseif selectedStep == 5 and output and output.labelPlaced %}<span class="printing-phase-navigation__done"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Trabajo terminado</span>{% else %}<span class="printing-phase-navigation__hint">Completa esta fase para desbloquear la siguiente.</span>{% endif %}
+        </nav>
+
+        <div class="printing-bottom-grid printing-bottom-grid--history">
             <section class="pf-card printing-detail-card printing-trace-card">
                 <div class="printing-card-heading"><h2>Trazabilidad del trabajo</h2><span class="printing-trace-order">{{ item.serviceOrder.folio }} · P{{ item.displayLineNumber }}</span></div>
                 <ol class="printing-timeline">

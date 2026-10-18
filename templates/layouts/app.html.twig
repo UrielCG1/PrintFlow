@@ -32,11 +32,11 @@
             <div class="pf-app-content">
                 {% include 'partials/_flash_messages.html.twig' %}
 
-                <main id="main-content" class="pf-page" tabindex="-1">
+                <main id="main-content" class="pf-page {% block app_page_class %}{% endblock %}" tabindex="-1">
                     {% block app_content %}{% endblock %}
                 </main>
 
-                <footer class="pf-app-footer">
+                <footer class="pf-app-footer {% block app_footer_class %}{% endblock %}">
                     <a href="{{ path('app_dashboard') }}" class="pf-app-footer__brand" aria-label="Ir al inicio de OoxCorp">
                         {% include 'partials/_brand_logo.html.twig' with { logo_class: 'pf-app-footer__logo' } %}
                     </a>

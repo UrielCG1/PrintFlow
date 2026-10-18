@@ -126,6 +126,23 @@ final class PrintingController extends AbstractController
         }
         $item = $plan->getServiceOrderItem();
         $reworkOrigin = $printingManager->reworkOriginForPlan($plan);
+        $preparationBlockReason = null;
+        if (!$item->getServiceOrder()->isPlanned()) {
+            $preparationBlockReason = 'La orden debe quedar planificada antes de validar la máquina y el material.';
+        } elseif ($plan->getBlockedReason() !== null) {
+            $preparationBlockReason = 'Resuelve el bloqueo operativo antes de continuar: '.$plan->getBlockedReason();
+        } elseif ($plan->hasCompletedExecution() && $reworkOrigin === null) {
+            $preparationBlockReason = 'Esta impresión ya se completó. Calidad debe autorizar un retrabajo antes de iniciar otro intento.';
+        } else {
+            foreach ($item->getActiveOperationPlans() as $previousPlan) {
+                if ($previousPlan->getSequenceNumber() < $plan->getSequenceNumber()
+                    && (!$previousPlan->hasCompletedLatestExecution() || $previousPlan->hasOpenExecution())
+                ) {
+                    $preparationBlockReason = 'La operación anterior debe terminarse antes de validar Impresión.';
+                    break;
+                }
+            }
+        }
         $activeExecution = null;
         foreach ($plan->getExecutions() as $execution) {
             if ($execution->isOpen()) {
@@ -156,6 +173,8 @@ final class PrintingController extends AbstractController
             'surplusStockUnits' => $scannedStockUnit !== null ? $stockUnitRepository->findSurplusesForParent($scannedStockUnit) : [],
             'activeExecution' => $activeExecution,
             'reworkOrigin' => $reworkOrigin,
+            'canValidatePrinting' => $preparationBlockReason === null,
+            'preparationBlockReason' => $preparationBlockReason,
             'canStartPrinting' => !$plan->hasCompletedExecution() || $reworkOrigin !== null,
             'output' => $output,
             'outputQrSvg' => $output !== null ? $labelRenderer->renderQrSvg($output) : null,
@@ -267,7 +286,7 @@ final class PrintingController extends AbstractController
             }
             if ($result->output instanceof ProductionPrintedOutput) {
                 $this->addFlash('success', 'Impresión terminada. Genera e imprime la etiqueta QR de esta salida.');
-                return $this->redirectToRoute('admin_printing_label', ['id' => $result->output->getId()]);
+                return $this->redirectToRoute('admin_printing_show', ['id' => $plan->getId(), 'step' => 5]);
             }
         } catch (\DomainException|\InvalidArgumentException $exception) {
             $this->addFlash('error', $exception->getMessage());

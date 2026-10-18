@@ -12,6 +12,7 @@
     {% form_theme rejectForm 'form/printflow_theme.html.twig' %}
     {% form_theme cancellationForm 'form/printflow_theme.html.twig' %}
     {% form_theme revisionForm 'form/printflow_theme.html.twig' %}
+    {% if purchaseOrderForm %}{% form_theme purchaseOrderForm 'form/printflow_theme.html.twig' %}{% endif %}
 
     {% set status = quotation.status.value %}
     {% set status_tones = {
@@ -224,45 +225,157 @@
         {% endif %}
 
         {% if quotation.decisionAt %}
-            <section class="pf-card mb-4">
-                <header class="pf-card__header">
-                    <h2 class="pf-card__title">Registro comercial</h2>
-                    <p class="pf-card__description">Evidencia asociada al estado actual de la cotización.</p>
+            <section class="pf-card mb-4 quotation-decision-record">
+                <header class="pf-card__header quotation-decision-record__header">
+                    <div>
+                        <p class="quotation-decision-record__eyebrow">Respuesta del cliente</p>
+                        <h2 class="pf-card__title">Registro comercial</h2>
+                    </div>
+                    <span class="pf-status-badge {{ status_tones[status]|default('pf-status-badge--neutral') }}">{{ quotation.status.label }}</span>
                 </header>
-                <div class="pf-card__body">
-                    <dl class="row mb-0">
-                        <dt class="col-sm-3">Fecha y hora</dt>
-                        <dd class="col-sm-9">{{ quotation.decisionAt|date('d/m/Y H:i', 'America/Mexico_City') }}</dd>
+                <div class="pf-card__body quotation-decision-record__body">
+                    <div class="quotation-decision-record__facts">
+                        <article class="quotation-decision-record__fact quotation-decision-record__fact--date">
+                            <span class="quotation-decision-record__icon" aria-hidden="true"><i class="bi bi-calendar-check"></i></span>
+                            <div class="quotation-decision-record__fact-content">
+                                <span class="quotation-decision-record__label">Fecha y hora</span>
+                                <strong>{{ quotation.decisionAt|date('d/m/Y', 'America/Mexico_City') }}</strong>
+                                <small>{{ quotation.decisionAt|date('H:i', 'America/Mexico_City') }} h</small>
+                            </div>
+                        </article>
                         {% if quotation.decisionChannel %}
-                            <dt class="col-sm-3">Canal</dt>
-                            <dd class="col-sm-9">{{ quotation.decisionChannel.label }}</dd>
+                            <article class="quotation-decision-record__fact">
+                                <span class="quotation-decision-record__icon" aria-hidden="true"><i class="bi bi-chat-square-text"></i></span>
+                                <div class="quotation-decision-record__fact-content">
+                                    <span class="quotation-decision-record__label">Canal de respuesta</span>
+                                    <strong>{{ quotation.decisionChannel.label }}</strong>
+                                </div>
+                            </article>
                         {% endif %}
                         {% if quotation.decisionContact %}
-                            <dt class="col-sm-3">Contacto</dt>
-                            <dd class="col-sm-9">{{ quotation.decisionContact }}</dd>
+                            <article class="quotation-decision-record__fact">
+                                <span class="quotation-decision-record__icon" aria-hidden="true"><i class="bi bi-person-check"></i></span>
+                                <div class="quotation-decision-record__fact-content">
+                                    <span class="quotation-decision-record__label">Contacto</span>
+                                    <strong>{{ quotation.decisionContact }}</strong>
+                                </div>
+                            </article>
                         {% endif %}
-                        {% if quotation.decisionNotes %}
-                            <dt class="col-sm-3">Observación</dt>
-                            <dd class="col-sm-9" style="white-space: pre-line;">{{ quotation.decisionNotes }}</dd>
-                        {% endif %}
-                        {% if quotation.decisionEvidenceReference %}
-                            <dt class="col-sm-3">Evidencia</dt>
-                            <dd class="col-sm-9" style="white-space: pre-line;">{{ quotation.decisionEvidenceReference }}</dd>
-                        {% endif %}
-                        {% if quotation.purchaseOrderNumber %}
-                            <dt class="col-sm-3">Folio de orden de compra</dt>
-                            <dd class="col-sm-9">{{ quotation.purchaseOrderNumber }}</dd>
-                        {% endif %}
-                        {% if quotation.purchaseOrderFile %}
-                            <dt class="col-sm-3">Archivo adjunto</dt>
-                            <dd class="col-sm-9"><a class="btn btn-sm btn-outline-primary" href="{{ path('admin_quotations_decision_file', {id: quotation.id, type: 'purchase-order'}) }}"><i class="bi bi-file-earmark-pdf"></i> Descargar orden de compra en PDF</a></dd>
-                        {% endif %}
-                        {% if quotation.responseScreenshotFile %}
-                            <dt class="col-sm-3">Captura de respuesta</dt>
-                            <dd class="col-sm-9"><a class="btn btn-sm btn-outline-primary" href="{{ path('admin_quotations_decision_file', {id: quotation.id, type: 'response-screenshot'}) }}"><i class="bi bi-image"></i> Descargar captura</a></dd>
-                        {% endif %}
-                    </dl>
+                    </div>
+
+                    {% if quotation.decisionNotes or quotation.decisionEvidenceReference or quotation.responseScreenshotFile %}
+                        <div class="quotation-decision-record__notes">
+                            {% if quotation.decisionNotes %}
+                                <article class="quotation-decision-record__note">
+                                    <span class="quotation-decision-record__icon" aria-hidden="true"><i class="bi bi-chat-left-text"></i></span>
+                                    <div>
+                                        <span class="quotation-decision-record__label">Observación</span>
+                                        <p>{{ quotation.decisionNotes }}</p>
+                                    </div>
+                                </article>
+                            {% endif %}
+                            {% if quotation.decisionEvidenceReference or quotation.responseScreenshotFile %}
+                                <article class="quotation-decision-record__note">
+                                    <span class="quotation-decision-record__icon" aria-hidden="true"><i class="bi bi-paperclip"></i></span>
+                                    <div>
+                                        <span class="quotation-decision-record__label">Evidencia</span>
+                                        {% if quotation.decisionEvidenceReference %}<p>{{ quotation.decisionEvidenceReference }}</p>{% endif %}
+                                        {% if quotation.responseScreenshotFile %}
+                                            <a class="btn pf-button pf-button--subtle pf-button--sm mt-2" href="{{ path('admin_quotations_decision_file', {id: quotation.id, type: 'response-screenshot'}) }}">
+                                                <i class="bi bi-download" aria-hidden="true"></i>
+                                                Descargar captura
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </article>
+                            {% endif %}
+                        </div>
+                    {% endif %}
                 </div>
+            </section>
+        {% endif %}
+
+        {% if status in ['ACCEPTED', 'ACCEPTED_WITH_CHANGES'] %}
+            {% set hasPurchaseOrderNumber = quotation.purchaseOrderNumber is not empty %}
+            {% set hasPurchaseOrderFile = quotation.purchaseOrderFile is not empty %}
+            {% set purchaseOrderDownloadUrl = quotation.purchaseOrderFile ? path('admin_quotations_decision_file', {id: quotation.id, type: 'purchase-order'}) : null %}
+            <section class="pf-card mb-4 quotation-purchase-order" data-controller="ui--file-preview">
+                <header class="pf-card__header quotation-purchase-order__header">
+                    <div class="quotation-purchase-order__heading">
+                        <div class="quotation-purchase-order__title-row">
+                            <h2 class="pf-card__title">Orden de compra del cliente</h2>
+                            <span class="quotation-purchase-order__state {{ hasPurchaseOrderNumber and hasPurchaseOrderFile ? 'quotation-purchase-order__state--complete' : (hasPurchaseOrderNumber or hasPurchaseOrderFile ? 'quotation-purchase-order__state--partial' : 'quotation-purchase-order__state--pending') }}">
+                                <i class="bi {{ hasPurchaseOrderNumber and hasPurchaseOrderFile ? 'bi-check-circle-fill' : (hasPurchaseOrderNumber or hasPurchaseOrderFile ? 'bi-clock-history' : 'bi-info-circle') }}" aria-hidden="true"></i>
+                                {% if hasPurchaseOrderNumber and hasPurchaseOrderFile %}Folio y PDF registrados{% elseif hasPurchaseOrderNumber %}Folio registrado · PDF pendiente{% elseif hasPurchaseOrderFile %}PDF adjunto · folio pendiente{% else %}Pendiente de registrar{% endif %}
+                            </span>
+                        </div>
+                        <p class="pf-card__description">Puedes iniciar la orden de servicio sin el PDF y completar estos datos cuando los recibas.</p>
+                    </div>
+                </header>
+                <div class="pf-card__body">
+                    <div class="quotation-purchase-order__overview">
+                        <div class="quotation-purchase-order__summary">
+                            <span class="quotation-purchase-order__summary-icon"><i class="bi bi-receipt" aria-hidden="true"></i></span>
+                            <div>
+                                <span class="quotation-decision-record__label">Folio del cliente</span>
+                                <strong>{{ quotation.purchaseOrderNumber|default('Sin folio registrado') }}</strong>
+                                {% if not hasPurchaseOrderNumber %}<small>Se puede agregar más adelante.</small>{% endif %}
+                            </div>
+                        </div>
+
+                        {% if hasPurchaseOrderFile %}
+                            <div class="quotation-file-preview__card quotation-purchase-order__file">
+                                <div class="quotation-file-preview__thumbnail">
+                                    <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+                                </div>
+                                <div class="quotation-file-preview__details">
+                                    <span class="quotation-file-preview__label">PDF de orden de compra</span>
+                                    <strong class="quotation-file-preview__name" title="{{ quotation.purchaseOrderFile.original_name|default('Orden de compra.pdf') }}">{{ quotation.purchaseOrderFile.original_name|default('Orden de compra.pdf') }}</strong>
+                                    <span class="quotation-file-preview__metadata">PDF{% if quotation.purchaseOrderFile.size|default(0) %} · {{ (quotation.purchaseOrderFile.size / 1024)|round(0, 'ceil')|number_format(0, '.', ',') }} KB{% endif %}</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="btn pf-button pf-button--subtle pf-button--sm quotation-file-preview__open"
+                                    data-action="ui--file-preview#openExistingPreview"
+                                    data-preview-url="{{ path('admin_quotations_decision_file', {id: quotation.id, type: 'purchase-order', preview: 1}) }}"
+                                    data-download-url="{{ purchaseOrderDownloadUrl }}"
+                                    data-file-name="{{ quotation.purchaseOrderFile.original_name|default('Orden de compra.pdf') }}"
+                                    data-file-type="application/pdf"
+                                    aria-label="Visualizar {{ quotation.purchaseOrderFile.original_name|default('Orden de compra.pdf') }} en grande"
+                                    title="Visualizar archivo"
+                                ><i class="bi bi-eye" aria-hidden="true"></i></button>
+                                <a class="btn pf-button pf-button--subtle pf-button--sm quotation-file-preview__open" href="{{ purchaseOrderDownloadUrl }}" aria-label="Descargar orden de compra" title="Descargar archivo"><i class="bi bi-download" aria-hidden="true"></i></a>
+                            </div>
+                        {% else %}
+                            <div class="quotation-purchase-order__empty">
+                                <span class="quotation-purchase-order__empty-icon"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i></span>
+                                <div><strong>PDF pendiente</strong><span>Adjúntalo aquí cuando lo recibas.</span></div>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {% if purchaseOrderForm %}
+                        <details class="quotation-purchase-order__editor" {% if not hasPurchaseOrderNumber and not hasPurchaseOrderFile %}open{% endif %}>
+                            <summary>
+                                <span class="quotation-purchase-order__editor-icon"><i class="bi bi-pencil-square" aria-hidden="true"></i></span>
+                                <span class="quotation-purchase-order__editor-copy"><strong>{% if hasPurchaseOrderNumber or hasPurchaseOrderFile %}Editar datos de compra{% else %}Agregar datos de compra{% endif %}</strong><small>Folio del cliente y PDF opcional</small></span>
+                                <i class="bi bi-chevron-down quotation-purchase-order__editor-chevron" aria-hidden="true"></i>
+                            </summary>
+                            <div class="quotation-purchase-order__editor-content">
+                                {{ form_start(purchaseOrderForm, {action: path('admin_quotations_purchase_order', {id: quotation.id}), attr: {class: 'quotation-purchase-order__form'}}) }}
+                                    <div class="row g-3 align-items-end">
+                                        <div class="col-lg-4">{{ form_row(purchaseOrderForm.purchaseOrderNumber) }}</div>
+                                        <div class="col-lg-6">{{ form_row(purchaseOrderForm.purchaseOrderFile, {attr: {accept: 'application/pdf,.pdf', 'data-ui--file-preview-target': 'fileInput', 'data-action': 'change->ui--file-preview#previewFile'}}) }}</div>
+                                        <div class="col-lg-2"><button type="submit" class="btn pf-button pf-button--primary w-100"><i class="bi bi-save2" aria-hidden="true"></i> Guardar</button></div>
+                                    </div>
+                                    <div class="quotation-file-preview" data-ui--file-preview-target="preview" aria-live="polite" hidden></div>
+                                {{ form_end(purchaseOrderForm) }}
+                            </div>
+                        </details>
+                    {% endif %}
+                </div>
+
+                {{ include('partials/_file_preview_modal.html.twig', {controllerIdentifier: 'ui--file-preview', modalTitleId: 'purchase-order-modal-title'}) }}
             </section>
         {% endif %}
 

@@ -1,5 +1,6 @@
-{% macro quotation_item(itemForm, lineNumber) %}
+{% macro quotation_item(itemForm, lineNumber, quotationId) %}
     {% set specifications = itemForm.specifications.vars.data|default({}) %}
+    {% set itemData = itemForm.vars.data|default(null) %}
 
     <article class="quotation-item" data-ui--quotation-form-item>
         <header class="quotation-item__header">
@@ -99,6 +100,39 @@
                     data-ui--quotation-form-characteristics-fields
                     data-specifications-name="{{ itemForm.specifications.vars.full_name }}"
                     data-initial-specifications="{{ specifications|json_encode|e('html_attr') }}"
+                ></div>
+            </section>
+
+            <section class="quotation-item__section quotation-item__section--attachment">
+                <header class="quotation-item__section-header">
+                    <span class="quotation-item__section-icon" aria-hidden="true">
+                        <i class="bi bi-paperclip"></i>
+                    </span>
+                    <div>
+                        <h4 class="quotation-item__section-title">Archivo de referencia</h4>
+                        <p class="quotation-item__section-description">
+                            Adjunta el arte o los documentos que correspondan a esta partida.
+                        </p>
+                    </div>
+                </header>
+
+                {% if itemData and itemData.attachmentPath %}
+                    <div class="alert alert-light border d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                        <span><i class="bi bi-file-earmark me-1" aria-hidden="true"></i>Archivo actual: <strong>{{ itemData.attachmentOriginalName|default('archivo adjunto') }}</strong></span>
+                        {% if quotationId and itemData.existingItemId %}
+                            <a class="btn btn-sm btn-outline-primary" href="{{ path('admin_quotations_item_attachment', {id: quotationId, itemId: itemData.existingItemId}) }}">
+                                <i class="bi bi-download me-1" aria-hidden="true"></i>Descargar
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                {{ form_row(itemForm.attachment) }}
+                <div
+                    class="quotation-file-preview"
+                    data-ui--quotation-form-attachment-preview
+                    aria-live="polite"
+                    hidden
                 ></div>
             </section>
 
@@ -221,6 +255,7 @@
 {% endmacro %}
 
 {% import _self as quote_ui %}
+{% set quotationId = quotation is defined ? quotation.id : null %}
 
 {{ form_start(form, {
     attr: {
@@ -258,7 +293,7 @@
     {{ form_widget(form.deliveryAddressId) }}
 
     <template data-ui--quotation-form-target="prototype">
-        {{ quote_ui.quotation_item(form.items.vars.prototype, null) }}
+        {{ quote_ui.quotation_item(form.items.vars.prototype, null, null) }}
     </template>
 
     <nav class="quotation-workflow" aria-label="Flujo de captura de cotización">
@@ -580,7 +615,7 @@
 
                     <div class="quotation-items" data-ui--quotation-form-target="items">
                         {% for itemForm in form.items %}
-                            {{ quote_ui.quotation_item(itemForm, loop.index) }}
+                            {{ quote_ui.quotation_item(itemForm, loop.index, quotationId) }}
                         {% endfor %}
                     </div>
 
@@ -639,4 +674,33 @@
             </button>
         </div>
     </footer>
+
+    <div
+        class="modal fade quotation-file-modal"
+        tabindex="-1"
+        role="dialog"
+        aria-labelledby="quotation-file-modal-title"
+        aria-hidden="true"
+        data-ui--quotation-form-target="attachmentModal"
+    >
+        <div class="modal-dialog modal-dialog-centered modal-xl modal-fullscreen-lg-down">
+            <div class="modal-content quotation-file-modal__content">
+                <div class="modal-header quotation-file-modal__header">
+                    <div>
+                        <p class="quotation-file-modal__eyebrow">Vista previa del archivo</p>
+                        <h2 class="modal-title quotation-file-modal__title" id="quotation-file-modal-title" data-ui--quotation-form-target="attachmentModalTitle"></h2>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar vista previa"></button>
+                </div>
+                <div class="modal-body quotation-file-modal__body" data-ui--quotation-form-target="attachmentModalBody"></div>
+                <div class="modal-footer quotation-file-modal__footer">
+                    <a class="btn pf-button pf-button--secondary" href="#" data-ui--quotation-form-target="attachmentModalDownload" hidden>
+                        <i class="bi bi-download" aria-hidden="true"></i>
+                        Descargar original
+                    </a>
+                    <button type="button" class="btn pf-button pf-button--primary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 {{ form_end(form, {render_rest: false}) }}

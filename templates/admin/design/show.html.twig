@@ -6,123 +6,330 @@
 
 {% block app_content %}
     {% set source = item.sourceFileSnapshot ?? {} %}
-    <section class="pf-page__content">
-        <header class="pf-page-header">
+    {% set sourceStatus = source.status|default('') %}
+    {% set productName = item.commercialItemSnapshot.name ?? item.commercialItem.name %}
+    {% set unitCode = item.commercialItemSnapshot.measurement_unit.code|default('') %}
+    {% set unitLabel = unitCode == 'M2' ? 'm²' : unitCode %}
+    {% set isClientFileReceived = sourceStatus == 'CLIENT_FILE_RECEIVED' or hasClientOriginal %}
+    {% set designStatus = item.designStatus.value %}
+    <section class="pf-page__content design-page design-review-page">
+        <header class="pf-page-header design-review-header">
             <div class="pf-page-header__content">
-                <p class="pf-page-header__eyebrow">{{ item.serviceOrder.folio }} · {{ item.trackingCode }}</p>
-                <h1 class="pf-page-header__title">Partida {{ item.displayLineNumber }}: {{ item.commercialItemSnapshot.name ?? item.commercialItem.name }}</h1>
-                <p class="pf-page-header__description">La partida solo avanza cuando Diseño autoriza el archivo exacto que se imprimirá y su captura de referencia.</p>
+                <p class="pf-page-header__eyebrow">{{ item.serviceOrder.folio }} · {{ item.trackingCode }} · Partida {{ item.displayLineNumber }}</p>
+                <h1 class="pf-page-header__title">{{ productName }}</h1>
+                <p class="pf-page-header__description">
+                    {% if isClientFileReceived %}
+                        Revisa el archivo que envió el cliente y confirma si puede imprimirse tal como está o requiere preparación.
+                    {% else %}
+                        No se recibió un archivo del cliente. Prepara el arte final y una captura que sirva de guía para Impresión.
+                    {% endif %}
+                </p>
             </div>
             <div class="pf-page-header__actions">
                 <a href="{{ path('admin_design_index') }}" class="btn pf-button pf-button--secondary"><i class="bi bi-arrow-left" aria-hidden="true"></i> Cola de Diseño</a>
             </div>
         </header>
 
-        <div class="row g-4">
-            <div class="col-xl-7">
-                <section class="pf-card mb-4">
-                    <div class="pf-card__header"><h2 class="pf-card__title">Solicitud y especificaciones</h2></div>
-                    <div class="pf-card__body">
-                        <dl class="row mb-0">
-                            <dt class="col-sm-4">Estado</dt><dd class="col-sm-8"><span class="pf-status-badge pf-status-badge--{{ item.designStatus.badgeTone }}">{{ item.designStatus.label }}</span></dd>
-                            <dt class="col-sm-4">Cantidad</dt><dd class="col-sm-8">{{ item.quantity|number_format(6, '.', ',')|trim('0', 'right')|trim('.', 'right') }} {{ item.commercialItemSnapshot.measurement_unit.code|default('') }}</dd>
-                            <dt class="col-sm-4">Archivo del cliente</dt>
-                            <dd class="col-sm-8">
-                                {% if hasClientOriginal %}
-                                    <a href="{{ path('admin_design_download_client_original', {id: item.id}) }}">{{ source.original_name ?? 'Descargar original' }}</a>
-                                {% else %}
-                                    <span class="text-muted">No se proporcionó archivo; Diseño debe preparar el arte.</span>
-                                {% endif %}
-                            </dd>
-                            <dt class="col-sm-4">Solicitud del cliente</dt><dd class="col-sm-8">{{ source.status|default('') == 'DESIGN_PREPARATION_REQUIRED' ? 'Se requiere preparar el diseño' : (source.status|default('') == 'CLIENT_FILE_RECEIVED' ? 'Archivo recibido para revisión' : 'Sin información adicional') }}</dd>
-                        </dl>
-                        {% if item.requestDetailsSnapshot.notes ?? false %}<p class="mb-0 mt-3"><strong>Notas:</strong> {{ item.requestDetailsSnapshot.notes }}</p>{% endif %}
-                        {% if item.productionSpecificationsSnapshot is not empty %}
-                            <details class="mt-3"><summary>Ver especificaciones técnicas congeladas</summary><pre class="small mt-2 mb-0">{{ item.productionSpecificationsSnapshot|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre></details>
-                        {% endif %}
+        <div class="design-review-layout">
+            <div class="design-review-main">
+                <section class="pf-card design-review-card" aria-labelledby="design-request-title" data-controller="ui--file-preview">
+                    <div class="pf-card__header design-review-card__header">
+                        <div>
+                            <span class="design-section-eyebrow">Solicitud del cliente</span>
+                            <h2 class="pf-card__title" id="design-request-title">Información para preparar el arte</h2>
+                        </div>
+                        <span class="design-origin-badge {{ isClientFileReceived ? 'design-origin-badge--received' : 'design-origin-badge--preparation' }}">
+                            <i class="bi {{ isClientFileReceived ? 'bi-file-earmark-check' : 'bi-brush' }}" aria-hidden="true"></i>
+                            {{ isClientFileReceived ? 'Archivo recibido' : 'Requiere preparación' }}
+                        </span>
                     </div>
+                    <div class="pf-card__body">
+                        <div class="design-review-facts" aria-label="Resumen de la partida">
+                            <div class="design-review-fact">
+                                <span><i class="bi bi-box-seam" aria-hidden="true"></i> Cantidad</span>
+                                <strong>{{ item.quantity|number_format(6, '.', ',')|trim('0', 'right')|trim('.', 'right') }} {{ unitLabel }}</strong>
+                            </div>
+                            <div class="design-review-fact">
+                                <span><i class="bi bi-lightning-charge" aria-hidden="true"></i> Prioridad</span>
+                                <strong>{{ item.priority.label }}</strong>
+                            </div>
+                            <div class="design-review-fact">
+                                <span><i class="bi bi-calendar3" aria-hidden="true"></i> Orden creada</span>
+                                <strong>{{ item.serviceOrder.createdAt|date('d/m/Y', 'America/Mexico_City') }}</strong>
+                            </div>
+                        </div>
+
+                        <div class="design-origin-panel {{ isClientFileReceived ? 'design-origin-panel--received' : 'design-origin-panel--preparation' }}">
+                            {% if isClientFileReceived %}
+                                <div class="design-origin-panel__heading">
+                                    <div>
+                                        <h3>Archivo enviado por el cliente</h3>
+                                        <p>Compáralo con las especificaciones antes de autorizarlo o preparar una versión corregida.</p>
+                                    </div>
+                                    <i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i>
+                                </div>
+                                {% if clientOriginalFile %}
+                                    {{ include('admin/design/_file_card.html.twig', {
+                                        label: 'Original recibido',
+                                        name: clientOriginalFile.name,
+                                        mimeType: clientOriginalFile.mimeType,
+                                        byteSize: clientOriginalFile.byteSize,
+                                        previewUrl: path('admin_design_download_client_original', {id: item.id, preview: 1}),
+                                        downloadUrl: path('admin_design_download_client_original', {id: item.id})
+                                    }) }}
+                                {% else %}
+                                    <div class="design-review-alert design-review-alert--warning" role="status">
+                                        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                                        <p><strong>El archivo original no está disponible</strong><span>El registro indica que el cliente adjuntó un archivo, pero no se puede leer desde el almacenamiento. Prepara un arte nuevo o pide que vuelvan a adjuntarlo.</span></p>
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="design-origin-panel__heading">
+                                    <div>
+                                        <h3>Esta partida necesita un arte nuevo</h3>
+                                        <p>La cotización no incluyó un archivo de diseño. Puedes preparar el arte con las características capturadas abajo.</p>
+                                    </div>
+                                    <i class="bi bi-brush" aria-hidden="true"></i>
+                                </div>
+                                <div class="design-preparation-note"><i class="bi bi-info-circle" aria-hidden="true"></i><span>La liberación requiere el archivo final para impresión y una captura visual de referencia.</span></div>
+                            {% endif %}
+                        </div>
+
+                        {% if item.requestDetailsSnapshot.notes|default('')|trim %}
+                            <div class="design-client-notes">
+                                <span><i class="bi bi-chat-left-text" aria-hidden="true"></i> Notas del cliente</span>
+                                <p>{{ item.requestDetailsSnapshot.notes|nl2br }}</p>
+                            </div>
+                        {% endif %}
+
+                        <section class="design-specifications" aria-labelledby="design-specifications-title">
+                            <div class="design-specifications__heading">
+                                <div>
+                                    <span class="design-section-eyebrow">Datos congelados de la cotización</span>
+                                    <h3 id="design-specifications-title">Especificaciones de producción</h3>
+                                </div>
+                                {% if specifications.billingSource %}<span class="design-specifications__source"><i class="bi bi-calculator" aria-hidden="true"></i>{{ specifications.billingSource }}</span>{% endif %}
+                            </div>
+                            {% if specifications.rows is not empty %}
+                                <dl class="design-specifications__grid">
+                                    {% for row in specifications.rows %}
+                                        <div><dt>{{ row.label }}</dt><dd>{{ row.value }}</dd></div>
+                                    {% endfor %}
+                                </dl>
+                            {% else %}
+                                <p class="design-specifications__empty"><i class="bi bi-card-list" aria-hidden="true"></i> No hay características técnicas adicionales para esta partida.</p>
+                            {% endif %}
+                        </section>
+                    </div>
+                    {% if clientOriginalFile %}
+                        {{ include('partials/_file_preview_modal.html.twig', {controllerIdentifier: 'ui--file-preview', modalTitleId: 'design-original-preview-title'}) }}
+                    {% endif %}
                 </section>
 
-                <section class="pf-card">
-                    <div class="pf-card__header"><h2 class="pf-card__title">Liberación vigente</h2></div>
+                <section class="pf-card design-review-card" aria-labelledby="design-current-release-title">
+                    <div class="pf-card__header design-review-card__header">
+                        <div>
+                            <span class="design-section-eyebrow">Destino: Impresión</span>
+                            <h2 class="pf-card__title" id="design-current-release-title">Liberación vigente</h2>
+                        </div>
+                        {% if currentRelease %}<span class="design-origin-badge design-origin-badge--received"><i class="bi bi-patch-check-fill" aria-hidden="true"></i>Versión {{ currentRelease.versionNumber }}</span>{% endif %}
+                    </div>
                     <div class="pf-card__body">
                         {% if currentRelease %}
-                            <dl class="row mb-0">
-                                <dt class="col-sm-4">Versión</dt><dd class="col-sm-8">{{ currentRelease.versionNumber }}</dd>
-                                <dt class="col-sm-4">Autorización</dt><dd class="col-sm-8">{{ currentRelease.authorizationType.label }}</dd>
-                                <dt class="col-sm-4">Arte</dt><dd class="col-sm-8"><a href="{{ path('admin_design_download_file', {id: currentRelease.artworkFile.id}) }}">{{ currentRelease.artworkFile.originalName }}</a></dd>
-                                <dt class="col-sm-4">Captura guía</dt><dd class="col-sm-8"><a href="{{ path('admin_design_download_file', {id: currentRelease.referenceFile.id}) }}">{{ currentRelease.referenceFile.originalName }}</a></dd>
-                                <dt class="col-sm-4">Autorizó</dt><dd class="col-sm-8">{{ currentRelease.authorizedBy.fullName }} · {{ currentRelease.authorizedAt|date('d/m/Y H:i', 'America/Mexico_City') }}</dd>
-                                {% if currentRelease.instructions %}<dt class="col-sm-4">Instrucciones</dt><dd class="col-sm-8">{{ currentRelease.instructions|nl2br }}</dd>{% endif %}
-                            </dl>
+                            <p class="design-release-summary"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> {{ currentRelease.authorizationType.label }} · autorizó {{ currentRelease.authorizedBy.fullName }} el {{ currentRelease.authorizedAt|date('d/m/Y H:i', 'America/Mexico_City') }}</p>
+                            <div class="design-release-files" data-controller="ui--file-preview">
+                                {{ include('admin/design/_file_card.html.twig', {
+                                    label: 'Arte para impresión · versión ' ~ currentRelease.versionNumber,
+                                    name: currentRelease.artworkFile.originalName,
+                                    mimeType: currentRelease.artworkFile.mimeType,
+                                    byteSize: currentRelease.artworkFile.byteSize,
+                                    previewUrl: path('admin_design_download_file', {id: currentRelease.artworkFile.id, preview: 1}),
+                                    downloadUrl: path('admin_design_download_file', {id: currentRelease.artworkFile.id}),
+                                    createdAt: currentRelease.artworkFile.createdAt
+                                }) }}
+                                {{ include('admin/design/_file_card.html.twig', {
+                                    label: 'Captura guía · versión ' ~ currentRelease.versionNumber,
+                                    name: currentRelease.referenceFile.originalName,
+                                    mimeType: currentRelease.referenceFile.mimeType,
+                                    byteSize: currentRelease.referenceFile.byteSize,
+                                    previewUrl: path('admin_design_download_file', {id: currentRelease.referenceFile.id, preview: 1}),
+                                    downloadUrl: path('admin_design_download_file', {id: currentRelease.referenceFile.id}),
+                                    createdAt: currentRelease.referenceFile.createdAt
+                                }) }}
+                                {{ include('partials/_file_preview_modal.html.twig', {controllerIdentifier: 'ui--file-preview', modalTitleId: 'design-current-release-preview-title'}) }}
+                            </div>
+                            {% if currentRelease.instructions %}<div class="design-release-instructions"><strong><i class="bi bi-printer" aria-hidden="true"></i> Instrucciones para Impresión</strong><p>{{ currentRelease.instructions|nl2br }}</p></div>{% endif %}
                         {% else %}
-                            <p class="mb-0 text-muted">Todavía no existe una liberación para Impresión.</p>
+                            <div class="design-empty-release"><span><i class="bi bi-file-earmark-lock" aria-hidden="true"></i></span><div><strong>Aún no hay un arte autorizado</strong><p>Cuando liberes la partida, aquí aparecerán el archivo exacto para impresión y su captura de referencia.</p></div></div>
+                        {% endif %}
+                    </div>
+                </section>
+
+                <section class="pf-card design-review-card" aria-labelledby="design-file-history-title">
+                    <div class="pf-card__header design-review-card__header">
+                        <div>
+                            <span class="design-section-eyebrow">Trazabilidad</span>
+                            <h2 class="pf-card__title" id="design-file-history-title">Historial de archivos</h2>
+                        </div>
+                        <span class="design-file-count">{{ files|length }} {{ files|length == 1 ? 'archivo' : 'archivos' }}</span>
+                    </div>
+                    <div class="pf-card__body">
+                        {% if files is not empty %}
+                            <div class="design-file-history" data-controller="ui--file-preview">
+                                {% for file in files %}
+                                    {{ include('admin/design/_file_card.html.twig', {
+                                        label: file.purpose.label ~ ' · versión ' ~ file.versionNumber,
+                                        name: file.originalName,
+                                        mimeType: file.mimeType,
+                                        byteSize: file.byteSize,
+                                        previewUrl: path('admin_design_download_file', {id: file.id, preview: 1}),
+                                        downloadUrl: path('admin_design_download_file', {id: file.id}),
+                                        createdAt: file.createdAt
+                                    }) }}
+                                {% endfor %}
+                                {{ include('partials/_file_preview_modal.html.twig', {controllerIdentifier: 'ui--file-preview', modalTitleId: 'design-history-preview-title'}) }}
+                            </div>
+                        {% else %}
+                            <p class="design-file-history__empty"><i class="bi bi-clock-history" aria-hidden="true"></i> Los archivos cargados durante la revisión y sus liberaciones aparecerán aquí.</p>
+                        {% endif %}
+                        {% if releaseHistory is not empty %}
+                            <section class="design-release-timeline" aria-labelledby="design-release-timeline-title">
+                                <h3 id="design-release-timeline-title">Versiones autorizadas</h3>
+                                <ol>
+                                    {% for release in releaseHistory %}
+                                        <li>
+                                            <span class="design-release-timeline__icon" aria-hidden="true"><i class="bi {{ release.isCurrent ? 'bi-patch-check-fill' : 'bi-arrow-counterclockwise' }}"></i></span>
+                                            <div>
+                                                <strong>Versión {{ release.versionNumber }} · {{ release.authorizationType.label }}</strong>
+                                                <small>Autorizó {{ release.authorizedBy.fullName }} · {{ release.authorizedAt|date('d/m/Y H:i', 'America/Mexico_City') }}</small>
+                                            </div>
+                                            <span class="design-release-timeline__status {{ release.isCurrent ? 'is-current' : '' }}">{{ release.isCurrent ? 'Vigente' : 'Sustituida' }}</span>
+                                        </li>
+                                    {% endfor %}
+                                </ol>
+                            </section>
                         {% endif %}
                     </div>
                 </section>
             </div>
 
-            <div class="col-xl-5">
-                {% if canReview and not item.serviceOrder.isPlanned %}
-                    <section class="pf-card mb-4">
-                        <div class="pf-card__body">
-                            <h2 class="pf-card__title">Pendiente de planificación</h2>
-                            <p class="mb-2">Producción debe completar la ruta, los equipos y la agenda antes de iniciar la revisión de Diseño.</p>
-                            {% if is_granted('service_orders.view') %}<a class="btn pf-button pf-button--secondary" href="{{ path('admin_service_orders_show', {id: item.serviceOrder.id}) }}">Ver pendientes de la orden</a>{% endif %}
+            <aside class="design-review-side" aria-label="Siguiente paso de Diseño">
+                <section class="pf-card design-workflow-card" aria-labelledby="design-workflow-title">
+                    <div class="pf-card__header">
+                        <div>
+                            <span class="design-section-eyebrow">Flujo de trabajo</span>
+                            <h2 class="pf-card__title" id="design-workflow-title">Siguiente paso</h2>
                         </div>
-                    </section>
-                {% elseif canReview and item.designStatus.value != 'IN_REVIEW' and item.designStatus.value != 'BLOCKED' %}
-                    <section class="pf-card mb-4">
-                        <div class="pf-card__body">
-                            <form method="post" action="{{ path('admin_design_start_review', {id: item.id}) }}">
-                                <input type="hidden" name="_token" value="{{ csrf_token('design-start-review-' ~ item.id) }}">
-                                <button class="btn pf-button pf-button--primary" type="submit"><i class="bi bi-play-fill" aria-hidden="true"></i> Iniciar revisión de Diseño</button>
-                            </form>
+                        <span class="pf-status-badge pf-status-badge--{{ item.designStatus.badgeTone }}">{{ item.designStatus.label }}</span>
+                    </div>
+                    <div class="pf-card__body">
+                        {% if not item.serviceOrder.isPlanned %}
+                            <div class="design-review-alert design-review-alert--warning" role="status">
+                                <i class="bi bi-calendar2-week" aria-hidden="true"></i>
+                                <p><strong>Primero debe planificarse la orden</strong><span>Producción necesita completar la ruta, asignar los equipos y definir la agenda antes de iniciar Diseño.</span></p>
+                            </div>
+                            {% if is_granted('service_orders.view') %}<a class="btn pf-button pf-button--secondary design-workflow-link" href="{{ path('admin_service_orders_show', {id: item.serviceOrder.id}) }}"><i class="bi bi-arrow-up-right-square" aria-hidden="true"></i> Ver pendientes de la orden</a>{% endif %}
+                        {% elseif designStatus == 'BLOCKED' %}
+                            <div class="design-review-alert design-review-alert--danger" role="status">
+                                <i class="bi bi-exclamation-octagon" aria-hidden="true"></i>
+                                <p><strong>Esta partida está bloqueada</strong><span>{{ item.planningIssue|default('Resuelve el bloqueo operativo antes de iniciar una nueva revisión.') }}</span></p>
+                            </div>
+                            {% if is_granted('service_orders.view') %}<a class="btn pf-button pf-button--secondary design-workflow-link" href="{{ path('admin_service_orders_show', {id: item.serviceOrder.id}) }}"><i class="bi bi-arrow-up-right-square" aria-hidden="true"></i> Abrir orden de servicio</a>{% endif %}
+                        {% elseif designStatus == 'PENDING_REVIEW' %}
+                            <div class="design-workflow-step"><span>1</span><div><strong>Inicia la revisión</strong><p>Revisa las especificaciones y el archivo del cliente, si existe.</p></div></div>
+                            {% if canReview %}
+                                <form method="post" action="{{ path('admin_design_start_review', {id: item.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('design-start-review-' ~ item.id) }}">
+                                    <button class="btn pf-button pf-button--primary design-workflow-cta" type="submit"><i class="bi bi-play-fill" aria-hidden="true"></i> Iniciar revisión de Diseño</button>
+                                </form>
+                            {% endif %}
+                        {% elseif designStatus == 'IN_REVIEW' %}
+                            <div class="design-review-alert design-review-alert--info" role="status">
+                                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                <p><strong>Revisión en curso</strong><span>Compara el archivo con las especificaciones. Después autoriza el original o entrega el arte preparado y su captura guía.</span></p>
+                            </div>
+                        {% else %}
+                            <div class="design-review-alert design-review-alert--success" role="status">
+                                <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                                <p><strong>Partida liberada a Impresión</strong><span>La versión vigente y sus documentos están disponibles en la tarjeta de liberación.</span></p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </section>
+
+                {% if canReview and canUploadFiles and item.serviceOrder.isPlanned and designStatus == 'IN_REVIEW' %}
+                    <section class="design-review-options" aria-labelledby="design-review-options-title" data-controller="admin--design-options">
+                        <header class="design-review-options__heading">
+                            <span class="design-section-eyebrow">Elige una ruta</span>
+                            <h2 id="design-review-options-title">¿Cómo liberarás el arte?</h2>
+                            <p>No llenes ambos formularios. La captura de referencia se pide en las dos opciones.</p>
+                        </header>
+                        <div class="design-review-options__choices">
+                            {% if clientOriginalFile %}
+                                <details class="pf-card design-review-form-card design-path-option" name="design-release-option" data-action="toggle->admin--design-options#toggle">
+                                    <summary class="design-path-option__summary">
+                                        <span class="design-path-option__number">1</span>
+                                        <span class="design-path-option__copy"><strong>Usar el original del cliente</strong><small>El archivo está listo y se imprimirá sin cambios.</small></span>
+                                        <span class="design-path-option__count">1 archivo obligatorio</span>
+                                        <i class="bi bi-chevron-down design-path-option__chevron" aria-hidden="true"></i>
+                                    </summary>
+                                    <form class="pf-card__body pf-form design-review-form-card__body" method="post" enctype="multipart/form-data" action="{{ path('admin_design_authorize_original', {id: item.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('design-authorize-original-' ~ item.id) }}">
+                                        <p class="design-form-intro">Adjunta una captura donde se vea el diseño final tal como se imprimirá. El original recibido quedará como arte autorizado.</p>
+                                        <div class="design-upload-field" data-controller="ui--file-preview">
+                                            <label class="form-label" for="reference-original">Captura de referencia <span class="design-required">Obligatoria</span></label>
+                                            <input id="reference-original" name="reference" type="file" class="form-control" accept="image/jpeg,image/png,image/webp" required data-action="change->ui--file-preview#previewFile">
+                                            <div class="quotation-file-preview mt-2" data-ui--file-preview-target="preview" aria-live="polite" hidden></div>
+                                            {{ include('partials/_file_preview_modal.html.twig', {controllerIdentifier: 'ui--file-preview', modalTitleId: 'design-original-upload-preview-title'}) }}
+                                        </div>
+                                        <label class="form-label" for="instructions-original">Instrucciones para Impresión <span class="text-body-secondary">Opcional</span></label>
+                                        <textarea id="instructions-original" name="instructions" class="form-control" rows="3" maxlength="5000" placeholder="Colores, orientación, sangrado u otras indicaciones..."></textarea>
+                                        <button class="btn pf-button pf-button--primary design-authorize-cta" type="submit"><i class="bi bi-check2-circle" aria-hidden="true"></i> Autorizar original y liberar</button>
+                                    </form>
+                                </details>
+                            {% endif %}
+
+                            <details class="pf-card design-review-form-card design-path-option" name="design-release-option" {% if not clientOriginalFile %}open{% endif %} data-action="toggle->admin--design-options#toggle">
+                                <summary class="design-path-option__summary">
+                                    <span class="design-path-option__number">{{ clientOriginalFile ? '2' : '1' }}</span>
+                                    <span class="design-path-option__copy"><strong>{% if clientOriginalFile %}Preparar o corregir el arte{% else %}Preparar arte para impresión{% endif %}</strong><small>{% if clientOriginalFile %}El original requiere ajustes o no debe imprimirse tal como llegó.{% elseif isClientFileReceived %}El registro indica que llegó un archivo, pero no está disponible para abrirlo.{% else %}La cotización no incluyó un archivo del cliente.{% endif %}</small></span>
+                                    <span class="design-path-option__count">2 archivos obligatorios</span>
+                                    <i class="bi bi-chevron-down design-path-option__chevron" aria-hidden="true"></i>
+                                </summary>
+                                <form class="pf-card__body pf-form design-review-form-card__body" method="post" enctype="multipart/form-data" action="{{ path('admin_design_authorize_prepared', {id: item.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('design-authorize-prepared-' ~ item.id) }}">
+                                    {% if clientOriginalFile %}
+                                        <p class="design-form-intro">Adjunta el arte corregido o reconstruido y una captura que muestre la versión final exacta que recibirá Impresión.</p>
+                                    {% elseif isClientFileReceived %}
+                                        <p class="design-form-intro">El original no se puede abrir. Adjunta un arte preparado a partir de la información de la partida o solicita que vuelvan a adjuntarlo.</p>
+                                    {% else %}
+                                        <p class="design-form-intro">Crea el arte a partir de la solicitud y las especificaciones técnicas de esta partida.</p>
+                                    {% endif %}
+                                    <div class="design-upload-field" data-controller="ui--file-preview">
+                                        <label class="form-label" for="prepared-artwork">Arte final exacto para impresión <span class="design-required">Obligatorio</span></label>
+                                        <input id="prepared-artwork" name="artwork" type="file" class="form-control" accept="application/pdf,application/postscript,application/illustrator,application/eps,application/zip,application/x-zip-compressed,image/svg+xml,image/jpeg,image/png,image/webp,image/tiff,.ai,.eps,.svg,.tif,.tiff,.zip" required data-action="change->ui--file-preview#previewFile">
+                                        <div class="quotation-file-preview mt-2" data-ui--file-preview-target="preview" aria-live="polite" hidden></div>
+                                        {{ include('partials/_file_preview_modal.html.twig', {controllerIdentifier: 'ui--file-preview', modalTitleId: 'design-prepared-artwork-preview-title'}) }}
+                                    </div>
+                                    <div class="design-upload-field" data-controller="ui--file-preview">
+                                        <label class="form-label" for="reference-prepared">Captura de referencia del arte final <span class="design-required">Obligatoria</span></label>
+                                        <input id="reference-prepared" name="reference" type="file" class="form-control" accept="image/jpeg,image/png,image/webp" required data-action="change->ui--file-preview#previewFile">
+                                        <div class="quotation-file-preview mt-2" data-ui--file-preview-target="preview" aria-live="polite" hidden></div>
+                                        {{ include('partials/_file_preview_modal.html.twig', {controllerIdentifier: 'ui--file-preview', modalTitleId: 'design-prepared-reference-preview-title'}) }}
+                                    </div>
+                                    <label class="form-label" for="instructions-prepared">Instrucciones para Impresión <span class="text-body-secondary">Opcional</span></label>
+                                    <textarea id="instructions-prepared" name="instructions" class="form-control" rows="3" maxlength="5000" placeholder="Colores, orientación, sangrado u otras indicaciones..."></textarea>
+                                    <button class="btn pf-button pf-button--primary design-authorize-cta" type="submit"><i class="bi bi-check2-circle" aria-hidden="true"></i> Autorizar arte preparado y liberar</button>
+                                </form>
+                            </details>
                         </div>
-                    </section>
-                {% endif %}
-
-                {% if canReview and item.designStatus.value == 'IN_REVIEW' %}
-                    {% if hasClientOriginal %}
-                        <section class="pf-card mb-4">
-                            <div class="pf-card__header"><h2 class="pf-card__title">Autorizar original viable</h2></div>
-                            <form class="pf-card__body pf-form" method="post" enctype="multipart/form-data" action="{{ path('admin_design_authorize_original', {id: item.id}) }}">
-                                <input type="hidden" name="_token" value="{{ csrf_token('design-authorize-original-' ~ item.id) }}">
-                                <p class="small text-body-secondary">Úsalo cuando el archivo del cliente es correcto para impresión. La captura final sigue siendo obligatoria.</p>
-                                <div class="mb-3"><label class="form-label" for="reference-original">Captura del diseño final</label><input id="reference-original" name="reference" type="file" class="form-control" accept="image/jpeg,image/png,image/webp" required></div>
-                                <div class="mb-3"><label class="form-label" for="instructions-original">Instrucciones para Impresión</label><textarea id="instructions-original" name="instructions" class="form-control" rows="3" maxlength="5000"></textarea></div>
-                                <button class="btn pf-button pf-button--primary" type="submit">Autorizar original y liberar</button>
-                            </form>
-                        </section>
-                    {% endif %}
-
-                    <section class="pf-card">
-                        <div class="pf-card__header"><h2 class="pf-card__title">Autorizar arte preparado</h2></div>
-                        <form class="pf-card__body pf-form" method="post" enctype="multipart/form-data" action="{{ path('admin_design_authorize_prepared', {id: item.id}) }}">
-                            <input type="hidden" name="_token" value="{{ csrf_token('design-authorize-prepared-' ~ item.id) }}">
-                            <div class="mb-3"><label class="form-label" for="prepared-artwork">Archivo listo para impresión</label><input id="prepared-artwork" name="artwork" type="file" class="form-control" required></div>
-                            <div class="mb-3"><label class="form-label" for="reference-prepared">Captura del diseño final</label><input id="reference-prepared" name="reference" type="file" class="form-control" accept="image/jpeg,image/png,image/webp" required></div>
-                            <div class="mb-3"><label class="form-label" for="instructions-prepared">Instrucciones para Impresión</label><textarea id="instructions-prepared" name="instructions" class="form-control" rows="3" maxlength="5000"></textarea></div>
-                            <button class="btn pf-button pf-button--primary" type="submit">Autorizar arte preparado y liberar</button>
-                        </form>
                     </section>
                 {% elseif not canReview %}
-                    <section class="pf-card"><div class="pf-card__body text-muted">Tu perfil puede consultar los archivos de Diseño, pero no autorizar una liberación.</div></section>
+                    <section class="pf-card design-review-permission-card"><div class="pf-card__body"><i class="bi bi-lock" aria-hidden="true"></i><p><strong>Acceso de consulta</strong><span>Tu perfil puede consultar la partida{% if is_granted('production.files.download') %} y abrir sus archivos{% endif %}, pero no iniciar ni autorizar una liberación.</span></p></div></section>
+                {% elseif not canUploadFiles and item.serviceOrder.isPlanned and designStatus == 'IN_REVIEW' %}
+                    <section class="pf-card design-review-permission-card"><div class="pf-card__body"><i class="bi bi-lock" aria-hidden="true"></i><p><strong>Falta permiso para cargar archivos</strong><span>Tu perfil puede gestionar la revisión, pero necesita el permiso “Cargar archivos de producción” para adjuntar el arte y la captura de referencia.</span></p></div></section>
                 {% endif %}
-            </div>
+            </aside>
         </div>
-
-        {% if releaseHistory|length > 1 or files|length > 0 %}
-            <section class="pf-card mt-4">
-                <div class="pf-card__header"><h2 class="pf-card__title">Historial de archivos y liberaciones</h2></div>
-                <div class="pf-card__body">
-                    <ul class="mb-0">
-                        {% for release in releaseHistory %}
-                            <li>Versión {{ release.versionNumber }} · {{ release.authorizationType.label }} · {{ release.isCurrent ? 'vigente' : 'sustituida' }} · {{ release.authorizedAt|date('d/m/Y H:i', 'America/Mexico_City') }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </section>
-        {% endif %}
     </section>
 {% endblock %}

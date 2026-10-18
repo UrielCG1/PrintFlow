@@ -10,16 +10,21 @@ use App\Application\Quotations\QuotationEmailData;
 use App\Application\Quotations\QuotationItemData;
 use App\Application\Quotations\QuotationItemCharacteristicsSpecificationResolver;
 use App\Application\Quotations\QuotationItemPresentationBuilder;
+use App\Application\Quotations\QuotationPurchaseOrderData;
 use App\Application\Quotations\QuotationManager;
 use App\Application\Quotations\QuotationVolumeApprovalService;
 use App\Application\Quotations\QuotationTotalsCalculator;
 use App\Application\Quotations\QuotationRevisionData;
 use App\Entity\Quotations\Quotation;
+use App\Entity\Quotations\QuotationItem;
 use App\Entity\Users\User;
+use App\Enum\Quotations\QuotationStatus;
+use App\Application\Orders\ServiceOrderManager;
 use App\Form\Admin\Quotations\QuotationCancellationType;
 use App\Form\Admin\Quotations\QuotationDecisionType;
 use App\Form\Admin\Quotations\QuotationEmailType;
 use App\Form\Admin\Quotations\QuotationRevisionType;
+use App\Form\Admin\Quotations\QuotationPurchaseOrderType;
 use App\Form\Admin\Quotations\QuotationType;
 use App\Repository\Orders\ServiceOrderRepository;
 use App\Repository\Clients\ClientAddressRepository;
@@ -29,6 +34,7 @@ use App\Repository\Catalog\CommercialItemCharacteristicRepository;
 use App\Repository\Catalog\CommercialItemRepository;
 use App\Repository\Quotations\QuotationRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bridge\Doctrine\Attribute\MapEntity;
 use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -36,7 +42,9 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Service\Quotations\QuotationPdfRenderer;
 use App\Service\Quotations\QuotationDecisionFileStorage;
+use App\Service\Production\ProductionFileStorage;
 use Symfony\Component\Form\FormInterface;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
@@ -225,6 +233,7 @@ final class QuotationController extends AbstractController
     public function new(
         Request $request,
         QuotationManager $quotationManager,
+        ProductionFileStorage $fileStorage,
     ): Response {
         $this->denyAccessUnlessGranted('quotations.create');
 
@@ -235,7 +244,10 @@ final class QuotationController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $attachmentStates = $this->itemAttachmentStates($data);
+            $storedAttachments = [];
             try {
+                $storedAttachments = $this->storeItemAttachments($data, $fileStorage);
                 $quotation = $quotationManager->create(
                     $data,
                     $this->authenticatedUser(),
@@ -250,7 +262,17 @@ final class QuotationController extends AbstractController
                     'id' => $quotation->getId(),
                 ]);
             } catch (\DomainException|\InvalidArgumentException $exception) {
+                $this->removeStoredAttachments($storedAttachments, $fileStorage);
+                $this->restoreItemAttachmentStates($data, $attachmentStates);
                 $form->addError(new FormError($exception->getMessage()));
+            } catch (\RuntimeException $exception) {
+                $this->removeStoredAttachments($storedAttachments, $fileStorage);
+                $this->restoreItemAttachmentStates($data, $attachmentStates);
+                $form->addError(new FormError($exception->getMessage()));
+            } catch (\Throwable $exception) {
+                $this->removeStoredAttachments($storedAttachments, $fileStorage);
+                $this->restoreItemAttachmentStates($data, $attachmentStates);
+                throw $exception;
             }
         }
 
@@ -264,6 +286,7 @@ final class QuotationController extends AbstractController
         Request $request,
         Quotation $quotation,
         QuotationManager $quotationManager,
+        ProductionFileStorage $fileStorage,
     ): Response {
         $this->denyAccessUnlessGranted('quotations.view');
 
@@ -284,7 +307,10 @@ final class QuotationController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $attachmentStates = $this->itemAttachmentStates($data);
+            $storedAttachments = [];
             try {
+                $storedAttachments = $this->storeItemAttachments($data, $fileStorage);
                 $quotationManager->update(
                     $quotation,
                     $data,
@@ -300,7 +326,17 @@ final class QuotationController extends AbstractController
                     'id' => $quotation->getId(),
                 ]);
             } catch (\DomainException|\InvalidArgumentException $exception) {
+                $this->removeStoredAttachments($storedAttachments, $fileStorage);
+                $this->restoreItemAttachmentStates($data, $attachmentStates);
                 $form->addError(new FormError($exception->getMessage()));
+            } catch (\RuntimeException $exception) {
+                $this->removeStoredAttachments($storedAttachments, $fileStorage);
+                $this->restoreItemAttachmentStates($data, $attachmentStates);
+                $form->addError(new FormError($exception->getMessage()));
+            } catch (\Throwable $exception) {
+                $this->removeStoredAttachments($storedAttachments, $fileStorage);
+                $this->restoreItemAttachmentStates($data, $attachmentStates);
+                throw $exception;
             }
         }
 
@@ -435,6 +471,7 @@ final class QuotationController extends AbstractController
         Request $request,
         Quotation $quotation,
         QuotationManager $quotationManager,
+        ServiceOrderManager $serviceOrderManager,
         QuotationDecisionFileStorage $fileStorage,
     ): Response {
         $this->denyAccessUnlessGranted('quotations.manage_status');
@@ -453,9 +490,6 @@ final class QuotationController extends AbstractController
                     $data->responseScreenshotMetadata = $fileStorage->storeResponseScreenshot($quotation, $data->responseScreenshot);
                 }
                 $quotationManager->accept($quotation, $data, $this->authenticatedUser());
-                $this->addFlash('success', 'La aceptación comercial quedó registrada correctamente.');
-
-                return $this->redirectToRoute('admin_quotations_show', ['id' => $quotation->getId()]);
             } catch (\DomainException|\InvalidArgumentException|\RuntimeException $exception) {
                 if (isset($data) && $data instanceof QuotationDecisionData) {
                     $fileStorage->remove($data->purchaseOrderMetadata);
@@ -470,6 +504,29 @@ final class QuotationController extends AbstractController
                 }
                 throw $exception;
             }
+
+            try {
+                $serviceOrder = $this->serviceOrderRepository->findOneBySourceQuotation($quotation)
+                    ?? $serviceOrderManager->createFromAcceptedQuotation($quotation, $this->authenticatedUser());
+            } catch (\Doctrine\DBAL\Exception\UniqueConstraintViolationException) {
+                $serviceOrder = $this->serviceOrderRepository->findOneBySourceQuotation($quotation);
+                if ($serviceOrder === null) {
+                    $this->addFlash('warning', 'La cotización fue aceptada, pero no se pudo completar la creación de la orden de servicio.');
+
+                    return $this->redirectToRoute('admin_quotations_show', ['id' => $quotation->getId()]);
+                }
+            } catch (\DomainException|\InvalidArgumentException|\RuntimeException $exception) {
+                $this->addFlash('warning', sprintf('La cotización fue aceptada, pero no se pudo crear la orden de servicio: %s', $exception->getMessage()));
+
+                return $this->redirectToRoute('admin_quotations_show', ['id' => $quotation->getId()]);
+            }
+
+            $this->addFlash('success', sprintf(
+                'La cotización fue aceptada y se creó la orden de servicio %s.',
+                $serviceOrder->getFolio(),
+            ));
+
+            return $this->redirectToRoute('admin_service_orders_show', ['id' => $serviceOrder->getId()]);
         }
 
         return $this->renderQuotationDetail($quotation, acceptForm: $form);
@@ -595,13 +652,103 @@ final class QuotationController extends AbstractController
     }
 
     #[Route('/{id}/evidencia/{type}', name: 'admin_quotations_decision_file', requirements: ['id' => '\d+', 'type' => 'purchase-order|response-screenshot'], methods: ['GET'])]
-    public function decisionFile(Quotation $quotation, string $type, QuotationDecisionFileStorage $fileStorage): Response
+    public function decisionFile(Request $request, Quotation $quotation, string $type, QuotationDecisionFileStorage $fileStorage): Response
     {
         $this->denyAccessUnlessGranted('quotations.view');
         $metadata = $type === 'purchase-order' ? $quotation->getPurchaseOrderFile() : $quotation->getResponseScreenshotFile();
         if ($metadata === null) throw $this->createNotFoundException('La evidencia solicitada no existe.');
         try { $path = $fileStorage->resolve($metadata); } catch (\InvalidArgumentException|\RuntimeException) { throw $this->createNotFoundException('La evidencia solicitada no está disponible.'); }
-        return $this->file($path, (string) ($metadata['original_name'] ?? $metadata['stored_name'] ?? basename($path)), ResponseHeaderBag::DISPOSITION_ATTACHMENT);
+        $disposition = $request->query->getBoolean('preview')
+            ? ResponseHeaderBag::DISPOSITION_INLINE
+            : ResponseHeaderBag::DISPOSITION_ATTACHMENT;
+
+        return $this->file($path, (string) ($metadata['original_name'] ?? $metadata['stored_name'] ?? basename($path)), $disposition);
+    }
+
+    #[Route('/{id}/partidas/{itemId}/archivo', name: 'admin_quotations_item_attachment', requirements: ['id' => '\\d+', 'itemId' => '\\d+'], methods: ['GET'])]
+    public function itemAttachment(Quotation $quotation, #[MapEntity(id: 'itemId')] QuotationItem $item, ProductionFileStorage $fileStorage): BinaryFileResponse
+    {
+        $this->denyAccessUnlessGranted('quotations.view');
+        if ($item->getQuotation()->getId() !== $quotation->getId() || $item->getAttachmentPath() === null) {
+            throw $this->createNotFoundException('El archivo de la partida no existe.');
+        }
+
+        try {
+            $path = $fileStorage->absoluteClientSource($item->getAttachmentPath());
+        } catch (\InvalidArgumentException|\RuntimeException) {
+            throw $this->createNotFoundException('El archivo de la partida no está disponible.');
+        }
+
+        $response = new BinaryFileResponse($path);
+        $response->setContentDisposition(
+            ResponseHeaderBag::DISPOSITION_ATTACHMENT,
+            $item->getAttachmentOriginalName() ?? 'archivo-de-partida',
+        );
+        $response->headers->set('Cache-Control', 'private, no-store');
+        $response->headers->set('X-Content-Type-Options', 'nosniff');
+
+        return $response;
+    }
+
+    #[Route('/{id}/orden-compra', name: 'admin_quotations_purchase_order', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function updatePurchaseOrder(
+        Request $request,
+        Quotation $quotation,
+        QuotationManager $quotationManager,
+        QuotationDecisionFileStorage $fileStorage,
+    ): Response {
+        $this->denyAccessUnlessGranted('quotations.manage_status');
+
+        $data = new QuotationPurchaseOrderData($quotation->getPurchaseOrderFile() !== null);
+        $data->purchaseOrderNumber = $quotation->getPurchaseOrderNumber();
+        $form = $this->createForm(QuotationPurchaseOrderType::class, $data);
+        $form->handleRequest($request);
+
+        if (!$form->isSubmitted() || !$form->isValid()) {
+            return $this->renderQuotationDetail($quotation, purchaseOrderForm: $form);
+        }
+
+        /** @var QuotationPurchaseOrderData $data */
+        $data = $form->getData();
+        $previousFile = $quotation->getPurchaseOrderFile();
+        $storedFile = null;
+
+        try {
+            if ($data->purchaseOrderFile !== null) {
+                $storedFile = $fileStorage->storePurchaseOrder(
+                    $quotation,
+                    $data->purchaseOrderFile,
+                    (string) $data->purchaseOrderNumber,
+                );
+            }
+
+            $quotationManager->updatePurchaseOrder(
+                $quotation,
+                $data->purchaseOrderNumber,
+                $storedFile,
+                $this->authenticatedUser(),
+            );
+        } catch (\DomainException|\InvalidArgumentException|\RuntimeException $exception) {
+            $fileStorage->remove($storedFile);
+            $this->addFlash('error', $exception->getMessage());
+
+            return $this->redirectToRoute('admin_quotations_show', ['id' => $quotation->getId()]);
+        } catch (\Throwable $exception) {
+            $fileStorage->remove($storedFile);
+            throw $exception;
+        }
+
+        if ($storedFile !== null && ($previousFile['path'] ?? null) !== ($storedFile['path'] ?? null)) {
+            try {
+                $fileStorage->remove($previousFile);
+            } catch (\InvalidArgumentException|\RuntimeException) {
+                // La orden de compra ya quedó guardada; un archivo anterior inválido no debe revertirla.
+            }
+        }
+
+        $this->addFlash('success', 'La orden de compra del cliente quedó actualizada.');
+
+        return $this->redirectToRoute('admin_quotations_show', ['id' => $quotation->getId()]);
     }
 
     #[Route('/{id}', name: 'admin_quotations_show', requirements: ['id' => '\d+'], methods: ['GET'])]
@@ -620,6 +767,7 @@ final class QuotationController extends AbstractController
         ?FormInterface $rejectForm = null,
         ?FormInterface $cancellationForm = null,
         ?FormInterface $revisionForm = null,
+        ?FormInterface $purchaseOrderForm = null,
         ?array $decisionFailure = null,
     ): Response {
         $submittedDecisionForm = $acceptForm?->isSubmitted() ? $acceptForm : ($rejectForm?->isSubmitted() ? $rejectForm : null);
@@ -633,9 +781,18 @@ final class QuotationController extends AbstractController
             $decisionErrors = array_values(array_unique($decisionErrors));
         }
 
+        $purchaseOrderFormView = null;
+        if (in_array($quotation->getStatus(), [QuotationStatus::ACCEPTED, QuotationStatus::ACCEPTED_WITH_CHANGES], true)
+            && $this->isGranted('quotations.manage_status')) {
+            $purchaseOrderData = new QuotationPurchaseOrderData($quotation->getPurchaseOrderFile() !== null);
+            $purchaseOrderData->purchaseOrderNumber = $quotation->getPurchaseOrderNumber();
+            $purchaseOrderFormView = ($purchaseOrderForm ?? $this->createForm(QuotationPurchaseOrderType::class, $purchaseOrderData))->createView();
+        }
+
         return $this->render('admin/quotations/show.html.twig', [
             'quotation' => $quotation,
             'serviceOrder' => $this->serviceOrderRepository->findOneBySourceQuotation($quotation),
+            'purchaseOrderForm' => $purchaseOrderFormView,
             'presentedItems' => $this->itemPresentationBuilder->presentAll($quotation->getItems()),
             'decisionErrors' => $decisionErrors,
             'decisionErrorPanel' => $decisionFailure['panel'] ?? ($acceptForm?->isSubmitted() ? '.quotation-action--accept' : '.quotation-action--reject'),
@@ -672,6 +829,66 @@ final class QuotationController extends AbstractController
         }
 
         return $user;
+    }
+
+    /** @return list<array{path: ?string, name: ?string}> */
+    private function itemAttachmentStates(QuotationData $data): array
+    {
+        $states = [];
+        foreach ($data->items as $item) {
+            $states[] = [
+                'path' => $item->attachmentPath,
+                'name' => $item->attachmentOriginalName,
+            ];
+        }
+
+        return $states;
+    }
+
+    /** @param list<array{path: ?string, name: ?string}> $states */
+    private function restoreItemAttachmentStates(QuotationData $data, array $states): void
+    {
+        foreach ($data->items as $index => $item) {
+            $item->attachmentPath = $states[$index]['path'] ?? null;
+            $item->attachmentOriginalName = $states[$index]['name'] ?? null;
+        }
+    }
+
+    /** @return list<string> Paths of files stored for this request. */
+    private function storeItemAttachments(QuotationData $data, ProductionFileStorage $fileStorage): array
+    {
+        $storedByIndex = [];
+        try {
+            foreach ($data->items as $index => $item) {
+                if ($item->attachment === null) {
+                    continue;
+                }
+
+                $storedByIndex[$index] = $fileStorage->storeQuotationItemAttachment($item->attachment);
+            }
+        } catch (\Throwable $exception) {
+            foreach ($storedByIndex as $stored) {
+                $fileStorage->removeQuotationItemAttachment($stored->internalPath);
+            }
+            throw $exception;
+        }
+
+        $paths = [];
+        foreach ($storedByIndex as $index => $stored) {
+            $data->items[$index]->attachmentPath = $stored->internalPath;
+            $data->items[$index]->attachmentOriginalName = $stored->originalName;
+            $paths[] = $stored->internalPath;
+        }
+
+        return $paths;
+    }
+
+    /** @param list<string> $paths */
+    private function removeStoredAttachments(array $paths, ProductionFileStorage $fileStorage): void
+    {
+        foreach ($paths as $path) {
+            $fileStorage->removeQuotationItemAttachment($path);
+        }
     }
 
     /** @param list<\App\Entity\Clients\ClientContact> $contacts */

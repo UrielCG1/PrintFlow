@@ -8,6 +8,7 @@ use App\Application\Production\ProductionExecutionCommand;
 use App\Application\Production\ProductionExecutionManager;
 use App\Application\Production\ProductionIncidentManager;
 use App\Application\Production\ProductionMaterialUsageManager;
+use App\Application\Production\ProductionOperatorAccess;
 use App\Application\Production\PrintingManager;
 use App\Entity\Orders\ServiceOrderOperationPlan;
 use App\Entity\Production\ProductionOperationExecution;
@@ -32,17 +33,28 @@ final class ProductionExecutionController extends AbstractController
         ServiceOrderOperationPlanRepository $planRepository,
         PrintingManager $printingManager,
         ServiceOrderTraceabilityEventRepository $eventRepository,
+        ProductionOperationExecutionRepository $executionRepository,
         ProductionMaterialUsageRepository $materialUsageRepository,
         MaterialVariantRepository $materialVariantRepository,
     ): Response {
         $this->denyAccessUnlessGranted('production.view');
+        $actor = $this->authenticatedUser();
+        $isQueueManager = $this->isGranted('production.assign') || $this->isGranted('ROLE_ADMIN');
+        $queuePlans = $planRepository->findForProductionQueue($isQueueManager ? null : $actor);
         $plans = [];
         $reworkOrigins = [];
         $specializedKinds = [];
         $startBlocks = [];
         $commandIds = [];
         $materialUsages = [];
-        foreach ($planRepository->findForProductionQueue() as $plan) {
+        $taskStates = [];
+        $canActOnPlans = [];
+        $routePlansByPlanId = [];
+        $equipmentOptions = [];
+        $stats = ['in_progress' => 0, 'ready' => 0, 'paused_blocked' => 0, 'completed_today' => 0];
+        $today = new \DateTimeImmutable('today', new \DateTimeZone('America/Mexico_City'));
+
+        foreach ($queuePlans as $plan) {
             $order = $plan->getServiceOrderItem()->getServiceOrder();
             if (!$plan->isActive()
                 || !in_array($order->getProductionStatus(), [
@@ -53,9 +65,8 @@ final class ProductionExecutionController extends AbstractController
             ) {
                 continue;
             }
-            $plans[] = $plan;
+
             $planId = (int) $plan->getId();
-            $materialUsages[$planId] = $materialUsageRepository->findForPlan($plan);
             $operationCode = $plan->getOperationSnapshot()['code'] ?? $plan->getOperation()->getCode();
             if ($plan->getBlockedReason() !== null) {
                 $startBlocks[$planId] = 'Resuelve el bloqueo operativo antes de iniciar.';
@@ -102,8 +113,107 @@ final class ProductionExecutionController extends AbstractController
                     $reworkOrigins[(int) $plan->getId()] = $origin;
                 }
             }
+
+            $latestStatus = $latest?->getStatus()->value;
+            $state = match ($latestStatus) {
+                'IN_PROGRESS' => 'in_progress',
+                'PAUSED' => 'paused',
+                default => null,
+            };
+
+            if ($state === null && $plan->getBlockedReason() !== null) {
+                $state = 'blocked';
+            } elseif ($state === null && isset($startBlocks[$planId])) {
+                $state = 'blocked';
+            } elseif ($state === null && $latestStatus === 'COMPLETED' && isset($reworkOrigins[$planId])) {
+                $state = 'ready';
+            } elseif ($state === null && $latestStatus === 'COMPLETED') {
+                continue;
+            } elseif ($state === null && $order->getProductionStatus() === ProductionOrderStatus::QUALITY_REWORK) {
+                // En retrabajo, Calidad identifica exactamente la operación devuelta.
+                continue;
+            } elseif ($state === null) {
+                $state = 'ready';
+            }
+
+            $plans[] = $plan;
+            $taskStates[$planId] = $state;
+            $canActOnPlans[$planId] = ProductionOperatorAccess::canActFor($plan->getAssignedOperator(), $actor);
+            $materialUsages[$planId] = $materialUsageRepository->findForPlan($plan);
+
+            $routePlans = $plan->getServiceOrderItem()->getActiveOperationPlans();
+            usort($routePlans, static fn (ServiceOrderOperationPlan $left, ServiceOrderOperationPlan $right): int =>
+                [$left->getSequenceNumber(), $left->getId()] <=> [$right->getSequenceNumber(), $right->getId()]
+            );
+            $routePlansByPlanId[$planId] = $routePlans;
+
+            if ($plan->getEquipment() !== null) {
+                $equipmentOptions[(int) $plan->getEquipment()->getId()] = $plan->getEquipmentSnapshot()['name'] ?? $plan->getEquipment()->getName();
+            }
+
+            if ($state === 'in_progress') {
+                ++$stats['in_progress'];
+            } elseif ($state === 'ready') {
+                ++$stats['ready'];
+            } elseif (in_array($state, ['paused', 'blocked'], true)) {
+                ++$stats['paused_blocked'];
+            }
         }
-        usort($plans, static function (ServiceOrderOperationPlan $left, ServiceOrderOperationPlan $right): int {
+
+        $tomorrow = $today->modify('+1 day');
+        foreach ($executionRepository->findCompletedBetween($today, $tomorrow, $isQueueManager ? null : $actor) as $execution) {
+            $plan = $execution->getPlan();
+            $item = $plan->getServiceOrderItem();
+            $order = $item->getServiceOrder();
+            $planId = (int) $plan->getId();
+            $operationCode = $plan->getOperationSnapshot()['code'] ?? $plan->getOperation()->getCode();
+
+            if ($plan->getLatestExecution() !== $execution
+                || isset($taskStates[$planId])
+                || $printingManager->isPrintingPlan($plan)
+                || $operationCode === 'PRE-DISENO'
+            ) {
+                continue;
+            }
+            if ($order->getProductionStatus() === ProductionOrderStatus::QUALITY_REWORK) {
+                $event = $eventRepository->findLatestQualityRejectionForPlan($plan);
+                if ($event?->getOperationExecution() === $execution && !$plan->hasExecutionOrigin($execution)) {
+                    continue;
+                }
+            }
+
+            $plans[] = $plan;
+            $taskStates[$planId] = $plan->getBlockedReason() !== null ? 'blocked' : 'completed';
+            $canActOnPlans[$planId] = ProductionOperatorAccess::canActFor($execution->getAssignedOperator(), $actor);
+            $materialUsages[$planId] = $materialUsageRepository->findForPlan($plan);
+            $commandIds['plan'][$planId] = [
+                'open_issue' => bin2hex(random_bytes(24)),
+                'resolve_issue' => bin2hex(random_bytes(24)),
+                'plan_material' => bin2hex(random_bytes(24)),
+            ];
+            $routePlans = $item->getActiveOperationPlans();
+            usort($routePlans, static fn (ServiceOrderOperationPlan $left, ServiceOrderOperationPlan $right): int =>
+                [$left->getSequenceNumber(), $left->getId()] <=> [$right->getSequenceNumber(), $right->getId()]
+            );
+            $routePlansByPlanId[$planId] = $routePlans;
+            if ($plan->getEquipment() !== null) {
+                $equipmentOptions[(int) $plan->getEquipment()->getId()] = $plan->getEquipmentSnapshot()['name'] ?? $plan->getEquipment()->getName();
+            }
+            if ($taskStates[$planId] === 'blocked') {
+                ++$stats['paused_blocked'];
+            } else {
+                ++$stats['completed_today'];
+            }
+        }
+
+        asort($equipmentOptions, SORT_NATURAL | SORT_FLAG_CASE);
+
+        usort($plans, static function (ServiceOrderOperationPlan $left, ServiceOrderOperationPlan $right) use ($taskStates): int {
+            $leftActive = $taskStates[(int) $left->getId()] === 'in_progress' ? 0 : 1;
+            $rightActive = $taskStates[(int) $right->getId()] === 'in_progress' ? 0 : 1;
+            if ($leftActive !== $rightActive) {
+                return $leftActive <=> $rightActive;
+            }
             $priority = $right->getServiceOrderItem()->getPriority()->weight() <=> $left->getServiceOrderItem()->getPriority()->weight();
             if ($priority !== 0) {
                 return $priority;
@@ -121,17 +231,35 @@ final class ProductionExecutionController extends AbstractController
                 <=> [$right->getServiceOrderItem()->getLineNumber(), $right->getSequenceNumber()];
         });
 
+        $featuredPlanId = null;
+        foreach (['in_progress', 'ready', 'paused', 'blocked'] as $featuredState) {
+            foreach ($plans as $plan) {
+                if ($taskStates[(int) $plan->getId()] === $featuredState) {
+                    $featuredPlanId = (int) $plan->getId();
+                    break 2;
+                }
+            }
+        }
+
         return $this->render('admin/production_execution/index.html.twig', [
             'plans' => $plans,
+            'featuredPlanId' => $featuredPlanId,
             'reworkOrigins' => $reworkOrigins,
             'specializedKinds' => $specializedKinds,
             'startBlocks' => $startBlocks,
             'commandIds' => $commandIds,
             'materialUsages' => $materialUsages,
+            'taskStates' => $taskStates,
+            'canActOnPlans' => $canActOnPlans,
+            'routePlansByPlanId' => $routePlansByPlanId,
+            'equipmentOptions' => $equipmentOptions,
+            'stats' => $stats,
             'materialChoices' => $this->isGranted('production.assign') ? $materialVariantRepository->findActiveConsumable() : [],
             'canExecute' => $this->isGranted('production.execute'),
             'canManageIncidents' => $this->isGranted('production.assign'),
-            'actorId' => $this->authenticatedUser()->getId(),
+            'isQueueManager' => $isQueueManager,
+            'actorId' => $actor->getId(),
+            'actorName' => $actor->getFullName(),
         ]);
     }
 
