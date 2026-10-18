@@ -8,6 +8,7 @@ use App\Application\Production\DesignReviewManager;
 use App\Entity\Orders\ServiceOrderItem;
 use App\Entity\Production\ProductionFile;
 use App\Entity\Users\User;
+use App\Enum\Orders\ServiceOrderItemDesignStatus;
 use App\Repository\Orders\ServiceOrderItemRepository;
 use App\Repository\Production\ProductionFileRepository;
 use App\Repository\Production\ServiceOrderItemDesignReleaseRepository;
@@ -28,8 +29,23 @@ final class DesignController extends AbstractController
     {
         $this->denyAccessUnlessGranted('production.view');
 
+        $items = $itemRepository->findForDesignQueue();
+        $designSummary = [
+            ServiceOrderItemDesignStatus::PENDING_REVIEW->value => 0,
+            ServiceOrderItemDesignStatus::IN_REVIEW->value => 0,
+            ServiceOrderItemDesignStatus::BLOCKED->value => 0,
+        ];
+
+        foreach ($items as $item) {
+            $status = $item->getDesignStatus()->value;
+            if (isset($designSummary[$status])) {
+                ++$designSummary[$status];
+            }
+        }
+
         return $this->render('admin/design/index.html.twig', [
-            'items' => $itemRepository->findForDesignQueue(),
+            'items' => $items,
+            'designSummary' => $designSummary,
         ]);
     }
 
