@@ -277,24 +277,9 @@
                     <form class="pf-form printing-completion-form" method="post" action="{{ path('admin_printing_complete', {id: activeExecution.id}) }}" data-controller="ui--printing-form" data-ui--printing-form-planned-quantity-value="{{ confirmedPlanQuantity|default('') }}">
                         <input type="hidden" name="_token" value="{{ csrf_token('printing-complete-' ~ activeExecution.id) }}"><input type="hidden" name="expected_order_version" value="{{ orderVersion }}"><input type="hidden" name="command_id" value="{{ completeCommandId }}">
 <div class="printing-validation-summary" role="alert" tabindex="-1" data-ui--printing-form-target="summary" hidden></div>
-<div class="printing-consumption-grid">
-    {% if confirmedPlanQuantity %}
-        <div><label class="form-label" for="printing-planned-total">Área propuesta desde Material previsto ({{ scannedMaterial.consumptionUnit.symbol }})</label><input id="printing-planned-total" class="form-control" value="{{ confirmedPlanQuantity }}" readonly><div class="form-text">{% if plannedInventoryQuantity %}Para el inventario se apartaron {{ plannedInventoryQuantity }} {{ scannedMaterial.inventoryUnit.symbol }}. El área no se convierte automáticamente en longitud del rollo.{% endif %}</div></div>
-    {% else %}
-        <div><label class="form-label" for="printing-total">Total real utilizado ({{ scannedMaterial ? scannedMaterial.consumptionUnit.symbol : 'unidad' }})</label><input id="printing-total" class="form-control" name="total_consumed" inputmode="decimal" placeholder="Cantidad medida" required><div class="form-text">El material escaneado no tiene un total previsto aplicable; mide su consumo.</div></div>
-    {% endif %}
-    <div><label class="form-label" for="printing-waste">Merma medida ({{ scannedMaterial ? scannedMaterial.consumptionUnit.symbol : 'unidad' }})</label><input id="printing-waste" class="form-control" name="waste" inputmode="decimal" value="0" required></div>
-</div>
-{% if scannedMaterial and scannedMaterial.linearRoll %}
-    <div class="printing-linear-consumption"><label class="form-label" for="printing-actual-inventory-quantity">Metros lineales realmente alimentados ({{ scannedMaterial.inventoryUnit.symbol }})</label><input id="printing-actual-inventory-quantity" class="form-control" name="actual_inventory_quantity" inputmode="decimal" placeholder="Ej. {{ plannedInventoryQuantity ?: '6' }}" required><div class="form-text">Mide el avance real del rollo o toma la lectura de máquina. Esta es la única cantidad que se descontará del QR; incluye el avance y la merma longitudinal. Si difiere de la longitud prevista, explica la diferencia en los datos de cierre.</div></div>
-{% endif %}
-<p class="printing-form-hint">La merma se registra para Producción. En un rollo, el descuento se calcula únicamente con los metros lineales realmente alimentados y no se suma otra vez.</p>
                         {% if confirmedPlanQuantity %}
-                            <div class="printing-plan-summary"><span class="printing-plan-summary__icon"><i class="bi bi-calculator" aria-hidden="true"></i></span><div><strong>Consumo previsto confirmado</strong><span>{{ confirmedPlanQuantity }} {{ scannedMaterial.consumptionUnit.symbol }}{% if plannedInventoryQuantity %} · Equivale a {{ plannedInventoryQuantity }} {{ scannedMaterial.inventoryUnit.symbol }} de la unidad física.{% endif %}</span></div></div>
+                            <div class="printing-plan-summary"><span class="printing-plan-summary__icon"><i class="bi bi-calculator" aria-hidden="true"></i></span><div><strong>Consumo previsto confirmado</strong><span>{{ confirmedPlanQuantity }} {{ scannedMaterial.consumptionUnit.symbol }}{% if plannedInventoryQuantity %} · Longitud prevista: {{ plannedInventoryQuantity }} {{ scannedMaterial.inventoryUnit.symbol }}.{% endif %}</span></div></div>
                         {% endif %}
-{% if confirmedPlanQuantity %}
-    <div class="printing-plan-summary"><span class="printing-plan-summary__icon"><i class="bi bi-calculator" aria-hidden="true"></i></span><div><strong>Consumo previsto confirmado</strong><span>{{ confirmedPlanQuantity }} {{ scannedMaterial.consumptionUnit.symbol }}{% if plannedInventoryQuantity %} · Equivale a {{ plannedInventoryQuantity }} {{ scannedMaterial.inventoryUnit.symbol }} de la unidad física.{% endif %}</span></div></div>
-{% endif %}
 <section class="printing-form-section" aria-labelledby="printing-consumption-title">
     <div class="printing-form-section__heading"><span>01</span><div><h3 id="printing-consumption-title">Consumo de material</h3><p>{% if confirmedPlanQuantity %}Deja el consumo real vacío para usar la cantidad prevista.{% else %}Mide el material utilizado e indica el total.{% endif %}</p></div></div>
     {% if confirmedPlanQuantity %}
@@ -302,6 +287,10 @@
     {% else %}
         <div class="printing-field"><label class="form-label" for="printing-total">Total real utilizado ({{ scannedMaterial ? scannedMaterial.consumptionUnit.symbol : 'unidad' }}) <span class="printing-field__required">Obligatorio</span></label><input id="printing-total" class="form-control" name="total_consumed" type="number" min="0.000001" max="99999999999999" step="0.000001" inputmode="decimal" placeholder="Ej. 16.5" required data-ui--printing-form-target="total"><div class="printing-field-help">El material escaneado no tiene una cantidad prevista aplicable. Mide el total utilizado; debe ser mayor que cero e incluir la merma.</div></div>
     {% endif %}
+    {% if scannedMaterial and scannedMaterial.linearRoll %}
+        <div class="printing-linear-consumption"><label class="form-label" for="printing-actual-inventory-quantity">Metros lineales realmente alimentados ({{ scannedMaterial.inventoryUnit.symbol }})</label><input id="printing-actual-inventory-quantity" class="form-control" name="actual_inventory_quantity" type="number" min="0.000001" max="99999999999999" step="0.000001" inputmode="decimal" placeholder="Ej. {{ plannedInventoryQuantity ?: '6' }}" required><div class="form-text">Confirma el avance real del rollo o la lectura de máquina. Esta longitud se descontará del QR e incluye la merma longitudinal. Si difiere de la prevista, explica el cambio abajo.</div></div>
+    {% endif %}
+    <p class="printing-field-help">La merma forma parte del consumo total. En rollos, el descuento físico usa los metros lineales alimentados y no suma la merma otra vez.</p>
     <div class="printing-field-grid">
         <div class="printing-field"><label class="form-label" for="printing-method">Cómo mediste el consumo <span class="printing-field__conditional">Obligatorio si indicas consumo real</span></label><select id="printing-method" class="form-select" name="measurement_method" data-ui--printing-form-target="measurementMethod"><option value="">Selecciona el método de medición</option><option value="medición manual">Medición manual</option><option value="lectura de máquina">Lectura de máquina</option></select><div class="printing-field-help">Elige medición manual si mediste el material directamente o lectura de máquina si usaste el contador del equipo.</div></div>
         <div class="printing-field"><label class="form-label" for="printing-adjustment-reason">Motivo del consumo o ajuste <span class="printing-field__conditional">Requerido según el caso</span></label><input id="printing-adjustment-reason" class="form-control" name="adjustment_reason" minlength="5" maxlength="500" placeholder="Ej. Sin previsión, reimpresión parcial o ajuste de corte" data-ui--printing-form-target="adjustmentReason"><div class="printing-field-help">Explica por qué no había una cantidad prevista o por qué el consumo real fue distinto. Se solicitará cuando aplique.</div></div>
@@ -320,18 +309,18 @@
     <summary>Datos adicionales del cierre</summary>
     <div class="printing-form-details__body">
         <div class="printing-field"><label class="form-label" for="printing-note">Comentario de cierre <span class="printing-field__optional">Opcional</span></label><textarea id="printing-note" class="form-control" name="note" rows="2" minlength="5" maxlength="500" placeholder="Agrega un comentario útil para el siguiente turno"></textarea><div class="printing-field-help">Si lo completas, escribe al menos cinco caracteres (máximo 500).</div></div>
-        <fieldset class="printing-surplus-fields">
-            <legend>Separar un sobrante reutilizable <span class="printing-field__optional">Opcional</span></legend>
-            <p class="printing-field-help">Úsalo solo si separaste físicamente un retazo o remanente que volverá a inventario. Se creará una unidad con su propio QR.</p>
-            <div class="printing-field-grid">
-                <div class="printing-field"><label class="form-label" for="printing-surplus-quantity">Cantidad que se separa ({{ scannedMaterial ? scannedMaterial.inventoryUnit.symbol : 'unidad de inventario' }})</label><input id="printing-surplus-quantity" class="form-control" name="surplus_quantity" type="number" min="0" max="99999999999999" step="0.000001" inputmode="decimal" value="0"><div class="printing-field-help">Captura 0 si no guardarás sobrante. Esta cantidad se mide en la unidad de inventario.</div></div>
-                <div class="printing-field"><label class="form-label" for="printing-surplus-location">Ubicación del sobrante</label><input id="printing-surplus-location" class="form-control" name="surplus_location" maxlength="100" placeholder="Ej. Rack A · Nivel 2"><div class="printing-field-help">Es opcional; si queda vacío se conserva la ubicación original.</div></div>
-            </div>
-            <div class="printing-field mt-3"><label class="form-label" for="printing-surplus-description">Descripción física</label><input id="printing-surplus-description" class="form-control" name="surplus_description" maxlength="500" placeholder="Ej. Retazo de 1.20 × 0.80 m"><div class="printing-field-help">Describe el tamaño o estado para que Bodega pueda identificarlo.</div></div>
-        </fieldset>
     </div>
 </details>
-<div class="form-check"><input id="printing-confirm-consumption" class="form-check-input" type="checkbox" name="confirmed_consumption" value="1" required><label class="form-check-label" for="printing-confirm-consumption">Confirmo que el total a descontar corresponde al material realmente utilizado en esta impresión.</label></div>
+<section class="printing-form-section" aria-labelledby="printing-surplus-title">
+    <div class="printing-form-section__heading"><span>03</span><div><h3 id="printing-surplus-title">Sobrante reutilizable <span class="printing-field__optional">Opcional</span></h3><p>Separa aquí una parte física que conservarás con otro QR; no es consumo ni merma adicional.</p></div></div>
+    {% if currentScan and currentScan.stockUnit %}<p class="printing-field-help">Unidad escaneada: {{ currentScan.stockUnit.unitCode }} · saldo antes del cierre: {{ currentScan.stockUnit.remainingQuantity }} {{ scannedMaterial.inventoryUnit.symbol }}. El sobrante no puede superar lo que quede después del consumo.</p>{% endif %}
+    <div class="printing-field-grid">
+        <div class="printing-field"><label class="form-label" for="printing-surplus-quantity">Cantidad que tendrá el nuevo QR ({{ scannedMaterial ? scannedMaterial.inventoryUnit.symbol : 'unidad de inventario' }})</label><input id="printing-surplus-quantity" class="form-control" name="surplus_quantity" type="number" min="0" max="99999999999999" step="0.000001" inputmode="decimal" value="0"><div class="printing-field-help">Captura 0 si no separas nada. Mide únicamente el remanente que apartaste físicamente.</div></div>
+        <div class="printing-field"><label class="form-label" for="printing-surplus-location">Ubicación del sobrante</label><input id="printing-surplus-location" class="form-control" name="surplus_location" maxlength="100" placeholder="Ej. Rack A · Nivel 2"><div class="printing-field-help">Si queda vacía, conserva la ubicación del rollo original.</div></div>
+    </div>
+    <div class="printing-field"><label class="form-label" for="printing-surplus-description">Descripción física</label><input id="printing-surplus-description" class="form-control" name="surplus_description" maxlength="500" placeholder="Ej. Remanente del mismo ancho, 0.5 m de largo"><div class="printing-field-help">Indica medidas o estado para poder identificarlo en bodega. Si el ancho cambió, no lo registres como la misma presentación.</div></div>
+</section>
+<div class="form-check"><input id="printing-confirm-consumption" class="form-check-input" type="checkbox" name="confirmed_consumption" value="1" required><label class="form-check-label" for="printing-confirm-consumption">Confirmo que el consumo registrado y, si es un rollo, los metros lineales alimentados corresponden a lo realmente utilizado.</label></div>
 <button class="btn pf-button pf-button--primary printing-wide-button" type="submit"><i class="bi bi-check-circle" aria-hidden="true"></i>Terminar impresión y crear etiqueta</button>
                     </form>
                 {% else %}

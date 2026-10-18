@@ -298,7 +298,6 @@
 .printing-next-card .pf-button--primary:disabled, .printing-detail .pf-button:disabled { color: #8490a6; background: #eff2f8; border-color: #e2e7f0; opacity: 1; }
 .printing-step-number { display: grid; width: 1.65rem; height: 1.65rem; flex: 0 0 auto; place-items: center; color: #08752b; background: #e7f8e9; border-radius: 50%; font-size: 0.72rem; font-weight: 700; }
 .printing-locked-icon { color: #66758e; font-size: 0.9rem; }
-.printing-consumption-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 0.5rem; }
 .printing-linear-consumption { display: grid; gap: 0.2rem; margin: 0.7rem 0; padding: 0.65rem; background: #f0f8f1; border: 1px solid #cfe8d3; border-radius: 0.4rem; }
 .printing-linear-consumption .form-text { color: #386246; font-size: 0.68rem; line-height: 1.4; }
 .printing-disabled-fields { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 0.5rem; }
@@ -372,9 +371,6 @@
 .printing-form-details > summary::after { float: right; content: "⌄"; font-size: 1rem; }
 .printing-form-details[open] > summary { margin-bottom: 0.8rem; }
 .printing-form-details__body { display: grid; gap: 0.9rem; }
-.printing-surplus-fields { display: grid; gap: 0.7rem; margin: 0; padding: 0.8rem; border: 1px solid #e4e9f1; border-radius: 0.5rem; }
-.printing-surplus-fields legend { float: none; width: auto; margin: 0; color: #243752; font-size: 0.82rem; font-weight: 700; }
-.printing-surplus-fields > .printing-field-help { margin-top: -0.55rem; }
 .printing-completion-form > .form-check { padding: 0.7rem 0.8rem 0.7rem 2.4rem; background: #f6f8fb; border: 1px solid #e5eaf1; border-radius: 0.5rem; }
 .printing-completion-form > .form-check .form-check-input { margin-left: -1.55rem; }
 .printing-completion-form > .form-check .form-check-label { color: #344761; font-size: 0.8rem; line-height: 1.45; }

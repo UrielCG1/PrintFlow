@@ -91,6 +91,29 @@ final class InventoryStockUnitTest extends TestCase
         self::assertSame(['usable_width_cm' => 80], $surplus->getPhysicalAttributes());
     }
 
+    public function testASecondPrintingCanSplitTheRemainingRollWithoutDuplicatingStock(): void
+    {
+        $variant = $this->variant();
+        $stockUnit = new InventoryStockUnit($variant, '2');
+        $stockUnit->setStorageLocation('QA-RACK-01');
+        $balance = new MaterialVariantCost($variant);
+        $balance->increaseOnHand('2');
+        $balance->commit('1');
+
+        $stockUnit->consume('1');
+        $balance->consume('1', '1');
+        $surplus = $stockUnit->separateSurplus('0.5');
+
+        self::assertSame('0.500000', $stockUnit->getRemainingQuantity());
+        self::assertSame('0.500000', $surplus->getRemainingQuantity());
+        self::assertNotSame($stockUnit->getUnitCode(), $surplus->getUnitCode());
+        self::assertNotSame($stockUnit->getQrPayload(), $surplus->getQrPayload());
+        self::assertSame($stockUnit, $surplus->getParentStockUnit());
+        self::assertSame('QA-RACK-01', $surplus->getStorageLocation());
+        self::assertSame('1.000000', $balance->getOnHandQuantity());
+        self::assertSame('0.000000', $balance->getCommittedQuantity());
+    }
+
     public function testItRejectsALotFromAnotherVariant(): void
     {
         $stockUnit = new InventoryStockUnit($this->variant(), '2');
