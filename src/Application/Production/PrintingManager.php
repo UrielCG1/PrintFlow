@@ -98,6 +98,9 @@ final class PrintingManager
             if (!$machine instanceof Equipment) {
                 throw new \DomainException('Selecciona la máquina prevista para Impresión.');
             }
+            if ($order->isPlanned() && $plan->getEquipment() instanceof Equipment && $plan->getEquipment()->getId() !== $machine->getId()) {
+                throw new \DomainException('La máquina ya está planificada. Cambia su asignación desde Planificación de producción antes de validar el escaneo.');
+            }
             $this->assertEquipmentCompatible($plan, $machine);
             $this->assertMaterialUsable($material);
             $plannedUsages = $this->materialUsageRepository->findPlannedForPlan($plan);
@@ -564,10 +567,15 @@ final class PrintingManager
             return 'El material escaneado no existe, está inactivo o no es consumible.';
         }
         if ($scannedEquipment->getId() !== $expectedEquipment->getId()) {
-            return 'La máquina escaneada no coincide con la planificada. Solicita una sustitución técnica autorizada.';
+            return 'Máquina incorrecta: escaneaste '.$scannedEquipment->getName().' ('.$scannedEquipment->getCode().'). Se espera '.$expectedEquipment->getName().' ('.$expectedEquipment->getCode().').';
         }
         if (!$this->containsVariant($allowedMaterials, $scannedStockUnit->getVariant())) {
-            return 'El material escaneado no coincide con el previsto. Solicita una sustitución técnica autorizada.';
+            $expected = implode(' o ', array_map(
+                static fn (MaterialVariant $variant): string => $variant->getMaterial()->getName().' · '.$variant->getCode(),
+                $allowedMaterials,
+            ));
+
+            return 'Material incorrecto. Escanea una unidad de '.$expected.' o solicita una sustitución autorizada.';
         }
         return null;
     }

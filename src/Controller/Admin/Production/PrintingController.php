@@ -6,6 +6,7 @@ namespace App\Controller\Admin\Production;
 
 use App\Application\Inventory\InventoryPrintingMaterialResolver;
 use App\Application\Inventory\InventoryPrintingMaterialStatus;
+use App\Application\Inventory\InventoryStockUnitQrResolver;
 use App\Application\Production\PrintingManager;
 use App\Application\Production\ProductionExecutionCommand;
 use App\Entity\Equipment\Equipment;
@@ -210,7 +211,8 @@ final class PrintingController extends AbstractController
             if (!$material instanceof \App\Entity\Materials\MaterialVariant) {
                 throw new \DomainException('Selecciona un material válido.');
             }
-            if (($plan->getEquipment() !== $equipment || $plan->getMaterialVariant() !== $material) && !$this->isGranted('production.substitution.approve') && $plan->getMaterialVariant() !== null) {
+            $effectiveEquipment = $equipment ?? $plan->getEquipment();
+            if (($plan->getEquipment() !== $effectiveEquipment || $plan->getMaterialVariant() !== $material) && !$this->isGranted('production.substitution.approve') && $plan->getMaterialVariant() !== null) {
                 throw new \DomainException('Solo el jefe de Producción o Administrador puede autorizar una sustitución.');
             }
             $manager->configureRequirements($plan, $equipment, $material, $request->request->getString('planned_quantity'), $request->request->getString('planned_inventory_quantity'), $request->request->getString('reason'), $this->authenticatedUser());
@@ -221,6 +223,42 @@ final class PrintingController extends AbstractController
             $this->addFlash('error', $exception->getMessage());
         }
         return $this->redirectToRoute('admin_printing_show', ['id' => $plan->getId()]);
+    }
+
+    #[Route('/operaciones/{id}/verificar-material', name: 'preview_material_scan', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function previewMaterialScan(
+        Request $request,
+        ServiceOrderOperationPlan $plan,
+        PrintingManager $manager,
+        InventoryStockUnitQrResolver $qrResolver,
+        InventoryPrintingMaterialResolver $materialResolver,
+    ): Response {
+        $this->denyAccessUnlessGranted('production.execute');
+        $this->assertPrintingPlan($plan, $manager);
+        $this->assertCsrf($request, 'printing-scan-preview-'.$plan->getId());
+
+        try {
+            $stockUnit = $qrResolver->resolve($request->request->getString('material_qr_payload'));
+            $variant = $stockUnit->getVariant();
+            if (!$materialResolver->isVariantAllowedForPlan($plan, $variant)) {
+                $expected = array_map(
+                    static fn ($allowed): string => $allowed->getMaterial()->getName().' · '.$allowed->getCode(),
+                    $materialResolver->allowedVariantsForPlan($plan),
+                );
+
+                return $this->json([
+                    'valid' => false,
+                    'message' => 'Material incorrecto: escaneaste '.$variant->getMaterial()->getName().' · '.$variant->getCode().'. Se espera '.implode(' o ', $expected).'.',
+                ]);
+            }
+
+            return $this->json([
+                'valid' => true,
+                'message' => 'Material correcto: '.$variant->getMaterial()->getName().' · '.$variant->getCode().' ('.$stockUnit->getUnitCode().'). Pulsa «Validar escaneos» para confirmar.',
+            ]);
+        } catch (\DomainException $exception) {
+            return $this->json(['valid' => false, 'message' => $exception->getMessage()]);
+        }
     }
 
     #[Route('/operaciones/{id}/validar-escaneos', name: 'validate_scans', requirements: ['id' => '\d+'], methods: ['POST'])]
