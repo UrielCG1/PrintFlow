@@ -19,7 +19,7 @@ final class Version20261018060000 extends AbstractMigration
     {
         $this->abortIf(!$this->connection->getDatabasePlatform() instanceof AbstractMySQLPlatform, 'Esta migración requiere MySQL o MariaDB.');
 
-        $this->addSql('ALTER TABLE inventory_commitments DROP CHECK chk_commitment_quantities');
+        $this->addSql('ALTER TABLE inventory_commitments DROP CONSTRAINT chk_commitment_quantities');
         $this->addSql(<<<'SQL'
             ALTER TABLE inventory_commitments
                 ADD CONSTRAINT chk_commitment_quantities CHECK (
@@ -50,7 +50,7 @@ final class Version20261018060000 extends AbstractMigration
             'No se puede revertir mientras existan apartados conciliados que incumplan la restricción anterior.',
         );
 
-        $this->addSql('ALTER TABLE inventory_commitments DROP CHECK chk_commitment_quantities');
+        $this->addSql('ALTER TABLE inventory_commitments DROP CONSTRAINT chk_commitment_quantities');
         $this->addSql(<<<'SQL'
             ALTER TABLE inventory_commitments
                 ADD CONSTRAINT chk_commitment_quantities CHECK (
