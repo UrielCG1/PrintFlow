@@ -53,6 +53,24 @@ final class UserRepository extends ServiceEntityRepository implements PasswordUp
     }
 
     /** @return list<User> */
+    public function findActiveAdministrators(): array
+    {
+        /** @var list<User> $users */
+        $users = $this->createQueryBuilder('user')
+            ->select('DISTINCT user')
+            ->innerJoin('user.assignedRoles', 'role')
+            ->andWhere('user.isActive = true')
+            ->andWhere('user.deletedAt IS NULL')
+            ->andWhere('role.code = :adminRole')
+            ->andWhere('role.isActive = true')
+            ->setParameter('adminRole', 'ROLE_ADMIN')
+            ->orderBy('user.id', 'ASC')
+            ->getQuery()->getResult();
+
+        return $users;
+    }
+
+    /** @return list<User> */
     public function findActiveProductionOperators(): array
     {
         /** @var list<User> $users */

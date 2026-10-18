@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Application\Production;
 
 use App\Application\Inventory\InventoryPrintingMaterialResolver;
+use App\Application\Inventory\InventoryProductionAuthorizationGuard;
 use App\Application\Inventory\InventoryOrderCommitmentManager;
 use App\Application\Inventory\InventoryPhysicalConsumptionManager;
 use App\Application\Inventory\InventoryPhysicalConsumptionResult;
@@ -54,6 +55,7 @@ final class PrintingManager
         private readonly AuditLogger $auditLogger,
         private readonly InventoryStockUnitQrResolver $stockUnitQrResolver,
         private readonly InventoryPrintingMaterialResolver $printingMaterialResolver,
+        private readonly InventoryProductionAuthorizationGuard $inventoryAuthorizationGuard,
         private readonly InventoryPhysicalConsumptionManager $physicalConsumptionManager,
         private readonly ProductionMaterialUsageRepository $materialUsageRepository,
         private readonly InventoryOrderCommitmentManager $orderCommitmentManager,
@@ -162,6 +164,7 @@ final class PrintingManager
             $this->assertPrintingPlan($plan);
             $this->assertAssignedOperator($plan, $actor);
             $this->assertReadyForPrint($order, $plan);
+            $this->inventoryAuthorizationGuard->assertOrderCanStartProduction($order);
 
             $equipmentCode = strtoupper(trim($equipmentCode));
             $materialQrPayload = trim($materialQrPayload);

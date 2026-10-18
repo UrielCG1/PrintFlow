@@ -39,6 +39,7 @@ use App\Repository\Orders\ServiceOrderRepository;
 use App\Repository\Production\ProductionCalendarExceptionRepository;
 use App\Repository\Production\ProductionReservationRepository;
 use App\Repository\Inventory\InventoryCommitmentRepository;
+use App\Repository\Inventory\InventoryCommitmentSubstitutionRepository;
 use App\Repository\Inventory\MaterialVariantCostRepository;
 use App\Repository\Inventory\InventoryShortageDecisionRepository;
 use App\Repository\Inventory\MaterialSubstitutionRuleRepository;
@@ -1020,6 +1021,7 @@ final class ServiceOrderController extends AbstractController
         MaterialVariantCostRepository $balanceRepository,
         InventoryCommitmentRepository $inventoryCommitmentRepository,
         InventoryShortageDecisionRepository $shortageDecisionRepository,
+        InventoryCommitmentSubstitutionRepository $substitutionRepository,
         MaterialSubstitutionRuleRepository $substitutionRuleRepository,
         InventoryCoverageEvaluator $coverageEvaluator,
     ): Response {
@@ -1070,6 +1072,10 @@ final class ServiceOrderController extends AbstractController
             $shortageDecisions[(int) $decision->getCommitment()->getId()] = $decision;
         }
         $substitutionRules = [];
+        $substitutionsByReplacementVariant = [];
+        foreach ($substitutionRepository->findForOrder($serviceOrder) as $substitution) {
+            $substitutionsByReplacementVariant[(int) $substitution->getSubstituteCommitment()->getVariant()->getId()] = $substitution;
+        }
         foreach ($existingMaterialCommitments as $commitment) {
             if ($commitment->getShortageQuantity() !== '0.000000' && $commitment->getStatus()->value !== 'SUBSTITUTED') {
                 $substitutionRules[(int) $commitment->getId()] = $substitutionRuleRepository->findActiveForOriginal($commitment->getVariant());
@@ -1097,6 +1103,7 @@ final class ServiceOrderController extends AbstractController
                 'commitment' => $existing,
                 'shortageDecision' => $existing === null ? null : ($shortageDecisions[(int) $existing->getId()] ?? null),
                 'substitutionRules' => $existing === null ? [] : ($substitutionRules[(int) $existing->getId()] ?? []),
+                'substitution' => $substitutionsByReplacementVariant[(int) $variant->getId()] ?? null,
             ];
         }
         $canCommitMaterials = $serviceOrder->isPlanned() && !$serviceOrder->isCancelled()

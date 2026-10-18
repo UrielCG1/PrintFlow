@@ -226,7 +226,7 @@
                 <div class="pf-card__body">
                     <div class="table-responsive"><table class="table pf-table mb-0"><thead><tr><th>Material</th><th>Necesidad</th><th>Apartado pendiente</th><th>Consumido</th><th>Liberado</th><th>Faltante</th><th>Estado</th></tr></thead><tbody>
                     {% for requirement in materialRequirements %}
-                        <tr>
+                        <tr{% if requirement.commitment %} id="material-commitment-{{ requirement.commitment.id }}"{% endif %}>
                             <td><strong>{{ requirement.variant.material.name }}</strong><div class="small text-body-secondary">{{ requirement.variant.code }} · {{ requirement.variant.inventoryUnit.symbol }}</div></td>
                             <td>{{ requirement.requiredQuantity|number_format(6, '.', ',') }}</td>
                             <td>{{ requirement.committedQuantity|number_format(6, '.', ',') }}</td>
@@ -238,7 +238,7 @@
                                     <span class="text-warning d-block">{{ requirement.status == 'PARTIAL' ? 'Cobertura parcial' : 'Material faltante' }}</span>
                                     {% if requirement.shortageDecision %}<span class="small text-body-secondary d-block">{{ requirement.shortageDecision.type.label }}</span>{% endif %}
                                     {% if is_granted('inventory.substitutions.manage') and requirement.commitment and requirement.substitutionRules is not empty %}
-                                        <details class="mt-2"><summary class="small">Usar sustituto viable</summary>
+                                        <details class="mt-2" open><summary class="small">Usar sustituto viable</summary>
                                             {% for rule in requirement.substitutionRules %}
                                                 <form method="post" action="{{ path('admin_service_orders_substitute_material_shortage', {id: serviceOrder.id, commitment: requirement.commitment.id, rule: rule.id}) }}" class="mt-2 border-top pt-2">
                                                     <input type="hidden" name="_token" value="{{ csrf_token('inventory-shortage-substitute-' ~ requirement.commitment.id ~ '-' ~ rule.id) }}">
@@ -251,7 +251,7 @@
                                     {% endif %}
                                     {% if is_granted('inventory.substitutions.manage') and requirement.commitment and requirement.substitutionRules is empty %}<a class="small d-inline-block mt-2" href="{{ path('admin_inventory_substitutions_index') }}">Configurar sustitutos viables</a>{% endif %}
                                     {% if is_granted('inventory.shortage.approve') and requirement.commitment %}
-                                        <details class="mt-2"><summary class="small">Resolver faltante</summary>
+                                        <details class="mt-2"{% if requirement.substitutionRules is empty %} open{% endif %}><summary class="small">Resolver faltante</summary>
                                             <form method="post" action="{{ path('admin_service_orders_resolve_material_shortage', {id: serviceOrder.id, commitment: requirement.commitment.id}) }}" class="mt-2">
                                                 <input type="hidden" name="_token" value="{{ csrf_token('inventory-shortage-resolve-' ~ requirement.commitment.id) }}">
                                                 <select class="form-select form-select-sm mb-2" name="decision" required>{% for type in shortageDecisionTypes %}<option value="{{ type.value }}" {{ requirement.shortageDecision and requirement.shortageDecision.type.value == type.value ? 'selected' : '' }}>{{ type.label }}</option>{% endfor %}</select>
@@ -260,6 +260,9 @@
                                             </form>
                                         </details>
                                     {% endif %}
+                                {% elseif requirement.substitution %}
+                                    <span class="text-success d-block">Sustituto autorizado</span>
+                                    <span class="small text-body-secondary d-block">Reemplaza {{ requirement.substitution.originalCommitment.variant.code }}: {{ requirement.substitution.substituteQuantity|number_format(6, '.', ',') }} {{ requirement.variant.inventoryUnit.symbol }} autorizados.</span>
                                 {% elseif requirement.status == 'SUBSTITUTED' %}<span class="text-success">Parte original cubierta; faltante sustituido</span>{% elseif requirement.isCommitted and requirement.committedQuantity == '0.000000' %}<span class="text-success">Conciliado</span>{% elseif requirement.isCommitted %}<span class="text-success">Apartado pendiente de uso</span>{% else %}<span class="text-body-secondary">Disponible para apartar</span>{% endif %}
                             </td>
                         </tr>

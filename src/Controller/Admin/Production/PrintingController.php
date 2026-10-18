@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin\Production;
 
 use App\Application\Inventory\InventoryPrintingMaterialResolver;
+use App\Application\Inventory\InventoryPrintingMaterialStatus;
 use App\Application\Production\PrintingManager;
 use App\Application\Production\ProductionExecutionCommand;
 use App\Entity\Equipment\Equipment;
@@ -36,6 +37,7 @@ final class PrintingController extends AbstractController
         ServiceOrderOperationPlanRepository $planRepository,
         ProductionPrintedOutputRepository $outputRepository,
         PrintingManager $printingManager,
+        InventoryPrintingMaterialStatus $materialStatusResolver,
     ): Response {
         $this->denyAccessUnlessGranted('production.view');
         $plans = array_values(array_filter(
@@ -43,6 +45,7 @@ final class PrintingController extends AbstractController
             static fn (ServiceOrderOperationPlan $plan): bool => $printingManager->isPrintingPlan($plan),
         ));
         $outputs = [];
+        $materialStatuses = $materialStatusResolver->forPlans($plans);
         $summary = [
             'ready' => 0,
             'in_progress' => 0,
@@ -57,6 +60,8 @@ final class PrintingController extends AbstractController
         foreach ($plans as $plan) {
             $output = $outputRepository->findCurrent($plan->getServiceOrderItem());
             $outputs[(int) $plan->getId()] = $output;
+            $materialStatus = $materialStatuses[(int) $plan->getId()] ?? null;
+            $materialBlocks = in_array($materialStatus['code'] ?? null, ['pending_reservation', 'pending_authorization', 'waiting_purchase'], true);
             $isCompleted = $output?->isLabelPlaced() ?? false;
             $isOverdue = $plan->getServiceOrderItem()->getServiceOrder()->getCommitmentDate() !== null
                 && $plan->getServiceOrderItem()->getServiceOrder()->getCommitmentDate()->setTimezone($timezone) < $today
@@ -67,7 +72,7 @@ final class PrintingController extends AbstractController
             } else {
                 ++$summary['requiring_action'];
             }
-            if ($isOverdue || $isBlocked) {
+            if (!$isCompleted && ($isOverdue || $isBlocked || $materialBlocks)) {
                 ++$summary['at_risk'];
             }
 
@@ -80,6 +85,7 @@ final class PrintingController extends AbstractController
                 $isConfigured
                 && $output === null
                 && !$plan->hasCompletedExecution()
+                && !$materialBlocks
                 && $plan->getServiceOrderItem()->getDesignStatus()->value === 'READY_FOR_PRINT'
             ) {
                 ++$summary['ready'];
@@ -94,6 +100,7 @@ final class PrintingController extends AbstractController
         return $this->render('admin/printing/index.html.twig', [
             'plans' => $plans,
             'outputs' => $outputs,
+            'materialStatuses' => $materialStatuses,
             'printingSummary' => $summary,
             'printingMachines' => array_values($machineNames),
             'printingToday' => $today,
@@ -105,6 +112,7 @@ final class PrintingController extends AbstractController
         ServiceOrderOperationPlan $plan,
         PrintingManager $printingManager,
         InventoryPrintingMaterialResolver $printingMaterialResolver,
+        InventoryPrintingMaterialStatus $materialStatusResolver,
         EquipmentRepository $equipmentRepository,
         MaterialVariantRepository $materialVariantRepository,
         ServiceOrderItemDesignReleaseRepository $releaseRepository,
@@ -163,6 +171,7 @@ final class PrintingController extends AbstractController
             'plannedInventoryQuantity' => $plannedInventoryQuantity,
             'multiplePlannedUsages' => count($plannedUsages) > 1,
             'allowedMaterialVariants' => $printingMaterialResolver->allowedVariantsForPlan($plan),
+            'materialStatus' => $materialStatusResolver->forPlan($plan),
             'equipmentChoices' => $equipmentRepository->findAvailableForFutureExecution($plan->getOperation()),
             'materialChoices' => $materialVariantRepository->findActiveConsumable(),
             'canConfigure' => $this->isGranted('production.assign'),
