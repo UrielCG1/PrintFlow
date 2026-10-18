@@ -3,9 +3,15 @@
 {% block title %}Ejecución de producción | OoxCorp{% endblock %}
 {% block app_navigation_active %}production_execution{% endblock %}
 {% block app_breadcrumb %}Operación / Trabajo diario / Ejecución{% endblock %}
+{% block app_page_class %}pf-page--full{% endblock %}
+{% block app_footer_class %}execution-footer{% endblock %}
 
 {% block app_content %}
     {% set queueCount = stats.in_progress + stats.ready + stats.paused_blocked %}
+    {% set featuredPlan = null %}
+    {% for plan in plans %}
+        {% if plan.id == featuredPlanId %}{% set featuredPlan = plan %}{% endif %}
+    {% endfor %}
     <section class="pf-page__content production-execution" data-controller="admin--production-execution-queue">
         <header class="pf-page-header production-execution__header">
             <div class="pf-page-header__content">
@@ -19,248 +25,111 @@
                     {% endif %}
                 </p>
             </div>
-            {% if not isQueueManager %}
-                <div class="production-execution__shift"><i class="bi bi-person-check" aria-hidden="true"></i><span>Mi turno</span><strong>{{ actorName }}</strong></div>
-            {% endif %}
         </header>
 
-        <section class="execution-metrics" aria-label="Resumen de operaciones">
-            <article class="execution-metric execution-metric--blue">
-                <span class="execution-metric__icon"><i class="bi bi-clock-history" aria-hidden="true"></i></span>
-                <div><h2>En curso</h2><strong>{{ stats.in_progress }}</strong><p>operación activa</p></div>
-            </article>
-            <article class="execution-metric execution-metric--green">
-                <span class="execution-metric__icon"><i class="bi bi-play-circle" aria-hidden="true"></i></span>
-                <div><h2>Listas para iniciar</h2><strong>{{ stats.ready }}</strong><p>en {{ isQueueManager ? 'la cola' : 'tu cola' }}</p></div>
-            </article>
-            <article class="execution-metric execution-metric--orange">
-                <span class="execution-metric__icon"><i class="bi bi-pause-circle" aria-hidden="true"></i></span>
-                <div><h2>Pausadas o bloqueadas</h2><strong>{{ stats.paused_blocked }}</strong><p>requieren seguimiento</p></div>
-            </article>
-        </section>
+        <div class="execution-workspace" data-admin--production-execution-queue-target="rows">
+            <div class="execution-overview{{ featuredPlan ? '' : ' is-route-hidden' }}">
+                <div class="execution-overview__main">
+                    <section class="execution-metrics" aria-label="Resumen de operaciones">
+                        <article class="execution-metric execution-metric--blue">
+                            <span class="execution-metric__icon"><i class="bi bi-clock-history" aria-hidden="true"></i></span>
+                            <div><h2>En curso</h2><strong>{{ stats.in_progress }}</strong><p>operación activa</p></div>
+                        </article>
+                        <article class="execution-metric execution-metric--green">
+                            <span class="execution-metric__icon"><i class="bi bi-play-circle" aria-hidden="true"></i></span>
+                            <div><h2>Listas para iniciar</h2><strong>{{ stats.ready }}</strong><p>en {{ isQueueManager ? 'la cola' : 'tu cola' }}</p></div>
+                        </article>
+                        <article class="execution-metric execution-metric--orange">
+                            <span class="execution-metric__icon"><i class="bi bi-pause-circle" aria-hidden="true"></i></span>
+                            <div><h2>Pausadas o bloqueadas</h2><strong>{{ stats.paused_blocked }}</strong><p>requieren seguimiento</p></div>
+                        </article>
+                    </section>
 
-        <section class="pf-card execution-filter-card" aria-label="Filtros de operaciones">
-            <div class="execution-filters">
-                <label class="execution-search">
-                    <i class="bi bi-search" aria-hidden="true"></i>
-                    <span class="visually-hidden">Buscar operación</span>
-                    <input type="search" placeholder="Orden, producto u operación…" autocomplete="off" data-admin--production-execution-queue-target="search" data-action="input->admin--production-execution-queue#filter">
-                </label>
-                <label class="execution-filter"><span>Estado</span>
-                    <select data-admin--production-execution-queue-target="status" data-action="change->admin--production-execution-queue#selectStatus">
-                        <option value="">Todos</option><option value="in_progress">En curso</option><option value="ready">Lista para iniciar</option><option value="paused">Pausada</option><option value="blocked">Bloqueada</option><option value="completed">Completada hoy</option>
-                    </select>
-                </label>
-                <label class="execution-filter"><span>Prioridad</span>
-                    <select data-admin--production-execution-queue-target="priority" data-action="change->admin--production-execution-queue#filter">
-                        <option value="">Todas</option><option value="urgent">Urgente</option><option value="high">Alta</option><option value="normal">Normal</option>
-                    </select>
-                </label>
-                <label class="execution-filter"><span>Equipo</span>
-                    <select data-admin--production-execution-queue-target="equipment" data-action="change->admin--production-execution-queue#filter">
-                        <option value="">Todos</option>
-                        {% for equipmentId, equipmentName in equipmentOptions %}<option value="{{ equipmentId }}">{{ equipmentName }}</option>{% endfor %}
-                    </select>
-                </label>
-                <button class="execution-clear" type="button" data-action="click->admin--production-execution-queue#clear">Limpiar</button>
+                    <section class="pf-card execution-filter-card" aria-label="Filtros de operaciones">
+                        <div class="execution-filters">
+                            <label class="execution-search">
+                                <i class="bi bi-search" aria-hidden="true"></i>
+                                <span class="visually-hidden">Buscar operación</span>
+                                <input type="search" placeholder="Orden, producto u operación…" autocomplete="off" data-admin--production-execution-queue-target="search" data-action="input->admin--production-execution-queue#filter">
+                            </label>
+                            <label class="execution-filter"><span>Estado</span>
+                                <select data-admin--production-execution-queue-target="status" data-action="change->admin--production-execution-queue#selectStatus">
+                                    <option value="">Todos</option><option value="in_progress">En curso</option><option value="ready">Lista para iniciar</option><option value="paused">Pausada</option><option value="blocked">Bloqueada</option><option value="completed">Completada hoy</option>
+                                </select>
+                            </label>
+                            <label class="execution-filter"><span>Prioridad</span>
+                                <select data-admin--production-execution-queue-target="priority" data-action="change->admin--production-execution-queue#filter">
+                                    <option value="">Todas</option><option value="urgent">Urgente</option><option value="high">Alta</option><option value="normal">Normal</option>
+                                </select>
+                            </label>
+                            <label class="execution-filter"><span>Equipo</span>
+                                <select data-admin--production-execution-queue-target="equipment" data-action="change->admin--production-execution-queue#filter">
+                                    <option value="">Todos</option>
+                                    {% for equipmentId, equipmentName in equipmentOptions %}<option value="{{ equipmentId }}">{{ equipmentName }}</option>{% endfor %}
+                                </select>
+                            </label>
+                            <button class="execution-clear" type="button" data-action="click->admin--production-execution-queue#clear">Limpiar</button>
+                        </div>
+                    </section>
+
+                    <nav class="execution-tabs" role="group" aria-label="Filtrar cola de ejecución">
+                        <button class="is-active" type="button" aria-pressed="true" data-filter="queue" data-action="click->admin--production-execution-queue#selectTab">{{ isQueueManager ? 'Cola de producción' : 'Mi cola' }} <span>({{ queueCount }})</span></button>
+                        <button type="button" aria-pressed="false" data-filter="in_progress" data-action="click->admin--production-execution-queue#selectTab">En curso <span>({{ stats.in_progress }})</span></button>
+                        <button type="button" aria-pressed="false" data-filter="ready" data-action="click->admin--production-execution-queue#selectTab">Por iniciar <span>({{ stats.ready }})</span></button>
+                        <button type="button" aria-pressed="false" data-filter="paused_blocked" data-action="click->admin--production-execution-queue#selectTab">Pausadas / bloqueadas <span>({{ stats.paused_blocked }})</span></button>
+                        <button type="button" aria-pressed="false" data-filter="completed" data-action="click->admin--production-execution-queue#selectTab">Completadas hoy <span>({{ stats.completed_today }})</span></button>
+                    </nav>
+
+                    {% if featuredPlan %}
+                        {% include 'admin/production_execution/_task.html.twig' with {plan: featuredPlan, isFeatured: true} %}
+                    {% endif %}
+                </div>
+
+                {% if featuredPlan %}
+                    <aside class="execution-route-panel" data-admin--production-execution-queue-target="routePanel" aria-label="Ruta de esta partida">
+                        <h2>Ruta de esta partida</h2>
+                        <ol>
+                            {% for routePlan in routePlansByPlanId[featuredPlan.id]|default([]) %}
+                                {% set routeLatest = routePlan.latestExecution %}
+                                {% set routeIsCurrent = routePlan.id == featuredPlan.id %}
+                                {% set routeState = routeIsCurrent ? taskStates[featuredPlan.id] : (routeLatest and routeLatest.status.value == 'COMPLETED' ? 'completed' : 'next') %}
+                                <li class="execution-route-panel__step execution-route-panel__step--{{ routeState }}">
+                                    <span class="execution-route-panel__mark"><i class="bi {{ routeState == 'completed' ? 'bi-check-lg' : (routeState == 'blocked' ? 'bi-lock-fill' : (routeState == 'in_progress' ? 'bi-play-fill' : 'bi-circle-fill')) }}" aria-hidden="true"></i></span>
+                                    <span class="execution-route-panel__copy">
+                                        <strong>{{ routePlan.operationSnapshot.name|default(routePlan.operation.name) }}</strong>
+                                        <span>{{ routeState == 'completed' ? 'Completado' : (routeState == 'in_progress' ? 'En curso' : (routeState == 'ready' ? 'Listo para iniciar' : (routeState == 'blocked' ? 'Bloqueado' : (routeState == 'paused' ? 'Pausado' : 'Siguiente')))) }}</span>
+                                        {% if routeIsCurrent and routePlan.equipment %}<small>{{ routePlan.equipmentSnapshot.name|default(routePlan.equipment.name) }}</small>{% endif %}
+                                    </span>
+                                </li>
+                            {% endfor %}
+                        </ol>
+                    </aside>
+                {% endif %}
             </div>
-        </section>
 
-        <nav class="execution-tabs" role="tablist" aria-label="Filtrar cola de ejecución">
-            <button class="is-active" type="button" role="tab" aria-selected="true" data-filter="queue" data-action="click->admin--production-execution-queue#selectTab">{{ isQueueManager ? 'Cola de producción' : 'Mi cola' }} <span>({{ queueCount }})</span></button>
-            <button type="button" role="tab" aria-selected="false" data-filter="in_progress" data-action="click->admin--production-execution-queue#selectTab">En curso <span>({{ stats.in_progress }})</span></button>
-            <button type="button" role="tab" aria-selected="false" data-filter="ready" data-action="click->admin--production-execution-queue#selectTab">Por iniciar <span>({{ stats.ready }})</span></button>
-            <button type="button" role="tab" aria-selected="false" data-filter="paused_blocked" data-action="click->admin--production-execution-queue#selectTab">Pausadas / bloqueadas <span>({{ stats.paused_blocked }})</span></button>
-            <button type="button" role="tab" aria-selected="false" data-filter="completed" data-action="click->admin--production-execution-queue#selectTab">Completadas hoy <span>({{ stats.completed_today }})</span></button>
-        </nav>
-
-        {% if plans is empty %}
-            <section class="pf-card execution-empty">
-                <span class="execution-empty__icon"><i class="bi bi-inboxes" aria-hidden="true"></i></span>
-                <h2>{{ isQueueManager ? 'No hay operaciones activas' : 'Tu cola está al día' }}</h2>
-                <p>{% if isQueueManager %}Las operaciones aparecerán cuando haya producción planificada pendiente.{% else %}Aquí aparecerán las operaciones que Producción te asigne. Si esperabas una tarea, consulta a tu supervisor.{% endif %}</p>
-            </section>
-        {% else %}
-            <section class="execution-task-list" data-admin--production-execution-queue-target="rows" aria-label="Operaciones de producción">
-                {% for plan in plans %}
-                    {% set item = plan.serviceOrderItem %}
-                    {% set order = item.serviceOrder %}
-                    {% set latest = plan.latestExecution %}
-                    {% set origin = reworkOrigins[plan.id]|default(null) %}
-                    {% set state = taskStates[plan.id] %}
-                    {% set canActOnPlan = canActOnPlans[plan.id]|default(false) %}
-                    {% set priorityValue = item.priority.value %}
-                    {% set priorityTone = priorityValue == 'urgent' ? 'urgent' : (priorityValue == 'high' ? 'high' : 'normal') %}
-                    {% set productName = item.commercialItemSnapshot.name|default(item.commercialItem.name) %}
-                    {% set operationName = plan.operationSnapshot.name|default(plan.operation.name) %}
-                    {% set statusLabel = state == 'in_progress' ? 'En curso' : (state == 'paused' ? 'Pausada' : (state == 'blocked' ? 'Bloqueada' : (state == 'completed' ? 'Completada hoy' : 'Lista para iniciar'))) %}
-                    {% set statusIcon = state == 'in_progress' ? 'bi-play-circle-fill' : (state == 'paused' ? 'bi-pause-circle-fill' : (state == 'blocked' ? 'bi-lock-fill' : (state == 'completed' ? 'bi-check-circle-fill' : 'bi-circle'))) %}
-                    {% set unitCode = item.commercialItemSnapshot.measurement_unit.code|default('') %}
-                    {% set equipmentName = plan.equipment ? (plan.equipmentSnapshot.name|default(plan.equipment.name)) : '' %}
-                    {% set responsible = state == 'completed' and latest ? latest.assignedOperator : plan.assignedOperator %}
-                    {% set elapsedSeconds = latest ? latest.activeSecondsAt : 0 %}
-                    {% set startBlock = startBlocks[plan.id]|default(null) %}
-                    <article class="execution-task execution-task--{{ state }}{% if state == 'in_progress' %} execution-task--featured{% endif %}" data-execution-row data-state="{{ state }}" data-priority="{{ priorityValue }}" data-equipment="{{ plan.equipment ? plan.equipment.id : '' }}" data-search="{{ (order.folio ~ ' ' ~ item.trackingCode ~ ' ' ~ productName ~ ' ' ~ operationName ~ ' ' ~ equipmentName)|lower }}">
-                        <header class="execution-task__header">
-                            <div class="execution-task__badges">
-                                <span class="execution-state execution-state--{{ state }}"><i class="bi {{ statusIcon }}" aria-hidden="true"></i>{{ statusLabel }}</span>
-                                <span class="execution-priority execution-priority--{{ priorityTone }}">{{ item.priority.label|upper }}</span>
-                            </div>
-                            <p class="execution-task__commitment{% if order.commitmentDate and order.commitmentDate|date('Y-m-d', 'America/Mexico_City') < 'now'|date('Y-m-d', 'America/Mexico_City') and state != 'completed' %} is-late{% endif %}">
-                                <i class="bi bi-calendar3" aria-hidden="true"></i>{% if order.commitmentDate %}Compromiso {{ order.commitmentDate|date('d/m/Y', 'America/Mexico_City') }}{% else %}Sin fecha compromiso{% endif %}
-                            </p>
-                        </header>
-
-                        <div class="execution-task__main">
-                            <div class="execution-task__identity">
-                                <p class="execution-task__folio">{{ order.folio }} <span>· Partida {{ item.displayLineNumber }}</span></p>
-                                <h2>{{ productName }}</h2>
-                                <p class="execution-task__operation">{{ operationName }} <span>· {{ plan.operationSnapshot.area_name|default(plan.operation.operationArea.name) }}</span></p>
-                            </div>
-                            {% if state == 'in_progress' and latest and latest.status.value == 'IN_PROGRESS' %}
-                                <div class="execution-clock">
-                                    <i class="bi bi-clock" aria-hidden="true"></i>
-                                    <div><strong data-execution-clock data-seconds="{{ elapsedSeconds }}" data-running="true">--:--:--</strong><span>Tiempo activo</span>
-                                        <small>{% if plan.estimatedMinutes %}Estimado {{ plan.estimatedMinutes }} min{% else %}Sin estimación de tiempo{% endif %}</small>
-                                    </div>
-                                </div>
-                            {% elseif state == 'paused' and latest %}
-                                <div class="execution-clock execution-clock--paused"><i class="bi bi-pause-circle" aria-hidden="true"></i><div><strong data-execution-clock data-seconds="{{ elapsedSeconds }}" data-running="false">--:--:--</strong><span>Tiempo activo acumulado</span><small>{% if latest.pauseReason %}Pausa: {{ latest.pauseReason }}{% endif %}</small></div></div>
+            {% if plans is empty %}
+                <section class="pf-card execution-empty">
+                    <span class="execution-empty__icon"><i class="bi bi-inboxes" aria-hidden="true"></i></span>
+                    <h2>{{ isQueueManager ? 'No hay operaciones activas' : 'Tu cola está al día' }}</h2>
+                    <p>{% if isQueueManager %}Las operaciones aparecerán cuando haya producción planificada pendiente.{% else %}Aquí aparecerán las operaciones que Producción te asigne. Si esperabas una tarea, consulta a tu supervisor.{% endif %}</p>
+                </section>
+            {% else %}
+                <section class="execution-following" data-admin--production-execution-queue-target="following" aria-label="Siguientes operaciones">
+                    <header class="execution-following__header">
+                        <h2>Siguientes operaciones</h2>
+                        <p>La más urgente aparece primero.</p>
+                    </header>
+                    <div class="execution-following__notice"><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>Una operación bloqueada se habilita al terminar el paso anterior o al resolver su incidencia.</div>
+                    <div class="execution-following__list">
+                        {% for plan in plans %}
+                            {% if plan.id != featuredPlanId %}
+                                {% include 'admin/production_execution/_task.html.twig' with {plan: plan, isFeatured: false} %}
                             {% endif %}
-                        </div>
-
-                        <div class="execution-task__details">
-                            <div><i class="bi bi-pc-display" aria-hidden="true"></i><span><small>Equipo</small><strong>{{ equipmentName ?: 'Por asignar' }}</strong></span></div>
-                            <div><i class="bi bi-box-seam" aria-hidden="true"></i><span><small>Cantidad</small><strong>{{ item.quantity|number_format(6, '.', ',')|trim('0', 'right')|trim('.', 'right') }} {{ unitCode }}</strong></span></div>
-                            <div><i class="bi bi-person" aria-hidden="true"></i><span><small>Responsable</small><strong>{% if responsible and responsible.id == actorId %}Tú{% else %}{{ responsible ? responsible.fullName : 'Sin asignar' }}{% endif %}</strong></span></div>
-                            {% if latest %}<div><i class="bi bi-arrow-repeat" aria-hidden="true"></i><span><small>Intento</small><strong>#{{ latest.attemptNumber }}{% if origin %} · Retrabajo{% endif %}</strong></span></div>{% endif %}
-                        </div>
-
-                        {% if state in ['blocked', 'paused'] %}
-                            <div class="execution-notice execution-notice--{{ state }}" role="status">
-                                <i class="bi {{ state == 'paused' ? 'bi-pause-circle' : 'bi-exclamation-triangle' }}" aria-hidden="true"></i>
-                                <span><strong>{{ state == 'paused' ? 'Operación pausada' : 'No disponible todavía' }}</strong>{{ plan.blockedReason|default(startBlock|default('')) }}</span>
-                            </div>
-                        {% endif %}
-
-                        <div class="execution-route" aria-label="Ruta de producción, paso {{ plan.sequenceNumber }}">
-                            <div class="execution-route__heading"><strong>Ruta de producción</strong><span>Paso {{ plan.sequenceNumber }}</span></div>
-                            <ol>
-                                {% for routePlan in routePlansByPlanId[plan.id]|default([]) %}
-                                    {% set routeLatest = routePlan.latestExecution %}
-                                    {% set routeIsCurrent = routePlan.id == plan.id %}
-                                    {% set routeStepState = routeIsCurrent ? state : (routeLatest and routeLatest.status.value == 'COMPLETED' ? 'completed' : (routePlan.sequenceNumber < plan.sequenceNumber ? 'waiting' : 'next')) %}
-                                    {% set routeStepLabel = routeStepState == 'completed' ? 'Completado' : (routeStepState == 'in_progress' ? 'En curso' : (routeStepState == 'paused' ? 'Pausada' : (routeStepState == 'blocked' ? 'Bloqueada' : (routeStepState == 'ready' ? 'Lista' : (routeStepState == 'waiting' ? 'Pendiente' : 'Siguiente'))))) %}
-                                    <li class="execution-route__step execution-route__step--{{ routeStepState }}{% if routeIsCurrent %} is-current{% endif %}">
-                                        <span class="execution-route__dot"><i class="bi {{ routeStepState == 'completed' ? 'bi-check' : (routeStepState == 'blocked' ? 'bi-lock-fill' : '') }}" aria-hidden="true"></i></span>
-                                        <span><strong>{{ routePlan.operationSnapshot.name|default(routePlan.operation.name) }}</strong><small>{{ routeStepLabel }}</small></span>
-                                    </li>
-                                {% endfor %}
-                            </ol>
-                        </div>
-
-                        <footer class="execution-task__actions">
-                            {% if specializedKinds[plan.id]|default(null) == 'printing' %}
-                                <a class="btn pf-button pf-button--secondary" href="{{ path('admin_printing_show', {id: plan.id}) }}">Abrir en Impresión <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
-                            {% elseif specializedKinds[plan.id]|default(null) == 'design' %}
-                                {% if is_granted('production.design.review') %}<a class="btn pf-button pf-button--secondary" href="{{ path('admin_design_show', {id: item.id}) }}">Abrir en Diseño <i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% else %}<span class="execution-action-hint">Esta etapa la atiende el equipo de Diseño.</span>{% endif %}
-                            {% elseif state == 'in_progress' and latest and latest.status.value == 'IN_PROGRESS' and canExecute and canActOnPlan %}
-                                <details class="execution-pause">
-                                    <summary class="btn pf-button pf-button--secondary"><i class="bi bi-pause-fill" aria-hidden="true"></i> Pausar</summary>
-                                    <form method="post" action="{{ path('admin_production_execution_pause', {id: latest.id}) }}" class="execution-pause__form">
-                                        <input type="hidden" name="_token" value="{{ csrf_token('production-execution-pause-' ~ latest.id) }}">
-                                        <input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}">
-                                        <input type="hidden" name="command_id" value="{{ commandIds.execution[latest.id].pause }}">
-                                        <label for="pause-note-{{ latest.id }}">Motivo de la pausa</label>
-                                        <textarea id="pause-note-{{ latest.id }}" name="note" minlength="5" maxlength="500" required placeholder="Describe por qué se detuvo la operación"></textarea>
-                                        <button class="btn pf-button pf-button--secondary btn-sm" type="submit">Confirmar pausa</button>
-                                    </form>
-                                </details>
-                                <form method="post" action="{{ path('admin_production_execution_complete', {id: latest.id}) }}">
-                                    <input type="hidden" name="_token" value="{{ csrf_token('production-execution-complete-' ~ latest.id) }}">
-                                    <input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}">
-                                    <input type="hidden" name="command_id" value="{{ commandIds.execution[latest.id].complete }}">
-                                    <button class="btn pf-button pf-button--primary" type="submit"><i class="bi bi-check2-circle" aria-hidden="true"></i> Completar operación</button>
-                                </form>
-                            {% elseif state == 'in_progress' %}
-                                <span class="execution-action-hint"><i class="bi bi-info-circle" aria-hidden="true"></i>{% if canActOnPlan and not canExecute %}Tu perfil no tiene permiso para ejecutar operaciones.{% else %}En curso con {{ plan.assignedOperator ? plan.assignedOperator.fullName : 'un responsable sin asignar' }}.{% endif %}</span>
-                            {% elseif state == 'paused' and latest and latest.status.value == 'PAUSED' and not plan.blockedReason and canExecute and canActOnPlan %}
-                                <form method="post" action="{{ path('admin_production_execution_resume', {id: latest.id}) }}">
-                                    <input type="hidden" name="_token" value="{{ csrf_token('production-execution-resume-' ~ latest.id) }}">
-                                    <input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}">
-                                    <input type="hidden" name="command_id" value="{{ commandIds.execution[latest.id].resume }}">
-                                    <button class="btn pf-button pf-button--primary" type="submit"><i class="bi bi-play-fill" aria-hidden="true"></i> Reanudar operación</button>
-                                </form>
-                            {% elseif state == 'paused' %}
-                                <span class="execution-action-hint"><i class="bi bi-info-circle" aria-hidden="true"></i>{% if plan.blockedReason %}Resuelve el bloqueo antes de reanudar.{% elseif canActOnPlan and not canExecute %}Tu perfil no tiene permiso para ejecutar operaciones.{% else %}Asignada a {{ plan.assignedOperator ? plan.assignedOperator.fullName : 'un responsable sin asignar' }}.{% endif %}</span>
-                            {% elseif state == 'ready' and canExecute and canActOnPlan and order.isPlanned %}
-                                <form method="post" action="{{ path('admin_production_execution_start', {id: plan.id}) }}">
-                                    <input type="hidden" name="_token" value="{{ csrf_token('production-execution-start-' ~ plan.id) }}">
-                                    <input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}">
-                                    <input type="hidden" name="command_id" value="{{ commandIds.plan[plan.id].start }}">
-                                    {% if origin %}<input type="hidden" name="origin_execution_id" value="{{ origin.id }}">{% endif %}
-                                    <button class="btn pf-button pf-button--primary" type="submit"><i class="bi bi-play-fill" aria-hidden="true"></i> {{ origin ? 'Iniciar retrabajo' : 'Iniciar operación' }}</button>
-                                </form>
-                            {% elseif state == 'ready' and not canActOnPlan %}
-                                <span class="execution-action-hint">{{ plan.assignedOperator ? 'Asignada a ' ~ plan.assignedOperator.fullName : 'Pendiente de asignación por Producción' }}</span>
-                            {% elseif state == 'ready' and not canExecute %}
-                                <span class="execution-action-hint"><i class="bi bi-info-circle" aria-hidden="true"></i> Tu perfil no tiene permiso para ejecutar operaciones.</span>
-                            {% elseif state == 'blocked' %}
-                                <span class="execution-action-hint"><i class="bi bi-info-circle" aria-hidden="true"></i>{{ canManageIncidents ? 'Revisa el bloqueo o espera la etapa anterior.' : 'Solicita apoyo a Producción para continuar.' }}</span>
-                            {% elseif state == 'completed' %}
-                                <span class="execution-action-hint"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Finalizada {{ latest.completedAt|date('H:i', 'America/Mexico_City') }}</span>
-                            {% endif %}
-                        </footer>
-
-                        {% if canManageIncidents and specializedKinds[plan.id]|default(null) is empty %}
-                            {% if plan.blockedReason starts with 'Incidencia:' %}
-                                <details class="execution-admin-details">
-                                    <summary>Resolver incidencia</summary>
-                                    <form method="post" action="{{ path('admin_production_execution_resolve_issue', {id: plan.id}) }}" class="execution-inline-form">
-                                        <input type="hidden" name="_token" value="{{ csrf_token('production-issue-resolve-' ~ plan.id) }}"><input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}"><input type="hidden" name="command_id" value="{{ commandIds.plan[plan.id].resolve_issue }}">
-                                        <label class="visually-hidden" for="resolve-issue-{{ plan.id }}">Resolución aplicada</label><input id="resolve-issue-{{ plan.id }}" class="form-control form-control-sm" name="note" minlength="5" maxlength="220" required placeholder="Resolución aplicada"><button class="btn pf-button pf-button--secondary btn-sm" type="submit">Resolver</button>
-                                    </form>
-                                </details>
-                            {% elseif (not latest or not latest.isOpen) and not plan.blockedReason and not startBlock and state != 'completed' %}
-                                <details class="execution-admin-details">
-                                    <summary>Registrar incidencia</summary>
-                                    <form method="post" action="{{ path('admin_production_execution_open_issue', {id: plan.id}) }}" class="execution-inline-form">
-                                        <input type="hidden" name="_token" value="{{ csrf_token('production-issue-open-' ~ plan.id) }}"><input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}"><input type="hidden" name="command_id" value="{{ commandIds.plan[plan.id].open_issue }}">
-                                        <label class="visually-hidden" for="issue-{{ plan.id }}">Motivo de incidencia</label><input id="issue-{{ plan.id }}" class="form-control form-control-sm" name="note" minlength="5" maxlength="220" required placeholder="Motivo del bloqueo"><button class="btn pf-button pf-button--secondary btn-sm" type="submit">Registrar incidencia</button>
-                                    </form>
-                                </details>
-                            {% endif %}
-                        {% endif %}
-
-                        {% set canSeeMaterials = canManageIncidents or (canExecute and canActOnPlan and latest and latest.status.value == 'IN_PROGRESS') %}
-                        {% if canSeeMaterials and specializedKinds[plan.id]|default(null) is empty %}
-                            <details class="execution-admin-details execution-materials">
-                                <summary>Materiales previstos y usados</summary>
-                                {% set usages = materialUsages[plan.id]|default([]) %}
-                                {% if usages is not empty %}
-                                    <div class="table-responsive mt-2"><table class="table table-sm align-middle mb-3"><thead><tr><th>Material</th><th>Previsto</th><th>Usado</th><th>Merma</th><th>Unidad</th><th>Intento</th></tr></thead><tbody>{% for usage in usages %}<tr><td>{{ usage.materialNameSnapshot }}</td><td>{{ usage.plannedQuantity }}</td><td>{{ usage.actualQuantity is not null ? usage.actualQuantity : '—' }}</td><td>{{ usage.wasteQuantity is not null ? usage.wasteQuantity : '—' }}</td><td>{{ usage.unitLabelSnapshot }}</td><td>{{ usage.operationExecution ? '#' ~ usage.operationExecution.attemptNumber : 'Previsto' }}</td></tr>{% endfor %}</tbody></table></div>
-                                {% else %}<p class="small text-body-secondary mt-2 mb-2">Aún no hay materiales registrados para esta operación.</p>{% endif %}
-
-                                {% if canManageIncidents and (not latest or not latest.isOpen) and not plan.hasCompletedLatestExecution %}
-                                    <form method="post" action="{{ path('admin_production_execution_plan_material', {id: plan.id}) }}" class="execution-material-form">
-                                        <input type="hidden" name="_token" value="{{ csrf_token('production-material-planned-' ~ plan.id) }}"><input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}"><input type="hidden" name="command_id" value="{{ commandIds.plan[plan.id].plan_material }}">
-                                        <label>Material previsto<select class="form-select form-select-sm" name="material_variant_id" required><option value="">Selecciona material</option>{% for material in materialChoices %}<option value="{{ material.id }}">{{ material.material.name }} · {{ material.code }} · {{ material.consumptionUnit.symbol }}</option>{% endfor %}</select></label>
-                                        <label>Cantidad<input class="form-control form-control-sm" name="quantity" inputmode="decimal" required></label><button class="btn pf-button pf-button--secondary btn-sm" type="submit">Agregar previsto</button>
-                                    </form>
-                                {% endif %}
-
-                                {% if canExecute and canActOnPlan and latest and latest.status.value == 'IN_PROGRESS' %}
-                                    <form method="post" action="{{ path('admin_production_execution_actual_material', {id: latest.id}) }}" class="execution-material-form">
-                                        <input type="hidden" name="_token" value="{{ csrf_token('production-material-used-' ~ latest.id) }}"><input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}"><input type="hidden" name="command_id" value="{{ commandIds.execution[latest.id].actual_material }}">
-                                        <label>Material usado<input class="form-control form-control-sm" name="material_name" minlength="2" maxlength="180" required></label><label>Cantidad<input class="form-control form-control-sm" name="quantity" inputmode="decimal" required></label><label>Unidad<input class="form-control form-control-sm" name="unit" maxlength="40" required placeholder="m², m, kg"></label><label>Merma<input class="form-control form-control-sm" name="waste" inputmode="decimal" value="0"></label><label>Motivo de merma<input class="form-control form-control-sm" name="waste_reason" maxlength="220"></label><button class="btn pf-button pf-button--secondary btn-sm" type="submit">Registrar material usado</button>
-                                    </form>
-                                {% endif %}
-                            </details>
-                        {% endif %}
-                    </article>
-                {% endfor %}
-            </section>
-            <div class="pf-card execution-no-results" hidden data-admin--production-execution-queue-target="empty"><i class="bi bi-search" aria-hidden="true"></i><strong>No hay operaciones con esos filtros.</strong><span>Ajusta la búsqueda o limpia los filtros.</span></div>
-        {% endif %}
+                        {% endfor %}
+                    </div>
+                </section>
+                <div class="pf-card execution-no-results" hidden data-admin--production-execution-queue-target="empty"><i class="bi bi-search" aria-hidden="true"></i><strong>No hay operaciones con esos filtros.</strong><span>Ajusta la búsqueda o limpia los filtros.</span></div>
+            {% endif %}
+        </div>
     </section>
 {% endblock %}

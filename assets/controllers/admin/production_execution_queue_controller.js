@@ -1,7 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 
 export default class extends Controller {
-    static targets = ['search', 'status', 'priority', 'equipment', 'rows', 'empty'];
+    static targets = ['search', 'status', 'priority', 'equipment', 'rows', 'empty', 'routePanel', 'following'];
 
     connect() {
         this.activeTab = 'queue';
@@ -42,6 +42,18 @@ export default class extends Controller {
             if (matches) visibleRows += 1;
         });
 
+        const featured = this.rowsTarget.querySelector('.execution-task--featured');
+        if (this.hasRoutePanelTarget) {
+            this.routePanelTarget.hidden = !featured || featured.hidden;
+            this.routePanelTarget.parentElement.classList.toggle('is-route-hidden', this.routePanelTarget.hidden);
+        }
+        if (this.hasFollowingTarget) {
+            this.followingTarget.hidden = !this.followingTarget.querySelector('[data-execution-row]:not([hidden])');
+            const blockedVisible = this.followingTarget.querySelector('.execution-task--blocked:not([hidden])');
+            const notice = this.followingTarget.querySelector('.execution-following__notice');
+            if (notice) notice.hidden = !blockedVisible;
+        }
+
         if (this.hasEmptyTarget) {
             this.emptyTarget.hidden = visibleRows > 0 || rows.length === 0;
         }
@@ -64,10 +76,10 @@ export default class extends Controller {
 
     activateTab(filter) {
         this.activeTab = filter;
-        this.element.querySelectorAll('.execution-tabs [role="tab"]').forEach((tab) => {
+        this.element.querySelectorAll('.execution-tabs button').forEach((tab) => {
             const selected = tab.dataset.filter === filter;
             tab.classList.toggle('is-active', selected);
-            tab.setAttribute('aria-selected', String(selected));
+            tab.setAttribute('aria-pressed', String(selected));
         });
     }
 

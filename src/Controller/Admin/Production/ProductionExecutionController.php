@@ -231,8 +231,19 @@ final class ProductionExecutionController extends AbstractController
                 <=> [$right->getServiceOrderItem()->getLineNumber(), $right->getSequenceNumber()];
         });
 
+        $featuredPlanId = null;
+        foreach (['in_progress', 'ready', 'paused', 'blocked'] as $featuredState) {
+            foreach ($plans as $plan) {
+                if ($taskStates[(int) $plan->getId()] === $featuredState) {
+                    $featuredPlanId = (int) $plan->getId();
+                    break 2;
+                }
+            }
+        }
+
         return $this->render('admin/production_execution/index.html.twig', [
             'plans' => $plans,
+            'featuredPlanId' => $featuredPlanId,
             'reworkOrigins' => $reworkOrigins,
             'specializedKinds' => $specializedKinds,
             'startBlocks' => $startBlocks,
