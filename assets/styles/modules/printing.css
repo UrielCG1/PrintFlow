@@ -328,6 +328,44 @@
 .printing-usage-list strong { color: #273956; }
 .printing-usage-list span, .printing-usage-list time { color: #687792; }
 
+.printing-close-card { max-width: 76rem; padding: 1.15rem; }
+.printing-completion-form { gap: 0.9rem !important; }
+.printing-validation-summary { padding: 0.7rem 0.85rem; color: #842029; background: #fff0f0; border: 1px solid #f1c2c5; border-radius: 0.5rem; font-size: 0.84rem; font-weight: 600; }
+.printing-validation-summary[hidden] { display: none; }
+.printing-plan-summary { display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 1rem; color: #155d2b; background: #effaf0; border: 1px solid #cfead3; border-radius: 0.6rem; }
+.printing-plan-summary__icon { display: grid; width: 2.35rem; height: 2.35rem; flex: 0 0 auto; place-items: center; background: #d9f3dd; border-radius: 0.55rem; font-size: 1.15rem; }
+.printing-plan-summary > div { display: grid; gap: 0.18rem; }
+.printing-plan-summary strong { font-size: 0.9rem; }
+.printing-plan-summary span:not(.printing-plan-summary__icon) { color: #42694a; font-size: 0.8rem; }
+.printing-form-section { display: grid; gap: 0.85rem; padding: 1rem; background: #fbfcfe; border: 1px solid #e0e6ef; border-radius: 0.65rem; }
+.printing-form-section__heading { display: flex; align-items: flex-start; gap: 0.7rem; }
+.printing-form-section__heading > span { display: grid; width: 1.8rem; height: 1.8rem; flex: 0 0 auto; place-items: center; color: #24518b; background: #e9f0ff; border-radius: 50%; font-size: 0.72rem; font-weight: 700; }
+.printing-form-section__heading h3 { margin: 0; color: #142844; font-size: 0.96rem; font-weight: 700; }
+.printing-form-section__heading p { margin: 0.18rem 0 0; color: #66758c; font-size: 0.78rem; }
+.printing-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem; }
+.printing-field { display: grid; align-content: start; gap: 0.25rem; min-width: 0; }
+.printing-field .form-label { margin: 0; color: #243752; font-size: 0.83rem; font-weight: 650; }
+.printing-field .form-control, .printing-field .form-select { min-height: 2.65rem; border-color: #cbd6e7; font-size: 0.88rem; }
+.printing-field textarea.form-control { min-height: 5rem; }
+.printing-field__required, .printing-field__optional { display: inline-flex; align-items: center; margin-left: 0.2rem; color: #66758c; font-size: 0.68rem; font-weight: 500; }
+.printing-field__required { color: #a33131; }
+.printing-field__conditional { display: inline-flex; align-items: center; margin-left: 0.2rem; color: #80601c; font-size: 0.68rem; font-weight: 600; }
+.printing-field-help { margin: 0; color: #687792; font-size: 0.75rem; line-height: 1.45; }
+.printing-form-details { padding: 0.85rem 1rem; background: #fff; border: 1px solid #e0e6ef; border-radius: 0.6rem; }
+.printing-form-details > summary { color: #315786; cursor: pointer; font-size: 0.84rem; font-weight: 700; list-style: none; }
+.printing-form-details > summary::-webkit-details-marker { display: none; }
+.printing-form-details > summary::after { float: right; content: "⌄"; font-size: 1rem; }
+.printing-form-details[open] > summary { margin-bottom: 0.8rem; }
+.printing-form-details__body { display: grid; gap: 0.9rem; }
+.printing-surplus-fields { display: grid; gap: 0.7rem; margin: 0; padding: 0.8rem; border: 1px solid #e4e9f1; border-radius: 0.5rem; }
+.printing-surplus-fields legend { float: none; width: auto; margin: 0; color: #243752; font-size: 0.82rem; font-weight: 700; }
+.printing-surplus-fields > .printing-field-help { margin-top: -0.55rem; }
+.printing-completion-form > .form-check { padding: 0.7rem 0.8rem 0.7rem 2.4rem; background: #f6f8fb; border: 1px solid #e5eaf1; border-radius: 0.5rem; }
+.printing-completion-form > .form-check .form-check-input { margin-left: -1.55rem; }
+.printing-completion-form > .form-check .form-check-label { color: #344761; font-size: 0.8rem; line-height: 1.45; }
+.printing-completion-form > .printing-wide-button { min-height: 2.8rem; font-size: 0.88rem; font-weight: 700; }
+.printing-completion-form > .printing-wide-button:focus-visible { outline: 3px solid rgba(8, 117, 43, 0.24); outline-offset: 2px; }
+
 @media (max-width: 1199.98px) {
     .printing-filters { grid-template-columns: minmax(12rem, 1.5fr) repeat(2, minmax(8rem, 1fr)); }
     .printing-search { grid-column: span 2; }
@@ -376,6 +414,9 @@
     .printing-instructions-card, .printing-close-card { grid-column: auto; }
     .printing-detail-card { padding: 0.75rem; }
     .printing-label-preview { grid-template-columns: minmax(6rem, 0.7fr) minmax(0, 1.3fr); }
+    .printing-field-grid { grid-template-columns: minmax(0, 1fr); }
+    .printing-close-card { padding: 0.8rem; }
+    .printing-form-section { padding: 0.8rem; }
 }
 
 @media (max-width: 420px) {
