@@ -1,0 +1,108 @@
+{% extends 'layouts/app.html.twig' %}
+
+{% block title %}Calendario de producción | OoxCorp{% endblock %}
+{% block app_navigation_active %}production_board{% endblock %}
+{% block app_breadcrumb %}Operación / Trabajo diario / Calendario{% endblock %}
+
+{% block app_content %}
+<div class="pf-page__content pf-production-board"
+     data-controller="admin--production-board"
+     data-admin--production-board-initial-value="{{ board|json_encode|e('html_attr') }}"
+     data-admin--production-board-events-url-value="{{ path('admin_production_board_events') }}"
+     data-admin--production-board-preview-url-value="{{ path('admin_production_board_move_preview', {id: 0}) }}"
+     data-admin--production-board-confirm-url-value="{{ path('admin_production_board_move_confirm', {id: 0}) }}"
+     data-admin--production-board-csrf-value="{{ csrf_token('production-board-move') }}"
+     data-admin--production-board-can-manage-value="{{ canManage ? 'true' : 'false' }}">
+    <header class="pf-page-header pf-production-board__header">
+        <div class="pf-page-header__content">
+            <span class="pf-production-board__eyebrow">Trabajo diario</span>
+            <h1 class="pf-page-header__title">Calendario de producción</h1>
+            <p class="pf-page-header__description">{{ canManage ? 'Capacidad y reservas por máquina para coordinar la jornada.' : 'Consulta las reservas de todas las máquinas y ubica tu siguiente operación.' }}</p>
+        </div>
+        <div class="pf-production-board__date-nav" aria-label="Navegación de fechas">
+            <button type="button" class="btn pf-button pf-button--secondary" data-action="admin--production-board#previous" aria-label="Periodo anterior"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+            <input type="date" aria-label="Fecha del calendario" value="{{ board.date }}" data-admin--production-board-target="date" data-action="change->admin--production-board#changeDate">
+            <button type="button" class="btn pf-button pf-button--secondary" data-action="admin--production-board#next" aria-label="Periodo siguiente"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+            <button type="button" class="btn pf-button pf-button--secondary" data-action="admin--production-board#today">Hoy</button>
+        </div>
+    </header>
+
+    <div class="pf-production-board__summary" aria-live="polite" data-admin--production-board-target="summary"></div>
+
+    <section class="pf-production-board__controls" aria-label="Vista y filtros del calendario">
+        <div class="pf-production-board__view-switch" role="group" aria-label="Tipo de vista">
+            <button type="button" class="is-active" data-admin--production-board-target="dayButton" data-action="admin--production-board#showDay">Día · máquinas</button>
+            {% if canManage %}<button type="button" data-admin--production-board-target="weekButton" data-action="admin--production-board#showWeek">Semana · capacidad</button>{% endif %}
+        </div>
+        <div class="pf-production-board__legend" aria-label="Estados">
+            <span><i class="is-reserved"></i> Reservada</span><span><i class="is-progress"></i> En curso</span><span><i class="is-paused"></i> Pausada o bloqueada</span><span><i class="is-completed"></i> Ejecutada</span>
+        </div>
+    </section>
+
+    {% if canManage %}
+    <form class="pf-production-board__filters" data-action="change->admin--production-board#applyFilters submit->admin--production-board#applyFilters" aria-label="Filtrar reservas">
+        <label>Máquina<select name="equipment" data-admin--production-board-target="equipmentFilter"><option value="">Todas</option>{% for resource in board.resources %}<option value="{{ resource.id }}">{{ resource.name }}</option>{% endfor %}</select></label>
+        <label>Área<select name="area" data-admin--production-board-target="areaFilter"><option value="">Todas</option>{% for id, name in board.options.area %}<option value="{{ id }}">{{ name }}</option>{% endfor %}</select></label>
+        <label>Operación<select name="operation" data-admin--production-board-target="operationFilter"><option value="">Todas</option>{% for id, name in board.options.operation %}<option value="{{ id }}">{{ name }}</option>{% endfor %}</select></label>
+        <label>Estado<select name="status"><option value="">Todos</option><option value="reserved">Reservada</option><option value="pending">Sin horario</option><option value="in_progress">En curso</option><option value="paused">Pausada</option><option value="blocked">Bloqueada</option><option value="completed">Ejecutada</option></select></label>
+        <label>Prioridad<select name="priority"><option value="">Todas</option><option value="urgent">Urgente</option><option value="high">Alta</option><option value="normal">Normal</option></select></label>
+        <label>Responsable<select name="responsible" data-admin--production-board-target="responsibleFilter"><option value="">Todos</option>{% for id, name in board.options.responsible %}<option value="{{ id }}">{{ name }}</option>{% endfor %}</select></label>
+        <label>Riesgo<select name="risk"><option value="">Todos</option><option value="late">En riesgo</option><option value="tight">Holgura baja</option><option value="on_track">En tiempo</option><option value="unplanned">Sin pronóstico</option><option value="no_commitment">Sin compromiso</option></select></label>
+        <label>Orden<input type="search" name="order" maxlength="80" placeholder="Folio OS-…"></label>
+        <label>Producto<input type="search" name="product" maxlength="80" placeholder="Nombre del producto"></label>
+        <button type="submit" class="btn pf-button pf-button--secondary">Aplicar</button>
+        <button type="reset" class="btn pf-button pf-button--secondary" data-action="admin--production-board#clearFilters">Limpiar</button>
+    </form>
+    {% endif %}
+
+    <section class="pf-production-board__calendar-card" aria-labelledby="production-board-heading">
+        <div class="pf-production-board__section-head"><div><span class="pf-production-board__eyebrow">Agenda operativa · Ciudad de México</span><h2 id="production-board-heading" data-admin--production-board-target="periodTitle">Reservas por máquina</h2></div><span data-admin--production-board-target="count"></span></div>
+        <p class="pf-production-board__notice" data-admin--production-board-target="notice" role="status" hidden></p>
+        <div class="pf-production-board__canvas" data-admin--production-board-target="canvas"></div>
+        <div class="pf-production-board__empty" data-admin--production-board-target="empty" hidden>No hay reservas para los filtros y la fecha seleccionados.</div>
+        <p class="pf-production-board__attribution">Calendario con <a href="https://www.daypilot.org/" rel="noopener noreferrer" target="_blank">DayPilot Lite</a>.</p>
+    </section>
+
+    <section class="pf-production-board__backlog" aria-labelledby="production-board-backlog-heading">
+        <div class="pf-production-board__section-head"><div><span class="pf-production-board__eyebrow">Seguimiento actual · independiente de la fecha seleccionada</span><h2 id="production-board-backlog-heading">Pendientes sin horario</h2></div><span data-admin--production-board-target="backlogCount"></span></div>
+        <div class="pf-production-board__backlog-list" data-admin--production-board-target="backlog"></div>
+    </section>
+
+    {% if canManage %}
+    <section class="pf-production-board__capacity" data-admin--production-board-target="capacity" hidden aria-label="Capacidad semanal por máquina"></section>
+    {% endif %}
+
+    <section class="pf-production-board__mobile-list" aria-label="Reservas en lista">
+        <h2>Reservas del periodo</h2>
+        <div data-admin--production-board-target="list"></div>
+    </section>
+
+    <dialog class="pf-production-board__dialog" data-admin--production-board-target="detailDialog" aria-labelledby="board-detail-heading">
+        <div class="pf-production-board__dialog-head"><h2 id="board-detail-heading">Detalle de la reserva</h2><button type="button" aria-label="Cerrar" data-action="admin--production-board#closeDetail"><i class="bi bi-x-lg" aria-hidden="true"></i></button></div>
+        <div data-admin--production-board-target="detail"></div>
+        {% if canManage %}
+        <form class="pf-production-board__manual-move" data-admin--production-board-target="manualMove" data-action="submit->admin--production-board#previewManualMove" hidden>
+            <h3>Proponer otro horario</h3>
+            <label>Máquina<select required data-admin--production-board-target="manualEquipment"></select></label>
+            <label>Inicio<input type="datetime-local" required data-admin--production-board-target="manualStart"></label>
+            <label>Fin<input type="datetime-local" required data-admin--production-board-target="manualEnd"></label>
+            <p class="pf-production-board__dialog-error" data-admin--production-board-target="manualError" role="alert" hidden></p>
+            <button type="submit" class="btn pf-button pf-button--primary">Verificar disponibilidad</button>
+        </form>
+        {% endif %}
+        <div class="pf-production-board__dialog-actions"><a class="btn pf-button pf-button--secondary" href="{{ path('admin_production_execution_index') }}">Ir a Ejecución</a>{% if canManage %}<button type="button" class="btn pf-button pf-button--secondary" data-admin--production-board-target="detailMoveButton" data-action="admin--production-board#showManualMove" hidden>Reprogramar</button>{% endif %}<button type="button" class="btn pf-button pf-button--primary" data-action="admin--production-board#closeDetail">Cerrar</button></div>
+    </dialog>
+
+    {% if canManage %}
+    <dialog class="pf-production-board__dialog" data-admin--production-board-target="moveDialog" aria-labelledby="board-move-heading">
+        <form data-action="submit->admin--production-board#confirmMove">
+            <div class="pf-production-board__dialog-head"><h2 id="board-move-heading">Confirmar reprogramación</h2><button type="button" aria-label="Cerrar" data-action="admin--production-board#closeMove"><i class="bi bi-x-lg" aria-hidden="true"></i></button></div>
+            <p data-admin--production-board-target="moveSummary"></p>
+            <label class="pf-production-board__reason">Motivo del cambio<textarea required minlength="5" maxlength="500" rows="3" data-admin--production-board-target="reason" placeholder="Explica por qué se mueve esta reserva"></textarea></label>
+            <p class="pf-production-board__dialog-error" data-admin--production-board-target="moveError" role="alert" hidden></p>
+            <div class="pf-production-board__dialog-actions"><button type="button" class="btn pf-button pf-button--secondary" data-action="admin--production-board#closeMove">Cancelar</button><button type="submit" class="btn pf-button pf-button--primary" data-admin--production-board-target="confirmButton">Confirmar cambio</button></div>
+        </form>
+    </dialog>
+    {% endif %}
+</div>
+{% endblock %}

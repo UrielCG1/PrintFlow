@@ -144,6 +144,8 @@ La interfaz actual también presenta una barra de avance por etapas con el sigui
 
 **Puerta de salida:** integración local con AssetMapper/Stimulus sin CDN de producción; calendario, JSON y DOM se verifican con cuentas de Operador y jefe. No se incorpora ningún plugin Premium de FullCalendar.
 
+**Avance local (18 de octubre de 2026):** se añadió DayPilot Lite como activo local con licencia y atribución, la vista diaria por máquina, el resumen semanal horizontal, filtros y proyección JSON operativa, pendientes sin horario, detalle de tramo y vista previa/confirmación de movimientos con bloqueo de agenda, auditoría y validación de jornada, excepciones, solapes y dependencias. La reubicación entre máquinas se restringe a un tramo futuro sin ejecución ni estimación calculada; Impresión conserva el cambio de equipo en su propio flujo de validación. La puerta de salida sigue abierta hasta recorrer calendario, JSON, DOM y movimientos con cuentas de Operador y jefe y una base de datos configurada.
+
 ## Fase 6 — QA, datos existentes y liberación
 
 | ID | Historia | Criterio de terminado |
