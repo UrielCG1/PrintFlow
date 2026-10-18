@@ -22,8 +22,6 @@ use App\Repository\Production\ProductionMaterialUsageRepository;
 use App\Repository\Production\ProductionPrintingScanRepository;
 use App\Repository\Production\ServiceOrderItemDesignReleaseRepository;
 use App\Service\Production\PrintingLabelRenderer;
-use Brick\Math\BigDecimal;
-use Brick\Math\RoundingMode;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -147,11 +145,7 @@ final class PrintingController extends AbstractController
             ? $plannedUsage->getPlannedQuantity()
             : null;
         $plannedInventoryQuantity = $confirmedPlanQuantity !== null
-            ? BigDecimal::of($confirmedPlanQuantity)->dividedBy(
-                BigDecimal::of($scannedStockUnit->getVariant()->getInventoryToConsumptionFactor()),
-                6,
-                RoundingMode::Up,
-            )->__toString()
+            ? $plannedUsage?->getPlannedInventoryQuantity()
             : null;
 
         return $this->render('admin/printing/show.html.twig', [
@@ -200,7 +194,7 @@ final class PrintingController extends AbstractController
             if (($plan->getEquipment() !== $equipment || $plan->getMaterialVariant() !== $material) && !$this->isGranted('production.substitution.approve') && $plan->getMaterialVariant() !== null) {
                 throw new \DomainException('Solo el jefe de Producción o Administrador puede autorizar una sustitución.');
             }
-            $manager->configureRequirements($plan, $equipment, $material, $request->request->getString('planned_quantity'), $request->request->getString('reason'), $this->authenticatedUser());
+            $manager->configureRequirements($plan, $equipment, $material, $request->request->getString('planned_quantity'), $request->request->getString('planned_inventory_quantity'), $request->request->getString('reason'), $this->authenticatedUser());
             $this->addFlash('success', $plan->getServiceOrderItem()->getServiceOrder()->isPlanned()
                 ? 'Material y cantidad previstos registrados; el apartado se concilió con el saldo disponible. Revisa si hay faltantes en la orden.'
                 : 'Material y cantidad previstos registrados. El apartado se calculará al planificar la orden.');
@@ -257,6 +251,7 @@ final class PrintingController extends AbstractController
                 $this->authenticatedUser(),
                 $this->commandFromRequest($request, 'Impresión completada con consumo registrado.'),
                 $request->request->getString('total_consumed'),
+                $request->request->getString('actual_inventory_quantity'),
                 $request->request->has('waste') ? $request->request->getString('waste') : null,
                 $request->request->getString('measurement_method'),
                 $request->request->getString('waste_reason'),

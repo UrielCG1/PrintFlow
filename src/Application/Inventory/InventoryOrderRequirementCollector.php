@@ -24,11 +24,18 @@ final class InventoryOrderRequirementCollector
             $variant = $usage->getVariant();
             $planned = $usage->getPlannedQuantity();
             if ($variant === null || $planned === null) { continue; }
-            $factor = BigDecimal::of($variant->getInventoryToConsumptionFactor());
-            if ($factor->isLessThanOrEqualTo(BigDecimal::zero())) {
-                throw new \DomainException('La variante '.$variant->getCode().' no tiene una conversión válida de inventario a consumo.');
+            if ($variant->isLinearRoll()) {
+                $required = $usage->getPlannedInventoryQuantity();
+                if ($required === null || BigDecimal::of($required)->isLessThanOrEqualTo(BigDecimal::zero())) {
+                    throw new \DomainException('La presentación de rollo '.$variant->getCode().' requiere una longitud prevista en metros lineales antes de apartar inventario.');
+                }
+            } else {
+                $factor = BigDecimal::of($variant->getInventoryToConsumptionFactor());
+                if ($factor->isLessThanOrEqualTo(BigDecimal::zero())) {
+                    throw new \DomainException('La variante '.$variant->getCode().' no tiene una conversión válida de inventario a consumo.');
+                }
+                $required = BigDecimal::of($planned)->dividedBy($factor, 6, RoundingMode::Up)->__toString();
             }
-            $required = BigDecimal::of($planned)->dividedBy($factor, 6, RoundingMode::Up)->__toString();
             $key = (int) $variant->getId();
             if (isset($requirements[$key])) {
                 $requirements[$key]['requiredQuantity'] = BigDecimal::of($requirements[$key]['requiredQuantity'])

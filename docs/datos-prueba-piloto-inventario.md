@@ -21,11 +21,11 @@ Material de prueba inspirado en «LONA 13 OZ BTE» del libro, sin usar el códig
 | Unidades y conversión | Objeto físico `ROLLO`; compra y saldo en `ML`, consumo en `M2`; **1 ML = 1.50 M2** por el ancho configurado. La longitud de cada rollo se mide al recibirlo. |
 | Unidad física recibida | Un rollo de **10 ML**, QR propio, referencia `QA-ENT-001`. |
 | Mínimos de prueba | Mínimo **2 ML**, punto de reabasto **3 ML** y cantidad sugerida **10 ML**. |
-| Orden de ensayo | Crear una operación de Impresión y, en **Impresión → operación → Material previsto**, indicar **6 M2** de esta presentación; planificar la orden para generar el apartado. |
+| Orden de ensayo | Crear una operación de Impresión y, en **Impresión → operación → Material previsto**, indicar **6 M2** de área y **4 ML** de longitud prevista para este caso de ancho completo; planificar la orden para generar el apartado. |
 | Consumo confirmado | **6 M2**, equivalentes a **4 ML** descontados del QR. |
 | Sobrante separado | **1.5 ML** con QR hijo y procedencia del rollo original. |
 
-Resultado esperado: al recibir hay **10 ML** físicos y disponibles; al apartar **4 ML** siguen existiendo 10 ML físicos y quedan 6 ML disponibles. Tras consumir 6 M2, el físico queda en **6 ML** y el apartado pendiente en cero. Al separar 1.5 ML, el QR original conserva **4.5 ML** y el QR hijo **1.5 ML**; el total continúa en 6 ML. Reimprimir cualquiera de las etiquetas no aumenta el saldo.
+Resultado esperado: al recibir hay **10 ML** físicos y disponibles; al apartar **4 ML** siguen existiendo 10 ML físicos y quedan 6 ML disponibles. Al cerrar, capturar **4 ML reales alimentados**; el área de 6 M2 solo documenta Producción y no se convierte automáticamente. El físico queda en **6 ML** y el apartado pendiente en cero. Al separar 1.5 ML, el QR original conserva **4.5 ML** y el QR hijo **1.5 ML**; el total continúa en 6 ML. Reimprimir cualquiera de las etiquetas no aumenta el saldo.
 
 ## Caso 2 — faltante y sustituto autorizado
 

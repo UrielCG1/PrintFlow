@@ -69,6 +69,7 @@ final class PrintingManager
         ?Equipment $equipment,
         MaterialVariant $material,
         string $plannedQuantity,
+        ?string $plannedInventoryQuantity,
         string $reason,
         User $actor,
     ): void {
@@ -78,7 +79,11 @@ final class PrintingManager
             throw new \InvalidArgumentException('Indica una cantidad prevista positiva, en la unidad de consumo del material.');
         }
         $plannedQuantity = BigDecimal::of($plannedQuantity)->toScale(6)->__toString();
-        $this->entityManager->wrapInTransaction(function () use ($plan, $equipment, $material, $plannedQuantity, $reason, $actor): void {
+        $plannedInventoryQuantity = $this->optionalPositiveQuantity($plannedInventoryQuantity, 'La longitud prevista del rollo');
+        if ($material->isLinearRoll() && $plannedInventoryQuantity === null) {
+            throw new \InvalidArgumentException('Indica la longitud prevista del rollo en metros lineales. Los m² de producción no se usan para apartar el saldo físico.');
+        }
+        $this->entityManager->wrapInTransaction(function () use ($plan, $equipment, $material, $plannedQuantity, $plannedInventoryQuantity, $reason, $actor): void {
             $order = $plan->getServiceOrderItem()->getServiceOrder();
             $this->lock($order, $plan);
             $this->assertPrintingPlan($plan);
@@ -100,7 +105,8 @@ final class PrintingManager
                 throw new \DomainException('Esta operación tiene varias previsiones de material. Revísalas antes de modificar sus requisitos.');
             }
             $plannedUsage = $plannedUsages[0] ?? null;
-            $quantityChanged = $plannedUsage?->getPlannedQuantity() !== $plannedQuantity;
+            $quantityChanged = $plannedUsage?->getPlannedQuantity() !== $plannedQuantity
+                || $plannedUsage?->getPlannedInventoryQuantity() !== $plannedInventoryQuantity;
             if (($plan->getEquipment() !== $machine || $plan->getMaterialVariant() !== $material || $quantityChanged) && mb_strlen($reason) < 5) {
                 throw new \DomainException('Explica el motivo de la asignación o del cambio de material o cantidad prevista.');
             }
@@ -112,17 +118,20 @@ final class PrintingManager
             $before = $this->requirementsState($plan);
             $before['planned_quantity'] = $plannedUsage?->getPlannedQuantity();
             $before['planned_unit'] = $plannedUsage?->getUnitLabelSnapshot();
+            $before['planned_inventory_quantity'] = $plannedUsage?->getPlannedInventoryQuantity();
+            $before['planned_inventory_unit'] = $plannedUsage?->getVariant()?->getInventoryUnit()->getSymbol();
             $plan->setEquipment($machine, $this->equipmentSnapshot($machine));
             $plan->setMaterialVariant($material, $this->materialSnapshot($material));
             if ($plannedUsage instanceof ProductionMaterialUsage && !$isQualityRework) {
-                $plannedUsage->revisePlanned($material, $plannedQuantity);
+                $plannedUsage->revisePlanned($material, $plannedQuantity, $plannedInventoryQuantity);
             } elseif (!($plannedUsage instanceof ProductionMaterialUsage)) {
                 $plannedUsage = new ProductionMaterialUsage(
                     $plan->getServiceOrderItem(), $material, $material->getConsumptionUnit(), $plannedQuantity,
                     CalculationMethod::FIXED, 1,
-                    ['source' => 'printing-production-plan', 'version' => 1, 'variant_code' => $material->getCode()],
+                    ['source' => 'printing-production-plan', 'version' => 2, 'variant_code' => $material->getCode(), 'planned_inventory_quantity' => $plannedInventoryQuantity, 'inventory_unit' => $material->getInventoryUnit()->getCode()],
                 );
                 $plannedUsage->assignPlanContext($plan);
+                $plannedUsage->setPlannedInventoryQuantity($plannedInventoryQuantity);
                 $this->entityManager->persist($plannedUsage);
             }
             $currentScan = $this->scanRepository->findCurrentForPlanForUpdate($plan);
@@ -131,6 +140,8 @@ final class PrintingManager
             $after = $this->requirementsState($plan);
             $after['planned_quantity'] = $plannedQuantity;
             $after['planned_unit'] = $material->getConsumptionUnit()->getSymbol();
+            $after['planned_inventory_quantity'] = $plannedInventoryQuantity;
+            $after['planned_inventory_unit'] = $material->getInventoryUnit()->getSymbol();
             $this->entityManager->flush();
             if ($order->isPlanned()) {
                 $this->orderCommitmentManager->commitForOrder($order, $actor);
@@ -264,6 +275,7 @@ final class PrintingManager
         User $actor,
         ProductionExecutionCommand $command,
         ?string $total,
+        ?string $actualInventoryQuantity,
         ?string $waste,
         ?string $measurementMethod,
         ?string $wasteReason,
@@ -274,7 +286,7 @@ final class PrintingManager
         bool $confirmedConsumption = false,
     ): PrintingCompletionResult {
         $physicalConsumption = null;
-        $this->executionManager->complete($execution, $actor, $command, function (ServiceOrder $order, ServiceOrderOperationPlan $plan, ProductionOperationExecution $lockedExecution, User $lockedActor) use ($total, $waste, $measurementMethod, $wasteReason, $surplusQuantity, $surplusLocation, $surplusDescription, $adjustmentReason, $confirmedConsumption, &$physicalConsumption): void {
+        $this->executionManager->complete($execution, $actor, $command, function (ServiceOrder $order, ServiceOrderOperationPlan $plan, ProductionOperationExecution $lockedExecution, User $lockedActor) use ($total, $actualInventoryQuantity, $waste, $measurementMethod, $wasteReason, $surplusQuantity, $surplusLocation, $surplusDescription, $adjustmentReason, $confirmedConsumption, &$physicalConsumption): void {
             $this->assertPrintingPlan($plan);
             $scan = $this->scanRepository->findCurrentForPlanForUpdate($plan);
             $stockUnit = $scan?->getStockUnit();
@@ -298,6 +310,16 @@ final class PrintingManager
                 $adjustmentReason,
                 $confirmedConsumption,
             );
+            $actualInventoryQuantity = $this->optionalPositiveQuantity($actualInventoryQuantity, 'La longitud real alimentada');
+            if ($material->isLinearRoll() && $actualInventoryQuantity === null) {
+                throw new \DomainException('Indica los metros lineales realmente alimentados. El área en m² no determina por sí sola el descuento del rollo.');
+            }
+            $plannedInventoryQuantity = $sameMaterial ? $plannedUsage?->getPlannedInventoryQuantity() : null;
+            if ($material->isLinearRoll() && $plannedInventoryQuantity !== null
+                && !BigDecimal::of($actualInventoryQuantity)->isEqualTo(BigDecimal::of($plannedInventoryQuantity))
+                && mb_strlen(trim((string) $adjustmentReason)) < 5) {
+                throw new \InvalidArgumentException('Explica por qué los metros lineales reales difieren de la longitud prevista.');
+            }
             $usage = new ProductionMaterialUsage(
                 $plan->getServiceOrderItem(),
                 $material,
@@ -305,10 +327,11 @@ final class PrintingManager
                 $consumption['planned'],
                 CalculationMethod::FIXED,
                 1,
-                ['version' => 'printing-consumption-v2', 'source' => $consumption['source'] === QuantitySource::DERIVED ? 'confirmed-production-plan' : 'measured-printing-consumption', 'adjustment_reason' => $consumption['adjustment_reason']],
+                ['version' => 'printing-consumption-v3', 'source' => $consumption['source'] === QuantitySource::DERIVED ? 'confirmed-production-plan' : 'measured-printing-consumption', 'adjustment_reason' => $consumption['adjustment_reason'], 'actual_inventory_quantity' => $actualInventoryQuantity, 'inventory_unit' => $material->getInventoryUnit()->getCode()],
             );
             $usage->assignExecutionContext($plan, $lockedExecution, $this->materialSnapshot($material));
             $usage->recordActual($consumption['total'], $waste, $consumption['source'], $lockedActor, $consumption['method'], $wasteReason);
+            $usage->recordActualInventoryQuantity($actualInventoryQuantity);
             $currentOutput = $this->outputRepository->findCurrentForUpdate($plan->getServiceOrderItem());
             if ($currentOutput instanceof ProductionPrintedOutput) {
                 $origin = $lockedExecution->getOriginExecution();
@@ -574,7 +597,20 @@ final class PrintingManager
     /** @return array<string, mixed> */
     private function materialSnapshot(MaterialVariant $variant): array
     {
-        return ['id' => $variant->getId(), 'code' => $variant->getCode(), 'barcode' => $variant->getBarcode(), 'material_code' => $variant->getMaterial()->getCode(), 'material_name' => $variant->getMaterial()->getName(), 'specifications' => $variant->getSpecifications(), 'consumption_unit' => ['id' => $variant->getConsumptionUnit()->getId(), 'code' => $variant->getConsumptionUnit()->getCode(), 'symbol' => $variant->getConsumptionUnit()->getSymbol()]];
+        return ['id' => $variant->getId(), 'code' => $variant->getCode(), 'barcode' => $variant->getBarcode(), 'material_code' => $variant->getMaterial()->getCode(), 'material_name' => $variant->getMaterial()->getName(), 'specifications' => $variant->getSpecifications(), 'inventory_unit' => ['id' => $variant->getInventoryUnit()->getId(), 'code' => $variant->getInventoryUnit()->getCode(), 'symbol' => $variant->getInventoryUnit()->getSymbol()], 'consumption_unit' => ['id' => $variant->getConsumptionUnit()->getId(), 'code' => $variant->getConsumptionUnit()->getCode(), 'symbol' => $variant->getConsumptionUnit()->getSymbol()]];
+    }
+
+    private function optionalPositiveQuantity(?string $value, string $field): ?string
+    {
+        $value = trim(str_replace(',', '.', (string) $value));
+        if ($value === '') {
+            return null;
+        }
+        if (preg_match('/^(?:0|[1-9]\\d{0,13})(?:\\.\\d{1,6})?$/D', $value) !== 1 || BigDecimal::of($value)->isLessThanOrEqualTo(BigDecimal::zero())) {
+            throw new \InvalidArgumentException($field.' debe ser positiva y tener máximo seis decimales.');
+        }
+
+        return BigDecimal::of($value)->toScale(6)->__toString();
     }
 
     /** @return array<string, mixed> */

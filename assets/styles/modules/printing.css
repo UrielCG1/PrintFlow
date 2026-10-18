@@ -267,6 +267,8 @@
 .printing-step-number { display: grid; width: 1.65rem; height: 1.65rem; flex: 0 0 auto; place-items: center; color: #08752b; background: #e7f8e9; border-radius: 50%; font-size: 0.72rem; font-weight: 700; }
 .printing-locked-icon { color: #66758e; font-size: 0.9rem; }
 .printing-consumption-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 0.5rem; }
+.printing-linear-consumption { display: grid; gap: 0.2rem; margin: 0.7rem 0; padding: 0.65rem; background: #f0f8f1; border: 1px solid #cfe8d3; border-radius: 0.4rem; }
+.printing-linear-consumption .form-text { color: #386246; font-size: 0.68rem; line-height: 1.4; }
 .printing-disabled-fields { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 0.5rem; }
 .printing-disabled-fields span { display: grid; gap: 0.2rem; color: #5c6a82; font-size: 0.62rem; }
 .printing-disabled-fields b { padding: 0.48rem 0.55rem; color: #a1aabd; background: #f6f7fa; border: 1px solid #e3e7ef; border-radius: 0.35rem; font-size: 0.67rem; font-weight: 400; }
