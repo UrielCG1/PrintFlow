@@ -41,6 +41,8 @@ El primer alcance incluye los materiales existentes en la base, configuración p
 - El material comprometido se muestra como **pendiente de uso**.
 - El administrador configura el límite mínimo.
 - Los faltantes al aceptar una orden deben avisarse inmediatamente en un panel del dashboard administrativo.
+- Al registrar o aumentar un faltante, los administradores activos reciben un correo con enlace directo a la decisión de esa orden; requiere transporte de correo configurado.
+- Impresión muestra el estado de la cobertura en la cola y en el trabajo: autorización pendiente, espera de compra, producción parcial o sustituto aprobado. La sustitución autorizada también se identifica en la tabla de cobertura de la orden.
 - Administrador e Impresión pueden registrar material.
 - El QR permite comprobar que el material corresponde a la orden de trabajo.
 - El alcance cubre los materiales que ya existen en la base de datos y utiliza las unidades que tienen configuradas.

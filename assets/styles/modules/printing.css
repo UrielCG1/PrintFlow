@@ -163,8 +163,11 @@
 .printing-status > i { width: 0.42rem; height: 0.42rem; background: currentColor; border-radius: 50%; }
 .printing-status--ready, .printing-status--completed { color: #08752c; background: #e7f8e9; }
 .printing-status--in_progress { color: #075dcd; background: #e8f1ff; }
-.printing-status--configuration, .printing-status--label { color: #b56800; background: #fff1db; }
+.printing-status--configuration, .printing-status--label, .printing-status--material { color: #b56800; background: #fff1db; }
 .printing-status--design, .printing-status--review { color: #b72c2c; background: #ffeded; }
+.printing-material-state { display: block; max-width: 19rem; margin-top: 0.25rem; color: #50627d; font-size: 0.67rem; line-height: 1.35; overflow-wrap: anywhere; }
+.printing-material-state--pending_authorization, .printing-material-state--waiting_purchase { color: #a45200; font-weight: 700; }
+.printing-material-state--substituted, .printing-material-state--covered { color: #08752c; }
 .printing-commitment { display: block; margin-top: 0.15rem; color: #596985; font-size: 0.68rem; white-space: nowrap; }
 .printing-commitment--late { color: #ca3c12; }
 .printing-commitment--week { color: #ad6500; }
@@ -222,6 +225,10 @@
 .printing-callout--success { color: #12672b; background: #effbf0; border-color: #d2f0d6; }
 .printing-callout--warning { color: #885400; background: #fff8e8; border-color: #f4dfb2; }
 .printing-callout--muted { color: #56647c; background: #f5f7fb; border-color: #e6eaf1; }
+.printing-material-alert { margin: 0.3rem 0 0.85rem; padding: 0.8rem 0.95rem; }
+.printing-material-alert p { font-size: 0.82rem; }
+.printing-material-alert p span { font-size: 0.76rem; }
+.printing-material-alert a { display: inline-block; margin-top: 0.4rem; color: inherit; font-size: 0.76rem; font-weight: 700; }
 .printing-reference-link { display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 0.5rem; color: #345b96; font-size: 0.66rem; font-weight: 600; text-decoration: none; }
 
 .printing-requirements { display: grid; gap: 0.55rem; margin: 0; }

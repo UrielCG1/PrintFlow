@@ -23,11 +23,23 @@ final class InventoryPrintingMaterialResolver
             return [];
         }
 
+        return self::authorizedVariants($plannedVariant, $this->substitutionRepository->findForOrder($plan->getServiceOrderItem()->getServiceOrder()));
+    }
+
+    /** @param iterable<\App\Entity\Inventory\InventoryCommitmentSubstitution> $substitutions @return list<MaterialVariant> */
+    public static function authorizedVariants(MaterialVariant $plannedVariant, iterable $substitutions): array
+    {
         /** @var array<int, MaterialVariant> $variants */
-        $variants = [$plannedVariant->getId() => $plannedVariant];
-        foreach ($this->substitutionRepository->findForOrder($plan->getServiceOrderItem()->getServiceOrder()) as $substitution) {
-            if (!$this->sameVariant($substitution->getOriginalCommitment()->getVariant(), $plannedVariant)) {
+        $variants = [];
+        $hasSubstitution = false;
+        foreach ($substitutions as $substitution) {
+            if (!self::sameVariant($substitution->getOriginalCommitment()->getVariant(), $plannedVariant)) {
                 continue;
+            }
+
+            $hasSubstitution = true;
+            if ($substitution->getOriginalCommitment()->getPendingQuantity() !== '0.000000') {
+                $variants[$plannedVariant->getId()] = $plannedVariant;
             }
 
             $substitute = $substitution->getSubstituteCommitment()->getVariant();
@@ -36,13 +48,17 @@ final class InventoryPrintingMaterialResolver
             }
         }
 
+        if (!$hasSubstitution) {
+            $variants[$plannedVariant->getId()] = $plannedVariant;
+        }
+
         return array_values($variants);
     }
 
     public function isVariantAllowedForPlan(ServiceOrderOperationPlan $plan, MaterialVariant $candidate): bool
     {
         foreach ($this->allowedVariantsForPlan($plan) as $allowedVariant) {
-            if ($this->sameVariant($allowedVariant, $candidate)) {
+            if (self::sameVariant($allowedVariant, $candidate)) {
                 return true;
             }
         }
@@ -50,7 +66,7 @@ final class InventoryPrintingMaterialResolver
         return false;
     }
 
-    private function sameVariant(MaterialVariant $left, MaterialVariant $right): bool
+    private static function sameVariant(MaterialVariant $left, MaterialVariant $right): bool
     {
         return $left === $right || ($left->getId() !== null && $left->getId() === $right->getId());
     }

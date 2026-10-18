@@ -1279,3 +1279,5 @@
         grid-template-columns: 1fr;
     }
 }
+.pf-table tr[id^="material-commitment-"] { scroll-margin-top: 8rem; }
+.pf-table tr[id^="material-commitment-"]:target { background: #effbf0; outline: 2px solid #8bd69d; outline-offset: -2px; }

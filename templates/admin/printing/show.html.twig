@@ -7,8 +7,9 @@
 {% block app_content %}
     {% set productName = item.commercialItemSnapshot.name ?? item.commercialItem.name %}
     {% set scannedMaterial = currentScan and currentScan.stockUnit ? currentScan.stockUnit.variant : plan.materialVariant %}
-    {% set scanIsDone = activeExecution or output or (currentScan and currentScan.available) %}
-    {% set activeStep = output and output.labelPlaced ? 6 : (output ? 5 : (activeExecution ? 4 : (currentScan and currentScan.available ? 3 : (release ? 2 : 1)))) %}
+    {% set materialNeedsDecision = materialStatus and materialStatus.code in ['pending_reservation', 'pending_authorization', 'waiting_purchase'] %}
+    {% set scanIsDone = activeExecution or output or (currentScan and currentScan.available and not materialNeedsDecision) %}
+    {% set activeStep = output and output.labelPlaced ? 6 : (output ? 5 : (activeExecution ? 4 : (currentScan and currentScan.available and not materialNeedsDecision ? 3 : (release ? 2 : 1)))) %}
     <section class="pf-page__content printing-page printing-detail">
         <header class="printing-detail-header">
             <div class="printing-detail-heading">
@@ -30,6 +31,13 @@
                 </li>
             {% endfor %}
         </ol>
+
+        {% if materialStatus and not output %}
+            <div class="printing-callout printing-material-alert printing-callout--{{ materialNeedsDecision or materialStatus.code == 'partial_authorized' ? 'warning' : 'success' }}" role="{{ materialNeedsDecision ? 'alert' : 'status' }}">
+                <i class="bi bi-{{ materialNeedsDecision or materialStatus.code == 'partial_authorized' ? 'exclamation-triangle-fill' : 'check-circle-fill' }}" aria-hidden="true"></i>
+                <p><strong>Estado del material: {{ materialStatus.label }}</strong><span>{{ materialStatus.message }}</span>{% if materialNeedsDecision and is_granted('service_orders.view') %}<a href="{{ path('admin_service_orders_show', {id: item.serviceOrder.id}) }}#material-coverage-title">Ver cobertura y decisión administrativa</a>{% endif %}</p>
+            </div>
+        {% endif %}
 
         <div class="printing-overview-grid">
             <section class="pf-card printing-detail-card printing-art-card">
@@ -53,8 +61,10 @@
                     <div><dt><i class="bi bi-box-seam" aria-hidden="true"></i>Cantidad a producir</dt><dd>{{ item.quantity|number_format(6, '.', ',')|trim('0', 'right')|trim('.', 'right') }} {{ item.commercialItemSnapshot.measurement_unit.code|default('') }}</dd></div>
                     <div><dt><i class="bi bi-layers" aria-hidden="true"></i>Material previsto</dt><dd>{{ plannedUsage ? plannedUsage.plannedQuantity ~ ' ' ~ plannedUsage.unitLabelSnapshot : 'Pendiente de captura' }}</dd></div>
                 </dl>
-                {% if allowedMaterialVariants is not empty %}
-                    <div class="printing-callout printing-callout--success"><i class="bi bi-qr-code-scan" aria-hidden="true"></i><p><strong>Material autorizado para etiqueta QR.</strong><span>{% for material in allowedMaterialVariants %}{{ material.material.name }} · {{ material.code }}{{ not loop.last ? ' / ' : '' }}{% endfor %}</span></p></div>
+                {% if materialStatus and materialStatus.code == 'substituted' %}
+                    <div class="printing-callout printing-callout--success"><i class="bi bi-qr-code-scan" aria-hidden="true"></i><p><strong>Escanea el sustituto autorizado.</strong><span>{{ materialStatus.substitute }}</span></p></div>
+                {% elseif materialStatus and materialStatus.code in ['covered', 'partial_authorized'] and allowedMaterialVariants is not empty %}
+                    <div class="printing-callout printing-callout--success"><i class="bi bi-qr-code-scan" aria-hidden="true"></i><p><strong>Material permitido para etiqueta QR.</strong><span>{% for material in allowedMaterialVariants %}{{ material.material.name }} · {{ material.code }}{{ not loop.last ? ' / ' : '' }}{% endfor %}</span></p></div>
                 {% endif %}
                 {% if canConfigure and not activeExecution and not plan.hasCompletedExecution %}
                     <details class="printing-configure-details">
@@ -83,7 +93,7 @@
         <div class="printing-workflow-grid">
             <section class="pf-card printing-detail-card printing-validation-card" data-controller="ui--printing-scanner" data-ui--printing-scanner-src-value="{{ asset('vendor/zxing-browser/zxing-browser.min.js') }}">
                 <div class="printing-card-heading"><div><h2>Validar máquina y material</h2><p>Escanea los códigos o ingrésalos manualmente.</p></div><span class="printing-step-number">1</span></div>
-                {% if canExecute and release and not activeExecution and canStartPrinting %}
+                {% if canExecute and release and not activeExecution and canStartPrinting and not materialNeedsDecision %}
                     <form class="pf-form" method="post" action="{{ path('admin_printing_validate_scans', {id: plan.id}) }}">
                         <input type="hidden" name="_token" value="{{ csrf_token('printing-scan-' ~ plan.id) }}">
                         <input type="hidden" name="capture_mode" value="SCANNER" data-ui--printing-scanner-target="mode">
@@ -97,17 +107,17 @@
                         <button class="btn pf-button pf-button--primary printing-wide-button" type="submit"><i class="bi bi-upc-scan" aria-hidden="true"></i>Validar escaneos</button>
                         <p class="printing-form-hint">La etiqueta debe pertenecer a una unidad con saldo disponible. La captura manual requiere autorización del jefe de Producción.</p>
                     </form>
-                {% elseif currentScan and currentScan.available %}
+                {% elseif currentScan and currentScan.available and not materialNeedsDecision %}
                     <div class="printing-callout printing-callout--success"><i class="bi bi-check-circle-fill" aria-hidden="true"></i><p><strong>Máquina y material validados.</strong><span>Validación {{ currentScan.validatedAt|date('d/m/Y H:i', 'America/Mexico_City') }}.</span></p></div>
                 {% else %}
-                    <div class="printing-callout printing-callout--muted"><i class="bi bi-lock-fill" aria-hidden="true"></i><p>{% if not release %}Se requiere un arte liberado por Diseño antes de validar.{% elseif activeExecution %}La impresión está en curso.{% elseif not canExecute %}Necesitas permiso de ejecución para validar.{% elseif not canStartPrinting %}Esta impresión ya se completó. Un retrabajo requiere autorización de Calidad.{% else %}Configura máquina y material para continuar.{% endif %}</p></div>
+                    <div class="printing-callout printing-callout--muted"><i class="bi bi-lock-fill" aria-hidden="true"></i><p>{% if materialNeedsDecision %}{{ materialStatus.message }}{% elseif not release %}Se requiere un arte liberado por Diseño antes de validar.{% elseif activeExecution %}La impresión está en curso.{% elseif not canExecute %}Necesitas permiso de ejecución para validar.{% elseif not canStartPrinting %}Esta impresión ya se completó. Un retrabajo requiere autorización de Calidad.{% else %}Configura máquina y material para continuar.{% endif %}</p></div>
                     <button class="btn pf-button pf-button--secondary printing-wide-button" type="button" disabled>Validar máquina y material</button>
                 {% endif %}
             </section>
 
             <section class="pf-card printing-detail-card printing-next-card">
                 <div class="printing-card-heading"><h2>Siguiente paso</h2></div>
-                {% if canExecute and currentScan and currentScan.available and not activeExecution and canStartPrinting %}
+                {% if canExecute and currentScan and currentScan.available and not activeExecution and canStartPrinting and not materialNeedsDecision %}
                     <form method="post" action="{{ path('admin_printing_start', {id: plan.id}) }}">
                         <input type="hidden" name="_token" value="{{ csrf_token('printing-start-' ~ plan.id) }}"><input type="hidden" name="expected_order_version" value="{{ orderVersion }}"><input type="hidden" name="command_id" value="{{ startCommandId }}">
                         {% if reworkOrigin %}<p class="printing-next-note">Calidad autorizó el retrabajo del intento {{ reworkOrigin.attemptNumber }}.</p>{% else %}<p class="printing-next-note">La máquina y el material están validados para esta partida.</p>{% endif %}

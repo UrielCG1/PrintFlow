@@ -8,6 +8,8 @@ use App\Entity\Inventory\InventoryCommitment;
 use App\Entity\Orders\ServiceOrder;
 use App\Entity\Users\User;
 use App\Repository\Inventory\InventoryCommitmentRepository;
+use App\Service\Inventory\InventoryShortageEmailNotifier;
+use Brick\Math\BigDecimal;
 use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -19,6 +21,7 @@ final class InventoryOrderCommitmentManager
         private readonly InventoryCommitmentManager $commitmentManager,
         private readonly InventoryCommitmentRepository $commitmentRepository,
         private readonly EntityManagerInterface $entityManager,
+        private readonly InventoryShortageEmailNotifier $shortageEmailNotifier,
     ) {
     }
 
@@ -28,13 +31,17 @@ final class InventoryOrderCommitmentManager
         if ($order->isCancelled()) {
             throw new \DomainException('No se pueden apartar materiales para una orden cancelada.');
         }
-        return $this->entityManager->wrapInTransaction(function () use ($order, $actor): array {
+        [$commitments, $newShortages] = $this->entityManager->wrapInTransaction(function () use ($order, $actor): array {
             $this->entityManager->lock($order, LockMode::PESSIMISTIC_WRITE);
             if ($order->isCancelled()) {
                 throw new \DomainException('No se pueden apartar materiales para una orden cancelada.');
             }
             $requirements = $this->requirementCollector->collect($order);
             $existing = $this->commitmentRepository->findForOrderForUpdate($order);
+            $previousShortages = [];
+            foreach ($existing as $commitment) {
+                $previousShortages[(int) $commitment->getVariant()->getId()] = $commitment->getShortageQuantity();
+            }
             if ($requirements === [] && $existing === []) {
                 throw new \DomainException('La orden todavía no tiene materiales inventariables previstos. Registra la variante y su cantidad antes de apartar existencias.');
             }
@@ -62,16 +69,28 @@ final class InventoryOrderCommitmentManager
             ksort($requiredByVariant, SORT_NUMERIC);
 
             $commitments = [];
+            $newShortages = [];
             foreach ($requiredByVariant as $requirement) {
-                $commitments[] = $this->commitmentManager->reconcile(
+                $commitment = $this->commitmentManager->reconcile(
                     $order,
                     $requirement['variant'],
                     $requirement['requiredQuantity'],
                     $actor,
                 );
+                $commitments[] = $commitment;
+                $previous = $previousShortages[(int) $requirement['variant']->getId()] ?? '0.000000';
+                if (BigDecimal::of($commitment->getShortageQuantity())->isGreaterThan(BigDecimal::of($previous))
+                    && $commitment->getStatus() !== \App\Enum\Inventory\InventoryCommitmentStatus::SUBSTITUTED) {
+                    $newShortages[] = [$commitment, $previous];
+                }
             }
 
-            return $commitments;
+            return [$commitments, $newShortages];
         });
+        foreach ($newShortages as [$commitment, $previous]) {
+            $this->shortageEmailNotifier->queue($commitment, $previous);
+        }
+
+        return $commitments;
     }
 }

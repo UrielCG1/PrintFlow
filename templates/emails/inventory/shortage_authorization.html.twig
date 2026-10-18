@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="es">
+<body style="font-family:Arial,sans-serif;color:#14233b;background:#f2f7f4;padding:24px;">
+    <div style="max-width:600px;margin:auto;background:#fff;padding:30px;border-radius:14px;">
+        <div style="margin-bottom:24px;">{% include 'emails/_brand_logo.html.twig' with { logo_width: 150 } %}</div>
+        <h1 style="font-size:22px;color:#945300;">Material faltante para {{ order.folio }}</h1>
+        <p>La orden requiere <strong>{{ commitment.variant.material.name }}</strong> ({{ commitment.variant.code }}), pero faltan <strong>{{ commitment.shortageQuantity|number_format(6, '.', ',') }} {{ commitment.variant.inventoryUnit.symbol }}</strong>.</p>
+        <p>Revisa la orden para autorizar un sustituto viable, esperar la compra o decidir si se permite producción parcial. La impresión no debe iniciarse sin una decisión vigente.</p>
+        <p><a href="{{ decisionUrl }}" style="display:inline-block;padding:12px 18px;background:#087c19;color:#fff;text-decoration:none;border-radius:6px;">Revisar y autorizar en la orden</a></p>
+        <p style="font-size:12px;color:#596985;">El enlace abre la sección Cobertura de materiales y requiere iniciar sesión con permisos de Administración.</p>
+    </div>
+</body>
+</html>
