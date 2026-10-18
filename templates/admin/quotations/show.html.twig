@@ -296,57 +296,81 @@
         {% endif %}
 
         {% if status in ['ACCEPTED', 'ACCEPTED_WITH_CHANGES'] %}
+            {% set hasPurchaseOrderNumber = quotation.purchaseOrderNumber is not empty %}
+            {% set hasPurchaseOrderFile = quotation.purchaseOrderFile is not empty %}
             {% set purchaseOrderDownloadUrl = quotation.purchaseOrderFile ? path('admin_quotations_decision_file', {id: quotation.id, type: 'purchase-order'}) : null %}
             <section class="pf-card mb-4 quotation-purchase-order" data-controller="ui--purchase-order">
-                <header class="pf-card__header">
-                    <div>
-                        <h2 class="pf-card__title">Orden de compra del cliente</h2>
-                        <p class="pf-card__description">Puedes iniciar la orden de servicio sin este documento y agregar el folio o el PDF cuando los recibas.</p>
+                <header class="pf-card__header quotation-purchase-order__header">
+                    <div class="quotation-purchase-order__heading">
+                        <div class="quotation-purchase-order__title-row">
+                            <h2 class="pf-card__title">Orden de compra del cliente</h2>
+                            <span class="quotation-purchase-order__state {{ hasPurchaseOrderNumber and hasPurchaseOrderFile ? 'quotation-purchase-order__state--complete' : (hasPurchaseOrderNumber or hasPurchaseOrderFile ? 'quotation-purchase-order__state--partial' : 'quotation-purchase-order__state--pending') }}">
+                                <i class="bi {{ hasPurchaseOrderNumber and hasPurchaseOrderFile ? 'bi-check-circle-fill' : (hasPurchaseOrderNumber or hasPurchaseOrderFile ? 'bi-clock-history' : 'bi-info-circle') }}" aria-hidden="true"></i>
+                                {% if hasPurchaseOrderNumber and hasPurchaseOrderFile %}Folio y PDF registrados{% elseif hasPurchaseOrderNumber %}Folio registrado · PDF pendiente{% elseif hasPurchaseOrderFile %}PDF adjunto · folio pendiente{% else %}Pendiente de registrar{% endif %}
+                            </span>
+                        </div>
+                        <p class="pf-card__description">Puedes iniciar la orden de servicio sin el PDF y completar estos datos cuando los recibas.</p>
                     </div>
                 </header>
                 <div class="pf-card__body">
-                    <div class="quotation-purchase-order__summary">
-                        <div>
-                            <span class="quotation-decision-record__label">Folio de orden</span>
-                            <strong>{{ quotation.purchaseOrderNumber|default('Pendiente de registrar') }}</strong>
+                    <div class="quotation-purchase-order__overview">
+                        <div class="quotation-purchase-order__summary">
+                            <span class="quotation-purchase-order__summary-icon"><i class="bi bi-receipt" aria-hidden="true"></i></span>
+                            <div>
+                                <span class="quotation-decision-record__label">Folio del cliente</span>
+                                <strong>{{ quotation.purchaseOrderNumber|default('Sin folio registrado') }}</strong>
+                                {% if not hasPurchaseOrderNumber %}<small>Se puede agregar más adelante.</small>{% endif %}
+                            </div>
                         </div>
+
+                        {% if hasPurchaseOrderFile %}
+                            <div class="quotation-file-preview__card quotation-purchase-order__file">
+                                <div class="quotation-file-preview__thumbnail">
+                                    <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+                                </div>
+                                <div class="quotation-file-preview__details">
+                                    <span class="quotation-file-preview__label">PDF de orden de compra</span>
+                                    <strong class="quotation-file-preview__name" title="{{ quotation.purchaseOrderFile.original_name|default('Orden de compra.pdf') }}">{{ quotation.purchaseOrderFile.original_name|default('Orden de compra.pdf') }}</strong>
+                                    <span class="quotation-file-preview__metadata">PDF{% if quotation.purchaseOrderFile.size|default(0) %} · {{ (quotation.purchaseOrderFile.size / 1024)|round(0, 'ceil')|number_format(0, '.', ',') }} KB{% endif %}</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="btn pf-button pf-button--subtle pf-button--sm quotation-file-preview__open"
+                                    data-action="ui--purchase-order#openExistingPreview"
+                                    data-preview-url="{{ path('admin_quotations_decision_file', {id: quotation.id, type: 'purchase-order', preview: 1}) }}"
+                                    data-download-url="{{ purchaseOrderDownloadUrl }}"
+                                    data-file-name="{{ quotation.purchaseOrderFile.original_name|default('Orden de compra.pdf') }}"
+                                    aria-label="Visualizar {{ quotation.purchaseOrderFile.original_name|default('Orden de compra.pdf') }} en grande"
+                                    title="Visualizar archivo"
+                                ><i class="bi bi-eye" aria-hidden="true"></i></button>
+                                <a class="btn pf-button pf-button--subtle pf-button--sm quotation-file-preview__open" href="{{ purchaseOrderDownloadUrl }}" aria-label="Descargar orden de compra" title="Descargar archivo"><i class="bi bi-download" aria-hidden="true"></i></a>
+                            </div>
+                        {% else %}
+                            <div class="quotation-purchase-order__empty">
+                                <span class="quotation-purchase-order__empty-icon"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i></span>
+                                <div><strong>PDF pendiente</strong><span>Adjúntalo aquí cuando lo recibas.</span></div>
+                            </div>
+                        {% endif %}
                     </div>
 
-                    {% if quotation.purchaseOrderFile %}
-                        <div class="quotation-file-preview__card quotation-purchase-order__file">
-                            <div class="quotation-file-preview__thumbnail">
-                                <object class="quotation-file-preview__document" data="{{ path('admin_quotations_decision_file', {id: quotation.id, type: 'purchase-order', preview: 1}) }}" type="application/pdf" aria-label="Vista previa de la orden de compra"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i></object>
-                            </div>
-                            <div class="quotation-file-preview__details">
-                                <span class="quotation-file-preview__label">PDF de orden de compra</span>
-                                <strong class="quotation-file-preview__name" title="{{ quotation.purchaseOrderFile.original_name|default('Orden de compra.pdf') }}">{{ quotation.purchaseOrderFile.original_name|default('Orden de compra.pdf') }}</strong>
-                                <span class="quotation-file-preview__metadata">PDF{% if quotation.purchaseOrderFile.size|default(0) %} · {{ (quotation.purchaseOrderFile.size / 1024)|round(0, 'ceil')|number_format(0, '.', ',') }} KB{% endif %}</span>
-                            </div>
-                            <button
-                                type="button"
-                                class="btn pf-button pf-button--subtle pf-button--sm quotation-file-preview__open"
-                                data-action="ui--purchase-order#openExistingPreview"
-                                data-preview-url="{{ path('admin_quotations_decision_file', {id: quotation.id, type: 'purchase-order', preview: 1}) }}"
-                                data-download-url="{{ purchaseOrderDownloadUrl }}"
-                                data-file-name="{{ quotation.purchaseOrderFile.original_name|default('Orden de compra.pdf') }}"
-                                aria-label="Visualizar {{ quotation.purchaseOrderFile.original_name|default('Orden de compra.pdf') }} en grande"
-                                title="Visualizar archivo"
-                            ><i class="bi bi-eye" aria-hidden="true"></i></button>
-                            <a class="btn pf-button pf-button--subtle pf-button--sm quotation-file-preview__open" href="{{ purchaseOrderDownloadUrl }}" aria-label="Descargar orden de compra" title="Descargar archivo"><i class="bi bi-download" aria-hidden="true"></i></a>
-                        </div>
-                    {% else %}
-                        <p class="quotation-purchase-order__empty"><i class="bi bi-info-circle" aria-hidden="true"></i> Todavía no se ha adjuntado el PDF de compra.</p>
-                    {% endif %}
-
                     {% if purchaseOrderForm %}
-                        {{ form_start(purchaseOrderForm, {action: path('admin_quotations_purchase_order', {id: quotation.id}), attr: {class: 'quotation-purchase-order__form'}}) }}
-                            <div class="row g-3 align-items-end">
-                                <div class="col-lg-4">{{ form_row(purchaseOrderForm.purchaseOrderNumber) }}</div>
-                                <div class="col-lg-6">{{ form_row(purchaseOrderForm.purchaseOrderFile, {attr: {accept: 'application/pdf,.pdf', 'data-ui--purchase-order-target': 'fileInput', 'data-action': 'change->ui--purchase-order#previewFile'}}) }}</div>
-                                <div class="col-lg-2"><button type="submit" class="btn pf-button pf-button--primary w-100"><i class="bi bi-save2" aria-hidden="true"></i> Guardar</button></div>
+                        <details class="quotation-purchase-order__editor" {% if not hasPurchaseOrderNumber and not hasPurchaseOrderFile %}open{% endif %}>
+                            <summary>
+                                <span class="quotation-purchase-order__editor-icon"><i class="bi bi-pencil-square" aria-hidden="true"></i></span>
+                                <span class="quotation-purchase-order__editor-copy"><strong>{% if hasPurchaseOrderNumber or hasPurchaseOrderFile %}Editar datos de compra{% else %}Agregar datos de compra{% endif %}</strong><small>Folio del cliente y PDF opcional</small></span>
+                                <i class="bi bi-chevron-down quotation-purchase-order__editor-chevron" aria-hidden="true"></i>
+                            </summary>
+                            <div class="quotation-purchase-order__editor-content">
+                                {{ form_start(purchaseOrderForm, {action: path('admin_quotations_purchase_order', {id: quotation.id}), attr: {class: 'quotation-purchase-order__form'}}) }}
+                                    <div class="row g-3 align-items-end">
+                                        <div class="col-lg-4">{{ form_row(purchaseOrderForm.purchaseOrderNumber) }}</div>
+                                        <div class="col-lg-6">{{ form_row(purchaseOrderForm.purchaseOrderFile, {attr: {accept: 'application/pdf,.pdf', 'data-ui--purchase-order-target': 'fileInput', 'data-action': 'change->ui--purchase-order#previewFile'}}) }}</div>
+                                        <div class="col-lg-2"><button type="submit" class="btn pf-button pf-button--primary w-100"><i class="bi bi-save2" aria-hidden="true"></i> Guardar</button></div>
+                                    </div>
+                                    <div class="quotation-file-preview" data-ui--purchase-order-target="preview" aria-live="polite" hidden></div>
+                                {{ form_end(purchaseOrderForm) }}
                             </div>
-                            <div class="quotation-file-preview" data-ui--purchase-order-target="preview" aria-live="polite" hidden></div>
-                        {{ form_end(purchaseOrderForm) }}
+                        </details>
                     {% endif %}
                 </div>
 
