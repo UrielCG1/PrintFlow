@@ -5,11 +5,84 @@
 {% block app_breadcrumb %}Operación / Entregas{% endblock %}
 
 {% block app_content %}
-    <section class="pf-page__content">
-        <header class="pf-page-header"><div class="pf-page-header__content"><p class="pf-page-header__eyebrow">Operación</p><h1 class="pf-page-header__title">Entregas</h1><p class="pf-page-header__description">Producción libera la orden; Ventas confirma la modalidad y la entrega. El registro no envía correos.</p></div></header>
-        <section class="pf-card"><div class="pf-card__body">
-            {% if orders is empty %}<p class="mb-0">No hay órdenes pendientes de preparación o entrega.</p>
-            {% else %}<div class="table-responsive"><table class="pf-table"><thead><tr><th>Orden</th><th>Cliente</th><th>Modalidad</th><th>Estado de entrega</th><th>Compromiso</th><th></th></tr></thead><tbody>{% for order in orders %}<tr><td><strong>{{ order.folio }}</strong></td><td>{{ order.clientSnapshot.business_name|default(order.clientSnapshot.legal_name|default('Cliente')) }}</td><td>{{ order.fulfillmentMethod.label }}</td><td>{{ order.deliveryStatus.label }}</td><td>{{ order.commitmentDate ? order.commitmentDate|date('d/m/Y') : 'Sin fecha' }}</td><td><a class="btn pf-button pf-button--secondary btn-sm" href="{{ path('admin_production_quality_delivery_delivery_show', {id: order.id}) }}">Abrir entrega</a></td></tr>{% endfor %}</tbody></table></div>{% endif %}
-        </div></section>
+    <section class="pf-page__content delivery-page delivery-queue" data-controller="admin--delivery-board">
+        <header class="pf-page-header delivery-page__header">
+            <div class="pf-page-header__content">
+                <p class="pf-page-header__eyebrow">Operación</p>
+                <h1 class="pf-page-header__title">Entregas</h1>
+                <p class="pf-page-header__description">Gestiona la entrega de producción. Prepara el pedido, confirma la modalidad y registra la recogida o el envío.</p>
+            </div>
+        </header>
+
+        <section class="delivery-summary" aria-label="Resumen de entregas">
+            <article class="delivery-metric delivery-metric--amber">
+                <span class="delivery-metric__icon" aria-hidden="true"><i class="bi bi-box-seam"></i></span>
+                <div><strong>{{ deliverySummary.to_prepare }}</strong><h2>Por preparar</h2><p>órdenes liberadas</p></div>
+            </article>
+            <article class="delivery-metric delivery-metric--green">
+                <span class="delivery-metric__icon" aria-hidden="true"><i class="bi bi-person-walking"></i></span>
+                <div><strong>{{ deliverySummary.pickup }}</strong><h2>Listas para recoger</h2><p>en sucursal</p></div>
+            </article>
+            <article class="delivery-metric delivery-metric--blue">
+                <span class="delivery-metric__icon" aria-hidden="true"><i class="bi bi-truck"></i></span>
+                <div><strong>{{ deliverySummary.shipped }}</strong><h2>Enviadas</h2><p>pendientes de recepción</p></div>
+            </article>
+            <article class="delivery-metric delivery-metric--red">
+                <span class="delivery-metric__icon" aria-hidden="true"><i class="bi bi-exclamation-triangle"></i></span>
+                <div><strong>{{ deliverySummary.overdue }}</strong><h2>Atrasadas</h2><p>compromiso vencido</p></div>
+            </article>
+        </section>
+
+        <section class="pf-card delivery-list-card" aria-labelledby="delivery-orders-title">
+            <h2 class="visually-hidden" id="delivery-orders-title">Órdenes de servicio liberadas para entrega</h2>
+            <nav class="delivery-tabs" aria-label="Filtrar por modalidad">
+                <button type="button" class="delivery-tab is-active" aria-pressed="true" data-method="all" data-admin--delivery-board-target="methodTab" data-action="click->admin--delivery-board#selectMethod">Todas <span>({{ orders|length }})</span></button>
+                <button type="button" class="delivery-tab" aria-pressed="false" data-method="pickup" data-admin--delivery-board-target="methodTab" data-action="click->admin--delivery-board#selectMethod">Recoger en sucursal <span>({{ deliveryMethodCounts.pickup }})</span></button>
+                <button type="button" class="delivery-tab" aria-pressed="false" data-method="shipping" data-admin--delivery-board-target="methodTab" data-action="click->admin--delivery-board#selectMethod">Envío <span>({{ deliveryMethodCounts.shipping }})</span></button>
+            </nav>
+
+            <div class="delivery-filter-wrap">
+                <div class="delivery-filters" aria-label="Filtros de entregas">
+                    <label class="delivery-search">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <span class="visually-hidden">Buscar por orden, cliente o contacto</span>
+                        <input type="search" placeholder="Buscar por orden, cliente o contacto…" autocomplete="off" data-admin--delivery-board-target="search" data-action="input->admin--delivery-board#filter">
+                    </label>
+                    <label class="delivery-filter"><span>Estado</span><select data-admin--delivery-board-target="status" data-action="change->admin--delivery-board#filter"><option value="">Todos</option><option value="NOT_READY">Por preparar</option><option value="READY_FOR_PICKUP">Lista para recoger</option><option value="READY_FOR_SHIPMENT">Lista para envío</option><option value="SHIPPED">Enviada</option><option value="DELIVERED">Entregada</option></select></label>
+                    <label class="delivery-filter"><span>Compromiso</span><select data-admin--delivery-board-target="commitment" data-action="change->admin--delivery-board#filter"><option value="">Todos</option><option value="overdue">Vencido</option><option value="today">Hoy</option><option value="future">Próximo</option><option value="unassigned">Sin fecha</option></select></label>
+                    <label class="delivery-filter delivery-filter--date"><span>Fecha</span><input type="date" aria-label="Filtrar por fecha compromiso" data-admin--delivery-board-target="date" data-action="change->admin--delivery-board#filter"></label>
+                    <button type="button" class="delivery-clear" data-action="click->admin--delivery-board#clear"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Limpiar</button>
+                </div>
+            </div>
+
+            <div class="delivery-table-scroll">
+                <table class="delivery-table">
+                    <thead><tr><th scope="col">Orden</th><th scope="col">Cliente / contacto</th><th scope="col">Modalidad</th><th scope="col">Estado</th><th scope="col">Compromiso</th><th scope="col">Riesgo</th><th scope="col"><span class="visually-hidden">Acción</span></th></tr></thead>
+                    <tbody data-admin--delivery-board-target="rows">
+                    {% for deliveryRow in deliveryRows %}
+                        {% set order = deliveryRow.order %}
+                        {% set clientName = order.clientSnapshot.business_name|default(order.clientSnapshot.legal_name|default('Cliente')) %}
+                        {% set status = order.deliveryStatus.value %}
+                        {% set method = order.fulfillmentMethod.value %}
+                        {% set riskState = status == 'DELIVERED' ? 'completed' : deliveryRow.commitmentState %}
+                        {% set commitmentDate = order.commitmentDate ? order.commitmentDate|date('Y-m-d', 'America/Mexico_City') : '' %}
+                        {% set statusLabel = status == 'NOT_READY' ? 'Por preparar' : (status == 'READY_FOR_PICKUP' ? 'Lista para recoger' : (status == 'READY_FOR_SHIPMENT' ? 'Lista para envío' : (status == 'SHIPPED' ? 'Enviada' : 'Entregada'))) %}
+                        <tr data-delivery-row data-status="{{ status }}" data-method="{{ method }}" data-commitment="{{ deliveryRow.commitmentState }}" data-commitment-date="{{ commitmentDate }}">
+                            <td data-label="Orden"><a class="delivery-order-link" href="{{ path('admin_production_quality_delivery_delivery_show', {id: order.id}) }}">{{ order.folio }}</a></td>
+                            <td data-label="Cliente / contacto"><strong class="delivery-client-name">{{ clientName }}</strong><span class="delivery-contact-name">{{ order.deliveryContactSnapshot.name|default('Contacto pendiente') }}</span></td>
+                            <td data-label="Modalidad">{{ order.fulfillmentMethod.label }}</td>
+                            <td data-label="Estado"><span class="delivery-status delivery-status--{{ status|lower }}"><i aria-hidden="true"></i>{{ statusLabel }}</span></td>
+                            <td data-label="Compromiso">{% if order.commitmentDate %}<time datetime="{{ commitmentDate }}">{{ order.commitmentDate|date('d/m/Y', 'America/Mexico_City') }}</time>{% else %}<span class="delivery-muted">Sin fecha</span>{% endif %}</td>
+                            <td data-label="Riesgo"><span class="delivery-risk delivery-risk--{{ riskState }}"><i aria-hidden="true"></i>{% if status == 'DELIVERED' %}Entregada{% elseif deliveryRow.commitmentState == 'overdue' %}Atrasada{% elseif deliveryRow.commitmentState == 'unassigned' %}Por asignar{% else %}A tiempo{% endif %}</span></td>
+                            <td data-label="Acción"><a class="delivery-row-action" href="{{ path('admin_production_quality_delivery_delivery_show', {id: order.id}) }}">Abrir entrega<i class="bi bi-arrow-right" aria-hidden="true"></i></a></td>
+                        </tr>
+                    {% else %}
+                        <tr class="delivery-empty"><td colspan="7"><i class="bi bi-box-seam" aria-hidden="true"></i><strong>No hay órdenes liberadas para entrega.</strong><span>Las órdenes aparecerán aquí cuando Calidad libere Producción.</span></td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                <p class="delivery-no-results" hidden data-admin--delivery-board-target="noResults">No hay órdenes que coincidan con los filtros.</p>
+            </div>
+        </section>
     </section>
 {% endblock %}

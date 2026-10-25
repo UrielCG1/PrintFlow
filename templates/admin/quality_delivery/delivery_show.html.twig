@@ -5,27 +5,152 @@
 {% block app_breadcrumb %}Operación / Entregas / {{ order.folio }}{% endblock %}
 
 {% block app_content %}
-    <section class="pf-page__content">
-        <header class="pf-page-header"><div class="pf-page-header__content"><p class="pf-page-header__eyebrow">Entrega de orden liberada</p><h1 class="pf-page-header__title">{{ order.folio }}</h1><p class="pf-page-header__description">{{ order.clientSnapshot.business_name|default(order.clientSnapshot.legal_name|default('Cliente')) }} · Producción: {{ order.productionStatus.label }} · Entrega: {{ order.deliveryStatus.label }}</p></div><div class="pf-page-header__actions"><a class="btn pf-button pf-button--secondary" href="{{ path('admin_production_quality_delivery_delivery_index') }}">Volver a Entregas</a></div></header>
+    {% set status = order.deliveryStatus.value %}
+    {% set method = order.fulfillmentMethod.value %}
+    {% set isDelivered = status == 'DELIVERED' %}
+    {% set isPickup = method == 'pickup' %}
+    {% set clientName = order.clientSnapshot.business_name|default(order.clientSnapshot.legal_name|default('Cliente')) %}
+    {% set deliveryContact = order.deliveryContactSnapshot %}
+    {% set deliveryAddress = order.deliveryAddressSnapshot %}
+    <section class="pf-page__content delivery-page delivery-detail">
+        <header class="pf-page-header delivery-detail__header">
+            <div class="pf-page-header__content">
+                <p class="pf-page-header__eyebrow">Entrega de orden</p>
+                <h1 class="pf-page-header__title">{{ order.folio }}</h1>
+                <p class="pf-page-header__description">{{ clientName }} <span aria-hidden="true">·</span> Compromiso {% if order.commitmentDate %}{{ order.commitmentDate|date('d/m/Y', 'America/Mexico_City') }}{% else %}sin fecha asignada{% endif %}</p>
+            </div>
+            <div class="pf-page-header__actions"><a class="btn pf-button pf-button--secondary" href="{{ path('admin_production_quality_delivery_delivery_index') }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> Volver a Entregas</a></div>
+        </header>
 
-        <section class="pf-card mb-4"><div class="pf-card__header"><h2 class="pf-card__title">Partidas que se entregan</h2></div><div class="pf-card__body"><div class="table-responsive"><table class="pf-table"><thead><tr><th>Partida</th><th>Producto</th><th>Cantidad</th><th>Operaciones</th></tr></thead><tbody>{% for item in order.items %}<tr><td>{{ item.displayLineNumber }} · {{ item.trackingCode }}</td><td>{{ item.commercialItemSnapshot.name|default(item.commercialItem.name) }}</td><td>{{ item.quantity }}</td><td>{% for plan in item.activeOperationPlans %}{{ plan.operationSnapshot.name|default(plan.operation.name) }}{% if not loop.last %}, {% endif %}{% else %}Sin operaciones{% endfor %}</td></tr>{% endfor %}</tbody></table></div></div></section>
+        {% if isDelivered %}
+            <section class="delivery-confirmed-banner" aria-label="Entrega confirmada">
+                <span class="delivery-confirmed-banner__icon" aria-hidden="true"><i class="bi bi-check-lg"></i></span>
+                <div><strong>Entrega confirmada</strong><p>El pedido fue entregado{% if isPickup %} en sucursal{% else %} al cliente{% endif %}.</p></div>
+            </section>
+        {% endif %}
 
-        <section class="pf-card mb-4"><div class="pf-card__header"><h2 class="pf-card__title">Siguiente acción</h2></div><div class="pf-card__body">
-            {% if order.productionStatus.value != 'PRODUCTION_COMPLETED' %}<p class="mb-0">Calidad debe liberar Producción antes de preparar la entrega.</p>
-            {% elseif order.deliveryStatus.value == 'DELIVERED' %}<p class="text-success mb-0">La entrega está confirmada.</p>
-            {% elseif order.fulfillmentMethod.value == 'undefined' and canSetMethod %}
-                <p>Ventas debe confirmar si el cliente recogerá en sucursal o recibirá un envío.</p>
-                <form method="post" action="{{ path('admin_production_quality_delivery_set_fulfillment', {id: order.id}) }}" class="pf-form row g-3 align-items-end"><input type="hidden" name="_token" value="{{ csrf_token('delivery-method-' ~ order.id) }}"><input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}"><input type="hidden" name="command_id" value="{{ methodCommandId }}"><div class="col-md-5"><label class="form-label" for="fulfillment">Modalidad</label><select id="fulfillment" class="form-select" name="fulfillment_method" required><option value="">Selecciona</option><option value="pickup">Recoger en sucursal</option><option value="shipping">Envío a domicilio</option></select></div><div class="col-md-5"><label class="form-label" for="method-note">Nota de confirmación (opcional)</label><input id="method-note" class="form-control" name="note" maxlength="500"></div><div class="col-md-2"><button class="btn pf-button pf-button--primary" type="submit">Confirmar modalidad</button></div></form>
-            {% elseif order.deliveryStatus.value == 'READY_FOR_SHIPMENT' and canShip %}
-                <p>Registra quién envía el pedido y, si existe, el número de guía.</p>
-                <form method="post" action="{{ path('admin_production_quality_delivery_ship', {id: order.id}) }}" class="pf-form row g-3 align-items-end"><input type="hidden" name="_token" value="{{ csrf_token('delivery-ship-' ~ order.id) }}"><input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}"><input type="hidden" name="command_id" value="{{ shipCommandId }}"><div class="col-md-4"><label class="form-label" for="carrier">Paquetería o responsable</label><input id="carrier" class="form-control" name="carrier" minlength="2" maxlength="100" required></div><div class="col-md-4"><label class="form-label" for="tracking">Número de guía (opcional)</label><input id="tracking" class="form-control" name="tracking_code" maxlength="120"></div><div class="col-md-3"><label class="form-label" for="ship-note">Nota (opcional)</label><input id="ship-note" class="form-control" name="note" maxlength="500"></div><div class="col-md-1"><button class="btn pf-button pf-button--primary" type="submit">Registrar</button></div></form>
-            {% elseif order.deliveryStatus.value in ['READY_FOR_PICKUP', 'SHIPPED'] and canConfirm %}
-                <p>{% if order.deliveryStatus.value == 'SHIPPED' %}Ventas puede confirmar la recepción del envío.{% else %}Ventas puede confirmar que el cliente recibió el pedido en sucursal.{% endif %}</p>
-                <form method="post" action="{{ path('admin_production_quality_delivery_confirm_delivery', {id: order.id}) }}" class="pf-form row g-3 align-items-end"><input type="hidden" name="_token" value="{{ csrf_token('delivery-confirm-' ~ order.id) }}"><input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}"><input type="hidden" name="command_id" value="{{ confirmCommandId }}"><div class="col-md-5"><label class="form-label" for="recipient">Recibió (opcional)</label><input id="recipient" class="form-control" name="recipient" maxlength="160"></div><div class="col-md-5"><label class="form-label" for="confirm-note">Evidencia o nota (opcional)</label><input id="confirm-note" class="form-control" name="note" maxlength="500"></div><div class="col-md-2"><button class="btn pf-button pf-button--primary" type="submit">Confirmar entrega</button></div></form>
-            {% else %}<p class="mb-0">Modalidad: {{ order.fulfillmentMethod.label }} · Estado: {{ order.deliveryStatus.label }}</p>{% endif %}
-            {% if order.deliveryPreparationIssue %}<p class="alert alert-warning mt-3 mb-0">{{ order.deliveryPreparationIssue }}</p>{% endif %}
-        </div></section>
+        <ol class="delivery-steps" aria-label="Progreso de la entrega">
+            <li class="is-complete"><span class="delivery-step__node"><i class="bi bi-check-lg" aria-hidden="true"></i></span><div><strong>Producción liberada</strong><small>Completado</small></div></li>
+            <li class="{{ status == 'NOT_READY' ? 'is-current' : 'is-complete' }}"><span class="delivery-step__node">{% if status != 'NOT_READY' %}<i class="bi bi-check-lg" aria-hidden="true"></i>{% else %}2{% endif %}</span><div><strong>Preparando entrega</strong><small>{{ status == 'NOT_READY' ? 'En proceso' : 'Completado' }}</small></div></li>
+            {% set isLastMileActive = status in ['READY_FOR_PICKUP', 'READY_FOR_SHIPMENT', 'SHIPPED'] %}
+            <li class="{{ isDelivered ? 'is-complete' : (isLastMileActive ? 'is-current' : 'is-pending') }}"><span class="delivery-step__node">{% if isDelivered %}<i class="bi bi-check-lg" aria-hidden="true"></i>{% elseif isLastMileActive %}<i class="bi bi-circle-fill" aria-hidden="true"></i>{% else %}3{% endif %}</span><div><strong>{% if method == 'shipping' %}Envío{% elseif method == 'pickup' %}Lista para recoger{% else %}Modalidad{% endif %}</strong><small>{% if status == 'READY_FOR_PICKUP' %}Listo en sucursal{% elseif status == 'READY_FOR_SHIPMENT' %}Pendiente de envío{% elseif status == 'SHIPPED' %}En tránsito{% elseif isDelivered %}Completado{% else %}Pendiente{% endif %}</small></div></li>
+            <li class="{{ isDelivered ? 'is-complete' : 'is-pending' }}"><span class="delivery-step__node">{% if isDelivered %}<i class="bi bi-check-lg" aria-hidden="true"></i>{% else %}4{% endif %}</span><div><strong>Entregada</strong><small>{{ isDelivered ? 'Completado' : 'Pendiente' }}</small></div></li>
+        </ol>
 
-        <section class="pf-card"><div class="pf-card__header"><h2 class="pf-card__title">Trazabilidad de entrega</h2></div><div class="pf-card__body"><ol class="mb-0">{% for event in events %}<li class="mb-2"><strong>{{ event.eventType }}</strong> · {{ event.occurredAt|date('d/m/Y H:i', 'America/Mexico_City') }}{% if event.actor %} · {{ event.actor.fullName }}{% endif %}{% if event.reason %}<span class="d-block small">{{ event.reason }}</span>{% endif %}{% if event.context.carrier|default(null) %}<span class="d-block small">{{ event.context.carrier }}{% if event.context.tracking_code|default(null) %} · Guía {{ event.context.tracking_code }}{% endif %}</span>{% endif %}{% if event.context.recipient|default(null) %}<span class="d-block small">Recibió: {{ event.context.recipient }}</span>{% endif %}</li>{% else %}<li>Sin eventos registrados.</li>{% endfor %}</ol></div></section>
+        <div class="delivery-detail-grid">
+            <div class="delivery-detail-main">
+                <section class="pf-card delivery-info-card {{ isDelivered ? 'is-confirmed' : '' }}">
+                    <div class="delivery-info-card__banner">
+                        <span class="delivery-info-card__icon" aria-hidden="true"><i class="bi {{ isDelivered ? 'bi-check-lg' : (isPickup ? 'bi-shop' : 'bi-truck') }}"></i></span>
+                        <div><h2>{% if isDelivered %}Entrega realizada{% elseif method == 'undefined' %}Entrega por preparar{% elseif isPickup %}Recoger en sucursal{% else %}Envío a domicilio{% endif %}</h2><p>{% if isDelivered %}El pedido se entregó a {{ deliveryContact.name|default(clientName) }}.{% elseif isPickup %}El cliente recogerá el pedido en sucursal.{% elseif method == 'shipping' %}El pedido será enviado al domicilio registrado.{% else %}Ventas debe confirmar la modalidad para continuar.{% endif %}</p></div>
+                        {% if isDelivered %}<span class="delivery-info-card__verified"><i class="bi bi-shield-check" aria-hidden="true"></i> Registro confirmado</span>{% endif %}
+                    </div>
+                    <div class="delivery-facts">
+                        <div><i class="bi bi-person" aria-hidden="true"></i><span><small>Cliente</small><strong>{{ clientName }}</strong></span></div>
+                        <div><i class="bi bi-box-seam" aria-hidden="true"></i><span><small>Modalidad</small><strong>{{ order.fulfillmentMethod.label }}</strong></span></div>
+                        {% if method == 'shipping' %}
+                            <div class="delivery-fact-wide"><i class="bi bi-geo-alt" aria-hidden="true"></i><span><small>Domicilio de entrega</small><strong>{{ deliveryAddress.formatted_address|default('Domicilio no disponible') }}</strong></span></div>
+                        {% else %}
+                            <div><i class="bi bi-geo-alt" aria-hidden="true"></i><span><small>Punto de recogida</small><strong>Recoger en sucursal</strong></span></div>
+                        {% endif %}
+                        <div><i class="bi bi-calendar-event" aria-hidden="true"></i><span><small>Fecha compromiso</small><strong>{{ order.commitmentDate ? order.commitmentDate|date('d/m/Y', 'America/Mexico_City') : 'Por asignar' }}</strong></span></div>
+                    </div>
+                </section>
+
+                <section class="pf-card delivery-items-card" aria-labelledby="delivery-items-title">
+                    <div class="pf-card__header delivery-card__header"><span class="delivery-card__heading-icon"><i class="bi bi-box-seam" aria-hidden="true"></i></span><div><h2 class="pf-card__title" id="delivery-items-title">Partidas {{ isDelivered ? 'entregadas' : 'de la orden' }}</h2><p>Productos incluidos en esta entrega.</p></div><span class="delivery-card__count">{{ order.items|length }} {{ order.items|length == 1 ? 'partida' : 'partidas' }}</span></div>
+                    <div class="delivery-table-scroll"><table class="delivery-items-table"><thead><tr><th scope="col">Partida</th><th scope="col">Producto</th><th scope="col">Cantidad</th><th scope="col">Operaciones</th></tr></thead><tbody>
+                        {% for item in order.items %}
+                            <tr><td data-label="Partida">{{ item.trackingCode }}</td><td data-label="Producto">{{ item.commercialItemSnapshot.name|default(item.commercialItem.name) }}</td><td data-label="Cantidad">{{ item.quantity }}</td><td data-label="Operaciones">{% for plan in item.activeOperationPlans %}{{ plan.operationSnapshot.name|default(plan.operation.name) }}{% if not loop.last %}, {% endif %}{% else %}Sin operaciones{% endfor %}</td></tr>
+                        {% else %}
+                            <tr><td colspan="4" class="delivery-items-empty">Esta orden no tiene partidas.</td></tr>
+                        {% endfor %}
+                    </tbody></table></div>
+                </section>
+
+                <section class="pf-card delivery-extra-card" aria-labelledby="delivery-extra-title">
+                    <div class="pf-card__header delivery-card__header"><span class="delivery-card__heading-icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></span><div><h2 class="pf-card__title" id="delivery-extra-title">Información adicional</h2><p>Datos de referencia de la orden.</p></div></div>
+                    <dl class="delivery-extra-grid">
+                        <div><dt>Cliente</dt><dd>{{ clientName }}</dd></div>
+                        <div><dt>Orden de servicio</dt><dd>{{ order.folio }}</dd></div>
+                        <div><dt>Compromiso</dt><dd>{{ order.commitmentDate ? order.commitmentDate|date('d/m/Y', 'America/Mexico_City') : 'Sin fecha' }}</dd></div>
+                        <div><dt>Estado de entrega</dt><dd><span class="delivery-status delivery-status--{{ status|lower }}"><i aria-hidden="true"></i>{{ order.deliveryStatus.label }}</span></dd></div>
+                    </dl>
+                </section>
+            </div>
+
+            <aside class="delivery-detail-aside">
+                <section class="pf-card delivery-action-card" aria-labelledby="delivery-action-title">
+                    <div class="pf-card__header delivery-card__header"><div><h2 class="pf-card__title" id="delivery-action-title">{{ isDelivered ? 'Entrega finalizada' : 'Preparación de la entrega' }}</h2><p>{{ order.deliveryStatus.label }}</p></div></div>
+                    <div class="pf-card__body">
+                        {% if order.productionStatus.value != 'PRODUCTION_COMPLETED' %}
+                            <p class="delivery-action-message">Calidad debe liberar Producción antes de preparar la entrega.</p>
+                        {% elseif isDelivered %}
+                            <p class="delivery-action-message delivery-action-message--success"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> La entrega quedó confirmada en el sistema.</p>
+                        {% elseif status == 'NOT_READY' and canSetMethod %}
+                            <p class="delivery-action-message">Confirma si el cliente recogerá el pedido o recibirá un envío.</p>
+                            <form method="post" action="{{ path('admin_production_quality_delivery_set_fulfillment', {id: order.id}) }}" class="delivery-action-form">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delivery-method-' ~ order.id) }}"><input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}"><input type="hidden" name="command_id" value="{{ methodCommandId }}">
+                                <label for="fulfillment">Modalidad</label><select id="fulfillment" class="form-select" name="fulfillment_method" required><option value="">Selecciona una modalidad</option><option value="pickup">Recoger en sucursal</option><option value="shipping" {{ deliveryAddress is null ? 'disabled' : '' }}>Envío a domicilio</option></select>
+                                {% if deliveryAddress is null %}<small class="delivery-field-help">No hay un domicilio registrado; solicita a Ventas actualizar la cotización.</small>{% endif %}
+                                <label for="method-note">Nota de confirmación <span>(opcional)</span></label><input id="method-note" class="form-control" name="note" maxlength="500" placeholder="Agrega contexto para la bitácora">
+                                <button class="btn pf-button pf-button--primary delivery-submit" type="submit">Confirmar modalidad</button>
+                            </form>
+                        {% elseif status == 'READY_FOR_SHIPMENT' and canShip %}
+                            <p class="delivery-action-message">Registra quién envía el pedido y el número de guía si está disponible.</p>
+                            <form method="post" action="{{ path('admin_production_quality_delivery_ship', {id: order.id}) }}" class="delivery-action-form">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delivery-ship-' ~ order.id) }}"><input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}"><input type="hidden" name="command_id" value="{{ shipCommandId }}">
+                                <label for="carrier">Paquetería o responsable</label><input id="carrier" class="form-control" name="carrier" minlength="2" maxlength="100" required placeholder="Nombre de la paquetería">
+                                <label for="tracking">Número de guía <span>(opcional)</span></label><input id="tracking" class="form-control" name="tracking_code" maxlength="120" placeholder="Número de rastreo">
+                                <label for="ship-note">Nota <span>(opcional)</span></label><input id="ship-note" class="form-control" name="note" maxlength="500">
+                                <button class="btn pf-button pf-button--primary delivery-submit" type="submit">Registrar envío</button>
+                            </form>
+                        {% elseif status in ['READY_FOR_PICKUP', 'SHIPPED'] and canConfirm %}
+                            <p class="delivery-action-message">{% if status == 'SHIPPED' %}Confirma cuando el cliente haya recibido el envío.{% else %}Confirma cuando el cliente recoja el pedido en sucursal.{% endif %}</p>
+                            <form method="post" action="{{ path('admin_production_quality_delivery_confirm_delivery', {id: order.id}) }}" class="delivery-action-form">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delivery-confirm-' ~ order.id) }}"><input type="hidden" name="expected_order_version" value="{{ order.traceabilityVersion }}"><input type="hidden" name="command_id" value="{{ confirmCommandId }}">
+                                <label for="recipient">Nombre de quien recibe <span>(opcional)</span></label><input id="recipient" class="form-control" name="recipient" maxlength="160" placeholder="Nombre completo">
+                                <label for="confirm-note">Nota o evidencia <span>(opcional)</span></label><textarea id="confirm-note" class="form-control" name="note" maxlength="500" rows="3" placeholder="Observaciones de la entrega"></textarea>
+                                <button class="btn pf-button pf-button--primary delivery-submit" type="submit">Confirmar entrega</button>
+                            </form>
+                        {% elseif status == 'NOT_READY' %}
+                            <p class="delivery-action-message">Ventas debe confirmar la modalidad de entrega para continuar.</p>
+                        {% elseif status == 'READY_FOR_SHIPMENT' %}
+                            <p class="delivery-action-message">La orden está lista para envío. Un usuario con permiso de envío debe registrar la paquetería.</p>
+                        {% elseif status in ['READY_FOR_PICKUP', 'SHIPPED'] %}
+                            <p class="delivery-action-message">La orden está lista para confirmar su recepción. Ventas registrará quién recibió el pedido.</p>
+                        {% else %}
+                            <p class="delivery-action-message">{{ order.deliveryStatus.label }}.</p>
+                        {% endif %}
+                        {% if order.deliveryPreparationIssue %}<p class="delivery-preparation-warning"><i class="bi bi-exclamation-circle" aria-hidden="true"></i>{{ order.deliveryPreparationIssue }}</p>{% endif %}
+                    </div>
+                </section>
+
+                <section class="pf-card delivery-contact-card" aria-labelledby="delivery-contact-title">
+                    <div class="pf-card__header delivery-card__header"><div><h2 class="pf-card__title" id="delivery-contact-title">Contacto del cliente</h2><p>Información guardada al crear la orden.</p></div><i class="bi bi-info-circle delivery-contact-info" aria-hidden="true"></i></div>
+                    <dl class="delivery-contact-list">
+                        <div><dt><i class="bi bi-person" aria-hidden="true"></i> Contacto</dt><dd>{{ deliveryContact.name|default('No registrado') }}</dd></div>
+                        {% if deliveryContact.phone|default(null) %}<div><dt><i class="bi bi-telephone" aria-hidden="true"></i> Teléfono</dt><dd>{{ deliveryContact.phone }}</dd></div>{% endif %}
+                        {% if deliveryContact.email|default(null) %}<div><dt><i class="bi bi-envelope" aria-hidden="true"></i> Correo</dt><dd>{{ deliveryContact.email }}</dd></div>{% endif %}
+                        {% if deliveryContact.contact_preference|default(null) %}<div><dt><i class="bi bi-chat-dots" aria-hidden="true"></i> Preferencia</dt><dd>{{ deliveryContact.contact_preference }}</dd></div>{% endif %}
+                    </dl>
+                    <p class="delivery-contact-note">El sistema no envía avisos automáticos al cliente.</p>
+                </section>
+
+                <section class="pf-card delivery-trace-card" aria-labelledby="delivery-trace-title">
+                    <div class="pf-card__header delivery-card__header"><span class="delivery-card__heading-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></span><div><h2 class="pf-card__title" id="delivery-trace-title">Trazabilidad de la entrega</h2><p>Historial de eventos de la orden.</p></div><span class="delivery-card__count">{{ events|length }}</span></div>
+                    <ol class="delivery-timeline">
+                        {% for event in events|reverse %}
+                            {% set eventTitle = event.eventType %}
+                            {% if event.eventType == 'quality.order_released' %}{% set eventTitle = 'Producción liberada' %}{% elseif event.eventType == 'delivery.method_set' %}{% set eventTitle = 'Modalidad de entrega definida' %}{% elseif event.eventType == 'delivery.ready' %}{% set eventTitle = 'Preparación iniciada' %}{% elseif event.eventType == 'delivery.shipped' %}{% set eventTitle = 'Envío registrado' %}{% elseif event.eventType == 'delivery.confirmed' %}{% set eventTitle = 'Entrega confirmada' %}{% endif %}
+                            <li class="{{ loop.last ? 'is-first' : '' }}"><span class="delivery-timeline__node" aria-hidden="true"></span><div class="delivery-timeline__copy"><strong>{{ eventTitle }}</strong><time datetime="{{ event.occurredAt|date('c', 'America/Mexico_City') }}">{{ event.occurredAt|date('d/m/Y H:i', 'America/Mexico_City') }}</time>{% if event.actor %}<span class="delivery-timeline__actor"><i class="bi bi-person" aria-hidden="true"></i>{{ event.actor.fullName }}</span>{% endif %}{% if event.reason %}<p>{{ event.reason }}</p>{% endif %}{% if event.context.carrier|default(null) %}<p>{{ event.context.carrier }}{% if event.context.tracking_code|default(null) %} · Guía {{ event.context.tracking_code }}{% endif %}</p>{% endif %}{% if event.context.recipient|default(null) %}<p>Recibió: {{ event.context.recipient }}</p>{% endif %}</div></li>
+                        {% else %}
+                            <li class="delivery-timeline__empty"><span class="delivery-timeline__node" aria-hidden="true"></span><div class="delivery-timeline__copy"><strong>Sin eventos registrados</strong><p>Las acciones de entrega aparecerán aquí.</p></div></li>
+                        {% endfor %}
+                    </ol>
+                    <div class="delivery-event-legend"><strong>Tipos de evento</strong><span><i class="is-production"></i> Producción</span><span><i class="is-delivery"></i> Entrega</span><span><i class="is-info"></i> Información</span></div>
+                </section>
+            </aside>
+        </div>
     </section>
 {% endblock %}

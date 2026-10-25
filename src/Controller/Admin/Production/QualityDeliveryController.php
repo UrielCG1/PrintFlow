@@ -131,12 +131,62 @@ final class QualityDeliveryController extends AbstractController
     public function deliveryIndex(ServiceOrderRepository $orders): Response
     {
         $this->assertDeliveryAccess();
-        $pending = array_values(array_filter(
+        $deliveryOrders = array_values(array_filter(
             $orders->findRecentForAdministration(),
-            static fn (ServiceOrder $order): bool => $order->getProductionStatus() === ProductionOrderStatus::PRODUCTION_COMPLETED
-                && $order->getDeliveryStatus() !== ServiceOrderDeliveryStatus::DELIVERED,
+            static fn (ServiceOrder $order): bool => $order->getProductionStatus() === ProductionOrderStatus::PRODUCTION_COMPLETED,
         ));
-        return $this->render('admin/quality_delivery/delivery_index.html.twig', ['orders' => $pending]);
+
+        $timezone = new \DateTimeZone('America/Mexico_City');
+        $today = new \DateTimeImmutable('today', $timezone);
+        $summary = [
+            'to_prepare' => 0,
+            'pickup' => 0,
+            'shipped' => 0,
+            'overdue' => 0,
+        ];
+        $methodCounts = ['pickup' => 0, 'shipping' => 0];
+        $deliveryRows = [];
+
+        foreach ($deliveryOrders as $order) {
+            $status = $order->getDeliveryStatus();
+            $method = $order->getFulfillmentMethod();
+            if ($method === ServiceOrderFulfillmentMethod::PICKUP) {
+                ++$methodCounts['pickup'];
+            } elseif ($method === ServiceOrderFulfillmentMethod::SHIPPING) {
+                ++$methodCounts['shipping'];
+            }
+
+            if ($status === ServiceOrderDeliveryStatus::NOT_READY) {
+                ++$summary['to_prepare'];
+            } elseif ($status === ServiceOrderDeliveryStatus::READY_FOR_PICKUP) {
+                ++$summary['pickup'];
+            } elseif ($status === ServiceOrderDeliveryStatus::SHIPPED) {
+                ++$summary['shipped'];
+            }
+
+            $commitment = $order->getCommitmentDate()?->setTimezone($timezone);
+            $commitmentState = $commitment === null
+                ? 'unassigned'
+                : ($commitment->format('Y-m-d') < $today->format('Y-m-d')
+                    ? 'overdue'
+                    : ($commitment->format('Y-m-d') === $today->format('Y-m-d') ? 'today' : 'future'));
+
+            if ($commitmentState === 'overdue' && $status !== ServiceOrderDeliveryStatus::DELIVERED) {
+                ++$summary['overdue'];
+            }
+
+            $deliveryRows[] = [
+                'order' => $order,
+                'commitmentState' => $commitmentState,
+            ];
+        }
+
+        return $this->render('admin/quality_delivery/delivery_index.html.twig', [
+            'orders' => $deliveryOrders,
+            'deliveryRows' => $deliveryRows,
+            'deliverySummary' => $summary,
+            'deliveryMethodCounts' => $methodCounts,
+        ]);
     }
 
     #[Route('/entregas/ordenes/{id}', name: 'delivery_show', requirements: ['id' => '\\d+'], methods: ['GET'])]
