@@ -4,6 +4,8 @@
 
 Esta guía completa la [estrategia del módulo de inventario](estrategia-modulo-inventario.md) con las actividades que requieren personas, material físico, dispositivos y el ambiente de destino. El [runbook general de despliegue](produccion-trazabilidad/operacion/validacion-y-despliegue-hostinger.md) conserva la secuencia técnica para publicar el código y aplicar migraciones.
 
+Antes de cerrar el recorrido de rollos, seguir la [guía de control en metros lineales](guia-control-lineal-rollos-inventario.md): el saldo puede estar correctamente en ML y aun así subestimar el descuento si los m² previstos no representan toda la superficie alimentada. Verificar el acomodo o medir la longitud real, especialmente en el caso `QA-LONA-13OZ`.
+
 ## 1. Alcance del piloto
 
 El primer piloto debe incluir un grupo pequeño pero representativo de variantes: una unidad por rollo o envase, una presentación contable, un material que pueda dejar sobrante y, cuando exista una regla aprobada, un sustituto. No limita el alcance futuro del catálogo: sirve para confirmar unidades, conversiones, etiquetas y hábitos de captura antes de activar el resto de la bodega.
@@ -101,7 +103,7 @@ Anotar los códigos visibles `IMU-` de las unidades, sin copiar el token interno
 
 | Caso | Folio de orden | Unidades `IMU-` y referencia de recepción | Saldo, apartado y resultado de escaneo observados | Estado, responsable y fecha |
 | --- | --- | --- | --- | --- |
-| Rollo: 10 ML → 6 M2 consumidos; sobrante separado pendiente | `OS-2026-000013`, partida 1 | `IMU-4ECB6E2978E4`; recepción `REC-20261015-46E1A69A` | Etiqueta de la unidad generada con 10 ML iniciales y ancho 1.50 m. Cámara integrada y validación de máquina/material funcionales. Material previsto sintético: 6 M2, equivalentes a 4 ML apartados. Tras cerrar Impresión, el usuario observó **6 ML** en la unidad; en Cobertura: **4 ML** de necesidad, **0 ML** apartados, **4 ML** consumidos, **0 ML** faltantes y estado **Conciliado**. No se reportó un QR hijo; la división de sobrante y la reimpresión siguen pendientes de validar. Confirmar también el rechazo del conteo hecho solo para probar el lector. | Consumo y conciliación informados el 17/10/2026 (Ciudad de México) |
+| Rollo: 10 ML → 6 M2 de área; sobrante separado pendiente | `OS-2026-000013`, partida 1 | `IMU-4ECB6E2978E4`; recepción `REC-20261015-46E1A69A` | Etiqueta de la unidad generada con 10 ML iniciales y ancho 1.50 m. Cámara integrada y validación de máquina/material funcionales. El movimiento histórico descontó 4 ML a partir de 6 M2; conservarlo y conciliar físicamente antes de usarlo como referencia. El flujo actual exige capturar ML previstos y ML reales: para un acomodo que usa todo el ancho, 6 M2 corresponden a 4 ML. No se reportó un QR hijo; la división de sobrante y la reimpresión siguen pendientes de validar. Confirmar también el rechazo del conteo hecho solo para probar el lector. | Consumo histórico informado el 17/10/2026 (Ciudad de México); pendiente conciliación física |
 | Faltante de 6 M2 y sustituto autorizado | Pendiente | Pendiente | Pendiente | Pendiente |
 | Paquetes: espera de 100 HOJA y recepciones 50 + 50 | Pendiente | Pendiente | Pendiente | Pendiente |
 

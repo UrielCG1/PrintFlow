@@ -20,6 +20,7 @@ final class MaterialVariantRollTest extends TestCase
             ->configureRollWidth('1.52');
 
         self::assertSame('1.520000000000', $variant->getInventoryToConsumptionFactor());
+        self::assertTrue($variant->isLinearRoll());
         self::assertSame([
             'physical_form' => 'ROLLO',
             'width_m' => '1.5200',
@@ -36,6 +37,18 @@ final class MaterialVariantRollTest extends TestCase
         $this->expectExceptionMessage('metros lineales');
 
         $variant->configureRollWidth('1.52');
+    }
+
+    public function testGenericPresentationCannotCreateARollWithoutItsWidth(): void
+    {
+        $linearMeter = (new MeasurementUnit())->setCode('ML')->setDimensionType(MeasurementDimensionType::LENGTH);
+        $squareMeter = (new MeasurementUnit())->setCode('M2')->setDimensionType(MeasurementDimensionType::AREA);
+        $variant = new MaterialVariant(new Material(), 'LONA-SIN-ANCHO', $linearMeter, $linearMeter, $squareMeter);
+
+        $this->expectException(\DomainException::class);
+        $this->expectExceptionMessage('metros lineales');
+
+        $variant->configurePhysicalPresentation('ROLLO', '', '1.5');
     }
 
     public function testItCanCorrectAnUnusedRollsWidthAndCode(): void

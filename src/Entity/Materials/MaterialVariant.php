@@ -59,6 +59,12 @@ class MaterialVariant
     public function getConsumptionUnit():MeasurementUnit{return $this->consumptionUnit;}
     public function getInventoryToConsumptionFactor():string{return $this->inventoryToConsumptionFactor;}
     public function getPurchaseToInventoryFactor():string{return $this->purchaseToInventoryFactor;}
+    /** Un rollo se controla por longitud física aunque Producción conserve su área en m². */
+    public function isLinearRoll(): bool
+    {
+        return ($this->specifications['physical_form'] ?? null) === 'ROLLO'
+            && $this->inventoryUnit->getCode() === 'ML';
+    }
     /** Configuración de una presentación nueva; cada recepción seguirá creando una unidad QR. */
     public function configurePhysicalPresentation(string $physicalForm, string $purchaseFactor, string $consumptionFactor):self
     {
@@ -66,11 +72,9 @@ class MaterialVariant
         if (!in_array($physicalForm, $allowed, true)) {
             throw new \InvalidArgumentException('Selecciona un objeto físico válido para la presentación.');
         }
-        if ($physicalForm === 'ROLLO' && $this->inventoryUnit->getDimensionType() === 'LENGTH'
-            && $this->consumptionUnit->getDimensionType() === 'AREA') {
-            throw new \DomainException('Un rollo con saldo lineal y consumo por área requiere configurar su ancho.');
+        if ($physicalForm === 'ROLLO') {
+            throw new \DomainException('Configura los rollos por ancho: su saldo físico se controla en metros lineales y requiere una presentación por ancho.');
         }
-
         $purchaseToInventoryFactor = $this->presentationFactor(
             $purchaseFactor, $this->purchaseUnit, $this->inventoryUnit, 'compra a inventario',
         );

@@ -6,6 +6,7 @@ namespace App\Controller\Admin\Production;
 
 use App\Application\Inventory\InventoryPrintingMaterialResolver;
 use App\Application\Inventory\InventoryPrintingMaterialStatus;
+use App\Application\Inventory\InventoryStockUnitQrResolver;
 use App\Application\Production\PrintingManager;
 use App\Application\Production\ProductionExecutionCommand;
 use App\Entity\Equipment\Equipment;
@@ -22,8 +23,6 @@ use App\Repository\Production\ProductionMaterialUsageRepository;
 use App\Repository\Production\ProductionPrintingScanRepository;
 use App\Repository\Production\ServiceOrderItemDesignReleaseRepository;
 use App\Service\Production\PrintingLabelRenderer;
-use Brick\Math\BigDecimal;
-use Brick\Math\RoundingMode;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -164,11 +163,7 @@ final class PrintingController extends AbstractController
             ? $plannedUsage->getPlannedQuantity()
             : null;
         $plannedInventoryQuantity = $confirmedPlanQuantity !== null
-            ? BigDecimal::of($confirmedPlanQuantity)->dividedBy(
-                BigDecimal::of($scannedStockUnit->getVariant()->getInventoryToConsumptionFactor()),
-                6,
-                RoundingMode::Up,
-            )->__toString()
+            ? $plannedUsage?->getPlannedInventoryQuantity()
             : null;
 
         return $this->render('admin/printing/show.html.twig', [
@@ -216,10 +211,11 @@ final class PrintingController extends AbstractController
             if (!$material instanceof \App\Entity\Materials\MaterialVariant) {
                 throw new \DomainException('Selecciona un material válido.');
             }
-            if (($plan->getEquipment() !== $equipment || $plan->getMaterialVariant() !== $material) && !$this->isGranted('production.substitution.approve') && $plan->getMaterialVariant() !== null) {
+            $effectiveEquipment = $equipment ?? $plan->getEquipment();
+            if (($plan->getEquipment() !== $effectiveEquipment || $plan->getMaterialVariant() !== $material) && !$this->isGranted('production.substitution.approve') && $plan->getMaterialVariant() !== null) {
                 throw new \DomainException('Solo el jefe de Producción o Administrador puede autorizar una sustitución.');
             }
-            $manager->configureRequirements($plan, $equipment, $material, $request->request->getString('planned_quantity'), $request->request->getString('reason'), $this->authenticatedUser());
+            $manager->configureRequirements($plan, $equipment, $material, $request->request->getString('planned_quantity'), $request->request->getString('planned_inventory_quantity'), $request->request->getString('reason'), $this->authenticatedUser());
             $this->addFlash('success', $plan->getServiceOrderItem()->getServiceOrder()->isPlanned()
                 ? 'Material y cantidad previstos registrados; el apartado se concilió con el saldo disponible. Revisa si hay faltantes en la orden.'
                 : 'Material y cantidad previstos registrados. El apartado se calculará al planificar la orden.');
@@ -227,6 +223,42 @@ final class PrintingController extends AbstractController
             $this->addFlash('error', $exception->getMessage());
         }
         return $this->redirectToRoute('admin_printing_show', ['id' => $plan->getId()]);
+    }
+
+    #[Route('/operaciones/{id}/verificar-material', name: 'preview_material_scan', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function previewMaterialScan(
+        Request $request,
+        ServiceOrderOperationPlan $plan,
+        PrintingManager $manager,
+        InventoryStockUnitQrResolver $qrResolver,
+        InventoryPrintingMaterialResolver $materialResolver,
+    ): Response {
+        $this->denyAccessUnlessGranted('production.execute');
+        $this->assertPrintingPlan($plan, $manager);
+        $this->assertCsrf($request, 'printing-scan-preview-'.$plan->getId());
+
+        try {
+            $stockUnit = $qrResolver->resolve($request->request->getString('material_qr_payload'));
+            $variant = $stockUnit->getVariant();
+            if (!$materialResolver->isVariantAllowedForPlan($plan, $variant)) {
+                $expected = array_map(
+                    static fn ($allowed): string => $allowed->getMaterial()->getName().' · '.$allowed->getCode(),
+                    $materialResolver->allowedVariantsForPlan($plan),
+                );
+
+                return $this->json([
+                    'valid' => false,
+                    'message' => 'Material incorrecto: escaneaste '.$variant->getMaterial()->getName().' · '.$variant->getCode().'. Se espera '.implode(' o ', $expected).'.',
+                ]);
+            }
+
+            return $this->json([
+                'valid' => true,
+                'message' => 'Material correcto: '.$variant->getMaterial()->getName().' · '.$variant->getCode().' ('.$stockUnit->getUnitCode().'). Pulsa «Validar escaneos» para confirmar.',
+            ]);
+        } catch (\DomainException $exception) {
+            return $this->json(['valid' => false, 'message' => $exception->getMessage()]);
+        }
     }
 
     #[Route('/operaciones/{id}/validar-escaneos', name: 'validate_scans', requirements: ['id' => '\d+'], methods: ['POST'])]
@@ -276,6 +308,7 @@ final class PrintingController extends AbstractController
                 $this->authenticatedUser(),
                 $this->commandFromRequest($request, 'Impresión completada con consumo registrado.'),
                 $request->request->getString('total_consumed'),
+                $request->request->getString('actual_inventory_quantity'),
                 $request->request->has('waste') ? $request->request->getString('waste') : null,
                 $request->request->getString('measurement_method'),
                 $request->request->getString('waste_reason'),

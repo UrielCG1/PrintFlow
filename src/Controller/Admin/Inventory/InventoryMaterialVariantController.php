@@ -141,6 +141,7 @@ final class InventoryMaterialVariantController extends AbstractController
             'materials' => $materials,
             'units' => $units,
             'physicalForms' => self::PHYSICAL_FORMS,
+            'newPhysicalForms' => array_diff_key(self::PHYSICAL_FORMS, ['ROLLO' => true]),
             'formData' => $formData,
             'configured' => $configured,
         ]);

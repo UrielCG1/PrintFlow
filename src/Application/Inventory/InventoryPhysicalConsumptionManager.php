@@ -54,8 +54,17 @@ final class InventoryPhysicalConsumptionManager
             throw new \DomainException('La unidad física escaneada ya no tiene saldo disponible. Escanea otra unidad y vuelve a iniciar la impresión.');
         }
 
-        $consumedInventoryQuantity = $this->toInventoryQuantity($actual, $variant->getInventoryToConsumptionFactor());
-        $wasteInventoryQuantity = $this->toInventoryQuantity($waste, $variant->getInventoryToConsumptionFactor());
+        if ($variant->isLinearRoll()) {
+            $consumedInventoryQuantity = $usage->getActualInventoryQuantity();
+            if ($consumedInventoryQuantity === null || BigDecimal::of($consumedInventoryQuantity)->isLessThanOrEqualTo(BigDecimal::zero())) {
+                throw new \DomainException('Indica la longitud real alimentada en metros lineales antes de descontar el rollo.');
+            }
+            // La merma lateral se conserva en Producción por área; no se convierte a longitud ni se descuenta dos veces.
+            $wasteInventoryQuantity = '0.000000';
+        } else {
+            $consumedInventoryQuantity = $this->toInventoryQuantity($actual, $variant->getInventoryToConsumptionFactor());
+            $wasteInventoryQuantity = $this->toInventoryQuantity($waste, $variant->getInventoryToConsumptionFactor());
+        }
         $productionInventoryQuantity = BigDecimal::of($consumedInventoryQuantity)->minus($wasteInventoryQuantity)->toScale(6)->__toString();
 
         $commitment = $this->commitmentRepository->findOneForOrderAndVariant($order, $variant);

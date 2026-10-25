@@ -45,7 +45,7 @@
                         <label for="variant-physical-form" class="form-label">Objeto físico que recibirá el QR</label>
                         <select id="variant-physical-form" name="physical_form" class="form-select" required>
                             <option value="">Selecciona el objeto</option>
-                            {% for code, label in physicalForms %}
+                            {% for code, label in newPhysicalForms %}
                                 <option value="{{ code }}" {{ formData.physical_form == code ? 'selected' : '' }}>{{ label }}</option>
                             {% endfor %}
                         </select>

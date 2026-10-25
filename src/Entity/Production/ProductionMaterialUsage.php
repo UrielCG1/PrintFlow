@@ -67,8 +67,16 @@ class ProductionMaterialUsage
     #[ORM\Column(name: 'planned_quantity', type: Types::DECIMAL, precision: 20, scale: 6, nullable: true)]
     private ?string $plannedQuantity = null;
 
+    /** Longitud o cantidad física prevista en la unidad de inventario; se usa en rollos. */
+    #[ORM\Column(name: 'planned_inventory_quantity', type: Types::DECIMAL, precision: 20, scale: 6, nullable: true)]
+    private ?string $plannedInventoryQuantity = null;
+
     #[ORM\Column(name: 'actual_quantity', type: Types::DECIMAL, precision: 20, scale: 6, nullable: true)]
     private ?string $actualQuantity = null;
+
+    /** Cantidad física realmente descontada en la unidad de inventario; se usa en rollos. */
+    #[ORM\Column(name: 'actual_inventory_quantity', type: Types::DECIMAL, precision: 20, scale: 6, nullable: true)]
+    private ?string $actualInventoryQuantity = null;
 
     /** Compatibilidad histórica: no representa movimiento de inventario. */
     #[ORM\Column(name: 'posted_quantity', type: Types::DECIMAL, precision: 20, scale: 6, nullable: true)]
@@ -159,7 +167,7 @@ class ProductionMaterialUsage
     }
 
     /** Actualiza la previsión de una operación aún no iniciada; el cambio queda auditado por el caso de uso. */
-    public function revisePlanned(MaterialVariant $variant, string $quantity): self
+    public function revisePlanned(MaterialVariant $variant, string $quantity, ?string $inventoryQuantity = null): self
     {
         if ($this->operationPlan === null || $this->operationExecution !== null || $this->actualQuantity !== null) {
             throw new \DomainException('Solo se puede corregir material previsto antes de iniciar la operación.');
@@ -168,9 +176,21 @@ class ProductionMaterialUsage
         $this->variant = $variant;
         $this->unit = $variant->getConsumptionUnit();
         $this->plannedQuantity = $this->postedQuantity = $normalized;
+        $this->plannedInventoryQuantity = self::decimalOrNull($inventoryQuantity, 'La cantidad física prevista');
         $this->materialNameSnapshot = $variant->getMaterial()->getName();
         $this->unitLabelSnapshot = $variant->getConsumptionUnit()->getSymbol();
         $this->calculationSnapshot = ['source' => 'printing-production-plan', 'version' => 1, 'variant_code' => $variant->getCode()];
+
+        return $this;
+    }
+
+    /** Registra la cantidad física prevista sin reinterpretar la cantidad de producción. */
+    public function setPlannedInventoryQuantity(?string $quantity): self
+    {
+        if ($this->operationPlan === null || $this->operationExecution !== null || $this->actualQuantity !== null) {
+            throw new \DomainException('Solo se puede indicar la cantidad física prevista antes de iniciar la operación.');
+        }
+        $this->plannedInventoryQuantity = self::decimalOrNull($quantity, 'La cantidad física prevista');
 
         return $this;
     }
@@ -230,6 +250,21 @@ class ProductionMaterialUsage
         $this->measuredAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
     }
 
+    /** La cantidad física se conserva aparte del área o consumo de Producción. */
+    public function recordActualInventoryQuantity(?string $quantity): self
+    {
+        if ($this->actualQuantity === null) {
+            throw new \DomainException('Registra primero el consumo de Producción antes de indicar la cantidad física.');
+        }
+        $normalized = self::decimalOrNull($quantity, 'La cantidad física real');
+        if ($normalized !== null && BigDecimal::of($normalized)->isZero()) {
+            throw new \InvalidArgumentException('La cantidad física real debe ser mayor que cero.');
+        }
+        $this->actualInventoryQuantity = $normalized;
+
+        return $this;
+    }
+
     public function getId(): ?int { return $this->id; }
     public function getServiceOrderItem(): ServiceOrderItem { return $this->serviceOrderItem; }
     public function getOperationPlan(): ?ServiceOrderOperationPlan { return $this->operationPlan; }
@@ -239,8 +274,10 @@ class ProductionMaterialUsage
     public function getMaterialNameSnapshot(): string { return $this->materialNameSnapshot; }
     public function getUnitLabelSnapshot(): string { return $this->unitLabelSnapshot; }
     public function getPlannedQuantity(): ?string { return $this->plannedQuantity; }
+    public function getPlannedInventoryQuantity(): ?string { return $this->plannedInventoryQuantity; }
     /** @return array<string, mixed> */ public function getCalculationSnapshot(): array { return $this->calculationSnapshot; }
     public function getActualQuantity(): ?string { return $this->actualQuantity; }
+    public function getActualInventoryQuantity(): ?string { return $this->actualInventoryQuantity; }
     public function getPostedQuantity(): ?string { return $this->postedQuantity; }
     public function getWasteQuantity(): ?string { return $this->wasteQuantity; }
     public function getQuantitySource(): QuantitySource { return $this->quantitySource; }
