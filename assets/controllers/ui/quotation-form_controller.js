@@ -123,8 +123,8 @@ export default class extends Controller {
                 return null;
             }
 
-            this.clientSelect2 = $(this.clientTarget);
-            this.clientSelect2.select2({
+            const clientSelect2 = $(this.clientTarget);
+            clientSelect2.select2({
                 width: '100%',
                 dropdownParent: $(this.clientExistingPanelTarget),
                 placeholder: 'Selecciona un cliente',
@@ -143,15 +143,18 @@ export default class extends Controller {
                     search: () => 'Buscar',
                 },
             });
-            this.clientSelect2.prop('disabled', this.clientTarget.disabled);
-            this.clientSelect2.on('change.quotationForm', this.clientChangeHandler);
-            this.clientSelect2.on('select2:open.quotationForm', () => {
+            clientSelect2.prop('disabled', this.clientTarget.disabled);
+            clientSelect2.on('change.quotationForm', this.clientChangeHandler);
+            clientSelect2.on('select2:open.quotationForm', () => {
                 const searchInput = this.clientExistingPanelTarget.querySelector('.select2-search__field');
                 searchInput?.setAttribute('placeholder', 'Buscar cliente por nombre…');
             });
 
-            return this.clientSelect2;
+            this.clientSelect2 = clientSelect2;
+
+            return clientSelect2;
         } catch (error) {
+            this.clientSelect2 = null;
             console.error('No fue posible inicializar Select2 para el cliente.', error);
 
             return null;
