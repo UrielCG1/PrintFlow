@@ -2832,20 +2832,121 @@
     outline-offset: 2px;
 }
 
-.quotation-client-search {
-    max-width: 36rem;
-    margin-bottom: var(--pf-space-sm);
+.quotation-client-field .select2-container {
+    width: 100% !important;
+    font-family: inherit;
+    font-size: var(--pf-font-size-body-md);
 }
 
-.quotation-client-search .input-group-text {
+.quotation-client-field .select2-container--default .select2-selection--single {
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: 0.45rem 2.5rem 0.45rem 0.875rem;
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-lowest);
+    border: 1px solid var(--pf-border-color-strong);
+    border-radius: var(--pf-radius-md);
+    transition: border-color var(--pf-transition-fast), box-shadow var(--pf-transition-fast);
+}
+
+.quotation-client-field .select2-container--default .select2-selection--single:hover {
+    border-color: var(--pf-outline);
+}
+
+.quotation-client-field .select2-container--default.select2-container--focus .select2-selection--single,
+.quotation-client-field .select2-container--default.select2-container--open .select2-selection--single {
+    border-color: var(--pf-primary);
+    box-shadow: 0 0 0 0.25rem rgba(var(--pf-primary-rgb), 0.16);
+}
+
+.quotation-client-field .select2-container--default .select2-selection--single .select2-selection__rendered {
+    padding: 0;
+    color: var(--pf-on-surface);
+    line-height: var(--pf-line-height-body-md);
+}
+
+.quotation-client-field .select2-container--default .select2-selection--single .select2-selection__placeholder {
+    color: var(--pf-secondary);
+    opacity: 0.8;
+}
+
+.quotation-client-field .select2-container--default .select2-selection--single .select2-selection__arrow {
+    top: 0;
+    right: 0.75rem;
+    height: 100%;
+}
+
+.quotation-client-field .select2-container--default .select2-selection--single .select2-selection__arrow b {
+    border-color: var(--pf-secondary) transparent transparent;
+    border-width: 5px 4px 0;
+}
+
+.quotation-client-field .select2-dropdown {
+    overflow: hidden;
+    background: var(--pf-surface-container-lowest);
+    border: 1px solid var(--pf-border-color-strong);
+    border-radius: var(--pf-radius-md);
+    box-shadow: var(--pf-shadow-md);
+}
+
+.quotation-client-field .select2-container--open .select2-dropdown--below {
+    border-top: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+.quotation-client-field .select2-container--open .select2-dropdown--above {
+    border-bottom: 0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.quotation-client-field .select2-container--default .select2-search--dropdown {
+    padding: 0.5rem;
+}
+
+.quotation-client-field .select2-container--default .select2-search--dropdown .select2-search__field {
+    min-height: 2.5rem;
+    padding: 0.5rem 0.75rem;
+    color: var(--pf-on-surface);
+    background: var(--pf-surface-container-lowest);
+    border: 1px solid var(--pf-border-color-strong);
+    border-radius: var(--pf-radius-sm);
+    outline: 0;
+}
+
+.quotation-client-field .select2-container--default .select2-search--dropdown .select2-search__field:focus {
+    border-color: var(--pf-primary);
+    box-shadow: 0 0 0 0.2rem rgba(var(--pf-primary-rgb), 0.14);
+}
+
+.quotation-client-field .select2-container--default .select2-results__option {
+    padding: 0.55rem 0.75rem;
+    color: var(--pf-on-surface);
+}
+
+.quotation-client-field .select2-container--default .select2-results__option--highlighted[aria-selected] {
+    color: var(--pf-on-primary);
+    background-color: var(--pf-primary);
+}
+
+.quotation-client-field .select2-container--default .select2-results__option[aria-selected="true"] {
+    color: var(--pf-on-surface);
+    background-color: var(--pf-surface-container-low);
+}
+
+.quotation-client-field .select2-container--default .select2-results__option--highlighted[aria-selected="true"] {
+    color: var(--pf-on-primary);
+    background-color: var(--pf-primary);
+}
+
+.quotation-client-field .select2-container--default.select2-container--disabled .select2-selection--single {
     color: var(--pf-secondary);
     background: var(--pf-surface-container-low);
     border-color: var(--pf-border-color);
-}
-
-.quotation-client-search .form-text {
-    display: block;
-    min-height: 1.25rem;
+    cursor: not-allowed;
+    opacity: 0.8;
 }
 
 .quotation-client-mode__hint {

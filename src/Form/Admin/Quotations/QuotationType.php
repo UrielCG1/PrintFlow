@@ -38,7 +38,6 @@ final class QuotationType extends AbstractType
                 'choice_label' => static fn (Client $client): string => $client->getBusinessName(),
                 'attr' => [
                     'data-ui--quotation-form-target' => 'client',
-                    'data-action' => 'change->ui--quotation-form#changeClient',
                 ],
             ])
             ->add('expiresAt', DateType::class, [

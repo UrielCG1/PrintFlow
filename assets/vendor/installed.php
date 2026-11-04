@@ -59,4 +59,35 @@
     array (
     ),
   ),
+  'jquery' =>
+  array (
+    'version' => '3.7.1',
+    'dependencies' =>
+    array (
+    ),
+    'extraFiles' =>
+    array (
+    ),
+  ),
+  'select2/dist/js/select2.min.js' =>
+  array (
+    'version' => '4.1.0-rc.0',
+    'dependencies' =>
+    array (
+      0 => 'jquery',
+    ),
+    'extraFiles' =>
+    array (
+    ),
+  ),
+  'select2/dist/css/select2.min.css' =>
+  array (
+    'version' => '4.1.0-rc.0',
+    'dependencies' =>
+    array (
+    ),
+    'extraFiles' =>
+    array (
+    ),
+  ),
 );

@@ -8,8 +8,6 @@ export default class extends Controller {
         'itemCount',
         'client',
         'clientExistingPanel',
-        'clientSearch',
-        'clientSearchStatus',
         'clientModeButton',
         'quickClientPanel',
         'quickClientType',
@@ -70,10 +68,22 @@ export default class extends Controller {
         this.currentClientContext = null;
         this.clientMode = 'existing';
         this.confirmQuickDuplicate = false;
+        this.clientChangeScheduled = false;
+        this.clientChangeHandler = () => {
+            if (this.clientChangeScheduled) {
+                return;
+            }
+            this.clientChangeScheduled = true;
+            queueMicrotask(() => {
+                this.clientChangeScheduled = false;
+                this.changeClient();
+            });
+        };
+        this.clientTarget.addEventListener('change', this.clientChangeHandler);
 
         this.refreshState();
         this.setClientMode('existing');
-        this.filterClients();
+        this.clientSelectReady = this.initializeClientSelect();
         if (this.hasQuickClientTypeTarget) {
             this.updateQuickClientType();
         }
@@ -94,9 +104,64 @@ export default class extends Controller {
         this.pricePreviewRequest += 1;
         this.productContextActive = false;
         this.pricePreviewActive = false;
+        this.clientTarget.removeEventListener('change', this.clientChangeHandler);
+        if (this.clientSelect2) {
+            this.clientSelect2.off('.quotationForm');
+            this.clientSelect2.select2('destroy');
+            this.clientSelect2 = null;
+        }
         this.element.querySelectorAll('[data-ui--quotation-form-attachment-preview]').forEach((preview) => {
             this.clearAttachmentPreview(preview);
         });
+    }
+
+    async initializeClientSelect() {
+        try {
+            const { default: loadSelect2 } = await import('../../select2.js');
+            const $ = await loadSelect2();
+            if (!this.element.isConnected) {
+                return null;
+            }
+
+            this.clientSelect2 = $(this.clientTarget);
+            this.clientSelect2.select2({
+                width: '100%',
+                dropdownParent: $(this.clientExistingPanelTarget),
+                placeholder: 'Selecciona un cliente',
+                allowClear: false,
+                minimumResultsForSearch: 0,
+                language: {
+                    errorLoading: () => 'No se pudieron cargar los clientes.',
+                    inputTooLong: (args) => `Elimina ${args.input.length - args.maximum} caracteres`,
+                    inputTooShort: (args) => `Escribe ${args.minimum - args.input.length} caracteres más`,
+                    loadingMore: () => 'Cargando más resultados…',
+                    maximumSelected: (args) => `Solo puedes seleccionar ${args.maximum} elementos`,
+                    noResults: () => 'No se encontraron clientes',
+                    searching: () => 'Buscando…',
+                    removeAllItems: () => 'Quitar todos los elementos',
+                    removeItem: () => 'Quitar elemento',
+                    search: () => 'Buscar',
+                },
+            });
+            this.clientSelect2.prop('disabled', this.clientTarget.disabled);
+            this.clientSelect2.on('change.quotationForm', this.clientChangeHandler);
+            this.clientSelect2.on('select2:open.quotationForm', () => {
+                const searchInput = this.clientExistingPanelTarget.querySelector('.select2-search__field');
+                searchInput?.setAttribute('placeholder', 'Buscar cliente por nombre…');
+            });
+
+            return this.clientSelect2;
+        } catch (error) {
+            console.error('No fue posible inicializar Select2 para el cliente.', error);
+
+            return null;
+        }
+    }
+
+    async syncClientSelection(clientId) {
+        await this.clientSelectReady;
+        this.clientTarget.value = String(clientId);
+        this.clientSelect2?.trigger('change.select2');
     }
 
     async changeClient() {
@@ -128,8 +193,12 @@ export default class extends Controller {
         this.clientMode = mode;
         const isNew = mode === 'new';
 
+        if (isNew) {
+            this.clientSelect2?.select2('close');
+        }
         this.clientTarget.disabled = isNew;
         this.clientTarget.required = !isNew;
+        this.clientSelect2?.prop('disabled', isNew);
         this.clientExistingPanelTarget.hidden = isNew;
         this.clientExistingPanelTarget.classList.toggle('d-none', isNew);
 
@@ -155,52 +224,6 @@ export default class extends Controller {
         });
 
         this.refreshWorkflow();
-    }
-
-    filterClients() {
-        if (!this.hasClientSearchTarget || !this.hasClientSearchStatusTarget) {
-            return;
-        }
-
-        const query = this.normalizeClientSearch(this.clientSearchTarget.value);
-        const options = Array.from(this.clientTarget.options);
-        let available = 0;
-        let matches = 0;
-
-        options.forEach((option) => {
-            if (option.value === '') {
-                option.hidden = false;
-                return;
-            }
-
-            available += 1;
-            const matchesQuery = query === ''
-                || this.normalizeClientSearch(option.textContent).includes(query);
-            if (matchesQuery) {
-                matches += 1;
-            }
-
-            // Keep the current selection visible while narrowing the remaining options.
-            option.hidden = !matchesQuery && !option.selected;
-        });
-
-        if (available === 0) {
-            this.clientSearchStatusTarget.textContent = 'No hay clientes activos disponibles.';
-        } else if (query === '') {
-            this.clientSearchStatusTarget.textContent = `${available} ${available === 1 ? 'cliente disponible' : 'clientes disponibles'}.`;
-        } else if (matches === 0) {
-            this.clientSearchStatusTarget.textContent = 'No hay clientes que coincidan con esa búsqueda.';
-        } else {
-            this.clientSearchStatusTarget.textContent = `${matches} ${matches === 1 ? 'coincidencia' : 'coincidencias'}.`;
-        }
-    }
-
-    normalizeClientSearch(value) {
-        return String(value ?? '')
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .toLocaleLowerCase()
-            .trim();
     }
 
     updateQuickClientType() {
@@ -307,6 +330,7 @@ export default class extends Controller {
             }
 
             const client = result.client;
+            await this.clientSelectReady;
             const option = Array.from(this.clientTarget.options).find((item) => item.value === String(client.id));
             if (!option) {
                 const newOption = document.createElement('option');
@@ -314,9 +338,8 @@ export default class extends Controller {
                 newOption.textContent = client.businessName;
                 this.clientTarget.append(newOption);
             }
-            this.clientTarget.value = String(client.id);
-            this.filterClients();
             this.setClientMode('existing');
+            await this.syncClientSelection(client.id);
             const context = await this.changeClient();
             const warnings = Array.isArray(result.warnings) ? result.warnings : [];
             const message = context
@@ -381,19 +404,19 @@ export default class extends Controller {
         this.quickClientCreateAnywayButtonTarget.classList.toggle('d-none', !result.canCreateAnyway);
     }
 
-    selectPotentialClient(client) {
+    async selectPotentialClient(client) {
         if (!client.isActive) {
             return;
         }
+        await this.clientSelectReady;
         if (!Array.from(this.clientTarget.options).some((option) => option.value === String(client.id))) {
             const option = document.createElement('option');
             option.value = String(client.id);
             option.textContent = client.name;
             this.clientTarget.append(option);
         }
-        this.clientTarget.value = String(client.id);
-        this.filterClients();
         this.setClientMode('existing');
+        await this.syncClientSelection(client.id);
         this.resetQuickDuplicateConfirmation();
         this.changeClient();
         this.setQuickClientStatus(`Se seleccionó ${client.name}.`, 'success');
