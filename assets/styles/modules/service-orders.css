@@ -162,6 +162,7 @@
 .service-orders-stage--planning, .service-orders-stage--design { color: #1760bb; background: #e8f1ff; }
 .service-orders-stage--production { color: #075ab8; background: #e1efff; }
 .service-orders-stage--quality, .service-orders-stage--delivery { color: #087229; background: #e6f8e9; }
+.service-orders-stage--complete { color: #075d1c; background: #d9f4df; }
 .service-orders-date { font-weight: 500; white-space: nowrap; }
 .service-orders-risk { display: flex; align-items: center; gap: 0.38rem; margin-top: 0.2rem; font-size: 0.72rem; white-space: nowrap; }
 .service-orders-risk > i { width: 0.55rem; height: 0.55rem; background: #1bad47; border-radius: 50%; }
@@ -171,10 +172,11 @@
 .service-orders-risk--week > i { background: #f39a00; }
 .service-orders-risk--unassigned { color: #69768c; }
 .service-orders-risk--unassigned > i { background: #aab3c3; }
-.service-orders-risk--future { color: #07802c; }
+.service-orders-risk--future, .service-orders-risk--completed { color: #07802c; }
 .service-orders-action { display: flex; min-width: 9.5rem; min-height: 2.25rem; align-items: center; gap: 0.55rem; padding: 0.35rem 0.6rem; color: #21477e; background: #f0f4ff; border: 1px solid #dce5fb; border-radius: 0.45rem; font-size: 0.75rem; font-weight: 600; text-decoration: none; }
 .service-orders-action:hover { color: #075d1c; background: #eaf8ec; border-color: #c5ebca; }
 .service-orders-action--planning, .service-orders-action--quality { color: #087229; background: #ebf9ed; border-color: #c9edce; }
+.service-orders-action--complete { color: #075d1c; background: #e6f8e9; border-color: #c9edce; cursor: default; }
 .service-orders-action__chevron { margin-left: auto; padding-left: 0.55rem; border-left: 1px solid rgba(71, 94, 133, 0.15); }
 .service-orders-empty td { height: 10rem; text-align: center; }
 .service-orders-empty td > * { display: block; margin: 0.35rem auto; }

@@ -11,6 +11,7 @@ enum ProductionCommitmentRisk: string
     case LATE = 'late';
     case TIGHT = 'tight';
     case ON_TRACK = 'on_track';
+    case COMPLETED = 'completed';
 
     public function label(): string
     {
@@ -20,6 +21,7 @@ enum ProductionCommitmentRisk: string
             self::LATE => 'En riesgo',
             self::TIGHT => 'Holgura baja',
             self::ON_TRACK => 'En tiempo',
+            self::COMPLETED => 'Completado',
         };
     }
 
@@ -29,7 +31,7 @@ enum ProductionCommitmentRisk: string
             self::UNPLANNED, self::NO_COMMITMENT => 'secondary',
             self::LATE => 'danger',
             self::TIGHT => 'warning',
-            self::ON_TRACK => 'success',
+            self::ON_TRACK, self::COMPLETED => 'success',
         };
     }
 }

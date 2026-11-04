@@ -8,6 +8,7 @@ use App\Entity\Orders\ServiceOrder;
 use App\Entity\Orders\ServiceOrderItem;
 use App\Entity\Orders\ServiceOrderOperationPlan;
 use App\Entity\Production\ProductionReservation;
+use App\Enum\Production\ProductionCommitmentRisk;
 use App\Repository\Production\ProductionCalendarExceptionRepository;
 use App\Repository\Production\ProductionReservationRepository;
 use App\Enum\Production\ProductionOperationExecutionStatus;
@@ -97,10 +98,30 @@ final class ProductionCommitmentForecaster
         $orderForecast = $this->analyzer->analyze($orderFinish, $order->getCommitmentDate(), $holidays);
         if ($causes !== []) { $orderForecast['risk_cause'] = reset($causes); }
 
+        if ($order->getDeliveryStatus()->value === 'DELIVERED') {
+            $completedCause = 'La entrega fue confirmada; el seguimiento de la orden está completo.';
+            $orderForecast = $this->markAsCompleted($orderForecast, $completedCause);
+            foreach ($items as $itemId => $itemForecast) {
+                $items[$itemId] = $this->markAsCompleted($itemForecast, $completedCause);
+            }
+        }
+
         return [
             'order' => $orderForecast,
             'items' => $items,
         ];
+    }
+
+    /** @param array<string, mixed> $forecast @return array<string, mixed> */
+    private function markAsCompleted(array $forecast, string $cause): array
+    {
+        $forecast['slack_business_days'] = null;
+        $forecast['risk'] = ProductionCommitmentRisk::COMPLETED;
+        $forecast['risk_label'] = ProductionCommitmentRisk::COMPLETED->label();
+        $forecast['risk_tone'] = ProductionCommitmentRisk::COMPLETED->tone();
+        $forecast['risk_cause'] = $cause;
+
+        return $forecast;
     }
 
     /** @param list<ProductionReservation> $reservations */
