@@ -7,6 +7,25 @@ export default class extends Controller {
         'emptyState',
         'itemCount',
         'client',
+        'clientExistingPanel',
+        'clientModeButton',
+        'quickClientPanel',
+        'quickClientType',
+        'quickClientName',
+        'quickContactNameField',
+        'quickContactName',
+        'quickClientEmail',
+        'quickClientPhone',
+        'quickClientTaxId',
+        'quickClientLegalName',
+        'quickClientCreateButton',
+        'quickClientStatus',
+        'quickClientDuplicates',
+        'quickClientDuplicateMessage',
+        'quickClientDuplicateList',
+        'quickClientCreateAnywayButton',
+        'quickAddressToggle',
+        'quickAddressFields',
         'clientContext',
         'clientBusinessName',
         'clientLegalName',
@@ -34,6 +53,8 @@ export default class extends Controller {
         clientContextUrl: String,
         productContextUrl: String,
         pricePreviewUrl: String,
+        quickClientUrl: String,
+        quickClientToken: String,
     };
 
     connect() {
@@ -45,8 +66,17 @@ export default class extends Controller {
         this.pricePreviewActive = true;
         this.pricePreviewTimers = new WeakMap();
         this.currentClientContext = null;
+        this.clientMode = 'existing';
+        this.confirmQuickDuplicate = false;
 
         this.refreshState();
+        this.setClientMode('existing');
+        if (this.hasQuickClientTypeTarget) {
+            this.updateQuickClientType();
+        }
+        if (this.hasQuickAddressToggleTarget) {
+            this.toggleQuickAddress();
+        }
         this.itemElements.forEach((item) => {
             this.filterProductsForCategory(item);
             this.configureItemSpecifications(item, { loadCharacteristics: true });
@@ -79,6 +109,252 @@ export default class extends Controller {
         this.applyCommercialDefaults(context);
 
         return context;
+    }
+
+    useExistingClient(event) {
+        event.preventDefault();
+        this.setClientMode('existing');
+    }
+
+    useNewClient(event) {
+        event.preventDefault();
+        this.setClientMode('new');
+    }
+
+    setClientMode(mode) {
+        this.clientMode = mode;
+        const isNew = mode === 'new';
+
+        this.clientTarget.disabled = isNew;
+        this.clientTarget.required = !isNew;
+        this.clientExistingPanelTarget.hidden = isNew;
+        this.clientExistingPanelTarget.classList.toggle('d-none', isNew);
+
+        if (this.hasQuickClientPanelTarget) {
+            this.quickClientPanelTarget.hidden = !isNew;
+            this.quickClientPanelTarget.classList.toggle('d-none', !isNew);
+        }
+        if (this.hasClientContextTarget) {
+            const visible = !isNew && this.clientTarget.value !== '';
+            this.clientContextTarget.hidden = !visible;
+            this.clientContextTarget.classList.toggle('d-none', !visible);
+        }
+        if (this.hasCommercialContextTarget) {
+            const visible = !isNew && this.clientTarget.value !== '';
+            this.commercialContextTarget.hidden = !visible;
+            this.commercialContextTarget.classList.toggle('d-none', !visible);
+        }
+
+        this.clientModeButtonTargets.forEach((button) => {
+            const active = button.dataset.clientMode === mode;
+            button.classList.toggle('is-active', active);
+            button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+
+        this.refreshWorkflow();
+    }
+
+    updateQuickClientType() {
+        if (!this.hasQuickClientTypeTarget || !this.hasQuickContactNameTarget) {
+            return;
+        }
+
+        const isCompany = this.quickClientTypeTarget.value === 'COMPANY';
+        this.quickContactNameFieldTarget.hidden = !isCompany;
+        this.quickContactNameTarget.disabled = !isCompany;
+        this.quickContactNameTarget.required = isCompany;
+    }
+
+    toggleQuickAddress() {
+        if (!this.hasQuickAddressToggleTarget || !this.hasQuickAddressFieldsTarget) {
+            return;
+        }
+
+        const enabled = this.quickAddressToggleTarget.checked;
+        this.quickAddressFieldsTarget.hidden = !enabled;
+        this.quickAddressFieldsTarget.querySelectorAll('[data-address-field]').forEach((field) => {
+            field.disabled = !enabled;
+            field.required = enabled && !['addressInteriorNumber', 'addressNeighborhood', 'addressReferences'].includes(field.dataset.addressField);
+        });
+    }
+
+    resetQuickDuplicateConfirmation() {
+        this.confirmQuickDuplicate = false;
+        if (this.hasQuickClientDuplicatesTarget) {
+            this.quickClientDuplicatesTarget.classList.add('d-none');
+        }
+        if (this.hasQuickClientCreateAnywayButtonTarget) {
+            this.quickClientCreateAnywayButtonTarget.classList.add('d-none');
+        }
+    }
+
+    async createQuickClient(event) {
+        event?.preventDefault();
+        if (this.isCreatingQuickClient) {
+            return;
+        }
+        this.confirmQuickDuplicate = Boolean(this.confirmQuickDuplicate);
+
+        const requiredFields = [this.quickClientNameTarget, this.quickClientEmailTarget];
+        if (this.quickClientTypeTarget.value === 'COMPANY') {
+            requiredFields.push(this.quickContactNameTarget);
+        }
+        if (this.hasQuickAddressToggleTarget && this.quickAddressToggleTarget.checked) {
+            requiredFields.push(...this.quickAddressFieldsTarget.querySelectorAll('[required]'));
+        }
+        const invalidField = requiredFields.find((field) => !field.checkValidity());
+        if (invalidField) {
+            invalidField.reportValidity();
+            return;
+        }
+
+        this.setQuickClientStatus('', 'idle');
+        this.isCreatingQuickClient = true;
+        this.quickClientCreateButtonTarget.disabled = true;
+        this.quickClientCreateButtonTarget.setAttribute('aria-busy', 'true');
+        if (this.hasQuickClientCreateAnywayButtonTarget) {
+            this.quickClientCreateAnywayButtonTarget.disabled = true;
+        }
+        const originalButtonLabel = this.quickClientCreateButtonTarget.innerHTML;
+        this.quickClientCreateButtonTarget.innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Guardando cliente…';
+
+        const payload = new URLSearchParams({
+            _token: this.quickClientTokenValue,
+            clientType: this.quickClientTypeTarget.value,
+            businessName: this.quickClientNameTarget.value.trim(),
+            contactName: this.hasQuickContactNameTarget ? this.quickContactNameTarget.value.trim() : '',
+            email: this.quickClientEmailTarget.value.trim(),
+            phone: this.quickClientPhoneTarget.value.trim(),
+            taxId: this.quickClientTaxIdTarget.value.trim(),
+            legalName: this.quickClientLegalNameTarget.value.trim(),
+            confirmPotentialDuplicate: this.confirmQuickDuplicate ? '1' : '0',
+            addressEnabled: this.hasQuickAddressToggleTarget && this.quickAddressToggleTarget.checked ? '1' : '0',
+        });
+        if (this.hasQuickAddressToggleTarget && this.quickAddressToggleTarget.checked) {
+            this.quickAddressFieldsTarget.querySelectorAll('[data-address-field]').forEach((field) => {
+                payload.set(field.dataset.addressField, field.value.trim());
+            });
+        }
+
+        try {
+            const response = await fetch(this.quickClientUrlValue, {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: payload,
+            });
+            const result = await response.json();
+
+            if (response.status === 409) {
+                this.renderQuickClientDuplicates(result);
+                return;
+            }
+            if (!response.ok) {
+                const detail = Array.isArray(result.errors) ? ` ${result.errors.join(' ')}` : '';
+                throw new Error(`${result.message ?? 'No se pudo registrar el cliente.'}${detail}`);
+            }
+
+            const client = result.client;
+            const option = Array.from(this.clientTarget.options).find((item) => item.value === String(client.id));
+            if (!option) {
+                const newOption = document.createElement('option');
+                newOption.value = String(client.id);
+                newOption.textContent = client.businessName;
+                this.clientTarget.append(newOption);
+            }
+            this.clientTarget.value = String(client.id);
+            this.setClientMode('existing');
+            const context = await this.changeClient();
+            const warnings = Array.isArray(result.warnings) ? result.warnings : [];
+            const message = context
+                ? `Cliente creado y cargado en la cotización.${warnings.length ? ` ${warnings.join(' ')}` : ''}`
+                : `Cliente creado y seleccionado, pero no pudimos cargar su contexto comercial. Puedes reintentar.${warnings.length ? ` ${warnings.join(' ')}` : ''}`;
+            this.setQuickClientStatus(message, warnings.length || !context ? 'warning' : 'success');
+            this.resetQuickDuplicateConfirmation();
+        } catch (error) {
+            this.setQuickClientStatus(error.message || 'No se pudo registrar el cliente.', 'error');
+        } finally {
+            this.isCreatingQuickClient = false;
+            this.quickClientCreateButtonTarget.disabled = false;
+            this.quickClientCreateButtonTarget.removeAttribute('aria-busy');
+            this.quickClientCreateButtonTarget.innerHTML = originalButtonLabel;
+            if (this.hasQuickClientCreateAnywayButtonTarget) {
+                this.quickClientCreateAnywayButtonTarget.disabled = false;
+            }
+        }
+    }
+
+    createAnywayQuickClient(event) {
+        event.preventDefault();
+        this.confirmQuickDuplicate = true;
+        this.createQuickClient();
+    }
+
+    renderQuickClientDuplicates(result) {
+        this.quickClientDuplicateMessageTarget.textContent = result.message ?? 'Revisa estos posibles clientes existentes.';
+        this.quickClientDuplicateListTarget.replaceChildren();
+        (Array.isArray(result.matches) ? result.matches : []).forEach((match) => {
+            const row = document.createElement('div');
+            row.className = 'quotation-quick-client__duplicate';
+            const details = document.createElement('div');
+            const name = document.createElement('strong');
+            name.textContent = match.name;
+            const meta = document.createElement('small');
+            const reasons = (match.reasons ?? []).map((reason) => ({
+                rfc: 'RFC coincidente',
+                correo: 'Correo coincidente',
+                nombre: 'Nombre coincidente',
+            }[reason] ?? reason));
+            meta.textContent = [reasons.join(' · '), match.taxId, match.email].filter(Boolean).join(' · ');
+            details.append(name, meta);
+            row.append(details);
+
+            if (match.isActive) {
+                const selectButton = document.createElement('button');
+                selectButton.type = 'button';
+                selectButton.className = 'btn pf-button pf-button--subtle pf-button--sm';
+                selectButton.textContent = 'Usar este cliente';
+                selectButton.addEventListener('click', () => this.selectPotentialClient(match));
+                row.append(selectButton);
+            } else {
+                const inactive = document.createElement('small');
+                inactive.textContent = 'Cliente inactivo';
+                row.append(inactive);
+            }
+            this.quickClientDuplicateListTarget.append(row);
+        });
+
+        this.quickClientDuplicatesTarget.classList.remove('d-none');
+        this.quickClientCreateAnywayButtonTarget.classList.toggle('d-none', !result.canCreateAnyway);
+    }
+
+    selectPotentialClient(client) {
+        if (!client.isActive) {
+            return;
+        }
+        if (!Array.from(this.clientTarget.options).some((option) => option.value === String(client.id))) {
+            const option = document.createElement('option');
+            option.value = String(client.id);
+            option.textContent = client.name;
+            this.clientTarget.append(option);
+        }
+        this.clientTarget.value = String(client.id);
+        this.setClientMode('existing');
+        this.resetQuickDuplicateConfirmation();
+        this.changeClient();
+        this.setQuickClientStatus(`Se seleccionó ${client.name}.`, 'success');
+    }
+
+    setQuickClientStatus(message, state) {
+        if (!this.hasQuickClientStatusTarget) {
+            return;
+        }
+        this.quickClientStatusTarget.textContent = message;
+        this.quickClientStatusTarget.dataset.state = state;
+        this.quickClientStatusTarget.classList.toggle('d-none', message === '');
     }
 
     markDiscountAsManual() {
@@ -1355,7 +1631,9 @@ export default class extends Controller {
         this.clientPhoneTarget.textContent = context.phone
             ? `Teléfono: ${context.phone}`
             : 'Sin teléfono registrado.';
-        this.clientContextTarget.classList.remove('d-none');
+        const visible = this.clientMode !== 'new';
+        this.clientContextTarget.hidden = !visible;
+        this.clientContextTarget.classList.toggle('d-none', !visible);
     }
 
     renderCommercialContext(context, { applyCommercialDefaults }) {
@@ -1398,7 +1676,9 @@ export default class extends Controller {
             applyCommercialDefaults,
         );
 
-        this.commercialContextTarget.classList.remove('d-none');
+        const visible = this.clientMode !== 'new';
+        this.commercialContextTarget.hidden = !visible;
+        this.commercialContextTarget.classList.toggle('d-none', !visible);
         this.renderCommercialSelectionPreviews();
     }
 
@@ -1413,6 +1693,7 @@ export default class extends Controller {
         this.fiscalAddressTarget.disabled = true;
         this.deliveryAddressTarget.disabled = true;
         this.clearCommercialSelectionPreviews();
+        this.commercialContextTarget.hidden = true;
         this.commercialContextTarget.classList.add('d-none');
     }
 
@@ -1757,7 +2038,9 @@ export default class extends Controller {
     }
 
     refreshWorkflow() {
-        const clientComplete = this.clientTarget.value !== '';
+        const clientComplete = this.clientMode === 'existing'
+            && !this.clientTarget.disabled
+            && this.clientTarget.value !== '';
         const items = this.itemElements;
         const itemsComplete = items.length > 0 && items.every((item) => {
             const product = item.querySelector(
@@ -1836,7 +2119,16 @@ export default class extends Controller {
         return window.confirm(`${title} ${text}`);
     }
 
-    submitForm() {
+    submitForm(event) {
+        if (this.clientMode === 'new' || this.clientTarget.disabled || this.clientTarget.value === '') {
+            event.preventDefault();
+            this.setQuickClientStatus(
+                'Selecciona un cliente registrado o crea y carga el cliente nuevo antes de guardar la cotización.',
+                'error',
+            );
+            return;
+        }
+
         if (!this.element.checkValidity()) {
             return;
         }

@@ -58,6 +58,61 @@ final class ClientRepository extends ServiceEntityRepository
         return null;
     }
 
+    /**
+     * @return list<array{client: Client, reasons: list<string>}>
+     */
+    public function findPotentialDuplicates(string $name, string $email, ?string $taxId): array
+    {
+        $matches = [];
+        $connection = $this->getEntityManager()->getConnection();
+        $email = strtolower(trim($email));
+        $taxId = strtoupper(trim((string) $taxId));
+
+        if ($taxId !== '') {
+            $ids = $connection->fetchFirstColumn(
+                'SELECT id FROM clients WHERE UPPER(tax_id) = :taxId',
+                ['taxId' => $taxId],
+            );
+            foreach ($ids as $id) {
+                $matches[(int) $id]['reasons'][] = 'rfc';
+            }
+        }
+
+        if ($email !== '') {
+            $ids = $connection->fetchFirstColumn(
+                'SELECT DISTINCT client.id
+                FROM clients client
+                LEFT JOIN client_contacts clientContact ON clientContact.client_id = client.id
+                LEFT JOIN contacts contact ON contact.id = clientContact.contact_id
+                WHERE LOWER(client.email) = :email
+                    OR LOWER(clientContact.business_email) = :email
+                    OR LOWER(contact.personal_email) = :email',
+                ['email' => $email],
+            );
+            foreach ($ids as $id) {
+                $matches[(int) $id]['reasons'][] = 'correo';
+            }
+        }
+
+        $nameMatch = $this->findPublicMatch($name, '', '');
+        if ($nameMatch !== null) {
+            $matches[(int) $nameMatch->getId()]['reasons'][] = 'nombre';
+        }
+
+        $results = [];
+        foreach ($matches as $id => $match) {
+            $client = $this->find($id);
+            if ($client instanceof Client) {
+                $results[] = [
+                    'client' => $client,
+                    'reasons' => array_values(array_unique($match['reasons'])),
+                ];
+            }
+        }
+
+        return $results;
+    }
+
     private function normalizePublicName(string $name): string
     {
         $name = mb_strtolower(trim($name), 'UTF-8');

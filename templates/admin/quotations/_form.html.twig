@@ -263,6 +263,8 @@
         'data-controller': 'ui--quotation-form',
         'data-action': 'submit->ui--quotation-form#submitForm',
         'data-ui--quotation-form-client-context-url-value': path('admin_quotations_client_context', {id: 0}),
+        'data-ui--quotation-form-quick-client-url-value': path('admin_quotations_quick_create_client'),
+        'data-ui--quotation-form-quick-client-token-value': csrf_token('quotation-quick-client'),
         'data-ui--quotation-form-product-context-url-value': path('admin_quotations_product_context', {id: 0}),
         'data-ui--quotation-form-price-preview-url-value': path('admin_quotations_price_preview', {id: 0})
     }
@@ -349,9 +351,158 @@
 
                 <div class="pf-card__body quotation-section-card__body">
                     <div class="row g-4">
+                        {% if is_granted('clients.create') %}
+                            <div class="col-12">
+                                <div class="quotation-client-mode" role="group" aria-label="Origen del cliente">
+                                    <button
+                                        type="button"
+                                        class="quotation-client-mode__button is-active"
+                                        aria-pressed="true"
+                                        data-ui--quotation-form-target="clientModeButton"
+                                        data-client-mode="existing"
+                                        data-action="ui--quotation-form#useExistingClient"
+                                    >
+                                        Cliente registrado
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="quotation-client-mode__button"
+                                        aria-pressed="false"
+                                        data-ui--quotation-form-target="clientModeButton"
+                                        data-client-mode="new"
+                                        data-action="ui--quotation-form#useNewClient"
+                                    >
+                                        Cliente nuevo
+                                    </button>
+                                </div>
+                                <p class="quotation-client-mode__hint">Si todavía no está en el catálogo, regístralo aquí y quedará disponible para futuras cotizaciones.</p>
+                            </div>
+                        {% endif %}
+
+                        <div
+                            class="col-12 quotation-quick-client-status d-none"
+                            data-ui--quotation-form-target="quickClientStatus"
+                            role="status"
+                            aria-live="polite"
+                        ></div>
+
                         <div class="col-12 pf-form-field quotation-client-field">
-                            {{ form_row(form.client) }}
+                            <div data-ui--quotation-form-target="clientExistingPanel">
+                                {{ form_row(form.client) }}
+                            </div>
                         </div>
+
+                        {% if is_granted('clients.create') %}
+                            <section
+                                class="col-12 quotation-quick-client d-none"
+                                data-ui--quotation-form-target="quickClientPanel"
+                                aria-labelledby="quotation-quick-client-title"
+                                hidden
+                            >
+                                <div class="quotation-quick-client__intro">
+                                    <div>
+                                        <h3 id="quotation-quick-client-title">Registrar cliente para esta cotización</h3>
+                                        <p>Se guardará en el catálogo como prospecto y se cargará aquí como cliente seleccionado.</p>
+                                    </div>
+                                    <span class="quotation-quick-client__eyebrow">Alta rápida</span>
+                                </div>
+
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-4 pf-form-field">
+                                        <label class="form-label" for="quotation-quick-client-type">Tipo de cliente</label>
+                                        <select id="quotation-quick-client-type" class="form-select" data-ui--quotation-form-target="quickClientType" data-action="change->ui--quotation-form#updateQuickClientType">
+                                            <option value="COMPANY">Empresa</option>
+                                            <option value="INDIVIDUAL">Persona física</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-md-8 pf-form-field">
+                                        <label class="form-label" for="quotation-quick-client-name">Nombre comercial o nombre completo</label>
+                                        <input id="quotation-quick-client-name" class="form-control" type="text" maxlength="160" autocomplete="organization" required data-ui--quotation-form-target="quickClientName" data-action="input->ui--quotation-form#resetQuickDuplicateConfirmation">
+                                    </div>
+                                    <div class="col-12 col-md-6 pf-form-field" data-ui--quotation-form-target="quickContactNameField">
+                                        <label class="form-label" for="quotation-quick-client-contact">Nombre del contacto principal</label>
+                                        <input id="quotation-quick-client-contact" class="form-control" type="text" maxlength="160" autocomplete="name" required data-ui--quotation-form-target="quickContactName" data-action="input->ui--quotation-form#resetQuickDuplicateConfirmation">
+                                    </div>
+                                    <div class="col-12 col-md-6 pf-form-field">
+                                        <label class="form-label" for="quotation-quick-client-email">Correo del cliente/contacto</label>
+                                        <input id="quotation-quick-client-email" class="form-control" type="email" maxlength="180" autocomplete="email" required data-ui--quotation-form-target="quickClientEmail" data-action="input->ui--quotation-form#resetQuickDuplicateConfirmation">
+                                    </div>
+                                    <div class="col-12 col-md-6 pf-form-field">
+                                        <label class="form-label" for="quotation-quick-client-phone">Teléfono <span class="quotation-optional">Opcional</span></label>
+                                        <input id="quotation-quick-client-phone" class="form-control" type="tel" maxlength="30" autocomplete="tel" data-ui--quotation-form-target="quickClientPhone" data-action="input->ui--quotation-form#resetQuickDuplicateConfirmation">
+                                    </div>
+                                    <div class="col-12 col-md-6 pf-form-field">
+                                        <label class="form-label" for="quotation-quick-client-tax-id">RFC <span class="quotation-optional">Opcional</span></label>
+                                        <input id="quotation-quick-client-tax-id" class="form-control text-uppercase" type="text" maxlength="20" autocomplete="off" data-ui--quotation-form-target="quickClientTaxId" data-action="input->ui--quotation-form#resetQuickDuplicateConfirmation">
+                                    </div>
+                                    <div class="col-12 pf-form-field">
+                                        <label class="form-label" for="quotation-quick-client-legal-name">Razón social <span class="quotation-optional">Opcional</span></label>
+                                        <input id="quotation-quick-client-legal-name" class="form-control" type="text" maxlength="160" autocomplete="organization" data-ui--quotation-form-target="quickClientLegalName">
+                                    </div>
+
+                                    {% if is_granted('clients.addresses.create') %}
+                                        <div class="col-12">
+                                            <label class="quotation-quick-client__address-toggle">
+                                                <input type="checkbox" data-ui--quotation-form-target="quickAddressToggle" data-action="change->ui--quotation-form#toggleQuickAddress">
+                                                <span>
+                                                    <strong>Agregar domicilio de entrega</strong>
+                                                    <small>Opcional. Se guardará como predeterminado para este cliente.</small>
+                                                </span>
+                                            </label>
+                                            <div class="row g-3 quotation-quick-client__address-fields" data-ui--quotation-form-target="quickAddressFields" hidden>
+                                                <div class="col-12 col-md-6 pf-form-field">
+                                                    <label class="form-label" for="quotation-quick-client-street">Calle</label>
+                                                    <input id="quotation-quick-client-street" class="form-control" type="text" maxlength="160" data-address-field="addressStreet">
+                                                </div>
+                                                <div class="col-12 col-md-3 pf-form-field">
+                                                    <label class="form-label" for="quotation-quick-client-exterior">Número exterior</label>
+                                                    <input id="quotation-quick-client-exterior" class="form-control" type="text" maxlength="30" data-address-field="addressExteriorNumber">
+                                                </div>
+                                                <div class="col-12 col-md-3 pf-form-field">
+                                                    <label class="form-label" for="quotation-quick-client-interior">Interior <span class="quotation-optional">Opcional</span></label>
+                                                    <input id="quotation-quick-client-interior" class="form-control" type="text" maxlength="30" data-address-field="addressInteriorNumber">
+                                                </div>
+                                                <div class="col-12 col-md-4 pf-form-field">
+                                                    <label class="form-label" for="quotation-quick-client-postal">Código postal</label>
+                                                    <input id="quotation-quick-client-postal" class="form-control" type="text" inputmode="numeric" maxlength="5" pattern="\d{5}" data-address-field="addressPostalCode">
+                                                </div>
+                                                <div class="col-12 col-md-4 pf-form-field">
+                                                    <label class="form-label" for="quotation-quick-client-municipality">Municipio o alcaldía</label>
+                                                    <input id="quotation-quick-client-municipality" class="form-control" type="text" maxlength="120" data-address-field="addressMunicipality">
+                                                </div>
+                                                <div class="col-12 col-md-4 pf-form-field">
+                                                    <label class="form-label" for="quotation-quick-client-state">Estado</label>
+                                                    <input id="quotation-quick-client-state" class="form-control" type="text" maxlength="120" data-address-field="addressState">
+                                                </div>
+                                                <div class="col-12 col-md-6 pf-form-field">
+                                                    <label class="form-label" for="quotation-quick-client-neighborhood">Colonia <span class="quotation-optional">Opcional</span></label>
+                                                    <input id="quotation-quick-client-neighborhood" class="form-control" type="text" maxlength="120" data-address-field="addressNeighborhood">
+                                                </div>
+                                                <div class="col-12 col-md-6 pf-form-field">
+                                                    <label class="form-label" for="quotation-quick-client-references">Referencias <span class="quotation-optional">Opcional</span></label>
+                                                    <input id="quotation-quick-client-references" class="form-control" type="text" maxlength="1000" data-address-field="addressReferences">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="quotation-quick-client__actions">
+                                    <button type="button" class="btn pf-button pf-button--primary" data-ui--quotation-form-target="quickClientCreateButton" data-action="ui--quotation-form#createQuickClient">
+                                        <i class="bi bi-person-check" aria-hidden="true"></i>
+                                        Crear cliente y cargarlo
+                                    </button>
+                                </div>
+
+                                <div class="quotation-quick-client__duplicates d-none" data-ui--quotation-form-target="quickClientDuplicates" role="region" aria-label="Posibles clientes existentes">
+                                    <p data-ui--quotation-form-target="quickClientDuplicateMessage"></p>
+                                    <div data-ui--quotation-form-target="quickClientDuplicateList"></div>
+                                    <button type="button" class="btn pf-button pf-button--subtle d-none" data-ui--quotation-form-target="quickClientCreateAnywayButton" data-action="ui--quotation-form#createAnywayQuickClient">
+                                        Es un cliente distinto, continuar
+                                    </button>
+                                </div>
+                            </section>
+                        {% endif %}
 
                         <div class="col-12">
                             <div

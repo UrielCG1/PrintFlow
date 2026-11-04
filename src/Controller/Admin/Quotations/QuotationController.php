@@ -15,6 +15,14 @@ use App\Application\Quotations\QuotationManager;
 use App\Application\Quotations\QuotationVolumeApprovalService;
 use App\Application\Quotations\QuotationTotalsCalculator;
 use App\Application\Quotations\QuotationRevisionData;
+use App\Application\Clients\ClientAddressData;
+use App\Application\Clients\ClientAddressManager;
+use App\Application\Clients\ClientBranchData;
+use App\Application\Clients\ClientData;
+use App\Application\Clients\ClientInlineContactData;
+use App\Application\Clients\ClientManager;
+use App\Application\Clients\ClientPhoneData;
+use App\Entity\Clients\Client;
 use App\Entity\Quotations\Quotation;
 use App\Entity\Quotations\QuotationItem;
 use App\Entity\Users\User;
@@ -30,6 +38,7 @@ use App\Repository\Orders\ServiceOrderRepository;
 use App\Repository\Clients\ClientAddressRepository;
 use App\Repository\Clients\ClientContactRepository;
 use App\Repository\Clients\ClientRepository;
+use App\Repository\Clients\ClientCategoryRepository;
 use App\Repository\Catalog\CommercialItemCharacteristicRepository;
 use App\Repository\Catalog\CommercialItemRepository;
 use App\Repository\Quotations\QuotationRepository;
@@ -39,6 +48,7 @@ use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Service\Quotations\QuotationPdfRenderer;
 use App\Service\Quotations\QuotationDecisionFileStorage;
@@ -83,17 +93,186 @@ final class QuotationController extends AbstractController
             throw $this->createNotFoundException('El cliente activo solicitado no existe.');
         }
 
-        $commercialContacts = $this->clientContactRepository->findActiveForClient($client);
-        $fiscalAddresses = $this->clientAddressRepository->findActiveForClientByType(
-            $client,
-            'FISCAL',
-        );
-        $deliveryAddresses = $this->clientAddressRepository->findActiveForClientByType(
-            $client,
-            'DELIVERY',
-        );
+        return $this->json($this->clientContextPayload($client));
+    }
+
+    #[Route('/cliente-rapido', name: 'admin_quotations_quick_create_client', methods: ['POST'])]
+    public function quickCreateClient(
+        Request $request,
+        ClientManager $clientManager,
+        ClientAddressManager $addressManager,
+        ClientCategoryRepository $categoryRepository,
+        ValidatorInterface $validator,
+    ): JsonResponse {
+        if (!$this->isGranted('quotations.create') || !$this->isGranted('clients.create')) {
+            throw $this->createAccessDeniedException();
+        }
+        if (!$this->isCsrfTokenValid('quotation-quick-client', $request->request->getString('_token'))) {
+            return $this->json(['message' => 'La sesión venció. Recarga la página e inténtalo de nuevo.'], Response::HTTP_FORBIDDEN);
+        }
+
+        $clientType = strtoupper($request->request->getString('clientType', 'COMPANY'));
+        if (!in_array($clientType, ['COMPANY', 'INDIVIDUAL'], true)) {
+            return $this->json(['message' => 'Selecciona un tipo de cliente válido.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $businessName = trim($request->request->getString('businessName'));
+        $contactName = trim($request->request->getString('contactName'));
+        $email = strtolower(trim($request->request->getString('email')));
+        $phone = trim($request->request->getString('phone'));
+        $taxId = strtoupper(trim($request->request->getString('taxId')));
+        $legalName = trim($request->request->getString('legalName'));
+
+        $data = new ClientData();
+        $data->clientType = $clientType;
+        $data->businessName = $businessName;
+        $data->email = $email;
+        $data->taxId = $taxId !== '' ? $taxId : null;
+        $data->legalName = $legalName !== '' ? $legalName : null;
+        $data->category = $categoryRepository->findOneBy([
+            'code' => 'PROSPECT_NO_PURCHASE',
+            'isActive' => true,
+        ]);
+
+        if ($phone !== '') {
+            $data->phone = $phone;
+            $clientPhone = new ClientPhoneData();
+            $clientPhone->type = 'MOBILE';
+            $clientPhone->number = $phone;
+            $clientPhone->isPrimary = true;
+            $data->phones[] = $clientPhone;
+        }
+
+        if ($clientType === 'COMPANY') {
+            $contactParts = preg_split('/\s+/', $contactName, 2) ?: [];
+            $contact = new ClientInlineContactData();
+            $contact->firstName = $contactParts[0] ?? '';
+            $contact->lastName = $contactParts[1] ?? null;
+            $contact->personalEmail = $email;
+            $contact->businessEmail = $email;
+            $contact->department = 'Administración';
+            $contact->jobTitle = 'Contacto comercial';
+            $contact->isPrimary = true;
+            if ($phone !== '') {
+                $contactPhone = new ClientPhoneData();
+                $contactPhone->type = 'MOBILE';
+                $contactPhone->number = $phone;
+                $contactPhone->isPrimary = true;
+                $contact->phones[] = $contactPhone;
+            }
+
+            $branch = new ClientBranchData();
+            $branch->code = 'MATRIZ';
+            $branch->name = 'Matriz';
+            $branch->isMain = true;
+            $branch->contacts[] = $contact;
+            $data->branches[] = $branch;
+        }
+
+        $clientViolations = $validator->validate($data);
+        if (count($clientViolations) > 0) {
+            return $this->json([
+                'message' => 'Revisa los datos del cliente.',
+                'errors' => array_map(static fn ($violation): string => $violation->getMessage(), iterator_to_array($clientViolations)),
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $addressEnabled = $request->request->getBoolean('addressEnabled');
+        $addressData = null;
+        if ($addressEnabled) {
+            if (!$this->isGranted('clients.addresses.create')) {
+                throw $this->createAccessDeniedException();
+            }
+            $addressData = new ClientAddressData();
+            $addressData->label = 'Domicilio de entrega';
+            $addressData->recipientName = $clientType === 'COMPANY' ? $contactName : $businessName;
+            $addressData->street = $request->request->getString('addressStreet');
+            $addressData->exteriorNumber = $request->request->getString('addressExteriorNumber');
+            $addressData->interiorNumber = $request->request->getString('addressInteriorNumber') ?: null;
+            $addressData->neighborhood = $request->request->getString('addressNeighborhood') ?: null;
+            $addressData->postalCode = $request->request->getString('addressPostalCode');
+            $addressData->municipality = $request->request->getString('addressMunicipality');
+            $addressData->state = $request->request->getString('addressState');
+            $addressData->references = $request->request->getString('addressReferences') ?: null;
+            $addressData->isDeliveryAddress = true;
+            $addressData->isDefaultDelivery = true;
+
+            $addressViolations = $validator->validate($addressData);
+            if (count($addressViolations) > 0) {
+                return $this->json([
+                    'message' => 'Completa los datos obligatorios del domicilio de entrega.',
+                    'errors' => array_map(static fn ($violation): string => $violation->getMessage(), iterator_to_array($addressViolations)),
+                ], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+        }
+
+        $matches = $this->clientRepository->findPotentialDuplicates($businessName, $email, $taxId);
+        $hasHardMatch = false;
+        $hasSelectableHardMatch = false;
+        foreach ($matches as $match) {
+            if (array_intersect($match['reasons'], ['rfc', 'correo']) !== []) {
+                $hasHardMatch = true;
+                $hasSelectableHardMatch = $hasSelectableHardMatch || $match['client']->isActive();
+            }
+        }
+        $confirmNameMatch = $request->request->getBoolean('confirmPotentialDuplicate');
+        if ($matches !== [] && ($hasHardMatch || !$confirmNameMatch)) {
+            return $this->json([
+                'message' => $hasHardMatch
+                    ? ($hasSelectableHardMatch
+                        ? 'Ya existe un cliente con ese RFC o correo. Selecciónalo para evitar duplicados.'
+                        : 'Ya existe un cliente inactivo con ese RFC o correo. Actívalo en el catálogo antes de usarlo.')
+                    : 'Encontramos un cliente con el mismo nombre. Revisa la coincidencia antes de continuar.',
+                'canCreateAnyway' => !$hasHardMatch,
+                'matches' => array_map(static function (array $match): array {
+                    $client = $match['client'];
+                    return [
+                        'id' => $client->getId(),
+                        'name' => $client->getBusinessName(),
+                        'email' => $client->getEmail(),
+                        'taxId' => $client->getTaxId(),
+                        'isActive' => $client->isActive(),
+                        'reasons' => $match['reasons'],
+                    ];
+                }, $matches),
+            ], Response::HTTP_CONFLICT);
+        }
+
+        try {
+            $client = $clientManager->create($data, $this->authenticatedUser());
+        } catch (\DomainException $exception) {
+            return $this->json(['message' => $exception->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $warnings = [];
+        $context = $this->clientContextPayload($client);
+        if ($addressData !== null) {
+            try {
+                $addressManager->create($client, $addressData, $this->authenticatedUser());
+                $context = $this->clientContextPayload($client);
+            } catch (\Throwable) {
+                $warnings[] = 'El cliente se creó, pero no pudimos guardar el domicilio. Puedes agregarlo después.';
+            }
+        }
 
         return $this->json([
+            'client' => [
+                'id' => $client->getId(),
+                'businessName' => $client->getBusinessName(),
+            ],
+            'context' => $context,
+            'warnings' => $warnings,
+        ], Response::HTTP_CREATED);
+    }
+
+    /** @return array<string, mixed> */
+    private function clientContextPayload(Client $client): array
+    {
+        $commercialContacts = $this->clientContactRepository->findActiveForClient($client);
+        $fiscalAddresses = $this->clientAddressRepository->findActiveForClientByType($client, 'FISCAL');
+        $deliveryAddresses = $this->clientAddressRepository->findActiveForClientByType($client, 'DELIVERY');
+
+        return [
             'id' => $client->getId(),
             'businessName' => $client->getBusinessName(),
             'legalName' => $client->getLegalName(),
@@ -116,7 +295,7 @@ final class QuotationController extends AbstractController
                 'fiscalAddressId' => $this->firstDefaultAddressId($fiscalAddresses),
                 'deliveryAddressId' => $this->firstDefaultAddressId($deliveryAddresses),
             ],
-        ]);
+        ];
     }
 
     #[Route('/contexto-producto/{id}', name: 'admin_quotations_product_context', requirements: ['id' => '\\d+'], methods: ['GET'])]
