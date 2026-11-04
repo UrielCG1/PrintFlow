@@ -1220,7 +1220,7 @@ final class ServiceOrderController extends AbstractController
             'with_equipment' => 0,
             'estimated' => 0,
             'reserved' => 0,
-            'ready' => 0,
+            'prepared' => 0,
             'auto_actions' => 0,
         ];
         $planningHasIssues = false;
@@ -1237,8 +1237,8 @@ final class ServiceOrderController extends AbstractController
             if ($hasEquipment) { ++$planningProgress['with_equipment']; }
             if ($hasEstimate) { ++$planningProgress['estimated']; }
             if ($hasReservation) { ++$planningProgress['reserved']; }
-            if ($hasEquipment && $hasEstimate && $hasReservation && $plan->getBlockedReason() === null && $plan->getServiceOrderItem()->getPlanningIssue() === null) {
-                ++$planningProgress['ready'];
+            if ($hasEquipment && $hasEstimate && $plan->getBlockedReason() === null && $plan->getServiceOrderItem()->getPlanningIssue() === null) {
+                ++$planningProgress['prepared'];
             }
             if ($plan->getBlockedReason() !== null) {
                 $planningHasIssues = true;

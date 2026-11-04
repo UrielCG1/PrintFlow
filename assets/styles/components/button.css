@@ -97,16 +97,16 @@
 
 .pf-button--primary,
 .pf-button.btn-primary {
-    color: var(--pf-on-primary-container);
-    background-color: #16c61d2e;
-    border-color: var(--pf-primary-container);
+    color: var(--pf-on-primary);
+    background-color: var(--pf-primary);
+    border-color: var(--pf-primary);
 }
 
 .pf-button--primary:hover,
 .pf-button.btn-primary:hover {
     color: var(--pf-on-primary);
-    background-color: var(--pf-primary);
-    border-color: var(--pf-primary);
+    background-color: var(--pf-on-primary-fixed-variant);
+    border-color: var(--pf-on-primary-fixed-variant);
 }
 
 .pf-button--primary:active,

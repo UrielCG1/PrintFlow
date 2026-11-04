@@ -31,7 +31,7 @@
                     <span><small>Fecha compromiso</small><strong>{{ serviceOrder.commitmentDate ? serviceOrder.commitmentDate|date('d/m/Y') : 'Por confirmar' }}</strong></span>
                 </div>
                 <div class="service-order-header-fact service-order-header-fact--{{ productionForecast.order.risk_tone }}">
-                    <i class="bi {{ productionForecast.order.risk.value == 'late' ? 'bi-exclamation-triangle' : (productionForecast.order.risk.value == 'on_track' ? 'bi-clock' : 'bi-exclamation-circle') }}" aria-hidden="true"></i>
+                    <i class="bi {{ productionForecast.order.risk.value in ['on_track', 'completed'] ? 'bi-check-circle' : (productionForecast.order.risk.value == 'late' ? 'bi-exclamation-triangle' : 'bi-exclamation-circle') }}" aria-hidden="true"></i>
                     <span><small>Pronóstico</small><strong>{{ productionForecast.order.risk_label }}</strong></span>
                 </div>
                 {% if is_granted('service_orders.view_commercial') %}
@@ -76,7 +76,7 @@
                     <span class="visually-hidden">{{ orderProgress.percent }}% completado</span>
                 </div>
 
-                {% set journeyLine = orderProgress.current_stage == 'planning' ? 0 : (orderProgress.current_stage == 'design' ? 20 : (orderProgress.current_stage == 'production' ? 40 : (orderProgress.current_stage == 'quality' ? 60 : 80))) %}
+                {% set journeyLine = orderProgress.current_stage == 'planning' ? 0 : (orderProgress.current_stage == 'design' ? 20 : (orderProgress.current_stage == 'production' ? 40 : (orderProgress.current_stage == 'quality' ? 60 : (orderProgress.current_stage == 'delivery' ? 80 : 100)))) %}
                 <ol class="service-order-journey__steps" style="--journey-progress: {{ journeyLine }}%" aria-label="Etapas de la orden">
                     {% for stage in orderStages %}
                         {% set stageComplete = orderProgress.stages[stage.key] %}
@@ -95,11 +95,14 @@
                 <div class="service-order-journey__status">
                     <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
                     {% if orderProgress.current_stage == 'planning' %}
-                        <strong>{{ serviceOrder.commitmentDate ? 'Preparación de planificación' : 'Fecha y agenda pendientes' }}</strong>
-                        <span>· {{ planningProgress.ready }}/{{ planningProgress.operations }} operaciones listas</span>
+                        <strong>{{ serviceOrder.commitmentDate ? 'Preparación de planificación' : 'Fecha compromiso pendiente' }}</strong>
+                        <span>{% if planningProgress.operations > 0 %}· {{ planningProgress.prepared }}/{{ planningProgress.operations }} operaciones configuradas · {{ planningProgress.reserved }}/{{ planningProgress.operations }} con agenda{% else %}· Aún no hay operaciones definidas{% endif %}</span>
                     {% elseif orderProgress.current_stage == 'production' %}
                         <strong>Producción en proceso</strong>
                         <span>· {{ orderProgress.completed_operations }} de {{ orderProgress.total_operations }} operaciones completadas</span>
+                    {% elseif orderProgress.current_stage == 'complete' %}
+                        <strong>Orden entregada</strong>
+                        <span>· Todas las etapas están completas</span>
                     {% else %}
                         <strong>{{ serviceOrder.productionStatus.label }}</strong>
                         <span>· {{ orderProgress.completed_operations }} de {{ orderProgress.total_operations }} operaciones completadas</span>
@@ -111,8 +114,23 @@
                     <div>
                         <span class="service-order-journey__eyebrow">Siguiente acción</span>
                         {% if orderProgress.current_stage == 'planning' %}
-                            <strong>Completar planificación</strong>
-                            <p>Faltan datos o agenda en {{ planningProgress.operations - planningProgress.ready }} operación(es).</p>
+                            {% if not serviceOrder.commitmentDate %}
+                                <strong>Definir fecha compromiso</strong>
+                                {% if planningProgress.operations > 0 %}
+                                    <p>La fecha compromiso es necesaria para habilitar “Confirmar planificación”. Hay {{ planningProgress.prepared }}/{{ planningProgress.operations }} operaciones configuradas y {{ planningProgress.reserved }}/{{ planningProgress.operations }} con agenda.</p>
+                                {% else %}
+                                    <p>Guarda la fecha compromiso y define las operaciones para poder confirmar la planificación.</p>
+                                {% endif %}
+                            {% else %}
+                                <strong>Completar planificación</strong>
+                                {% if planningProgress.prepared < planningProgress.operations %}
+                                    <p>Falta configurar equipo y tiempo en {{ planningProgress.operations - planningProgress.prepared }} operación(es).</p>
+                                {% elseif planningProgress.reserved < planningProgress.operations %}
+                                    <p>La configuración está lista; falta reservar la agenda de {{ planningProgress.operations - planningProgress.reserved }} operación(es).</p>
+                                {% else %}
+                                    <p>La agenda y la fecha compromiso están listas. Confirma la planificación para continuar.</p>
+                                {% endif %}
+                            {% endif %}
                         {% elseif orderProgress.current_stage == 'design' %}
                             <strong>Revisar y liberar el diseño</strong>
                             <p>{{ orderProgress.design_pending_items }} partida(s) todavía requieren atención de Diseño.</p>
@@ -135,10 +153,12 @@
                     </div>
                     <div class="service-order-journey__action">
                         {% if orderProgress.current_stage == 'planning' %}
-                            {% if canPlan %}
+                            {% if not serviceOrder.commitmentDate and canManageCommitment %}
+                                <a href="#commitment-date-control" class="btn pf-button pf-button--primary">Definir fecha <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+                            {% elseif not serviceOrder.commitmentDate %}
+                                <span class="service-order-journey__owner">Siguiente responsable: Ventas debe confirmar la fecha</span>
+                            {% elseif canPlan %}
                                 <a href="#planning-section" class="btn pf-button pf-button--primary">Completar planificación <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
-                            {% elseif canManageCommitment and not serviceOrder.commitmentDate %}
-                                <a href="#commitment-date-control" class="btn pf-button pf-button--primary">Confirmar fecha <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
                             {% elseif canManageCommitment %}
                                 <a href="#commitment-date-control" class="btn pf-button pf-button--secondary">Revisar fecha</a>
                             {% else %}
@@ -183,13 +203,13 @@
             <div class="service-order-quick-tools__forecast">
                 <strong>Pronóstico de entrega</strong>
                 <span>{{ productionForecast.order.risk_cause }}</span>
-                {% if productionForecast.order.production_finish %}<span>Fin de producción previsto: {{ productionForecast.order.production_finish|date('d/m/Y H:i', 'America/Mexico_City') }} · Entrega sugerida: {{ productionForecast.order.suggested_delivery|date('d/m/Y') }}</span>{% endif %}
+                {% if productionForecast.order.production_finish and orderProgress.current_stage != 'complete' %}<span>Fin de producción previsto: {{ productionForecast.order.production_finish|date('d/m/Y H:i', 'America/Mexico_City') }} · Entrega sugerida: {{ productionForecast.order.suggested_delivery|date('d/m/Y') }}</span>{% endif %}
                 {% if serviceOrder.plannedAt %}<span>Planificada {{ serviceOrder.plannedAt|date('d/m/Y H:i', 'America/Mexico_City') }}{% if serviceOrder.plannedBy %} por {{ serviceOrder.plannedBy.fullName }}{% endif %}</span>{% endif %}
             </div>
         </div>
         <div class="service-order-commitment">
                         {% if canManageCommitment %}
-                            <details id="commitment-date-control" class="service-order-disclosure service-order-disclosure--primary mt-3">
+                            <details id="commitment-date-control" class="service-order-disclosure service-order-disclosure--primary mt-3"{% if not serviceOrder.commitmentDate %} open{% endif %}>
                                 <summary>
                                     <span class="service-order-disclosure__label"><i class="bi bi-calendar-check" aria-hidden="true"></i> {{ serviceOrder.commitmentDate ? 'Cambiar fecha compromiso' : 'Confirmar fecha compromiso' }}</span>
                                     <span class="service-order-disclosure__hint">Ventas define el plazo prometido</span>
@@ -376,7 +396,9 @@
                                 {% set itemPlanningSummary = itemPlanningSummaryById[item.id]|default(null) %}
                                 <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
                                     <span class="badge {{ item.priority.value == 'urgent' ? 'text-bg-primary' : (item.priority.value == 'high' ? 'text-bg-info' : 'text-bg-light text-dark border') }}"><i class="bi {{ item.priority.value == 'urgent' ? 'bi-lightning-charge-fill' : (item.priority.value == 'high' ? 'bi-arrow-up-circle-fill' : 'bi-dash-circle') }}" aria-hidden="true"></i> Prioridad {{ item.priority.label }}</span>
-                                    {% if itemPlanningSummary and itemPlanningSummary.finish_type == 'projected' %}
+                                    {% if itemForecast and itemForecast.risk.value == 'completed' %}
+                                        <span class="badge text-bg-{{ itemForecast.risk_tone }}"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> {{ itemForecast.risk_label }}</span>
+                                    {% elseif itemPlanningSummary and itemPlanningSummary.finish_type == 'projected' %}
                                         <span class="badge text-bg-info"><i class="bi bi-calendar2-week" aria-hidden="true"></i> Pronóstico preliminar</span>
                                     {% elseif itemForecast and itemPlanningSummary and itemPlanningSummary.finish_at %}
                                         {% set itemRiskIcon = itemForecast.risk.value == 'late' ? 'bi-exclamation-triangle-fill' : (itemForecast.risk.value == 'tight' ? 'bi-clock-history' : (itemForecast.risk.value == 'on_track' ? 'bi-check-circle-fill' : 'bi-question-circle')) %}
@@ -877,12 +899,22 @@
                 <footer class="pf-card__body border-top d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                     <div>
                         <p class="mb-1 text-muted small">Las operaciones se reservan respetando su secuencia y evitando cruces en cada máquina.{% if is_granted('production_calendar.manage') %} Ajusta turnos y excepciones en <a href="{{ path('admin_production_calendar_index') }}">jornada de producción</a>.{% endif %}</p>
-                        {% if planningProgress.operations > 0 and planningProgress.reserved == planningProgress.operations and not serviceOrder.commitmentDate %}
-                            <p class="mb-0 small">La agenda está lista. Confirma la fecha compromiso en el resumen de la orden para cerrar la planificación.</p>
+                        {% if not serviceOrder.commitmentDate %}
+                            <div class="service-order-planning-blocker" role="status">
+                                <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+                                <div><strong>Falta definir la fecha compromiso</strong><p>La planificación no puede confirmarse sin esta fecha. El botón aparecerá cuando la agenda también esté lista.</p></div>
+                                {% if canManageCommitment %}
+                                    <a href="#commitment-date-control" class="btn pf-button pf-button--secondary pf-button--sm">Definir fecha</a>
+                                {% else %}
+                                    <span>Ventas debe confirmarla</span>
+                                {% endif %}
+                            </div>
                         {% elseif planningHasIssues %}
                             <p class="mb-0 small text-warning">Resuelve las partidas u operaciones marcadas antes de reservar la orden.</p>
-                        {% elseif planningProgress.operations > 0 and planningProgress.ready < planningProgress.operations %}
-                            <p class="mb-0 small">{{ planningProgress.operations - planningProgress.ready }} operación(es) todavía necesitan datos o reserva.</p>
+                        {% elseif planningProgress.prepared < planningProgress.operations %}
+                            <p class="mb-0 small">{{ planningProgress.operations - planningProgress.prepared }} operación(es) todavía necesitan equipo o tiempo estimado.</p>
+                        {% elseif planningProgress.reserved < planningProgress.operations %}
+                            <p class="mb-0 small">{{ planningProgress.operations - planningProgress.reserved }} operación(es) todavía necesitan reserva de agenda.</p>
                         {% endif %}
                     </div>
                     {% if canConfirmPlanning %}

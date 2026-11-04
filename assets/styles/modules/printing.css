@@ -294,7 +294,8 @@
 .printing-wide-button { display: inline-flex; width: 100%; min-height: 2.2rem; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.45rem 0.6rem; font-size: 0.68rem; }
 .printing-form-hint, .printing-next-note { margin: 0.15rem 0 0; color: #687792; font-size: 0.63rem; line-height: 1.4; }
 .printing-next-card form { display: grid; gap: 0.65rem; }
-.printing-next-card .pf-button--primary, .printing-detail .pf-button--primary { background: #08752b; border-color: #08752b; }
+.printing-next-card .pf-button--primary, .printing-detail .pf-button--primary { color: #fff; background: #08752b; border-color: #08752b; }
+.printing-next-card .pf-button--primary:hover, .printing-detail .pf-button--primary:hover { color: #fff; background: #066824; border-color: #066824; }
 .printing-next-card .pf-button--primary:disabled, .printing-detail .pf-button:disabled { color: #8490a6; background: #eff2f8; border-color: #e2e7f0; opacity: 1; }
 .printing-step-number { display: grid; width: 1.65rem; height: 1.65rem; flex: 0 0 auto; place-items: center; color: #08752b; background: #e7f8e9; border-radius: 50%; font-size: 0.72rem; font-weight: 700; }
 .printing-locked-icon { color: #66758e; font-size: 0.9rem; }
