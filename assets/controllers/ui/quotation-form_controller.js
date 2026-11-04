@@ -8,6 +8,8 @@ export default class extends Controller {
         'itemCount',
         'client',
         'clientExistingPanel',
+        'clientSearch',
+        'clientSearchStatus',
         'clientModeButton',
         'quickClientPanel',
         'quickClientType',
@@ -71,6 +73,7 @@ export default class extends Controller {
 
         this.refreshState();
         this.setClientMode('existing');
+        this.filterClients();
         if (this.hasQuickClientTypeTarget) {
             this.updateQuickClientType();
         }
@@ -152,6 +155,52 @@ export default class extends Controller {
         });
 
         this.refreshWorkflow();
+    }
+
+    filterClients() {
+        if (!this.hasClientSearchTarget || !this.hasClientSearchStatusTarget) {
+            return;
+        }
+
+        const query = this.normalizeClientSearch(this.clientSearchTarget.value);
+        const options = Array.from(this.clientTarget.options);
+        let available = 0;
+        let matches = 0;
+
+        options.forEach((option) => {
+            if (option.value === '') {
+                option.hidden = false;
+                return;
+            }
+
+            available += 1;
+            const matchesQuery = query === ''
+                || this.normalizeClientSearch(option.textContent).includes(query);
+            if (matchesQuery) {
+                matches += 1;
+            }
+
+            // Keep the current selection visible while narrowing the remaining options.
+            option.hidden = !matchesQuery && !option.selected;
+        });
+
+        if (available === 0) {
+            this.clientSearchStatusTarget.textContent = 'No hay clientes activos disponibles.';
+        } else if (query === '') {
+            this.clientSearchStatusTarget.textContent = `${available} ${available === 1 ? 'cliente disponible' : 'clientes disponibles'}.`;
+        } else if (matches === 0) {
+            this.clientSearchStatusTarget.textContent = 'No hay clientes que coincidan con esa búsqueda.';
+        } else {
+            this.clientSearchStatusTarget.textContent = `${matches} ${matches === 1 ? 'coincidencia' : 'coincidencias'}.`;
+        }
+    }
+
+    normalizeClientSearch(value) {
+        return String(value ?? '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLocaleLowerCase()
+            .trim();
     }
 
     updateQuickClientType() {
@@ -266,6 +315,7 @@ export default class extends Controller {
                 this.clientTarget.append(newOption);
             }
             this.clientTarget.value = String(client.id);
+            this.filterClients();
             this.setClientMode('existing');
             const context = await this.changeClient();
             const warnings = Array.isArray(result.warnings) ? result.warnings : [];
@@ -342,6 +392,7 @@ export default class extends Controller {
             this.clientTarget.append(option);
         }
         this.clientTarget.value = String(client.id);
+        this.filterClients();
         this.setClientMode('existing');
         this.resetQuickDuplicateConfirmation();
         this.changeClient();

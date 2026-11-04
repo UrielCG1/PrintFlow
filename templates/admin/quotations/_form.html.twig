@@ -388,6 +388,23 @@
 
                         <div class="col-12 pf-form-field quotation-client-field">
                             <div data-ui--quotation-form-target="clientExistingPanel">
+                                <div class="pf-form-field quotation-client-search">
+                                    <label class="form-label" for="quotation-client-search">Buscar cliente</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text" aria-hidden="true"><i class="bi bi-search"></i></span>
+                                        <input
+                                            id="quotation-client-search"
+                                            class="form-control"
+                                            type="search"
+                                            autocomplete="off"
+                                            placeholder="Escribe el nombre comercial…"
+                                            aria-controls="{{ form.client.vars.id }}"
+                                            data-ui--quotation-form-target="clientSearch"
+                                            data-action="input->ui--quotation-form#filterClients"
+                                        >
+                                    </div>
+                                    <small class="form-text" data-ui--quotation-form-target="clientSearchStatus" aria-live="polite"></small>
+                                </div>
                                 {{ form_row(form.client) }}
                             </div>
                         </div>

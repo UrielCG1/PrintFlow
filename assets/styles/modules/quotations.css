@@ -2832,6 +2832,22 @@
     outline-offset: 2px;
 }
 
+.quotation-client-search {
+    max-width: 36rem;
+    margin-bottom: var(--pf-space-sm);
+}
+
+.quotation-client-search .input-group-text {
+    color: var(--pf-secondary);
+    background: var(--pf-surface-container-low);
+    border-color: var(--pf-border-color);
+}
+
+.quotation-client-search .form-text {
+    display: block;
+    min-height: 1.25rem;
+}
+
 .quotation-client-mode__hint {
     margin: var(--pf-space-sm) 0 0;
     color: var(--pf-on-surface-variant);
