@@ -76,7 +76,7 @@
                     <span class="visually-hidden">{{ orderProgress.percent }}% completado</span>
                 </div>
 
-                {% set journeyLine = orderProgress.current_stage == 'planning' ? 0 : (orderProgress.current_stage == 'design' ? 20 : (orderProgress.current_stage == 'production' ? 40 : (orderProgress.current_stage == 'quality' ? 60 : (orderProgress.current_stage == 'delivery' ? 80 : 100)))) %}
+                {% set journeyLine = orderProgress.current_stage == 'planning' ? 0 : (orderProgress.current_stage == 'design' ? 20 : (orderProgress.current_stage == 'production' ? 40 : (orderProgress.current_stage == 'quality' ? 60 : 80))) %}
                 <ol class="service-order-journey__steps" style="--journey-progress: {{ journeyLine }}%" aria-label="Etapas de la orden">
                     {% for stage in orderStages %}
                         {% set stageComplete = orderProgress.stages[stage.key] %}

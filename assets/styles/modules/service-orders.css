@@ -742,6 +742,7 @@
 
 .service-order-journey__steps::after {
     width: var(--journey-progress);
+    max-width: 80%;
     background: #16952f;
 }
 
