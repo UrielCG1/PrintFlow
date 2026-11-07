@@ -155,6 +155,17 @@ body.pf-public-body--auth {
     border-radius: 0;
     box-shadow: none;
 }
+
+.pf-auth--login .pf-auth__form {
+    width: min(100%, 28rem);
+    justify-self: end;
+    margin-right: clamp(0rem, 7vw, 7rem);
+}
+
+.pf-auth--login .pf-brand {
+    width: 100%;
+}
+
 .pf-auth__form::before {
     position: absolute;
     inset:
@@ -744,6 +755,12 @@ body.pf-public-body--auth {
             0
             var(--pf-space-lg)
             var(--pf-space-lg);
+    }
+
+    .pf-auth--login .pf-auth__form {
+        width: min(100%, 30rem);
+        justify-self: center;
+        margin-right: 0;
     }
 
     .pf-auth__support--footer {
