@@ -115,12 +115,14 @@
                     </twig:Ui:Button>
                 </form>
 
-                <a
-                    href="{{ path('app_forgot_password_request') }}"
-                    class="pf-auth__recovery-link"
-                >
-                    ¿Olvidaste tu contraseña?
-                </a>
+                <div class="pf-auth__recovery">
+                    <a
+                        href="{{ path('app_forgot_password_request') }}"
+                        class="pf-auth__recovery-link"
+                    >
+                        ¿Olvidaste tu contraseña?
+                    </a>
+                </div>
             </div>
         </div>
     </section>
