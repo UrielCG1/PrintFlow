@@ -43,12 +43,14 @@
             Enviar un nuevo enlace
         </a>
 
-        <a
-            href="{{ path('app_login') }}"
-            class="pf-auth__recovery-link pf-auth__recovery-link--center"
-        >
-            <i class="bi bi-arrow-left me-2" aria-hidden="true"></i>
-            Volver al inicio de sesión
-        </a>
+        <div class="pf-auth__recovery">
+            <a
+                href="{{ path('app_login') }}"
+                class="pf-auth__recovery-link pf-auth__recovery-link--center"
+            >
+                <i class="bi bi-arrow-left me-2" aria-hidden="true"></i>
+                Volver al inicio de sesión
+            </a>
+        </div>
     </div>
 {% endblock %}

@@ -51,7 +51,7 @@ body.pf-public-body--auth {
     overflow: hidden;
 }
 
-.pf-auth--login {
+.pf-auth--frosted {
     grid-template-rows: minmax(0, 1fr);
     min-height: 100vh;
     min-height: 100svh;
@@ -164,8 +164,8 @@ body.pf-public-body--auth {
     box-shadow: none;
 }
 
-.pf-auth--login .pf-auth__form {
-    width: min(100%, 28rem);
+.pf-auth--frosted .pf-auth__form {
+    width: min(100%, 32rem);
     justify-self: center;
     margin: 0;
     padding: clamp(1.5rem, 3.5vw, 2rem);
@@ -188,11 +188,15 @@ body.pf-public-body--auth {
     -webkit-backdrop-filter: blur(1rem) saturate(1.08);
 }
 
-.pf-auth--login .pf-auth__form::before {
+.pf-auth--login .pf-auth__form {
+    width: min(100%, 28rem);
+}
+
+.pf-auth--frosted .pf-auth__form::before {
     display: none;
 }
 
-.pf-auth--login .pf-auth__form .pf-brand {
+.pf-auth--frosted .pf-auth__form .pf-brand {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -208,19 +212,19 @@ body.pf-public-body--auth {
     box-shadow: none;
 }
 
-.pf-auth--login .pf-auth__form .pf-brand__logo {
+.pf-auth--frosted .pf-auth__form .pf-brand__logo {
     width: min(100%, 10.5rem);
     max-height: 4.25rem;
 
     mix-blend-mode: multiply;
 }
 
-.pf-auth--login .pf-auth__header {
+.pf-auth--frosted .pf-auth__header {
     margin: 0 0 1.5rem;
     text-align: center;
 }
 
-.pf-auth--login .pf-auth__header h1 {
+.pf-auth--frosted .pf-auth__header h1 {
     margin: 0;
 
     color: var(--pf-on-surface);
@@ -228,7 +232,7 @@ body.pf-public-body--auth {
     line-height: 1.2;
 }
 
-.pf-auth--login .pf-auth__header h1::after {
+.pf-auth--frosted .pf-auth__header h1::after {
     display: block;
 
     width: 3rem;
@@ -241,11 +245,23 @@ body.pf-public-body--auth {
     content: "";
 }
 
-.pf-auth--login .pf-auth__form-fields {
+.pf-auth--reset .pf-auth__header p {
+    max-width: 28rem;
+    margin: 0.875rem auto 0;
+
+    color: rgba(22, 38, 54, 0.76);
+    font-size: 0.9375rem;
+    font-weight: var(--pf-font-weight-regular);
+    line-height: 1.55;
+
+    text-shadow: none;
+}
+
+.pf-auth--frosted .pf-auth__form-fields {
     gap: 1rem;
 }
 
-.pf-auth--login .pf-auth__field .form-label {
+.pf-auth--frosted .pf-auth__field .form-label {
     display: block;
 
     margin: 0 0 0.45rem;
@@ -258,7 +274,7 @@ body.pf-public-body--auth {
     text-transform: none;
 }
 
-.pf-auth--login .pf-auth__input-group {
+.pf-auth--frosted .pf-auth__input-group {
     min-height: 3.375rem;
 
     background: rgba(255, 255, 255, 0.72);
@@ -272,13 +288,13 @@ body.pf-public-body--auth {
     -webkit-backdrop-filter: blur(0.375rem);
 }
 
-.pf-auth--login .pf-auth__input-group:hover {
+.pf-auth--frosted .pf-auth__input-group:hover {
     background: rgba(255, 255, 255, 0.86);
     border-color: rgba(27, 47, 66, 0.24);
     box-shadow: 0 0.25rem 0.75rem rgba(11, 28, 48, 0.07);
 }
 
-.pf-auth--login .pf-auth__input-group:focus-within {
+.pf-auth--frosted .pf-auth__input-group:focus-within {
     background: rgba(255, 255, 255, 0.96);
     border-color: rgba(var(--pf-primary-rgb), 0.72);
     box-shadow:
@@ -288,7 +304,7 @@ body.pf-public-body--auth {
     transform: none;
 }
 
-.pf-auth--login .pf-auth__input-group .input-group-text {
+.pf-auth--frosted .pf-auth__input-group .input-group-text {
     flex-basis: 3.25rem;
 
     width: 3.25rem;
@@ -299,21 +315,21 @@ body.pf-public-body--auth {
     box-shadow: inset -1px 0 0 rgba(var(--pf-primary-rgb), 0.1);
 }
 
-.pf-auth--login .pf-auth__input-group .input-group-text i {
+.pf-auth--frosted .pf-auth__input-group .input-group-text i {
     color: inherit;
     filter: none;
 }
 
-.pf-auth--login .pf-auth__input-group .form-control {
+.pf-auth--frosted .pf-auth__input-group .form-control {
     min-height: 3.375rem;
     color: rgba(22, 38, 54, 0.96);
 }
 
-.pf-auth--login .pf-auth__input-group .form-control::placeholder {
+.pf-auth--frosted .pf-auth__input-group .form-control::placeholder {
     color: rgba(63, 70, 82, 0.62);
 }
 
-.pf-auth--login .pf-auth__password-toggle {
+.pf-auth--frosted .pf-auth__password-toggle {
     flex-basis: 3.25rem;
 
     width: 3.25rem;
@@ -325,18 +341,18 @@ body.pf-public-body--auth {
     box-shadow: inset 1px 0 0 rgba(var(--pf-primary-rgb), 0.1);
 }
 
-.pf-auth--login .pf-auth__password-toggle:hover {
+.pf-auth--frosted .pf-auth__password-toggle:hover {
     color: var(--pf-on-primary);
     background: var(--pf-primary);
 }
 
-.pf-auth--login .pf-auth__password-toggle:focus-visible {
+.pf-auth--frosted .pf-auth__password-toggle:focus-visible {
     outline: 2px solid var(--pf-primary);
     outline-offset: -3px;
     box-shadow: none;
 }
 
-.pf-auth--login .pf-auth__submit {
+.pf-auth--frosted .pf-auth__submit {
     min-height: 3.25rem;
     margin-top: 0.25rem;
 
@@ -346,13 +362,13 @@ body.pf-public-body--auth {
     box-shadow: 0 0.5rem 1rem rgba(var(--pf-primary-container-rgb), 0.24);
 }
 
-.pf-auth--login .pf-auth__submit:hover {
+.pf-auth--frosted .pf-auth__submit:hover {
     color: var(--pf-on-primary);
     background-color: var(--pf-primary);
     border-color: var(--pf-primary);
 }
 
-.pf-auth--login .pf-auth__recovery {
+.pf-auth--frosted .pf-auth__recovery {
     display: flex;
     align-items: center;
     gap: 0.875rem;
@@ -360,8 +376,8 @@ body.pf-public-body--auth {
     margin-top: 1.5rem;
 }
 
-.pf-auth--login .pf-auth__recovery::before,
-.pf-auth--login .pf-auth__recovery::after {
+.pf-auth--frosted .pf-auth__recovery::before,
+.pf-auth--frosted .pf-auth__recovery::after {
     flex: 1 1 auto;
 
     height: 1px;
@@ -371,7 +387,7 @@ body.pf-public-body--auth {
     content: "";
 }
 
-.pf-auth--login .pf-auth__recovery-link {
+.pf-auth--frosted .pf-auth__recovery-link {
     flex: 0 0 auto;
     justify-content: center;
 
@@ -384,13 +400,13 @@ body.pf-public-body--auth {
     white-space: nowrap;
 }
 
-.pf-auth--login .pf-auth__recovery-link:hover {
+.pf-auth--frosted .pf-auth__recovery-link:hover {
     color: var(--pf-primary);
     text-decoration: underline;
     text-underline-offset: 0.2em;
 }
 
-.pf-auth--login .pf-auth__recovery-link:focus-visible {
+.pf-auth--frosted .pf-auth__recovery-link:focus-visible {
     border-radius: 0.2rem;
     outline: 2px solid var(--pf-primary);
     outline-offset: 0.2rem;
@@ -985,7 +1001,7 @@ body.pf-public-body--auth {
             8rem;
     }
 
-    .pf-auth--login {
+    .pf-auth--frosted {
         padding: clamp(1rem, 3vh, 2rem) var(--pf-space-md);
     }
 
@@ -1021,7 +1037,7 @@ body.pf-public-body--auth {
             9rem;
     }
 
-    .pf-auth--login {
+    .pf-auth--frosted {
         min-height: 100svh;
         padding: 1rem 1rem 6.5rem;
     }
@@ -1101,7 +1117,7 @@ body.pf-public-body--auth {
         background-color: rgba(11, 28, 48, 0.22);
     }
 
-    .pf-auth--login .pf-auth__form {
+    .pf-auth--frosted .pf-auth__form {
         background: rgba(255, 255, 255, 0.97);
     }
 }
@@ -1228,6 +1244,35 @@ body.pf-public-body--auth {
     text-align: center;
 }
 
+.pf-auth--reset .pf-auth__notice {
+    padding: 1.25rem;
+
+    background: rgba(241, 247, 250, 0.78);
+    border: 1px solid rgba(27, 47, 66, 0.1);
+    border-radius: 1rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+
+    backdrop-filter: blur(0.375rem);
+    -webkit-backdrop-filter: blur(0.375rem);
+}
+
+.pf-auth--reset .pf-auth__notice-icon {
+    color: var(--pf-primary);
+    background-color: rgba(var(--pf-primary-container-rgb), 0.1);
+}
+
+.pf-auth--reset .pf-auth__notice-content p {
+    color: rgba(22, 38, 54, 0.82);
+}
+
+.pf-auth--reset .pf-auth__actions {
+    margin-top: 1.25rem;
+}
+
+.pf-auth--reset .pf-auth__actions .pf-auth__recovery {
+    margin-top: 0;
+}
+
 @media (max-width: 575.98px) {
     .pf-auth__notice {
         grid-template-columns: 1fr;
@@ -1239,5 +1284,36 @@ body.pf-public-body--auth {
 
     .pf-auth__notice-content {
         text-align: center;
+    }
+
+    .pf-auth--reset .pf-auth__form {
+        padding: 1.25rem;
+    }
+
+    .pf-auth--reset .pf-auth__form .pf-brand {
+        margin-bottom: 1rem;
+    }
+
+    .pf-auth--reset .pf-auth__header {
+        margin-bottom: 1.125rem;
+    }
+
+    .pf-auth--reset .pf-auth__form-fields {
+        gap: 0.875rem;
+    }
+
+    .pf-auth--reset .pf-auth__notice {
+        padding: 1rem;
+        gap: 0.75rem;
+    }
+
+    .pf-auth--reset .pf-auth__notice-content {
+        gap: 0.75rem;
+        text-align: left;
+    }
+
+    .pf-auth--reset .pf-auth__actions {
+        gap: 0.75rem;
+        margin-top: 1rem;
     }
 }

@@ -43,7 +43,6 @@
                 {{ form_widget(resetForm.plainPassword.first, {
                     attr: {
                         class: 'form-control',
-                        placeholder: 'Nueva contraseña',
                         autocomplete: 'new-password',
                         'data-ui--password-visibility-target': 'input'
                     }
@@ -91,7 +90,6 @@
                 {{ form_widget(resetForm.plainPassword.second, {
                     attr: {
                         class: 'form-control',
-                        placeholder: 'Repite la nueva contraseña',
                         autocomplete: 'new-password',
                         'data-ui--password-visibility-target': 'input'
                     }
@@ -129,11 +127,13 @@
         </twig:Ui:Button>
     {{ form_end(resetForm) }}
 
-    <a
-        href="{{ path('app_login') }}"
-        class="pf-auth__recovery-link pf-auth__recovery-link--center"
-    >
-        <i class="bi bi-arrow-left me-2" aria-hidden="true"></i>
-        Volver al inicio de sesión
-    </a>
+    <div class="pf-auth__recovery">
+        <a
+            href="{{ path('app_login') }}"
+            class="pf-auth__recovery-link pf-auth__recovery-link--center"
+        >
+            <i class="bi bi-arrow-left me-2" aria-hidden="true"></i>
+            Volver al inicio de sesión
+        </a>
+    </div>
 {% endblock %}
