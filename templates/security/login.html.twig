@@ -127,25 +127,5 @@
         </div>
     </section>
 
-    <div class="pf-auth__support pf-auth__support--footer">
-        <div class="pf-auth__support-item">
-            <i class="bi bi-headset" aria-hidden="true"></i>
-
-            <p>
-                Soporte técnico.
-            </p>
-        </div>
-
-        <div class="pf-auth__support-item">
-            <i class="bi bi-shield-lock" aria-hidden="true"></i>
-
-            <p>Privacidad</p>
-        </div>
-
-        <div class="pf-auth__support-item">
-            <i class="bi bi-shield-lock" aria-hidden="true"></i>
-
-            <p>Términos de servicio</p>
-        </div>
-    </div>
+    {% include 'partials/_auth_support_footer.html.twig' %}
 {% endblock %}

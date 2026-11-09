@@ -907,24 +907,30 @@ body.pf-public-body--auth {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--pf-space-xl);
+    gap: 0.75rem 1.5rem;
 
     width: max-content;
     max-width: calc(100% - 2rem);
     padding: 0.5rem 1rem;
 
-    color: var(--pf-inverse-on-surface);
-    background-color: rgba(11, 28, 48, 0.3);
+    color: rgba(22, 38, 54, 0.92);
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.91),
+            rgba(248, 251, 255, 0.84)
+        );
 
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.72);
     border-radius: var(--pf-radius-pill);
 
     box-shadow:
-        0 0.75rem 2rem rgba(11, 28, 48, 0.18),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        0 0.75rem 2rem rgba(11, 28, 48, 0.16),
+        0 0.125rem 0.5rem rgba(11, 28, 48, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.78);
 
-    backdrop-filter: blur(0.75rem);
-    -webkit-backdrop-filter: blur(0.75rem);
+    backdrop-filter: blur(1rem) saturate(1.08);
+    -webkit-backdrop-filter: blur(1rem) saturate(1.08);
 
     transform: translateX(-50%);
 }
@@ -949,21 +955,21 @@ body.pf-public-body--auth {
     width: 1.5rem;
     height: 1.5rem;
 
-    color: var(--pf-inverse-primary);
-    background-color:
-        rgba(var(--pf-primary-container-rgb), 0.14);
+    color: var(--pf-primary);
+    background-color: rgba(var(--pf-primary-container-rgb), 0.1);
 
-    border-radius: var(--pf-radius-sm);
+    border-radius: var(--pf-radius-md);
 
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     line-height: 1;
 }
 
 .pf-auth__support--footer .pf-auth__support-item p {
     color: inherit;
 
-    font-size: var(--pf-font-size-label-sm);
-    line-height: var(--pf-line-height-label-sm);
+    font-size: 0.8125rem;
+    font-weight: var(--pf-font-weight-semibold);
+    line-height: 1.35;
 }
 
 
