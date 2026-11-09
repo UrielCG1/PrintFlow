@@ -1,149 +1,101 @@
 {% extends 'layouts/app.html.twig' %}
-
 {% block title %}Inicio | OoxCorp{% endblock %}
-
 {% block app_navigation_active %}dashboard{% endblock %}
-
 {% block app_breadcrumb %}Inicio{% endblock %}
 
 {% block app_content %}
-    <twig:Ui:PageHeader
-        title="Inicio"
-        description="Resumen de las herramientas a las que tienes acceso."
-    ></twig:Ui:PageHeader>
+<div class="pf-home">
+    <header class="pf-home__header">
+        <div><p class="pf-home__eyebrow">Tu espacio de trabajo</p><h1>Hola, {{ app.user.fullName }}</h1><p>Consulta tus pendientes y los compromisos de la operación.</p></div>
+        <div class="pf-home__date"><i class="bi bi-calendar3" aria-hidden="true"></i><span>{{ dashboard.today|date('d/m/Y') }} <small>· Ciudad de México</small></span></div>
+    </header>
 
-    <section class="pf-dashboard-welcome">
-        <div>
-            <p class="pf-dashboard-welcome__eyebrow">Sesión activa</p>
-            <h2>Hola, {{ app.user.fullName }}</h2>
-            <p>Selecciona un módulo para continuar con tu operación.</p>
-        </div>
-
-        <span class="pf-status-badge pf-status-badge--success">
-            <i class="bi bi-check-circle" aria-hidden="true"></i>
-            Acceso verificado
-        </span>
-    </section>
-
-    {% if is_granted('inventory.configure') %}
-        <section class="pf-dashboard-section">
-            <div class="pf-dashboard-section__header"><div><h2>Avisos de inventario</h2><p>Faltantes de órdenes y materiales en el mínimo configurado.</p></div><div class="d-flex gap-2"><a href="{{ path('admin_inventory_indicators_index') }}" class="btn pf-button pf-button--secondary pf-button--sm">Indicadores</a><a href="{{ path('admin_inventory_replenishment_index') }}" class="btn pf-button pf-button--primary pf-button--sm">Sugerencias de compra</a><a href="{{ path('admin_inventory_receipts_minimums') }}" class="btn pf-button pf-button--secondary pf-button--sm">Configurar mínimos</a></div></div>
-            <div class="row g-3 mb-3" aria-label="Seguimiento operativo de inventario"><div class="col-md-4"><div class="pf-card h-100"><div class="pf-card__body"><div class="small text-body-secondary">Conteos por revisar</div><strong class="fs-3">{{ inventoryIndicators.pendingCycleCounts }}</strong></div></div></div><div class="col-md-4"><div class="pf-card h-100"><div class="pf-card__body"><div class="small text-body-secondary">Esperas activas por material</div><strong class="fs-3">{{ inventoryIndicators.ordersWaitingForPurchaseCount }}</strong></div></div></div><div class="col-md-4"><div class="pf-card h-100"><div class="pf-card__body"><div class="small text-body-secondary">Compras en seguimiento</div><strong class="fs-3">{{ inventoryIndicators.purchasesInTrackingCount }}</strong></div></div></div></div>
-            {% if materialShortageAlerts is not empty %}
-                <twig:Ui:Card class="mb-3">
-                    <div class="d-flex align-items-start gap-2 mb-3"><i class="bi bi-exclamation-triangle-fill text-warning" aria-hidden="true"></i><div><strong>Órdenes con material insuficiente</strong><p class="mb-0 small text-body-secondary">Revisa cada orden para autorizar una sustitución, esperar compra o permitir producción parcial.</p></div></div>
-                    <div class="table-responsive"><table class="table pf-table mb-0"><thead><tr><th>Orden</th><th>Material</th><th>Faltante</th><th>Estado</th></tr></thead><tbody>{% for alert in materialShortageAlerts %}{% set decision = materialShortageDecisions[alert.id] ?? null %}<tr><td><a href="{{ path('admin_service_orders_show', {id: alert.serviceOrder.id}) }}#material-commitment-{{ alert.id }}">{{ alert.serviceOrder.folio }}</a></td><td><strong>{{ alert.variant.material.name }}</strong><div class="small text-body-secondary">{{ alert.variant.code }}</div></td><td>{{ alert.shortageQuantity|number_format(6, '.', ',') }} {{ alert.variant.inventoryUnit.symbol }}</td><td>{{ decision ? decision.type.label : 'Autorización pendiente' }}{% if alert.status.value == 'PARTIAL' %}<div class="small text-body-secondary">Cobertura parcial</div>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
-                </twig:Ui:Card>
-            {% endif %}
-            <twig:Ui:Card>
-                {% if lowStockAlerts is empty %}
-                    <p class="mb-0">No hay materiales en mínimo o por debajo de él.</p>
-                {% else %}
-                    <div class="table-responsive"><table class="table pf-table mb-0"><thead><tr><th>Material</th><th>Disponible</th><th>Mínimo</th></tr></thead><tbody>{% for alert in lowStockAlerts %}<tr><td><strong>{{ alert.variant.material.name }}</strong><div class="small text-body-secondary">{{ alert.variant.code }}</div></td><td>{{ alert.availableQuantity|number_format(6, '.', ',') }} {{ alert.variant.inventoryUnit.symbol }}</td><td>{{ alert.variant.minimumStock|number_format(6, '.', ',') }} {{ alert.variant.inventoryUnit.symbol }}</td></tr>{% endfor %}</tbody></table></div>
-                {% endif %}
-            </twig:Ui:Card>
-        </section>
-    {% endif %}
-
-    {% set has_administration_access =
-        is_granted('user.view')
-        or is_granted('role.view')
-        or is_granted('audit_log.view')
-    %}
-
-    <section class="pf-dashboard-section">
-        <div class="pf-dashboard-section__header">
-            <div>
-                <h2>Módulos disponibles</h2>
-                <p>Accesos habilitados según tus permisos asignados.</p>
-            </div>
-        </div>
-
-        {% if has_administration_access %}
-            <div class="pf-dashboard-grid">
-                {% if is_granted('user.view') %}
-                    <twig:Ui:Card
-                        title="Usuarios"
-                        subtitle="Cuentas, estatus y contraseñas temporales."
-                        class="pf-dashboard-card"
-                    >
-                        <a
-                            href="{{ path('admin_users_index') }}"
-                            class="pf-dashboard-shortcut"
-                        >
-                            <span class="pf-dashboard-shortcut__icon">
-                                <i class="bi bi-people" aria-hidden="true"></i>
-                            </span>
-
-                            <span>
-                                Administrar usuarios
-                                <small>Consultar y gestionar cuentas</small>
-                            </span>
-
-                            <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                        </a>
-                    </twig:Ui:Card>
-                {% endif %}
-
-                {% if is_granted('role.view') %}
-                    <twig:Ui:Card
-                        title="Roles y permisos"
-                        subtitle="Control de acceso al sistema."
-                        class="pf-dashboard-card"
-                    >
-                        <a
-                            href="{{ path('admin_roles_index') }}"
-                            class="pf-dashboard-shortcut"
-                        >
-                            <span class="pf-dashboard-shortcut__icon">
-                                <i class="bi bi-shield-lock" aria-hidden="true"></i>
-                            </span>
-
-                            <span>
-                                Administrar roles
-                                <small>Definir permisos y responsabilidades</small>
-                            </span>
-
-                            <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                        </a>
-                    </twig:Ui:Card>
-                {% endif %}
-
-                {% if is_granted('audit_log.view') %}
-                    <twig:Ui:Card
-                        title="Bitácora"
-                        subtitle="Trazabilidad de las acciones administrativas."
-                        class="pf-dashboard-card"
-                    >
-                        <a
-                            href="{{ path('admin_audit_index') }}"
-                            class="pf-dashboard-shortcut"
-                        >
-                            <span class="pf-dashboard-shortcut__icon">
-                                <i class="bi bi-journal-text" aria-hidden="true"></i>
-                            </span>
-
-                            <span>
-                                Consultar bitácora
-                                <small>Revisar actividades y cambios registrados</small>
-                            </span>
-
-                            <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                        </a>
-                    </twig:Ui:Card>
-                {% endif %}
-            </div>
-        {% else %}
-            <twig:Ui:Card class="pf-dashboard-empty">
-                <div class="pf-dashboard-empty__icon">
-                    <i class="bi bi-shield-check" aria-hidden="true"></i>
-                </div>
-
-                <div>
-                    <h2>Sin módulos administrativos asignados</h2>
-                    <p>Tu cuenta está autenticada, pero no tiene accesos adicionales habilitados.</p>
-                </div>
-            </twig:Ui:Card>
+    {% if dashboard.orders or dashboard.sales or dashboard.design or dashboard.work %}
+    <section class="pf-home__metrics" aria-label="Resumen de pendientes">
+        {% if dashboard.orders %}
+            <a class="pf-home__metric pf-home__metric--danger" href="{{ path('admin_service_orders_index') }}"><span class="pf-home__metric-icon"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i></span><span><span class="pf-home__metric-label">Órdenes vencidas</span><strong>{{ dashboard.orders.overdue_count }}</strong><small>sin confirmar entrega</small></span></a>
+            <a class="pf-home__metric" href="{{ path('admin_service_orders_index') }}"><span class="pf-home__metric-icon"><i class="bi bi-truck" aria-hidden="true"></i></span><span><span class="pf-home__metric-label">Compromisos de hoy</span><strong>{{ dashboard.orders.today_count }}</strong><small>fecha de entrega pactada</small></span></a>
+        {% endif %}
+        {% if dashboard.sales %}
+            <a class="pf-home__metric" href="{{ path('admin_quotations_index') }}"><span class="pf-home__metric-icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></span><span><span class="pf-home__metric-label">Cotizaciones por atender</span><strong>{{ dashboard.sales.pending_count }}</strong><small>solicitud, revisión o borrador</small></span></a>
+            <a class="pf-home__metric pf-home__metric--warning" href="{{ path('admin_quotations_index') }}"><span class="pf-home__metric-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></span><span><span class="pf-home__metric-label">Pendientes de respuesta</span><strong>{{ dashboard.sales.awaiting_count }}</strong><small>emitidas o enviadas</small></span></a>
+        {% endif %}
+        {% if dashboard.design %}
+            <a class="pf-home__metric" href="{{ path('admin_design_index') }}"><span class="pf-home__metric-icon"><i class="bi bi-palette" aria-hidden="true"></i></span><span><span class="pf-home__metric-label">Pendientes de Diseño</span><strong>{{ dashboard.design.counts.PENDING_REVIEW }}</strong><small>partidas por revisar</small></span></a>
+            <a class="pf-home__metric pf-home__metric--warning" href="{{ path('admin_design_index') }}"><span class="pf-home__metric-icon"><i class="bi bi-pencil-square" aria-hidden="true"></i></span><span><span class="pf-home__metric-label">En revisión de Diseño</span><strong>{{ dashboard.design.counts.IN_REVIEW }}</strong><small>{{ dashboard.design.counts.BLOCKED }} con bloqueo</small></span></a>
+        {% endif %}
+        {% if dashboard.work %}
+            <a class="pf-home__metric" href="{{ path('admin_production_execution_index') }}"><span class="pf-home__metric-icon"><i class="bi bi-gear-wide-connected" aria-hidden="true"></i></span><span><span class="pf-home__metric-label">Mis operaciones pendientes</span><strong>{{ dashboard.work.count }}</strong><small>asignadas a tu cuenta</small></span></a>
+        {% endif %}
+        {% if dashboard.production %}
+            <a class="pf-home__metric pf-home__metric--warning" href="{{ path('admin_production_board_index') }}"><span class="pf-home__metric-icon"><i class="bi bi-calendar-event" aria-hidden="true"></i></span><span><span class="pf-home__metric-label">Operaciones en riesgo</span><strong>{{ dashboard.production.summary.risk_count }}</strong><small>reservas de hoy con riesgo o poca holgura</small></span></a>
         {% endif %}
     </section>
+    {% endif %}
+
+    <div class="pf-home__grid">
+        <div class="pf-home__main">
+            {% if dashboard.work %}
+            <section class="pf-card pf-home__panel" aria-labelledby="home-work">
+                <div class="pf-home__panel-head"><div><p class="pf-home__eyebrow">Tu trabajo</p><h2 id="home-work">Mis operaciones</h2><p>Asignaciones pendientes de tu cuenta.</p></div><a href="{{ path('admin_production_execution_index') }}">Ver mi cola <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
+                <div class="pf-home__list">
+                    {% for plan in dashboard.work.rows %}
+                        {% set item = plan.serviceOrderItem %}{% set latest = plan.latestExecution %}
+                        <article class="pf-home__row"><div class="pf-home__row-icon"><i class="bi bi-gear" aria-hidden="true"></i></div><div class="pf-home__row-content"><strong>{{ item.serviceOrder.folio }} · Partida {{ item.displayLineNumber }}</strong><span>{{ item.commercialItemSnapshot.name ?? 'Producto' }} · {{ plan.operation.name }}</span><small>{{ plan.equipment ? plan.equipment.name : 'Equipo por asignar' }}{% if plan.blockedReason %} · {{ plan.blockedReason }}{% endif %}</small></div><span class="pf-home__tag {{ plan.blockedReason or (latest and latest.status.value == 'PAUSED') ? 'is-warning' : '' }}">{{ plan.blockedReason ? 'Bloqueada' : (latest and latest.status.value == 'IN_PROGRESS' ? 'En curso' : (latest and latest.status.value == 'PAUSED' ? 'Pausada' : 'Pendiente')) }}</span></article>
+                    {% else %}<p class="pf-home__empty">No tienes operaciones pendientes asignadas.</p>{% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            {% if dashboard.orders %}
+            <section class="pf-card pf-home__panel" aria-labelledby="home-overdue">
+                <div class="pf-home__panel-head"><div><p class="pf-home__eyebrow">Requieren seguimiento</p><h2 id="home-overdue">Órdenes vencidas</h2><p>Compromiso anterior a hoy, sin confirmar entrega.</p></div><a href="{{ path('admin_service_orders_index') }}">Ver órdenes <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
+                <div class="pf-home__list">{% for order in dashboard.orders.overdue %}<a class="pf-home__row pf-home__row--link" href="{{ path('admin_service_orders_show', {id: order.id}) }}"><div class="pf-home__row-icon is-danger"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i></div><div class="pf-home__row-content"><strong>{{ order.folio }} · {{ order.clientSnapshot.business_name ?? 'Cliente no disponible' }}</strong><span>{{ order.productionStatus.label }} · {{ order.deliveryStatus.label }}</span><small>Compromiso: {{ order.commitmentDate|date('d/m/Y') }}</small></div><span class="pf-home__tag is-danger">Vencida</span></a>{% else %}<p class="pf-home__empty">No hay órdenes vencidas pendientes de entrega.</p>{% endfor %}</div>
+            </section>
+            {% endif %}
+
+            {% if dashboard.design %}
+            <section class="pf-card pf-home__panel" aria-labelledby="home-design">
+                <div class="pf-home__panel-head"><div><p class="pf-home__eyebrow">Preprensa</p><h2 id="home-design">Prioridad de Diseño</h2><p>Partidas pendientes, ordenadas por prioridad de la orden.</p></div><a href="{{ path('admin_design_index') }}">Ver cola de Diseño <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
+                <div class="pf-home__list">{% for item in dashboard.design.rows %}{% set priority = dashboard.design.priorities[item.serviceOrder.id] ?? item.priority %}<a class="pf-home__row pf-home__row--link" href="{{ path('admin_design_show', {id: item.id}) }}"><div class="pf-home__row-icon"><i class="bi bi-palette" aria-hidden="true"></i></div><div class="pf-home__row-content"><strong>{{ item.serviceOrder.folio }} · Partida {{ item.displayLineNumber }}</strong><span>{{ item.commercialItemSnapshot.name ?? 'Producto' }} · Prioridad {{ priority.label|lower }}</span><small>{{ item.serviceOrder.commitmentDate ? 'Compromiso: ' ~ item.serviceOrder.commitmentDate|date('d/m/Y') : 'Sin fecha compromiso' }}</small></div><span class="pf-home__tag {{ item.designStatus.value == 'BLOCKED' ? 'is-danger' : 'is-warning' }}">{{ item.designStatus.label }}</span></a>{% else %}<p class="pf-home__empty">No hay partidas pendientes en Diseño.</p>{% endfor %}</div>
+            </section>
+            {% endif %}
+
+            {% if dashboard.sales %}
+            <section class="pf-card pf-home__panel" aria-labelledby="home-sales">
+                <div class="pf-home__panel-head"><div><p class="pf-home__eyebrow">Seguimiento comercial</p><h2 id="home-sales">Cotizaciones por atender</h2><p>Solicitudes, borradores y cotizaciones pendientes de respuesta.</p></div><a href="{{ path('admin_quotations_index') }}">Ver cotizaciones <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
+                <div class="pf-home__list">{% for quote in dashboard.sales.rows %}<a class="pf-home__row pf-home__row--link" href="{{ path('admin_quotations_show', {id: quote.id}) }}"><div class="pf-home__row-icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></div><div class="pf-home__row-content"><strong>{{ quote.folio ?? quote.requestReference ?? ('Solicitud #' ~ quote.id) }} · {{ quote.client.businessName }}</strong><span>Actualizada el {{ quote.updatedAt|date('d/m/Y', 'America/Mexico_City') }}</span></div><span class="pf-home__tag">{{ quote.status.label }}</span></a>{% else %}<p class="pf-home__empty">No hay cotizaciones pendientes de seguimiento.</p>{% endfor %}</div>
+            </section>
+            {% endif %}
+            {% if dashboard.production %}
+            <section class="pf-card pf-home__panel" aria-labelledby="home-equipment">
+                <div class="pf-home__panel-head"><div><p class="pf-home__eyebrow">Producción de hoy</p><h2 id="home-equipment">Agenda por equipo</h2><p>Tiempo reservado y disponible en la jornada calculada.</p></div><a href="{{ path('admin_production_board_index') }}">Ver calendario <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>
+                <div class="pf-home__list">{% for machine in dashboard.production.resources %}<div class="pf-home__row"><div class="pf-home__row-icon"><i class="bi bi-printer" aria-hidden="true"></i></div><div class="pf-home__row-content"><strong>{{ machine.name }}</strong><span>{{ machine.operation }} · {{ machine.area }}</span><small>{{ machine.total_reserved_minutes }} min reservados · {{ machine.free_minutes }} min disponibles{% if machine.alerts %} · {{ machine.alerts }} con riesgo o poca holgura{% endif %}</small></div><span class="pf-home__tag {{ machine.alerts ? 'is-warning' : '' }}">{{ machine.alerts ? 'Revisar' : 'Programación' }}</span></div>{% else %}<p class="pf-home__empty">No hay equipos para mostrar.</p>{% endfor %}</div>
+            </section>
+            {% endif %}
+        </div>
+
+        <aside class="pf-home__aside">
+            <section class="pf-card pf-home__panel" aria-labelledby="home-agenda">
+                <div class="pf-home__panel-head"><div><p class="pf-home__eyebrow">Hoy y próximos 6 días</p><h2 id="home-agenda">Agenda</h2><p>Compromisos y reservas disponibles para tu perfil.</p></div><i class="bi bi-calendar3 pf-home__heading-icon" aria-hidden="true"></i></div>
+                <div class="pf-home__agenda">{% for event in dashboard.agenda %}<a class="pf-home__event" href="{{ event.id ? path(event.route, {id: event.id}) : path(event.route) }}"><time class="pf-home__event-date">{% if event.timed %}{{ event.date|date('d/m', 'America/Mexico_City') }}<strong>{{ event.date|date('H:i', 'America/Mexico_City') }}</strong>{% else %}{{ event.date|date('d/m') }}<strong>Sin hora</strong>{% endif %}</time><span class="pf-home__event-content"><small>{{ event.type }}</small><strong>{{ event.title }}</strong><span>{{ event.detail }}</span></span><i class="bi bi-chevron-right" aria-hidden="true"></i></a>{% else %}<p class="pf-home__empty">No hay compromisos o reservas visibles para los próximos días.</p>{% endfor %}</div>
+                {% if is_granted('production.view') %}<div class="pf-home__panel-footer"><a href="{{ path('admin_production_board_index') }}">Abrir calendario de producción <i class="bi bi-arrow-right" aria-hidden="true"></i></a></div>{% endif %}
+            </section>
+            {% if dashboard.orders %}
+            <section class="pf-card pf-home__panel" aria-labelledby="home-deliveries"><div class="pf-home__panel-head"><div><p class="pf-home__eyebrow">Seguimiento</p><h2 id="home-deliveries">Próximas entregas</h2><p>Fechas compromiso pendientes de confirmar.</p></div></div><div class="pf-home__list">{% for order in dashboard.orders.upcoming|slice(0, 4) %}<a class="pf-home__row pf-home__row--link" href="{{ path('admin_service_orders_show', {id: order.id}) }}"><div class="pf-home__row-content"><strong>{{ order.folio }}</strong><span>{{ order.clientSnapshot.business_name ?? 'Cliente no disponible' }}</span><small>{{ order.commitmentDate|date('d/m/Y') }} · {{ order.deliveryStatus.label }}</small></div><i class="bi bi-chevron-right" aria-hidden="true"></i></a>{% else %}<p class="pf-home__empty">No hay compromisos próximos con fecha.</p>{% endfor %}</div></section>
+            {% endif %}
+        </aside>
+    </div>
+
+    {% include 'dashboard/_inventory.html.twig' %}
+    <section class="pf-home__shortcuts" aria-labelledby="home-shortcuts"><div><p class="pf-home__eyebrow">Accesos</p><h2 id="home-shortcuts">Herramientas disponibles</h2><p>Continúa en los módulos habilitados para tu cuenta.</p></div><div class="pf-home__shortcut-grid">
+        {% if is_granted('quotations.view') %}<a href="{{ path('admin_quotations_index') }}"><i class="bi bi-file-earmark-text" aria-hidden="true"></i> Cotizaciones <i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% endif %}
+        {% if is_granted('service_orders.view') %}<a href="{{ path('admin_service_orders_index') }}"><i class="bi bi-clipboard2-check" aria-hidden="true"></i> Órdenes de servicio <i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% endif %}
+        {% if is_granted('production.view') and is_granted('production.design.review') %}<a href="{{ path('admin_design_index') }}"><i class="bi bi-palette" aria-hidden="true"></i> Diseño <i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% endif %}
+        {% if is_granted('production.view') %}<a href="{{ path('admin_production_board_index') }}"><i class="bi bi-calendar3" aria-hidden="true"></i> Calendario <i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% endif %}
+        {% if is_granted('user.view') %}<a href="{{ path('admin_users_index') }}"><i class="bi bi-people" aria-hidden="true"></i> Usuarios <i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% endif %}
+        {% if is_granted('role.view') %}<a href="{{ path('admin_roles_index') }}"><i class="bi bi-shield-lock" aria-hidden="true"></i> Roles y permisos <i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% endif %}
+        {% if is_granted('audit_log.view') %}<a href="{{ path('admin_audit_index') }}"><i class="bi bi-journal-text" aria-hidden="true"></i> Bitácora <i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% endif %}
+    </div></section>
+</div>
 {% endblock %}
