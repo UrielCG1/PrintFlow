@@ -5,7 +5,7 @@
 {% block body_class %}pf-public-body pf-public-body--auth{% endblock %}
 
 {% block public_frame %}
-    <section class="pf-auth pf-auth--login">
+    <section class="pf-auth pf-auth--login" aria-labelledby="login-title">
         <aside class="pf-auth__visual" aria-hidden="true">
             <img
                 class="pf-auth__visual-image"
@@ -21,7 +21,7 @@
                 </div>
 
                 <header class="pf-auth__header">
-                    <h1>Bienvenido</h1>
+                    <h1 id="login-title">Bienvenido</h1>
                 </header>
 
                 {% include 'partials/_flash_messages.html.twig' %}
@@ -42,6 +42,8 @@
                     class="pf-form pf-auth__form-fields"
                 >
                     <div class="pf-auth__field">
+                        <label class="form-label" for="username">Nombre de usuario</label>
+
                         <div class="input-group pf-auth__input-group">
                             <span class="input-group-text">
                                 <i class="bi bi-person" aria-hidden="true"></i>
@@ -54,7 +56,6 @@
                                 class="form-control"
                                 value="{{ last_username }}"
                                 autocomplete="username"
-                                placeholder="Nombre de usuario"
                                 required
                                 autofocus
                             >
@@ -62,6 +63,8 @@
                     </div>
 
                     <div class="pf-auth__field">
+                        <label class="form-label" for="password">Contraseña</label>
+
                         <div
                             class="input-group pf-auth__input-group"
                             data-controller="ui--password-visibility"
@@ -76,7 +79,6 @@
                                 type="password"
                                 class="form-control"
                                 autocomplete="current-password"
-                                placeholder="Contraseña"
                                 required
                                 data-ui--password-visibility-target="input"
                             >
