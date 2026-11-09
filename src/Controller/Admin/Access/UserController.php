@@ -40,6 +40,10 @@ final class UserController extends AbstractController
         $total = count($paginator);
         $totalPages = max(1, (int) ceil($total / self::PAGE_SIZE));
 
+        if ($page > $totalPages) {
+            return $this->redirectToRoute('admin_users_index', ['q' => $search, 'page' => $totalPages]);
+        }
+
         return $this->render('admin/access/users/index.html.twig', [
             'users' => iterator_to_array($paginator),
             'search' => $search,

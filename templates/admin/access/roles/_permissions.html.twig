@@ -1,0 +1,37 @@
+<div class="pf-permission-picker" data-controller="admin--permission-picker">
+    <div class="pf-permission-picker__intro">
+        <div><h2>Permisos del rol</h2><p>Selecciona al menos un permiso activo. Los cambios afectan a todas las personas con este rol.</p></div>
+        <strong data-admin--permission-picker-target="total" aria-live="polite"></strong>
+    </div>
+    {{ form_errors(form.permissions) }}
+    <div class="pf-permission-picker__search" data-admin--permission-picker-target="controls" hidden>
+        <label for="permission-search">Buscar permisos</label>
+        <input id="permission-search" type="search" placeholder="Nombre, módulo o código" autocomplete="off" data-admin--permission-picker-target="search" data-action="input->admin--permission-picker#filter">
+        <p>La búsqueda solo filtra la vista; conserva todas las selecciones.</p>
+    </div>
+    <p data-admin--permission-picker-target="empty" hidden>No se encontraron permisos con esa búsqueda.</p>
+    {% set current_module = null %}
+    {% for permission in form.permissions %}
+        {% set module = permission.vars.attr['data-module'] %}
+        {% if module != current_module %}
+            {% if not loop.first %}</div></section>{% endif %}
+            {% set current_module = module %}
+            <section class="pf-permission-group" data-admin--permission-picker-target="group">
+                <header><div><h3>{{ module|replace({'_': ' ', '.': ' / '})|capitalize }}</h3><span data-count></span></div>
+                    <div class="pf-permission-group__actions" data-admin--permission-picker-target="controls" hidden>
+                        <button type="button" data-action="admin--permission-picker#selectVisible">Seleccionar visibles</button>
+                        <button type="button" data-action="admin--permission-picker#clearVisible">Quitar visibles</button>
+                    </div>
+                </header>
+                <div class="pf-permission-group__items">
+        {% endif %}
+        <div class="pf-permission-item" data-admin--permission-picker-target="item" data-search="{{ (module ~ ' ' ~ permission.vars.label ~ ' ' ~ permission.vars.attr['data-code'] ~ ' ' ~ permission.vars.attr['data-description'])|lower }}">
+            {{ form_widget(permission, {attr: {'data-action': 'change->admin--permission-picker#update'}}) }}
+            <label for="{{ permission.vars.id }}"><strong>{{ permission.vars.label }}</strong><small>{{ permission.vars.attr['data-code'] }}</small>{% if permission.vars.attr['data-description'] %}<span>{{ permission.vars.attr['data-description'] }}</span>{% endif %}</label>
+        </div>
+        {% if loop.last %}</div></section>{% endif %}
+    {% else %}
+        <p>No hay permisos activos disponibles.</p>
+    {% endfor %}
+    {% do form.permissions.setRendered %}
+</div>

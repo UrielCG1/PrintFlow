@@ -62,10 +62,12 @@
 
                             <div>
                                 <h2>Roles asignados</h2>
-                                <p>Definen los permisos efectivos al iniciar sesión.</p>
+                                <p>Los permisos de los roles activos se combinan.</p>
                             </div>
                         </header>
 
+                        {% set inactive_roles = managed_user.assignedRoles|filter(r => not r.active) %}
+                        {% if inactive_roles|length %}<div class="pf-access-notice">Roles inactivos conservados (no conceden acceso): {% for role in inactive_roles %}{{ not loop.first ? ', ' : '' }}{{ role.name }}{% endfor %}.</div>{% endif %}
                         {% if form.roles.vars.disabled %}
                             <div class="pf-user-form__notice">
                                 <i class="bi bi-info-circle" aria-hidden="true"></i>
@@ -73,6 +75,7 @@
                             </div>
                         {% endif %}
 
+                        {% if is_granted('role.view') %}<p><a href="{{ path('admin_roles_index') }}">Consultar capacidades de los roles</a></p>{% endif %}
                         {{ form_label(form.roles) }}
                         {{ form_errors(form.roles) }}
 
@@ -85,7 +88,7 @@
                         <span class="pf-user-form__summary-label">Cuenta</span>
                         <strong>@{{ managed_user.username }}</strong>
                         <span>
-                            Creada para operar en OoxCorp.
+                            {{ managed_user.mustChangePassword ? 'Cambio de contraseña pendiente.' : 'Sin cambio de contraseña obligatorio.' }}
                         </span>
                     </section>
                 </aside>

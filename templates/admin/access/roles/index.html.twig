@@ -1,128 +1,25 @@
 {% extends 'layouts/app.html.twig' %}
-
 {% block title %}Roles y permisos | OoxCorp{% endblock %}
-
 {% block app_navigation_active %}roles{% endblock %}
-
 {% block app_breadcrumb %}Administración / Roles y permisos{% endblock %}
-
 {% block app_content %}
-    <section class="pf-roles-page">
-        <header class="pf-roles-heading">
-            <div>
-                <p class="pf-roles-heading__eyebrow">Administración</p>
-                <h1>Roles y permisos</h1>
-                <p>Define qué acciones puede realizar cada perfil dentro de OoxCorp.</p>
-            </div>
-
-            {% if is_granted('role.manage') %}
-                <a
-                    href="{{ path('admin_roles_new') }}"
-                    class="btn pf-button pf-button--primary pf-roles-heading__action"
-                >
-                    <i class="bi bi-shield-plus" aria-hidden="true"></i>
-                    Crear rol
-                </a>
-            {% endif %}
-        </header>
-
-        <section class="pf-roles-table-card">
-            <div class="pf-roles-table-wrap">
-                <table class="pf-roles-table">
-                    <thead>
-                        <tr>
-                            <th>Rol</th>
-                            <th>Código</th>
-                            <th>Tipo</th>
-                            <th>Permisos</th>
-                            <th>Estado</th>
-                            <th class="pf-roles-table__actions-column">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for role in roles %}
-                            {% set is_protected = role.code == 'ROLE_ADMIN' %}
-
-                            <tr>
-                                <td>
-                                    <div class="pf-role-identity">
-                                        <span class="pf-role-identity__icon">
-                                            <i
-                                                class="bi {{ is_protected ? 'bi-shield-lock-fill' : 'bi-shield-check' }}"
-                                                aria-hidden="true"
-                                            ></i>
-                                        </span>
-
-                                        <div>
-                                            <strong>{{ role.name }}</strong>
-                                            <span>{{ role.description ?: 'Sin descripción registrada.' }}</span>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <code class="pf-role-code">{{ role.code }}</code>
-                                </td>
-                                <td>
-                                    {% if is_protected %}
-                                        <span class="pf-role-badge pf-role-badge--protected">
-                                            <i class="bi bi-lock-fill" aria-hidden="true"></i>
-                                            Protegido
-                                        </span>
-                                    {% elseif role.system %}
-                                        <span class="pf-role-badge">Sistema</span>
-                                    {% else %}
-                                        <span class="pf-role-badge">Personalizado</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <span class="pf-role-permission-count">
-                                        <i class="bi bi-key" aria-hidden="true"></i>
-                                        {{ role.permissions|length }}
-                                        {{ role.permissions|length == 1 ? 'permiso' : 'permisos' }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="pf-role-status {{ role.active ? 'pf-role-status--active' : 'pf-role-status--inactive' }}">
-                                        <i
-                                            class="bi {{ role.active ? 'bi-check-circle-fill' : 'bi-pause-circle-fill' }}"
-                                            aria-hidden="true"
-                                        ></i>
-                                        {{ role.active ? 'Activo' : 'Inactivo' }}
-                                    </span>
-                                </td>
-                                <td>
-                                    {% if is_granted('role.manage') %}
-                                        <a
-                                            href="{{ path('admin_roles_edit', {id: role.id}) }}"
-                                            class="pf-role-action {{ is_protected ? 'pf-role-action--subtle' : '' }}"
-                                        >
-                                            <i
-                                                class="bi {{ is_protected ? 'bi-eye' : 'bi-pencil-square' }}"
-                                                aria-hidden="true"
-                                            ></i>
-                                            {{ is_protected ? 'Consultar' : 'Editar' }}
-                                        </a>
-                                    {% else %}
-                                        <span class="pf-roles-table__muted">Sin acciones disponibles</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                        {% else %}
-                            <tr>
-                                <td colspan="6">
-                                    <div class="pf-roles-empty">
-                                        <i class="bi bi-shield-x" aria-hidden="true"></i>
-                                        <div>
-                                            <strong>No hay roles registrados.</strong>
-                                            <span>Crea un rol personalizado cuando necesites un nuevo perfil.</span>
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    </section>
+<section class="pf-roles-page pf-access-page">
+    <header class="pf-roles-heading">
+        <div><p class="pf-roles-heading__eyebrow">Administración de acceso</p><h1>Roles y permisos</h1><p>Consulta las capacidades de cada rol. Una persona puede reunir permisos de varios roles activos.</p></div>
+        {% if is_granted('role.manage') %}<a href="{{ path('admin_roles_new') }}" class="btn pf-button pf-button--primary"><i class="bi bi-shield-plus" aria-hidden="true"></i> Crear rol</a>{% endif %}
+    </header>
+    {% include 'admin/access/_navigation.html.twig' with {active: 'roles'} %}
+    <div class="pf-access-section-title"><div><h2>Perfiles de acceso</h2><p>{{ roles|length }} {{ roles|length == 1 ? 'rol registrado' : 'roles registrados' }}</p></div></div>
+    <div class="pf-access-role-grid">
+        {% for role in roles %}
+            <article class="pf-access-role-card">
+                <div class="pf-access-role-card__top"><span class="pf-access-role-icon"><i class="bi {{ role.code == 'ROLE_ADMIN' ? 'bi-shield-lock' : 'bi-shield-check' }}" aria-hidden="true"></i></span><span class="pf-role-status {{ role.active ? 'pf-role-status--active' : 'pf-role-status--inactive' }}">{{ role.active ? 'Activo' : 'Inactivo' }}</span></div>
+                <h3>{{ role.name }}</h3><code>{{ role.code }}</code>
+                <p>{{ role.description ?: 'Sin descripción registrada.' }}</p>
+                <div class="pf-access-role-card__meta">{% if role.code == 'ROLE_ADMIN' %}<span>Acceso completo · protegido</span>{% else %}<span>{{ role.permissions|filter(p => p.active)|length }} permisos activos</span>{% endif %}<span>{{ role.users|length }} {{ role.users|length == 1 ? 'persona asignada' : 'personas asignadas' }}</span></div>
+                <div class="pf-access-role-card__actions"><a href="{{ path('admin_roles_show', {id: role.id}) }}">Consultar capacidades <i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% if is_granted('role.manage') and role.code != 'ROLE_ADMIN' %}<a href="{{ path('admin_roles_edit', {id: role.id}) }}">Editar</a>{% endif %}</div>
+            </article>
+        {% else %}<div class="pf-access-notice">No hay roles registrados.{% if is_granted('role.manage') %} Crea un rol para definir un perfil de acceso.{% endif %}</div>{% endfor %}
+    </div>
+</section>
 {% endblock %}

@@ -41,11 +41,12 @@ final class CreateRoleType extends AbstractType
             ->add('permissions', EntityType::class, [
                 'class' => Permission::class,
                 'label' => 'Permisos',
-                'choice_label' => static fn (Permission $permission): string => sprintf(
-                    '%s · %s',
-                    $permission->getModule(),
-                    $permission->getName(),
-                ),
+                'choice_label' => static fn (Permission $permission): string => $permission->getName(),
+                'choice_attr' => static fn (Permission $permission): array => [
+                    'data-module' => $permission->getModule(),
+                    'data-code' => $permission->getCode(),
+                    'data-description' => $permission->getDescription() ?? '',
+                ],
                 'query_builder' => static fn (PermissionRepository $repository) => $repository
                     ->createQueryBuilder('permission')
                     ->andWhere('permission.isActive = :active')

@@ -82,6 +82,12 @@ class RoleManager
 
         $oldValues = $this->snapshot($role);
         $permissions = $this->validatePermissions($data->permissions);
+        // Preserve inactive assignments that the form cannot offer.
+        foreach ($role->getPermissions() as $existingPermission) {
+            if (!$existingPermission->isActive()) {
+                $permissions[] = $existingPermission;
+            }
+        }
 
         $role
             ->setName($data->name)

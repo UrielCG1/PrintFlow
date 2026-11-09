@@ -1111,3 +1111,44 @@
         transform: none;
     }
 }
+/* Administration of access */
+.pf-access-nav { display: flex; gap: .35rem; border-bottom: 1px solid var(--pf-outline-variant, #d9dfe5); overflow-x: auto; }
+.pf-access-nav a { padding: .8rem 1rem; color: var(--pf-on-surface-variant, #495867); text-decoration: none; white-space: nowrap; border-bottom: 3px solid transparent; font-weight: 600; }
+.pf-access-nav a[aria-current="page"] { color: var(--pf-primary, #006e06); border-color: var(--pf-primary, #006e06); }
+.pf-access-section-title h2, .pf-permission-picker h2, .pf-access-detail-grid h2 { font-size: 1.15rem; margin: 0 0 .35rem; }
+.pf-access-section-title p, .pf-permission-picker p { color: var(--pf-on-surface-variant, #52606b); margin: 0; }
+.pf-access-role-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 1rem; }
+.pf-access-role-card, .pf-access-notice { border: 1px solid var(--pf-outline-variant, #d9dfe5); border-radius: 12px; background: var(--pf-surface, #fff); padding: 1.25rem; }
+.pf-access-role-card { display: flex; flex-direction: column; gap: .6rem; min-width: 0; }
+.pf-access-role-card__top, .pf-access-role-card__actions, .pf-permission-group header, .pf-permission-picker__intro { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.pf-access-role-icon { display: grid; place-items: center; width: 2.7rem; height: 2.7rem; border-radius: .7rem; background: #e8f5e8; color: var(--pf-primary, #006e06); font-size: 1.25rem; }
+.pf-access-role-card h3 { margin: .3rem 0 0; font-size: 1.15rem; overflow-wrap: anywhere; }
+.pf-access-role-card p { color: var(--pf-on-surface-variant, #52606b); margin: 0; flex: 1; overflow-wrap: anywhere; }
+.pf-access-role-card code, .pf-access-permission-list small { overflow-wrap: anywhere; }
+.pf-access-role-card__meta { display: flex; flex-wrap: wrap; gap: .4rem 1rem; padding-top: .8rem; border-top: 1px solid #e1e7eb; font-size: .85rem; }
+.pf-access-role-card__actions { padding-top: .5rem; font-weight: 600; }
+.pf-access-detail-grid { display: grid; grid-template-columns: minmax(15rem, 1fr) minmax(0, 2fr); gap: 1rem; align-items: start; }
+.pf-access-permission-list { list-style: none; margin: 1rem 0 0; padding: 0; }
+.pf-access-permission-list li { display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid #e1e7eb; padding: .75rem 0; }
+.pf-access-permission-list small { display: block; color: var(--pf-on-surface-variant, #52606b); }
+.pf-access-notice { background: #edf7ed; color: #004b03; }
+.pf-role-form__grid { grid-template-columns: minmax(15rem, .8fr) minmax(0, 1.6fr); align-items: start; }
+.pf-permission-picker { display: grid; gap: 1rem; }
+.pf-permission-picker__intro { align-items: flex-start; flex-wrap: wrap; }
+.pf-permission-picker__intro > strong { white-space: nowrap; font-size: .85rem; color: var(--pf-primary, #006e06); }
+.pf-permission-picker__search label { display: block; font-weight: 600; margin-bottom: .3rem; }
+.pf-permission-picker__search input { width: 100%; padding: .65rem .8rem; border: 1px solid #778b98; border-radius: .4rem; }
+.pf-permission-picker__search p { font-size: .8rem; margin-top: .3rem; }
+.pf-permission-group { border: 1px solid #d5dfe5; border-radius: .65rem; overflow: hidden; }
+.pf-permission-group header { padding: .8rem 1rem; background: #f3f7f9; flex-wrap: wrap; }
+.pf-permission-group h3 { font-size: 1rem; margin: 0; }
+.pf-permission-group header span { font-size: .8rem; color: #52606b; }
+.pf-permission-group__actions { display: flex; gap: .7rem; flex-wrap: wrap; }
+.pf-permission-group__actions button { border: 0; background: transparent; padding: .2rem; color: var(--pf-primary, #006e06); font-weight: 600; text-decoration: underline; }
+.pf-permission-item { display: flex; align-items: flex-start; gap: .7rem; padding: .8rem 1rem; border-top: 1px solid #e3e9ed; }
+.pf-permission-item input { flex: none; margin-top: .25rem; width: 1.1rem; height: 1.1rem; }
+.pf-permission-item label { display: grid; gap: .15rem; cursor: pointer; overflow-wrap: anywhere; }
+.pf-permission-item small, .pf-permission-item label span { color: #52606b; font-size: .8rem; }
+.pf-access-page a:focus-visible, .pf-permission-picker :focus-visible { outline: 3px solid #006e06; outline-offset: 3px; }
+.pf-permission-picker [hidden] { display: none !important; }
+@media (max-width: 800px) { .pf-access-detail-grid, .pf-role-form__grid { grid-template-columns: 1fr; } .pf-access-role-card__actions { flex-wrap: wrap; } }

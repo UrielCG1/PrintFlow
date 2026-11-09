@@ -44,22 +44,7 @@
                 </section>
 
                 <section class="pf-role-form__card">
-                    <header class="pf-role-form__section-header">
-                        <span class="pf-role-form__section-icon">
-                            <i class="bi bi-key" aria-hidden="true"></i>
-                        </span>
-                        <div>
-                            <h2>Permisos asignados</h2>
-                            <p>Selecciona al menos un permiso activo para este rol.</p>
-                        </div>
-                    </header>
-
-                    {{ form_label(form.permissions) }}
-                    {{ form_errors(form.permissions) }}
-
-                    <div class="pf-role-form__permissions">
-                        {{ form_widget(form.permissions) }}
-                    </div>
+                    {% include 'admin/access/roles/_permissions.html.twig' %}
                 </section>
             </div>
 

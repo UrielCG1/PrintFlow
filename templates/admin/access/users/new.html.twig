@@ -54,10 +54,11 @@
 
                             <div>
                                 <h2>Roles asignados</h2>
-                                <p>Determinan los módulos y acciones disponibles.</p>
+                                <p>Los permisos de los roles activos se combinan.</p>
                             </div>
                         </header>
 
+                        {% if is_granted('role.view') %}<p><a href="{{ path('admin_roles_index') }}">Consultar capacidades de los roles</a></p>{% endif %}
                         {{ form_label(form.roles) }}
                         {{ form_errors(form.roles) }}
 

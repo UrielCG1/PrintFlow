@@ -1,0 +1,12 @@
+{% extends 'layouts/app.html.twig' %}
+{% block title %}{{ role.name }} | Roles y permisos{% endblock %}
+{% block app_navigation_active %}roles{% endblock %}
+{% block app_breadcrumb %}Administración / Roles y permisos / Consultar{% endblock %}
+{% block app_content %}
+<section class="pf-roles-page pf-access-page">
+    <header class="pf-roles-heading"><div><a class="pf-roles-back-link" href="{{ path('admin_roles_index') }}"><i class="bi bi-arrow-left" aria-hidden="true"></i> Volver a roles</a><p class="pf-roles-heading__eyebrow">Perfil de acceso</p><h1>{{ role.name }}</h1><p><code>{{ role.code }}</code> · {{ role.active ? 'Activo' : 'Inactivo' }}</p></div>{% if is_granted('role.manage') and role.code != 'ROLE_ADMIN' %}<a class="btn pf-button pf-button--primary" href="{{ path('admin_roles_edit', {id: role.id}) }}">Editar rol</a>{% endif %}</header>
+    {% if role.code == 'ROLE_ADMIN' %}<div class="pf-access-notice"><strong>Rol protegido con acceso completo.</strong> Concede todos los permisos reconocidos, incluso los que se incorporen después; no depende de la lista de asignaciones y no puede editarse.</div>{% elseif not role.active %}<div class="pf-access-notice">Este rol está inactivo y no concede acceso mientras permanezca así.</div>{% endif %}
+    <div class="pf-access-detail-grid"><section class="pf-role-form__card"><h2>Acerca del rol</h2><p>{{ role.description ?: 'Sin descripción registrada.' }}</p><p><strong>{{ role.users|length }}</strong> {{ role.users|length == 1 ? 'persona asignada' : 'personas asignadas' }}</p>{% if is_granted('user.view') %}<a href="{{ path('admin_users_index') }}">Ir a usuarios <i class="bi bi-arrow-right" aria-hidden="true"></i></a>{% endif %}</section>
+    <section class="pf-role-form__card"><h2>Permisos registrados</h2><p>{{ role.code == 'ROLE_ADMIN' ? 'Estas asignaciones no limitan su acceso completo.' : 'Los permisos inactivos no conceden acceso.' }}</p><ul class="pf-access-permission-list">{% for permission in role.permissions %}<li><div><strong>{{ permission.name }}</strong><small>{{ permission.module|replace({'_': ' ', '.': ' / '})|capitalize }} · {{ permission.code }}</small>{% if permission.description %}<small>{{ permission.description }}</small>{% endif %}</div>{% if not permission.active %}<span class="pf-role-status pf-role-status--inactive">Inactivo</span>{% endif %}</li>{% else %}<li>Sin permisos registrados.</li>{% endfor %}</ul></section></div>
+</section>
+{% endblock %}

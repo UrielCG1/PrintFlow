@@ -8,6 +8,7 @@ use App\Entity\Users\Role;
 use App\Entity\Users\User;
 use App\Repository\Users\UserRepository;
 use App\Service\Audit\AuditLogger;
+use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -74,9 +75,21 @@ final class UserManager
 
     public function update(User $user, UpdateUserData $data, User $actor): void
     {
+        $this->withAdministratorLock(fn () => $this->updateLocked($user, $data, $actor));
+    }
+
+    private function updateLocked(User $user, UpdateUserData $data, User $actor): void
+    {
         $username = strtolower(trim($data->username));
         $email = strtolower(trim($data->email));
-        $roles = $this->validateRoles($data->roles);
+        $roles = $data->roles;
+        // Preserve inactive assignments that the form cannot offer.
+        foreach ($user->getAssignedRoles() as $existingRole) {
+            if (!$existingRole->isActive() && !in_array($existingRole, $roles, true)) {
+                $roles[] = $existingRole;
+            }
+        }
+        $roles = $this->validateRoles($roles, $user->getAssignedRoles()->toArray());
 
         $this->assertUniqueCredentials($username, $email, $user);
 
@@ -113,6 +126,11 @@ final class UserManager
     }
 
     public function setActive(User $user, bool $isActive, User $actor): void
+    {
+        $this->withAdministratorLock(fn () => $this->setActiveLocked($user, $isActive, $actor));
+    }
+
+    private function setActiveLocked(User $user, bool $isActive, User $actor): void
     {
         if ($actor->getId() === $user->getId() && !$isActive) {
             throw new \DomainException(
@@ -206,6 +224,30 @@ final class UserManager
         $this->entityManager->flush();
     }
 
+    /** Serialize changes that could remove the last active administrator. */
+    private function withAdministratorLock(callable $change): void
+    {
+        $connection = $this->entityManager->getConnection();
+        $connection->beginTransaction();
+        try {
+            // A locking read must be the first read in this transaction so the
+            // subsequent count observes a previous administrator change.
+            $this->entityManager->createQueryBuilder()
+                ->select('role')
+                ->from(Role::class, 'role')
+                ->where('role.code = :code')
+                ->setParameter('code', 'ROLE_ADMIN')
+                ->getQuery()
+                ->setLockMode(LockMode::PESSIMISTIC_WRITE)
+                ->getOneOrNullResult();
+            $change();
+            $connection->commit();
+        } catch (\Throwable $exception) {
+            $connection->rollBack();
+            throw $exception;
+        }
+    }
+
     private function assertUniqueCredentials(
         string $username,
         string $email,
@@ -234,14 +276,14 @@ final class UserManager
      *
      * @return Role[]
      */
-    private function validateRoles(array $roles): array
+    private function validateRoles(array $roles, array $existingRoles = []): array
     {
         if ($roles === []) {
             throw new \DomainException('Debes asignar al menos un rol.');
         }
 
         foreach ($roles as $role) {
-            if (!$role instanceof Role || !$role->isActive()) {
+            if (!$role instanceof Role || (!$role->isActive() && !in_array($role, $existingRoles, true))) {
                 throw new \DomainException(
                     'Solo es posible asignar roles activos.',
                 );

@@ -7,7 +7,7 @@
 {% block app_breadcrumb %}Administración / Usuarios{% endblock %}
 
 {% block app_content %}
-    <section class="pf-users-page">
+    <section class="pf-users-page pf-access-page">
         <header class="pf-users-heading">
             <div>
                 <p class="pf-users-heading__eyebrow">Administración</p>
@@ -25,6 +25,8 @@
                 </a>
             {% endif %}
         </header>
+
+        {% include 'admin/access/_navigation.html.twig' with {active: 'users'} %}
 
         <section class="pf-users-toolbar" aria-label="Buscar usuarios">
             <form
@@ -116,7 +118,7 @@
                                 <td>
                                     <div class="pf-user-roles">
                                         {% for role in managed_user.assignedRoles %}
-                                            <span class="pf-user-role">{{ role.name }}</span>
+                                            {% if is_granted('role.view') %}<a class="pf-user-role" href="{{ path('admin_roles_show', {id: role.id}) }}">{{ role.name }}{{ not role.active ? ' · Inactivo' : '' }}</a>{% else %}<span class="pf-user-role">{{ role.name }}{{ not role.active ? ' · Inactivo' : '' }}</span>{% endif %}
                                         {% else %}
                                             <span class="pf-user-roles__empty">Sin roles asignados</span>
                                         {% endfor %}
@@ -131,6 +133,7 @@
                                         ></i>
                                         {{ managed_user.active ? 'Activo' : 'Inactivo' }}
                                     </span>
+                                    {% if managed_user.mustChangePassword %}<span class="pf-users-table__muted">Cambio de contraseña pendiente</span>{% endif %}
                                 </td>
 
                                 <td>
@@ -172,6 +175,11 @@
                                         {% if is_granted('user.deactivate') and app.user.id != managed_user.id %}
                                             <form
                                                 method="post"
+                                                data-controller="ui--confirm-action"
+                                                data-action="submit->ui--confirm-action#submit"
+                                                data-ui--confirm-action-title-value="{{ managed_user.active ? '¿Desactivar cuenta?' : '¿Activar cuenta?' }}"
+                                                data-ui--confirm-action-text-value="{{ managed_user.active ? 'La persona no podrá iniciar sesión mientras la cuenta esté inactiva.' : 'La persona podrá volver a iniciar sesión con sus roles activos.' }}"
+                                                data-ui--confirm-action-confirm-button-text-value="{{ managed_user.active ? 'Desactivar' : 'Activar' }}"
                                                 action="{{ path('admin_users_toggle_status', {id: managed_user.id}) }}"
                                             >
                                                 <input
@@ -203,8 +211,8 @@
                                     <div class="pf-users-empty">
                                         <i class="bi bi-people" aria-hidden="true"></i>
                                         <div>
-                                            <strong>No hay usuarios para mostrar.</strong>
-                                            <span>Prueba con otra búsqueda o crea una cuenta nueva.</span>
+                                            <strong>{{ search ? 'No hay resultados para esta búsqueda.' : 'No hay usuarios para mostrar.' }}</strong>
+                                            <span>{{ search ? 'Prueba con otro nombre, usuario o correo.' : 'Las cuentas creadas aparecerán aquí.' }}</span>
                                         </div>
                                     </div>
                                 </td>

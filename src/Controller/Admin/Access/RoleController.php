@@ -31,6 +31,14 @@ final class RoleController extends AbstractController
         ]);
     }
 
+    #[Route('/{id}', name: 'show', methods: ['GET'], requirements: ['id' => '\\d+'])]
+    public function show(Role $role): Response
+    {
+        $this->denyAccessUnlessGranted('role.view');
+
+        return $this->render('admin/access/roles/show.html.twig', ['role' => $role]);
+    }
+
     #[Route('/nuevo', name: 'new', methods: ['GET', 'POST'])]
     public function new(
         Request $request,

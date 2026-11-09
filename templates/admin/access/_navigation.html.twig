@@ -1,0 +1,4 @@
+<nav class="pf-access-nav" aria-label="Administración de acceso">
+    {% if is_granted('user.view') %}<a href="{{ path('admin_users_index') }}" {% if active == 'users' %}aria-current="page"{% endif %}><i class="bi bi-people" aria-hidden="true"></i> Usuarios</a>{% endif %}
+    {% if is_granted('role.view') %}<a href="{{ path('admin_roles_index') }}" {% if active == 'roles' %}aria-current="page"{% endif %}><i class="bi bi-shield-lock" aria-hidden="true"></i> Roles y permisos</a>{% endif %}
+</nav>
